@@ -20,6 +20,11 @@ export type ForumCommentRecord = {
 
 export type ForumPost = ForumPostRecord & {
   author_name: string;
+  comment_count?: number;
+};
+
+export type ForumPostWithGame = ForumPost & {
+  game_title?: string;
 };
 
 export type ForumComment = ForumCommentRecord & {

@@ -1,56 +1,83 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import Image from "next/image";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft,
-  Camera,
+  Bell,
   Check,
   Gamepad2,
   Globe,
   Loader2,
-  Mail,
-  Save,
-  AtSign,
+  Monitor,
+  Moon,
+  Palette,
+  RotateCcw,
+  Sparkles,
+  Sun,
   UserRound,
+  Zap,
 } from "lucide-react";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getInitials } from "@/lib/auth";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useAuth } from "@/hooks/use-auth";
+import { useAppSettings } from "@/components/settings/app-settings-provider";
+import type { AppLanguage, AppTheme } from "@/lib/app-settings";
+import {
+  AccountShell,
+  accountCardClassName,
+  accountFieldClassName,
+  accountLabelClassName,
+  accountSectionTitleClassName,
+  settingsToggleRowClassName,
+} from "@/components/settings/account-shell";
 import { cn } from "@/lib/utils";
 
-const inputClassName = cn(
-  "h-11 w-full rounded-xl border border-white/10 bg-white/5 px-4 text-center text-sm text-zinc-100",
-  "placeholder:text-zinc-500 outline-none transition-all",
-  "focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
-);
-
-const labelClassName = "block text-center text-zinc-300";
-
-const fieldClassName = "space-y-2 text-center";
+function SettingsToggle({
+  id,
+  label,
+  description,
+  checked,
+  onCheckedChange,
+  disabled,
+}: {
+  id: string;
+  label: string;
+  description: string;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <label htmlFor={id} className={settingsToggleRowClassName}>
+      <div className="min-w-0 flex-1 text-left">
+        <p className="text-sm font-medium text-zinc-200">{label}</p>
+        <p className="mt-0.5 text-xs leading-relaxed text-zinc-500">{description}</p>
+      </div>
+      <Checkbox
+        id={id}
+        checked={checked}
+        onCheckedChange={(value) => onCheckedChange(value === true)}
+        disabled={disabled}
+        className="shrink-0 border-white/20 data-checked:border-violet-500 data-checked:bg-violet-500"
+      />
+    </label>
+  );
+}
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { profile, loading, refreshProfile } = useAuth();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const [email, setEmail] = useState<string | null>(null);
-  const [displayName, setDisplayName] = useState("");
-  const [website, setWebsite] = useState("");
-  const [twitter, setTwitter] = useState("");
-  const [playingGames, setPlayingGames] = useState(true);
-  const [developingGames, setDevelopingGames] = useState(false);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const [avatarUploading, setAvatarUploading] = useState(false);
-
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { profile, loading } = useAuth();
+  const { settings, ready, updateSettings, resetSettings } = useAppSettings();
   const [toast, setToast] = useState<string | null>(null);
 
   const showToast = useCallback((message: string) => {
@@ -60,375 +87,217 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (loading) return;
-
     if (!profile) {
       router.replace("/auth?redirect=/settings");
-      return;
     }
-
-    setDisplayName(profile.display_name);
-    setWebsite(profile.website ?? "");
-    setTwitter(profile.twitter ?? "");
-    setPlayingGames(profile.playing_games);
-    setDevelopingGames(profile.developing_games);
-    setAvatarPreview(profile.avatar_url);
-
-    fetch("/api/auth/profile")
-      .then((response) => response.json())
-      .then((data: { email?: string | null }) => {
-        setEmail(data.email ?? null);
-      })
-      .catch(() => setEmail(null));
   }, [loading, profile, router]);
 
-  useEffect(() => {
-    return () => {
-      if (avatarPreview?.startsWith("blob:")) {
-        URL.revokeObjectURL(avatarPreview);
-      }
-    };
-  }, [avatarPreview]);
-
-  async function handleAvatarChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const localPreview = URL.createObjectURL(file);
-    setAvatarPreview((prev) => {
-      if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
-      return localPreview;
-    });
-
-    setAvatarUploading(true);
-    setError(null);
-
-    try {
-      const formData = new FormData();
-      formData.append("avatar", file);
-
-      const response = await fetch("/api/auth/avatar", {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = (await response.json()) as {
-        avatar_url?: string;
-        error?: string;
-      };
-
-      if (!response.ok || !data.avatar_url) {
-        throw new Error(data.error ?? "頭像上傳失敗");
-      }
-
-      URL.revokeObjectURL(localPreview);
-      setAvatarPreview(data.avatar_url);
-      await refreshProfile();
-      showToast("頭像已更新");
-    } catch (uploadError) {
-      URL.revokeObjectURL(localPreview);
-      setAvatarPreview(profile?.avatar_url ?? null);
-      setError(
-        uploadError instanceof Error ? uploadError.message : "頭像上傳失敗"
-      );
-    } finally {
-      setAvatarUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
+  function handleReset() {
+    resetSettings();
+    showToast("已恢復預設設定");
   }
 
-  async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    setSaving(true);
-    setError(null);
-
-    try {
-      const response = await fetch("/api/auth/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          display_name: displayName.trim(),
-          website: website.trim(),
-          twitter: twitter.trim(),
-          playing_games: playingGames,
-          developing_games: developingGames,
-        }),
-      });
-
-      const data = (await response.json()) as { error?: string };
-
-      if (!response.ok) {
-        throw new Error(data.error ?? "儲存失敗，請稍後再試");
-      }
-
-      await refreshProfile();
-      showToast("個人資料已成功儲存");
-    } catch (submitError) {
-      setError(
-        submitError instanceof Error ? submitError.message : "儲存失敗，請稍後再試"
-      );
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  if (loading || !profile) {
+  if (loading || !profile || !ready) {
     return (
       <div className="dark flex min-h-full items-center justify-center bg-zinc-950">
-        <Loader2 className="size-8 animate-spin text-cyan-400" />
+        <Loader2 className="size-8 animate-spin text-violet-400" />
       </div>
     );
   }
 
-  const initials = getInitials(displayName || profile.display_name);
-
   return (
-    <div className="dark min-h-full bg-zinc-950 text-zinc-100">
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -left-32 top-0 size-[480px] rounded-full bg-violet-600/15 blur-[120px]" />
-        <div className="absolute -right-32 top-1/3 size-[520px] rounded-full bg-cyan-500/10 blur-[130px]" />
-        <div
-          className="absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)",
-            backgroundSize: "64px 64px",
-          }}
-        />
-      </div>
+    <AccountShell
+      title="設定"
+      description="調整外觀、通知、遊戲體驗與無障礙選項——變更會立即儲存至本機"
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="space-y-6"
+      >
+        <div className={accountCardClassName}>
+          <section className="space-y-5">
+            <h2 className={accountSectionTitleClassName}>
+              <Palette className="size-4 text-violet-400" />
+              外觀與顯示
+            </h2>
 
-      <header className="sticky top-0 z-40 border-b border-white/5 bg-zinc-950/70 backdrop-blur-xl">
-        <div className="relative mx-auto flex h-16 max-w-3xl items-center justify-center px-4 sm:px-6">
-          <Link
-            href="/"
-            className={cn(
-              buttonVariants({ variant: "ghost", size: "sm" }),
-              "absolute left-4 gap-1.5 text-zinc-400 hover:text-cyan-300 sm:left-6"
-            )}
-          >
-            <ArrowLeft className="size-4" />
-            <span className="hidden sm:inline">返回首頁</span>
-          </Link>
-          <Link href="/" className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400 to-violet-600">
-              <Gamepad2 className="size-4 text-white" />
-            </div>
-            <span className="text-sm font-semibold text-white">NexusPlay</span>
-          </Link>
-        </div>
-      </header>
-
-      <main className="relative mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-        >
-          <div className="mb-8 text-center">
-            <h1 className="text-2xl font-bold text-white sm:text-3xl">個人資料設定</h1>
-            <p className="mt-2 text-sm text-zinc-500">
-              管理你的公開形象，讓討論區與全站都能看見最新的你
-            </p>
-          </div>
-
-          <div
-            className={cn(
-              "rounded-2xl border border-white/10 bg-zinc-900/60 p-6 text-center sm:p-8",
-              "shadow-xl shadow-black/40 backdrop-blur-sm"
-            )}
-          >
-            {/* Avatar */}
-            <div className="mb-8 flex flex-col items-center">
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={avatarUploading}
-                className={cn(
-                  "group relative size-28 overflow-hidden rounded-full",
-                  "border-2 border-white/10 transition-all duration-300",
-                  "hover:border-cyan-400/70 hover:shadow-lg hover:shadow-cyan-500/25",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/40",
-                  avatarUploading && "pointer-events-none opacity-70"
-                )}
+            <div className={accountFieldClassName}>
+              <Label className={accountLabelClassName}>主題模式</Label>
+              <Select
+                value={settings.theme}
+                onValueChange={(value) => {
+                  if (value) updateSettings({ theme: value as AppTheme });
+                }}
               >
-                {avatarPreview ? (
-                  <Image
-                    src={avatarPreview}
-                    alt={displayName}
-                    fill
-                    className="object-cover transition-transform duration-300 group-hover:scale-105"
-                    unoptimized={avatarPreview.startsWith("blob:")}
-                  />
-                ) : (
-                  <div className="flex size-full items-center justify-center bg-gradient-to-br from-cyan-500/30 to-violet-600/40 text-2xl font-bold text-white">
-                    {initials}
-                  </div>
-                )}
+                <SelectTrigger className="mx-auto w-full max-w-xs border-white/10 bg-white/5 text-zinc-100">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="border-white/10 bg-zinc-900 text-zinc-100">
+                  <SelectItem value="dark">
+                    <span className="flex items-center gap-2">
+                      <Moon className="size-3.5" /> 深色
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="light">
+                    <span className="flex items-center gap-2">
+                      <Sun className="size-3.5" /> 淺色
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="system">
+                    <span className="flex items-center gap-2">
+                      <Monitor className="size-3.5" /> 跟隨系統
+                    </span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-                <div className="absolute inset-0 flex items-center justify-center bg-zinc-950/50 opacity-0 transition-opacity group-hover:opacity-100">
-                  {avatarUploading ? (
-                    <Loader2 className="size-6 animate-spin text-cyan-300" />
-                  ) : (
-                    <Camera className="size-6 text-cyan-300" />
-                  )}
-                </div>
-              </button>
+            <SettingsToggle
+              id="compactLayout"
+              label="精簡版面"
+              description="縮小卡片間距，在相同螢幕顯示更多內容"
+              checked={settings.compactLayout}
+              onCheckedChange={(checked) => updateSettings({ compactLayout: checked })}
+            />
+          </section>
+        </div>
 
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
-                className="hidden"
-                onChange={handleAvatarChange}
-              />
+        <div className={accountCardClassName}>
+          <section className="space-y-5">
+            <h2 className={accountSectionTitleClassName}>
+              <Globe className="size-4 text-cyan-400" />
+              語言
+            </h2>
 
-              <p className="mt-3 text-center text-xs text-zinc-500">
-                點擊頭像上傳 · 支援 PNG / JPG / WebP · 最大 2 MB
+            <div className={accountFieldClassName}>
+              <Label className={accountLabelClassName}>介面語言</Label>
+              <Select
+                value={settings.language}
+                onValueChange={(value) => {
+                  if (value) updateSettings({ language: value as AppLanguage });
+                }}
+              >
+                <SelectTrigger className="mx-auto w-full max-w-xs border-white/10 bg-white/5 text-zinc-100">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="border-white/10 bg-zinc-900 text-zinc-100">
+                  <SelectItem value="zh-Hant">繁體中文</SelectItem>
+                  <SelectItem value="en">English</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-zinc-600">
+                部分頁面仍為繁中，完整多語系將於後續版本提供
               </p>
             </div>
+          </section>
+        </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6 text-center">
-              <div className={fieldClassName}>
-                <Label htmlFor="username" className={labelClassName}>
-                  使用者名稱
-                </Label>
-                <div
-                  className={cn(
-                    inputClassName,
-                    "flex items-center justify-center gap-2 text-zinc-400"
-                  )}
-                >
-                  <Mail className="size-4 shrink-0 text-zinc-500" />
-                  <span id="username" className="truncate">
-                    {email ?? "—"}
-                  </span>
-                </div>
-                <p className="text-center text-xs text-zinc-600">
-                  註冊時的電子郵件，無法在此修改
-                </p>
-              </div>
+        <div className={accountCardClassName}>
+          <section className="space-y-4">
+            <h2 className={accountSectionTitleClassName}>
+              <Bell className="size-4 text-amber-400" />
+              通知偏好
+            </h2>
 
-              <div className={fieldClassName}>
-                <Label htmlFor="displayName" className={labelClassName}>
-                  顯示名稱
-                </Label>
-                <Input
-                  id="displayName"
-                  value={displayName}
-                  maxLength={40}
-                  onChange={(event) => setDisplayName(event.target.value)}
-                  className={inputClassName}
-                  placeholder="在討論區與全站顯示的暱稱"
-                  disabled={saving}
-                />
-              </div>
+            <SettingsToggle
+              id="forumReplyNotify"
+              label="討論區回覆通知"
+              description="有人回覆你的文章或留言時提醒"
+              checked={settings.forumReplyNotify}
+              onCheckedChange={(checked) =>
+                updateSettings({ forumReplyNotify: checked })
+              }
+            />
 
-              <div className={fieldClassName}>
-                <Label
-                  htmlFor="website"
-                  className={cn(labelClassName, "flex items-center justify-center gap-2")}
-                >
-                  <Globe className="size-4 text-cyan-400" />
-                  個人網站
-                </Label>
-                <Input
-                  id="website"
-                  type="url"
-                  value={website}
-                  onChange={(event) => setWebsite(event.target.value)}
-                  className={inputClassName}
-                  placeholder="https://your-site.com"
-                  disabled={saving}
-                />
-              </div>
+            <SettingsToggle
+              id="forumEmailDigest"
+              label="每週討論摘要"
+              description="以電子郵件接收關注遊戲的熱門討論摘要"
+              checked={settings.forumEmailDigest}
+              onCheckedChange={(checked) =>
+                updateSettings({ forumEmailDigest: checked })
+              }
+            />
+          </section>
+        </div>
 
-              <div className={fieldClassName}>
-                <Label
-                  htmlFor="twitter"
-                  className={cn(labelClassName, "flex items-center justify-center gap-2")}
-                >
-                  <AtSign className="size-4 text-sky-400" />
-                  Twitter / X 帳號
-                </Label>
-                <Input
-                  id="twitter"
-                  value={twitter}
-                  onChange={(event) => setTwitter(event.target.value)}
-                  className={inputClassName}
-                  placeholder="@username"
-                  disabled={saving}
-                />
-              </div>
+        <div className={accountCardClassName}>
+          <section className="space-y-4">
+            <h2 className={accountSectionTitleClassName}>
+              <Gamepad2 className="size-4 text-emerald-400" />
+              遊戲體驗
+            </h2>
 
-              <div
-                className={cn(
-                  "space-y-4 rounded-xl border border-white/10 bg-zinc-950/40 p-4 text-center"
-                )}
-              >
-                <div>
-                  <p className="text-sm font-medium text-white">帳戶類型</p>
-                  <p className="mt-1 text-xs text-zinc-500">
-                    勾選「開發並上傳遊戲」即可開通創作者後台
-                  </p>
-                </div>
+            <SettingsToggle
+              id="gameAutoplay"
+              label="自動載入遊戲"
+              description="進入遊戲頁時立即開始載入，無需再按開始"
+              checked={settings.gameAutoplay}
+              onCheckedChange={(checked) => updateSettings({ gameAutoplay: checked })}
+            />
 
-                <label className="flex cursor-pointer flex-col items-center gap-3 rounded-lg border border-white/8 bg-white/[0.02] p-4 transition-colors hover:border-cyan-400/20">
-                  <Checkbox
-                    checked={playingGames}
-                    onCheckedChange={(checked) => setPlayingGames(checked === true)}
-                    disabled={saving}
-                    className="border-white/20 data-checked:border-cyan-500 data-checked:bg-cyan-500"
-                  />
-                  <div>
-                    <p className="text-sm font-medium text-zinc-200">玩遊戲</p>
-                    <p className="text-xs text-zinc-500">Playing games</p>
-                  </div>
-                </label>
+            <SettingsToggle
+              id="showMatureContent"
+              label="顯示成人向標記內容"
+              description="在瀏覽與推薦中顯示標記為成人向的遊戲"
+              checked={settings.showMatureContent}
+              onCheckedChange={(checked) =>
+                updateSettings({ showMatureContent: checked })
+              }
+            />
+          </section>
+        </div>
 
-                <label className="flex cursor-pointer flex-col items-center gap-3 rounded-lg border border-white/8 bg-white/[0.02] p-4 transition-colors hover:border-violet-400/20">
-                  <Checkbox
-                    checked={developingGames}
-                    onCheckedChange={(checked) => setDevelopingGames(checked === true)}
-                    disabled={saving}
-                    className="border-white/20 data-checked:border-violet-500 data-checked:bg-violet-500"
-                  />
-                  <div>
-                    <p className="text-sm font-medium text-zinc-200">
-                      開發並上傳遊戲
-                    </p>
-                    <p className="text-xs text-zinc-500">
-                      Developing and uploading games
-                    </p>
-                  </div>
-                </label>
-              </div>
+        <div className={accountCardClassName}>
+          <section className="space-y-4">
+            <h2 className={accountSectionTitleClassName}>
+              <Zap className="size-4 text-sky-400" />
+              無障礙與效能
+            </h2>
 
-              {error && (
-                <p className="rounded-lg border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-center text-sm text-rose-300">
-                  {error}
-                </p>
-              )}
+            <SettingsToggle
+              id="reduceMotion"
+              label="減少動態效果"
+              description="降低頁面動畫與過渡效果，減輕暈動症不適"
+              checked={settings.reduceMotion}
+              onCheckedChange={(checked) => updateSettings({ reduceMotion: checked })}
+            />
+          </section>
+        </div>
 
-              <Button
-                type="submit"
-                disabled={saving || !displayName.trim() || avatarUploading}
-                className="w-full gap-2 bg-gradient-to-r from-cyan-500 to-violet-600 text-white hover:from-cyan-400 hover:to-violet-500"
-              >
-                {saving ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Save className="size-4" />
-                )}
-                {saving ? "儲存中…" : "儲存變更"}
-              </Button>
-            </form>
+        <div className={cn(accountCardClassName, "border-dashed")}>
+          <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
+            <div className="text-center sm:text-left">
+              <p className="flex items-center justify-center gap-2 text-sm font-medium text-white sm:justify-start">
+                <Sparkles className="size-4 text-violet-400" />
+                恢復預設
+              </p>
+              <p className="mt-1 text-xs text-zinc-500">
+                將所有系統設定還原為 NexusPlay 預設值
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleReset}
+              className="gap-2 border-white/10 bg-white/5 text-zinc-200 hover:border-rose-400/30 hover:text-rose-200"
+            >
+              <RotateCcw className="size-4" />
+              重置設定
+            </Button>
           </div>
+        </div>
 
-          <p className="mt-6 flex items-center justify-center gap-2 text-center text-xs text-zinc-600">
-            <UserRound className="size-3.5" />
-            儲存後，導航欄頭像與討論區顯示名稱將即時更新
-          </p>
-        </motion.div>
-      </main>
+        <p className="flex items-center justify-center gap-2 text-xs text-zinc-600">
+          <UserRound className="size-3.5" />
+          頭像、暱稱與帳戶權限請至
+          <Link href="/profile" className="text-cyan-400 hover:text-cyan-300">
+            個人資料
+          </Link>
+        </p>
+      </motion.div>
 
       <AnimatePresence>
         {toast && (
@@ -438,15 +307,15 @@ export default function SettingsPage() {
             exit={{ opacity: 0, y: 20 }}
             className={cn(
               "fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2",
-              "rounded-full border border-emerald-400/30 bg-zinc-900/95 px-5 py-2.5",
-              "text-sm text-emerald-100 shadow-xl shadow-emerald-500/10 backdrop-blur-md"
+              "rounded-full border border-violet-400/30 bg-zinc-900/95 px-5 py-2.5",
+              "text-sm text-violet-100 shadow-xl backdrop-blur-md"
             )}
           >
-            <Check className="size-4 text-emerald-400" />
+            <Check className="size-4 text-violet-400" />
             {toast}
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </AccountShell>
   );
 }

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VOID GACHA</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      background: radial-gradient(ellipse at 50% 0%, #1a0a2e 0%, #0a0510 60%, #000 100%);
+      color: #e8e0f0;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .void-ring {
+      position: fixed; width: 500px; height: 500px;
+      border-radius: 50%;
+      border: 1px solid rgba(167,139,250,0.2);
+      top: 50%; left: 50%; transform: translate(-50%, -50%);
+      animation: spin 20s linear infinite;
+    }
+    .void-ring::before {
+      content: ""; position: absolute; inset: 40px;
+      border-radius: 50%; border: 1px dashed rgba(34,211,238,0.25);
+    }
+    @keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+    .panel { position: relative; z-index: 1; text-align: center; padding: 2rem; }
+    h1 {
+      font-size: clamp(2rem, 6vw, 3rem);
+      font-weight: 900;
+      letter-spacing: 0.15em;
+      background: linear-gradient(180deg, #fff 0%, #a78bfa 40%, #22d3ee 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .tag { color: #a78bfa; font-size: 0.75rem; letter-spacing: 0.25em; margin: 1rem 0; }
+    .sub { color: #9ca3af; font-size: 0.95rem; max-width: 380px; line-height: 1.7; margin: 0 auto; }
+    .stats { margin-top: 2rem; display: flex; gap: 1.5rem; justify-content: center; }
+    .stat { color: #22d3ee; font-size: 0.85rem; }
+    .stat b { display: block; font-size: 1.4rem; color: #fff; }
+  </style>
+</head>
+<body>
+  <div class="void-ring"></div>
+  <div class="panel">
+    <h1>VOID GACHA</h1>
+    <p class="tag">NEXUSPLAY STUDIO · 平台旗艦</p>
+    <p class="sub">神秘虛擬卡牌 · 深淵抽卡宇宙 · 核心卡組對決</p>
+    <div class="stats">
+      <div class="stat"><b>86.4k</b>遊玩</div>
+      <div class="stat"><b>7.2k</b>按讚</div>
+      <div class="stat"><b>4.82</b>評分</div>
+    </div>
+  </div>
+</body>
+</html>

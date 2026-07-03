@@ -61,6 +61,15 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  if (request.nextUrl.pathname.startsWith("/profile")) {
+    if (!user) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/auth";
+      redirectUrl.searchParams.set("redirect", "/profile");
+      return NextResponse.redirect(redirectUrl);
+    }
+  }
+
   if (request.nextUrl.pathname.startsWith("/settings")) {
     if (!user) {
       const redirectUrl = request.nextUrl.clone();
@@ -79,6 +88,8 @@ export const config = {
     "/dashboard/:path*",
     "/account",
     "/account/:path*",
+    "/profile",
+    "/profile/:path*",
     "/settings",
     "/settings/:path*",
   ],

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Loader2, LogOut, Palette, UserRound } from "lucide-react";
+import { Loader2, LogOut, Palette, Settings, UserRound } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { getInitials } from "@/lib/auth";
 import { useAuth } from "@/hooks/use-auth";
@@ -25,7 +25,7 @@ export function UserNav() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  if (loading) {
+  if (loading && !profile) {
     return (
       <Button
         variant="outline"
@@ -106,12 +106,21 @@ export function UserNav() {
           )}
 
           <Link
-            href="/settings"
+            href="/profile"
             onClick={() => setOpen(false)}
             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white"
           >
             <UserRound className="size-4 text-cyan-400" />
-            個人資料設定
+            個人資料
+          </Link>
+
+          <Link
+            href="/settings"
+            onClick={() => setOpen(false)}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white"
+          >
+            <Settings className="size-4 text-violet-400" />
+            設定
           </Link>
 
           <button
@@ -138,9 +147,9 @@ export function CreatorDashboardLink() {
     ? "/auth?redirect=/dashboard"
     : profile.role === "creator"
       ? "/dashboard"
-      : "/settings";
+      : "/profile";
 
-  if (loading) {
+  if (loading && !profile) {
     return (
       <span
         className={cn(

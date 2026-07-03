@@ -28,12 +28,19 @@ export function sanitizePlainText(
   return stripped;
 }
 
-/** Allow only http(s) URLs from our Supabase storage for iframe embed codes. */
+/** Allow https game-files on Supabase storage, or same-origin demo previews. */
 export function isSafeEmbedUrl(url: string): boolean {
+  if (url.startsWith("/demos/") && url.endsWith(".html")) {
+    return true;
+  }
+
   try {
     const parsed = new URL(url);
     if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
       return false;
+    }
+    if (parsed.pathname.startsWith("/demos/") && parsed.pathname.endsWith(".html")) {
+      return true;
     }
     const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
       ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname

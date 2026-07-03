@@ -43,7 +43,12 @@ export async function getGames(options: GetGamesOptions = {}): Promise<Game[]> {
     throw new Error(`讀取遊戲列表失敗：${error.message}`);
   }
 
-  return (data ?? []).map(mapRecordToGame);
+  return (data ?? []).map(mapRecordToGame).sort((a, b) => {
+    const aFeatured = a.featured ? 1 : 0;
+    const bFeatured = b.featured ? 1 : 0;
+    if (aFeatured !== bFeatured) return bFeatured - aFeatured;
+    return 0;
+  });
 }
 
 export async function getGameById(id: number): Promise<Game | null> {

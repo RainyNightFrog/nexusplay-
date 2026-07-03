@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
@@ -12,6 +12,7 @@ import {
   Gamepad2,
   Heart,
   Loader2,
+  MessagesSquare,
   Share2,
   ThumbsUp,
   Upload,
@@ -20,27 +21,49 @@ import {
   X,
 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CommunityForum } from "@/components/game/community-forum";
 import { isDirectlyPlayable } from "@/lib/games-data";
 import { buildEmbedCode, IFRAME_SANDBOX } from "@/lib/iframe-sandbox";
 import { isSafeEmbedUrl } from "@/lib/sanitize";
 import { TAG_COLORS, type Game } from "@/lib/games";
 import { cn } from "@/lib/utils";
 
+function GamePageFallback() {
+  return (
+    <div className="dark flex min-h-full flex-col items-center justify-center bg-zinc-950 px-4 text-zinc-100">
+      <Loader2 className="mb-4 size-10 animate-spin text-cyan-400" />
+      <p className="text-sm text-zinc-400">載入遊戲中…</p>
+    </div>
+  );
+}
+
 export default function GamePage() {
+  return (
+    <Suspense fallback={<GamePageFallback />}>
+      <GamePageContent />
+    </Suspense>
+  );
+}
+
+function GamePageContent() {
   const params = useParams();
+  const router = useRouter();
   const gameId = params.id as string;
 
   const [game, setGame] = useState<Game | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [migrating, setMigrating] = useState(false);
+  const [forumPostCount, setForumPostCount] = useState(0);
 
   const [liked, setLiked] = useState(false);
   const [favorited, setFavorited] = useState(false);
   const [showEmbed, setShowEmbed] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+
+  const showToast = useCallback((message: string) => {
+    setToast(message);
+    window.setTimeout(() => setToast(null), 2500);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -117,6 +140,23 @@ export default function GamePage() {
     fetch(`/api/games/${game.id}/play`, { method: "POST" }).catch(() => undefined);
   }, [game?.id]);
 
+  useEffect(() => {
+    if (!game?.id) return;
+    fetch(`/api/games/${game.id}/forum/posts`)
+      .then((response) => response.json())
+      .then((data: { posts?: unknown[] }) => {
+        setForumPostCount(data.posts?.length ?? 0);
+      })
+      .catch(() => setForumPostCount(0));
+  }, [game?.id]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("tab") === "forum") {
+      router.replace(`/game/${gameId}/forum`);
+    }
+  }, [gameId, router]);
+
   const playable = game ? isDirectlyPlayable(game.embedUrl) : false;
   const trustedEmbedUrl =
     game && playable && isSafeEmbedUrl(game.embedUrl) ? game.embedUrl : null;
@@ -126,11 +166,6 @@ export default function GamePage() {
     [trustedEmbedUrl]
   );
 
-  const showToast = (message: string) => {
-    setToast(message);
-    window.setTimeout(() => setToast(null), 2500);
-  };
-
   const copyToClipboard = async (text: string, successMessage: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -138,14 +173,6 @@ export default function GamePage() {
     } catch {
       showToast("複製失敗，請手動複製");
     }
-  };
-
-  const handleShare = () => {
-    copyToClipboard(window.location.href, "連結已複製到剪貼簿");
-  };
-
-  const handleEmbedCopy = () => {
-    copyToClipboard(embedCode, "嵌入程式碼已複製");
   };
 
   if (loading) {
@@ -176,7 +203,6 @@ export default function GamePage() {
 
   return (
     <div className="dark min-h-full bg-zinc-950 text-zinc-100">
-      {/* Ambient background */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute -left-32 top-0 size-[480px] rounded-full bg-violet-600/15 blur-[120px]" />
         <div className="absolute -right-32 top-1/3 size-[520px] rounded-full bg-cyan-500/10 blur-[130px]" />
@@ -190,7 +216,6 @@ export default function GamePage() {
         />
       </div>
 
-      {/* Header */}
       <header className="sticky top-0 z-40 border-b border-white/5 bg-zinc-950/70 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
           <Link
@@ -216,12 +241,27 @@ export default function GamePage() {
           <h1 className="ml-2 truncate text-sm font-medium text-zinc-300 sm:text-base">
             {game.title}
           </h1>
+
+          <Link
+            href={`/game/${game.id}/forum`}
+            className={cn(
+              buttonVariants({ variant: "outline", size: "sm" }),
+              "ml-auto gap-1.5 border-violet-400/25 bg-violet-500/10 text-violet-200 hover:border-violet-400/40 hover:bg-violet-500/15"
+            )}
+          >
+            <MessagesSquare className="size-3.5" />
+            <span className="hidden sm:inline">社群討論區</span>
+            {forumPostCount > 0 && (
+              <span className="rounded-full bg-violet-500/25 px-1.5 py-0.5 text-[10px] font-bold">
+                {forumPostCount}
+              </span>
+            )}
+          </Link>
         </div>
       </header>
 
       <main className="relative mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
         <div className="grid gap-6 lg:grid-cols-[1fr_360px] lg:gap-8 xl:grid-cols-[1fr_400px]">
-          {/* Game player */}
           <motion.section
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -274,7 +314,9 @@ export default function GamePage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={handleShare}
+                    onClick={() =>
+                      copyToClipboard(window.location.href, "連結已複製到剪貼簿")
+                    }
                     className="gap-1.5 border-white/10 bg-white/5 text-zinc-300 hover:border-cyan-400/30 hover:text-white"
                   >
                     <Share2 className="size-3.5" />
@@ -295,7 +337,6 @@ export default function GamePage() {
             </div>
           </motion.section>
 
-          {/* Game info sidebar */}
           <motion.aside
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -327,6 +368,17 @@ export default function GamePage() {
                 <span>{game.players} 次遊玩</span>
               </div>
 
+              <div className="mt-2 flex flex-wrap gap-4 text-sm text-zinc-400">
+                <span className="flex items-center gap-1.5">
+                  <Heart className="size-4 text-rose-400" />
+                  {game.likes} 按讚
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Share2 className="size-4 text-fuchsia-400" />
+                  {game.shares} 分享
+                </span>
+              </div>
+
               <div className="mt-4 flex flex-wrap gap-1.5">
                 {game.tags.map((tag) => (
                   <span
@@ -345,9 +397,24 @@ export default function GamePage() {
               <p className="mt-5 text-sm leading-relaxed text-zinc-400">
                 {game.description}
               </p>
+
+              <Link
+                href={`/game/${game.id}/forum`}
+                className={cn(
+                  buttonVariants({ variant: "outline" }),
+                  "mt-5 w-full gap-2 border-violet-400/25 bg-violet-500/10 text-violet-200 hover:border-violet-400/40 hover:bg-violet-500/15"
+                )}
+              >
+                <MessagesSquare className="size-4" />
+                進入社群討論區
+                {forumPostCount > 0 && (
+                  <span className="rounded-full bg-violet-500/25 px-2 py-0.5 text-[11px]">
+                    {forumPostCount} 則
+                  </span>
+                )}
+              </Link>
             </div>
 
-            {/* Interaction row */}
             <div
               className={cn(
                 "flex gap-3 rounded-2xl border border-white/10 bg-zinc-900/60 p-4",
@@ -388,125 +455,62 @@ export default function GamePage() {
                 {favorited ? "已收藏" : "收藏"}
               </Button>
             </div>
-
-            {/* Mobile share / embed */}
-            <div className="flex gap-3 lg:hidden">
-              <Button
-                variant="outline"
-                onClick={handleShare}
-                className="flex-1 gap-2 border-white/10 bg-white/5 text-zinc-300"
-              >
-                <Share2 className="size-4" />
-                分享連結
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setShowEmbed(true)}
-                className="flex-1 gap-2 border-white/10 bg-white/5 text-zinc-300"
-              >
-                <Code2 className="size-4" />
-                嵌入程式碼
-              </Button>
-            </div>
           </motion.aside>
         </div>
 
-        {/* Details & Community Tabs */}
         <motion.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, delay: 0.15 }}
-          className="mt-8 pb-10"
+          className="mt-10 pb-10"
         >
-          <Tabs defaultValue="details" className="gap-6">
-            <TabsList
-              variant="line"
-              className="h-auto w-full justify-start gap-1 rounded-none border-b border-white/10 bg-transparent p-0"
-            >
-              <TabsTrigger
-                value="details"
-                className="rounded-none border-b-2 border-transparent px-4 py-3 text-sm font-medium text-zinc-400 data-active:border-cyan-400 data-active:bg-transparent data-active:text-cyan-300"
-              >
-                🎮 遊戲詳情
-              </TabsTrigger>
-              <TabsTrigger
-                value="forum"
-                className="rounded-none border-b-2 border-transparent px-4 py-3 text-sm font-medium text-zinc-400 data-active:border-violet-400 data-active:bg-transparent data-active:text-violet-300"
-              >
-                👥 社群討論區
-              </TabsTrigger>
-            </TabsList>
+          <div
+            className={cn(
+              "rounded-2xl border border-white/10 bg-zinc-900/60 p-6 sm:p-8",
+              "shadow-lg shadow-black/40 backdrop-blur-sm"
+            )}
+          >
+            <h3 className="text-lg font-semibold text-white">關於這款遊戲</h3>
+            <p className="mt-4 text-sm leading-relaxed text-zinc-400">
+              {game.description}
+            </p>
 
-            <TabsContent value="details" className="mt-0 outline-none">
-              <div
-                className={cn(
-                  "rounded-2xl border border-white/10 bg-zinc-900/60 p-6",
-                  "shadow-lg shadow-black/40 backdrop-blur-sm"
-                )}
-              >
-                <h3 className="text-lg font-semibold text-white">關於這款遊戲</h3>
-                <p className="mt-4 text-sm leading-relaxed text-zinc-400">
-                  {game.description}
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="rounded-xl border border-white/8 bg-zinc-950/40 p-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+                  創作者
                 </p>
-
-                <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                  <div className="rounded-xl border border-white/8 bg-zinc-950/40 p-4">
-                    <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-                      創作者
-                    </p>
-                    <p className="mt-1 flex items-center gap-2 text-sm text-zinc-200">
-                      <User className="size-4 text-violet-400" />
-                      {game.creator}
-                    </p>
-                  </div>
-                  <div className="rounded-xl border border-white/8 bg-zinc-950/40 p-4">
-                    <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-                      遊玩次數
-                    </p>
-                    <p className="mt-1 flex items-center gap-2 text-sm text-zinc-200">
-                      <Users className="size-4 text-cyan-400" />
-                      {game.players} 次
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-6">
-                  <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">
-                    分類標籤
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {game.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className={cn(
-                          "rounded-md px-2.5 py-1 text-xs font-medium ring-1 ring-inset",
-                          TAG_COLORS[tag] ??
-                            "bg-zinc-700/50 text-zinc-300 ring-zinc-600/40"
-                        )}
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
+                <p className="mt-1 flex items-center gap-2 text-sm text-zinc-200">
+                  <User className="size-4 text-violet-400" />
+                  {game.creator}
+                </p>
               </div>
-            </TabsContent>
-
-            <TabsContent value="forum" className="mt-0 outline-none">
-              <div
-                className={cn(
-                  "rounded-2xl border border-white/10 bg-zinc-900/40 p-5 sm:p-6",
-                  "shadow-lg shadow-black/40 backdrop-blur-sm"
-                )}
-              >
-                <CommunityForum gameId={game.id} onToast={showToast} />
+              <div className="rounded-xl border border-white/8 bg-zinc-950/40 p-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+                  遊玩次數
+                </p>
+                <p className="mt-1 flex items-center gap-2 text-sm text-zinc-200">
+                  <Users className="size-4 text-cyan-400" />
+                  {game.players} 次
+                </p>
               </div>
-            </TabsContent>
-          </Tabs>
+              <div className="rounded-xl border border-white/8 bg-zinc-950/40 p-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+                  社群討論
+                </p>
+                <Link
+                  href={`/game/${game.id}/forum`}
+                  className="mt-1 flex items-center gap-2 text-sm text-violet-300 transition-colors hover:text-violet-200"
+                >
+                  <MessagesSquare className="size-4" />
+                  {forumPostCount} 則討論串 →
+                </Link>
+              </div>
+            </div>
+          </div>
         </motion.section>
       </main>
 
-      {/* Embed modal */}
       <AnimatePresence>
         {showEmbed && (
           <>
@@ -540,14 +544,13 @@ export default function GamePage() {
                   <X className="size-4" />
                 </Button>
               </div>
-              <p className="mb-3 text-sm text-zinc-400">
-                複製以下 HTML 程式碼，貼到你的網站即可嵌入遊戲：
-              </p>
               <pre className="max-h-40 overflow-auto rounded-xl border border-white/10 bg-zinc-950 p-4 text-xs leading-relaxed text-cyan-200/90">
                 {embedCode}
               </pre>
               <Button
-                onClick={handleEmbedCopy}
+                onClick={() =>
+                  copyToClipboard(embedCode, "嵌入程式碼已複製")
+                }
                 className="mt-4 w-full gap-2 bg-gradient-to-r from-cyan-500 to-violet-600 text-white hover:from-cyan-400 hover:to-violet-500"
               >
                 <Copy className="size-4" />
@@ -558,7 +561,6 @@ export default function GamePage() {
         )}
       </AnimatePresence>
 
-      {/* Toast */}
       <AnimatePresence>
         {toast && (
           <motion.div

@@ -44,8 +44,8 @@ const OVERVIEW_STATS = [
   {
     label: "Total Plays",
     title: "總遊玩次數",
-    value: "128,492",
-    change: "+18.2%",
+    value: "249,120",
+    change: "+22.6%",
     icon: Gamepad2,
     accent: "from-cyan-500/20 to-cyan-500/5 text-cyan-300 ring-cyan-400/20",
     iconBg: "bg-cyan-500/15 text-cyan-400",
@@ -53,8 +53,8 @@ const OVERVIEW_STATS = [
   {
     label: "Total Likes",
     title: "總按讚數",
-    value: "8,731",
-    change: "+12.4%",
+    value: "21,700",
+    change: "+18.9%",
     icon: Heart,
     accent: "from-rose-500/20 to-rose-500/5 text-rose-300 ring-rose-400/20",
     iconBg: "bg-rose-500/15 text-rose-400",
@@ -71,8 +71,8 @@ const OVERVIEW_STATS = [
   {
     label: "Shares",
     title: "分享與嵌入次數",
-    value: "2,184",
-    change: "+24.1%",
+    value: "5,180",
+    change: "+31.4%",
     icon: Share2,
     accent: "from-fuchsia-500/20 to-fuchsia-500/5 text-fuchsia-300 ring-fuchsia-400/20",
     iconBg: "bg-fuchsia-500/15 text-fuchsia-400",
@@ -83,38 +83,33 @@ const MOCK_GAMES = [
   {
     id: 1,
     title: "VOID GACHA",
+    creator: "NexusPlay Studio",
     cover:
       "https://icydkixwynxizrgfzelq.supabase.co/storage/v1/object/public/game-covers/d37f574e-1360-4c41-800c-6aa6fadf98cb-774ed615-911f-46c1-ac3d-1015fac6ef7754745745.jfif",
     uploadedAt: "2026-03-28",
     status: "published" as const,
     plays: "86,420",
+    likes: "7,200",
   },
   {
     id: 2,
-    title: "Neon Drift Racer",
-    cover:
-      "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&q=80",
-    uploadedAt: "2026-03-15",
+    title: "CoreDefense: Mindustry X",
+    creator: "NeonTowers",
+    cover: "/covers/core-defense-cover.png",
+    uploadedAt: "2026-03-22",
     status: "published" as const,
-    plays: "28,104",
+    plays: "98,500",
+    likes: "8,900",
   },
   {
     id: 3,
-    title: "Pixel Dungeon X",
-    cover:
-      "https://images.unsplash.com/photo-1552820728-8b83bb6b773f?w=800&q=80",
-    uploadedAt: "2026-04-01",
-    status: "review" as const,
-    plays: "—",
-  },
-  {
-    id: 4,
-    title: "Sky Tower Defense",
-    cover:
-      "https://images.unsplash.com/photo-1511512578047-dfb367046420?w=800&q=80",
-    uploadedAt: "2026-04-03",
-    status: "draft" as const,
-    plays: "—",
+    title: "CyberFortune 012",
+    creator: "EliteRoyal Gaming",
+    cover: "/covers/cyber-fortune-cover.png",
+    uploadedAt: "2026-03-26",
+    status: "published" as const,
+    plays: "64,200",
+    likes: "5,600",
   },
 ];
 
@@ -312,8 +307,8 @@ export default function CreatorDashboardPage() {
                 {[
                   {
                     label: "最高單日遊玩",
-                    value: "1,380",
-                    hint: "4/3 · VOID GACHA 帶動",
+                    value: "2,840",
+                    hint: "4/3 · CoreDefense 帶動",
                   },
                   {
                     label: "新玩家佔比",
@@ -403,7 +398,7 @@ export default function CreatorDashboardPage() {
                             </span>
                           </div>
                           <p className="mt-1 text-sm text-zinc-500">
-                            上傳日期 · {game.uploadedAt}
+                            {game.creator} · 上傳 {game.uploadedAt}
                           </p>
                         </div>
                       </div>
@@ -413,6 +408,9 @@ export default function CreatorDashboardPage() {
                           <p className="text-xs text-zinc-500">累計遊玩</p>
                           <p className="mt-1 font-semibold text-cyan-300">
                             {game.plays}
+                          </p>
+                          <p className="mt-0.5 text-xs text-rose-300/80">
+                            ♥ {game.likes}
                           </p>
                         </div>
                         {game.status === "published" && (

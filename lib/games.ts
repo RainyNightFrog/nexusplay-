@@ -3,10 +3,16 @@ export type Game = {
   title: string;
   tags: string[];
   players: string;
+  likes: string;
+  shares: string;
   image: string;
   creator: string;
   description: string;
   embedUrl: string;
+  featured?: boolean;
+  featuredBadge?: string;
+  featuredAccent?: "cyan" | "amber" | "violet";
+  ratingAvg?: number;
 };
 
 export const FILTER_CATEGORIES = [

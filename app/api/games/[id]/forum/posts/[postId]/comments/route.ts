@@ -22,8 +22,13 @@ export async function GET(
     const gameId = parseId(id);
     const numericPostId = parseId(postId);
 
-    if (!gameId || !numericPostId) {
+    if (!gameId || numericPostId === null) {
       return NextResponse.json({ error: "無效的 ID" }, { status: 400 });
+    }
+
+    if (numericPostId < 0) {
+      const comments = await getForumCommentsByPostId(numericPostId);
+      return NextResponse.json({ comments });
     }
 
     const belongs = await forumPostBelongsToGame(numericPostId, gameId);
@@ -73,11 +78,14 @@ export async function POST(
       return NextResponse.json({ error: "請輸入回覆內容" }, { status: 400 });
     }
 
-    const comment = await createForumComment({
-      postId: numericPostId,
-      userId: user.id,
-      content,
-    });
+    const comment = await createForumComment(
+      {
+        postId: numericPostId,
+        userId: user.id,
+        content,
+      },
+      authClient
+    );
 
     return NextResponse.json({ comment }, { status: 201 });
   } catch (error) {

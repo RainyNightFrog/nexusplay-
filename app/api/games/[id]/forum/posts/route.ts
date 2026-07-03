@@ -74,13 +74,16 @@ export async function POST(
       return NextResponse.json({ error: "請選擇有效的貼文分類" }, { status: 400 });
     }
 
-    const post = await createForumPost({
-      gameId,
-      userId: user.id,
-      title,
-      category,
-      content,
-    });
+    const post = await createForumPost(
+      {
+        gameId,
+        userId: user.id,
+        title,
+        category,
+        content,
+      },
+      authClient
+    );
 
     return NextResponse.json({ post }, { status: 201 });
   } catch (error) {

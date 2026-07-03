@@ -51,18 +51,20 @@ export async function PATCH(request: Request) {
       developing_games?: boolean;
     };
 
+    const currentProfile = await resolveUserProfile(supabase, user);
+
     const displayName = sanitizePlainText(
-      body.display_name ?? "",
+      body.display_name ?? currentProfile.display_name,
       PROFILE_LIMITS.displayName
     );
-    const websiteRaw = sanitizePlainText(
-      body.website ?? "",
-      PROFILE_LIMITS.website
-    );
-    const twitterRaw = sanitizePlainText(
-      body.twitter ?? "",
-      PROFILE_LIMITS.twitter
-    );
+    const websiteRaw =
+      body.website !== undefined
+        ? sanitizePlainText(body.website, PROFILE_LIMITS.website)
+        : (currentProfile.website ?? "");
+    const twitterRaw =
+      body.twitter !== undefined
+        ? sanitizePlainText(body.twitter, PROFILE_LIMITS.twitter)
+        : (currentProfile.twitter ?? "");
 
     if (!displayName) {
       return NextResponse.json({ error: "請輸入顯示名稱" }, { status: 400 });
@@ -75,8 +77,14 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "個人網站網址格式不正確" }, { status: 400 });
     }
 
-    const playingGames = body.playing_games !== false;
-    const developingGames = body.developing_games === true;
+    const playingGames =
+      body.playing_games !== undefined
+        ? body.playing_games !== false
+        : currentProfile.playing_games;
+    const developingGames =
+      body.developing_games !== undefined
+        ? body.developing_games === true
+        : currentProfile.developing_games;
     const role = resolveRoleFromPreferences(developingGames);
 
     const metadata = {

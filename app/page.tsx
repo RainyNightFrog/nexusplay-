@@ -6,8 +6,11 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Gamepad2,
+  MessagesSquare,
   Search,
   Upload,
+  Heart,
+  Share2,
   Users,
   Sparkles,
   Zap,
@@ -26,6 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CreatorDashboardLink, UserNav } from "@/components/auth/user-nav";
+import { FeaturedGames } from "@/components/home/featured-games";
 import {
   FILTER_CATEGORIES,
   SORT_OPTIONS,
@@ -93,9 +97,19 @@ function GameCard({ game, index }: { game: Game; index: number }) {
             ))}
           </div>
 
-          <div className="flex items-center justify-center gap-1.5 text-xs text-zinc-400">
-            <Users className="size-3.5 text-cyan-400/80" />
-            <span>{game.players} 遊玩</span>
+          <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-zinc-400">
+            <span className="flex items-center gap-1.5">
+              <Users className="size-3.5 text-cyan-400/80" />
+              {game.players} 遊玩
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Heart className="size-3.5 text-rose-400/80" />
+              {game.likes} 讚
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Share2 className="size-3.5 text-fuchsia-400/80" />
+              {game.shares} 分享
+            </span>
           </div>
         </div>
       </div>
@@ -316,6 +330,16 @@ export default function Home() {
           </div>
 
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
+            <Link
+              href="/community"
+              className={cn(
+                buttonVariants({ variant: "outline", size: "sm" }),
+                "hidden gap-1.5 border-violet-400/20 bg-violet-500/10 text-violet-200 hover:border-violet-400/30 hover:bg-violet-500/15 sm:inline-flex"
+              )}
+            >
+              <MessagesSquare className="size-3.5" />
+              社群討論
+            </Link>
             <CreatorDashboardLink />
             <UserNav />
           </div>
@@ -400,6 +424,8 @@ export default function Home() {
             </motion.div>
           </motion.div>
         </section>
+
+        <FeaturedGames games={games} loading={loading} />
 
         {/* Game Grid */}
         <section id="game-grid" className="pb-20">
@@ -491,7 +517,16 @@ export default function Home() {
       {/* Footer */}
       <footer className="relative border-t border-white/5 py-8">
         <div className="mx-auto max-w-7xl px-4 text-center text-xs text-zinc-600 sm:px-6 lg:px-8">
-          © 2026 NexusPlay · 網頁遊戲平台
+          <p>
+            <Link
+              href="/community/rules"
+              className="text-zinc-500 transition-colors hover:text-violet-400"
+            >
+              社群規則
+            </Link>
+            {" · "}
+            © 2026 NexusPlay · 網頁遊戲平台
+          </p>
         </div>
       </footer>
     </div>
