@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:rls": "node scripts/run-rls-policies.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -18,7 +19,6 @@
     "jszip": "^3.10.1",
     "lucide-react": "^1.23.0",
     "next": "16.2.10",
-    "pg": "^8.22.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "recharts": "^3.8.0",
@@ -33,6 +33,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
+    "pg": "^8.22.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

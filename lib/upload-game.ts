@@ -14,6 +14,7 @@ export type UploadGameResult = {
     category: string;
     cover_url: string;
     game_url: string;
+    creator_id: string;
     created_at: string;
   };
 };
@@ -35,6 +36,7 @@ export async function uploadGame(
 
   const response = await fetch("/api/games/upload", {
     method: "POST",
+    credentials: "same-origin",
     body: formData,
   });
 

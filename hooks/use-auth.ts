@@ -55,5 +55,17 @@ export function useAuth() {
     window.location.href = "/";
   }
 
-  return { profile, loading, signOut, isCreator: profile?.role === "creator" };
+  async function refreshProfile() {
+    try {
+      const response = await fetch("/api/auth/profile");
+      if (response.ok) {
+        const data = (await response.json()) as { profile?: UserProfile };
+        setProfile(data.profile ?? null);
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  return { profile, loading, signOut, refreshProfile, isCreator: profile?.role === "creator" };
 }

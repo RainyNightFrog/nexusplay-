@@ -237,22 +237,20 @@ export default function Home() {
 
         {/* Game Grid */}
         <section className="pb-20">
-          <div className="mb-8 flex items-end justify-between gap-4">
-            <div>
-              <div className="mb-2 flex items-center gap-2 text-sm font-medium text-cyan-400">
-                <TrendingUp className="size-4" />
-                本週熱門
-              </div>
-              <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
-                精選遊戲
-              </h2>
-              <p className="mt-1 text-sm text-zinc-500">
-                來自 Supabase 的社群作品
-              </p>
+          <div className="mb-8 text-center">
+            <div className="mb-2 inline-flex items-center justify-center gap-2 text-sm font-medium text-cyan-400">
+              <TrendingUp className="size-4" />
+              本週熱門
             </div>
+            <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+              精選遊戲
+            </h2>
+            <p className="mt-1 text-sm text-zinc-500">
+              來自 Supabase 的社群作品
+            </p>
             <Button
               variant="ghost"
-              className="hidden text-zinc-400 hover:text-cyan-300 sm:inline-flex"
+              className="mt-4 text-zinc-400 hover:text-cyan-300"
             >
               查看全部 →
             </Button>

@@ -27,6 +27,8 @@ import { uploadGame } from "@/lib/upload-game";
 import {
   formatMaxSize,
   MAX_COVER_BYTES,
+  MAX_DESCRIPTION_LENGTH,
+  MAX_TITLE_LENGTH,
   MAX_ZIP_BYTES,
 } from "@/lib/upload-limits";
 import { cn } from "@/lib/utils";
@@ -406,6 +408,7 @@ export default function UploadPage() {
                   id="title"
                   type="text"
                   value={form.title}
+                  maxLength={MAX_TITLE_LENGTH}
                   onChange={(event) =>
                     setForm((prev) => ({ ...prev, title: event.target.value }))
                   }
@@ -425,6 +428,7 @@ export default function UploadPage() {
                 <textarea
                   id="description"
                   value={form.description}
+                  maxLength={MAX_DESCRIPTION_LENGTH}
                   onChange={(event) =>
                     setForm((prev) => ({
                       ...prev,

@@ -11,24 +11,21 @@ create table if not exists public.games (
   category text not null,
   cover_url text not null,
   game_url text not null,
+  creator_id uuid references auth.users (id) on delete set null,
   created_at timestamptz not null default now()
 );
 
 -- 2. 啟用 Row Level Security
 alter table public.games enable row level security;
 
--- 3. games 資料表政策（公開讀取、允許匿名上傳 — 正式環境建議改為需登入）
+-- 3. games 資料表政策（詳見 supabase/rls-policies.sql 取得完整安全版）
+-- 以下為最小公開讀取；正式環境請執行 rls-policies.sql
 drop policy if exists "Public read games" on public.games;
 create policy "Public read games"
   on public.games
   for select
+  to anon, authenticated
   using (true);
-
-drop policy if exists "Allow anon insert games" on public.games;
-create policy "Allow anon insert games"
-  on public.games
-  for insert
-  with check (true);
 
 -- 4. 建立 Storage Buckets
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
@@ -52,28 +49,18 @@ on conflict (id) do update set
   file_size_limit = excluded.file_size_limit,
   allowed_mime_types = excluded.allowed_mime_types;
 
--- 5. Storage 政策 — game-covers（公開讀取 + 匿名上傳）
+-- 5. Storage 政策 — game-covers（公開讀取；上傳政策見 rls-policies.sql）
 drop policy if exists "Public read game covers" on storage.objects;
 create policy "Public read game covers"
   on storage.objects
   for select
+  to anon, authenticated
   using (bucket_id = 'game-covers');
 
-drop policy if exists "Allow anon upload game covers" on storage.objects;
-create policy "Allow anon upload game covers"
-  on storage.objects
-  for insert
-  with check (bucket_id = 'game-covers');
-
--- 6. Storage 政策 — game-files（公開讀取 + 匿名上傳）
+-- 6. Storage 政策 — game-files（公開讀取；上傳政策見 rls-policies.sql）
 drop policy if exists "Public read game files" on storage.objects;
 create policy "Public read game files"
   on storage.objects
   for select
+  to anon, authenticated
   using (bucket_id = 'game-files');
-
-drop policy if exists "Allow anon upload game files" on storage.objects;
-create policy "Allow anon upload game files"
-  on storage.objects
-  for insert
-  with check (bucket_id = 'game-files');

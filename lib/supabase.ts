@@ -26,5 +26,6 @@ export type GameRecord = {
   category: string;
   cover_url: string;
   game_url: string;
+  creator_id: string | null;
   created_at: string;
 };

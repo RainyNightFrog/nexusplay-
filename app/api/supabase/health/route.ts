@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase-server";
 
 export async function GET() {
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
   const hasPublishable = Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
   const hasSecret = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -12,7 +16,7 @@ export async function GET() {
   try {
     await fetch(`${url}/rest/v1/`, {
       method: "HEAD",
-      headers: { apikey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? "" },
+      headers: { apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "" },
     });
     dnsOk = true;
   } catch (error) {
@@ -46,7 +50,6 @@ export async function GET() {
     url,
     hasPublishable,
     hasSecret,
-    publishableKeyLength: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.length ?? 0,
     dnsOk,
     dnsError,
     dbOk,

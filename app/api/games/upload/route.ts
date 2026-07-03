@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { extractAndUploadGameBuild } from "@/lib/extract-game-zip";
 import { resolveUserRole } from "@/lib/auth-profile";
+import { sanitizePlainText } from "@/lib/sanitize";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
 import {
   formatMaxSize,
+  MAX_CATEGORY_LENGTH,
   MAX_COVER_BYTES,
+  MAX_DESCRIPTION_LENGTH,
+  MAX_TITLE_LENGTH,
   MAX_ZIP_BYTES,
 } from "@/lib/upload-limits";
 
@@ -65,9 +69,18 @@ export async function POST(request: Request) {
 
     const formData = await request.formData();
 
-    const title = String(formData.get("title") ?? "").trim();
-    const description = String(formData.get("description") ?? "").trim();
-    const category = String(formData.get("category") ?? "").trim();
+    const title = sanitizePlainText(
+      String(formData.get("title") ?? ""),
+      MAX_TITLE_LENGTH
+    );
+    const description = sanitizePlainText(
+      String(formData.get("description") ?? ""),
+      MAX_DESCRIPTION_LENGTH
+    );
+    const category = sanitizePlainText(
+      String(formData.get("category") ?? ""),
+      MAX_CATEGORY_LENGTH
+    );
     const coverFile = formData.get("cover");
     const gameZipFile = formData.get("gameZip");
 
@@ -135,6 +148,7 @@ export async function POST(request: Request) {
       const buildUpload = await extractAndUploadGameBuild(supabase, zipBuffer);
       buildPaths = buildUpload.uploadedPaths;
 
+      // creator_id 必須由伺服器從 session 寫入，不可由前端 FormData 傳入
       const { data, error } = await supabase
         .from("games")
         .insert({
@@ -143,6 +157,7 @@ export async function POST(request: Request) {
           category,
           cover_url: coverUpload.publicUrl,
           game_url: buildUpload.playUrl,
+          creator_id: user.id,
         })
         .select()
         .single();

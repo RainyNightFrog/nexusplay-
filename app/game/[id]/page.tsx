@@ -21,15 +21,10 @@ import {
 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { isDirectlyPlayable } from "@/lib/games-data";
+import { buildEmbedCode, IFRAME_SANDBOX } from "@/lib/iframe-sandbox";
+import { isSafeEmbedUrl } from "@/lib/sanitize";
 import { TAG_COLORS, type Game } from "@/lib/games";
 import { cn } from "@/lib/utils";
-
-const IFRAME_SANDBOX =
-  "allow-scripts allow-same-origin allow-popups allow-forms";
-
-function buildEmbedCode(embedUrl: string) {
-  return `<iframe src="${embedUrl}" width="800" height="600" frameborder="0" sandbox="${IFRAME_SANDBOX}" allowfullscreen></iframe>`;
-}
 
 export default function GamePage() {
   const params = useParams();
@@ -116,10 +111,12 @@ export default function GamePage() {
   }, [gameId]);
 
   const playable = game ? isDirectlyPlayable(game.embedUrl) : false;
+  const trustedEmbedUrl =
+    game && playable && isSafeEmbedUrl(game.embedUrl) ? game.embedUrl : null;
 
   const embedCode = useMemo(
-    () => (game && playable ? buildEmbedCode(game.embedUrl) : ""),
-    [game, playable]
+    () => (trustedEmbedUrl ? buildEmbedCode(trustedEmbedUrl) : ""),
+    [trustedEmbedUrl]
   );
 
   const showToast = (message: string) => {
@@ -231,13 +228,14 @@ export default function GamePage() {
               )}
             >
               <div className="relative aspect-video w-full bg-black">
-                {playable ? (
+                {trustedEmbedUrl ? (
                   <iframe
-                    src={game.embedUrl}
+                    src={trustedEmbedUrl}
                     title={game.title}
                     className="absolute inset-0 size-full"
                     sandbox={IFRAME_SANDBOX}
                     allowFullScreen
+                    referrerPolicy="no-referrer"
                   />
                 ) : (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-6 text-center">
@@ -279,7 +277,7 @@ export default function GamePage() {
                     variant="outline"
                     size="sm"
                     onClick={() => setShowEmbed(true)}
-                    disabled={!playable}
+                    disabled={!trustedEmbedUrl}
                     className="gap-1.5 border-white/10 bg-white/5 text-zinc-300 hover:border-violet-400/30 hover:text-white disabled:opacity-40"
                   >
                     <Code2 className="size-3.5" />
