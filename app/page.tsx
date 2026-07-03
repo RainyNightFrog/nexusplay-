@@ -1,25 +1,43 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Gamepad2,
-  Loader2,
   Search,
   Upload,
   Users,
   Sparkles,
   Zap,
   TrendingUp,
+  SlidersHorizontal,
+  ArrowUpDown,
 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { CreatorDashboardLink, UserNav } from "@/components/auth/user-nav";
-import { TAG_COLORS, type Game } from "@/lib/games";
+import {
+  FILTER_CATEGORIES,
+  SORT_OPTIONS,
+  TAG_COLORS,
+  type FilterCategory,
+  type Game,
+  type SortOption,
+} from "@/lib/games";
 import { cn } from "@/lib/utils";
 
 const MotionLink = motion.create(Link);
+const SKELETON_COUNT = 8;
 
 function GameCard({ game, index }: { game: Game; index: number }) {
   return (
@@ -85,25 +103,168 @@ function GameCard({ game, index }: { game: Game; index: number }) {
   );
 }
 
+function GameCardSkeleton() {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/60 shadow-lg shadow-black/20">
+      <Skeleton className="aspect-[16/10] w-full rounded-none bg-zinc-800/70" />
+      <div className="space-y-3 p-4">
+        <Skeleton className="mx-auto h-5 w-3/4 bg-zinc-800/70" />
+        <div className="flex justify-center gap-1.5">
+          <Skeleton className="h-5 w-12 rounded-md bg-zinc-800/70" />
+          <Skeleton className="h-5 w-10 rounded-md bg-zinc-800/70" />
+        </div>
+        <Skeleton className="mx-auto h-4 w-20 bg-zinc-800/70" />
+      </div>
+    </div>
+  );
+}
+
+function GameGridSkeleton() {
+  return (
+    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {Array.from({ length: SKELETON_COUNT }).map((_, index) => (
+        <motion.div
+          key={index}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3, delay: index * 0.04 }}
+        >
+          <GameCardSkeleton />
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
+function FilterSortBar({
+  category,
+  sort,
+  onCategoryChange,
+  onSortChange,
+}: {
+  category: FilterCategory;
+  sort: SortOption;
+  onCategoryChange: (category: FilterCategory) => void;
+  onSortChange: (sort: SortOption) => void;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: 0.1 }}
+      className={cn(
+        "mb-8 rounded-2xl border border-white/10 bg-zinc-900/50 p-4 shadow-xl shadow-black/20 backdrop-blur-md",
+        "sm:p-5"
+      )}
+    >
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-center gap-2 text-sm font-medium text-zinc-400">
+          <SlidersHorizontal className="size-4 text-cyan-400" />
+          <span>分類篩選</span>
+        </div>
+
+        <div className="flex items-center gap-2 text-sm font-medium text-zinc-400 lg:shrink-0">
+          <ArrowUpDown className="size-4 text-violet-400" />
+          <span className="hidden sm:inline">排序</span>
+          <Select
+            value={sort}
+            onValueChange={(value) => onSortChange(value as SortOption)}
+          >
+            <SelectTrigger
+              size="default"
+              className={cn(
+                "h-9 min-w-[148px] border-white/10 bg-white/5 text-zinc-200",
+                "hover:bg-white/8 focus-visible:border-cyan-400/40 focus-visible:ring-cyan-500/20"
+              )}
+            >
+              <SelectValue placeholder="選擇排序" />
+            </SelectTrigger>
+            <SelectContent className="border-white/10 bg-zinc-900 text-zinc-100 ring-white/10">
+              {SORT_OPTIONS.map((option) => (
+                <SelectItem
+                  key={option.value}
+                  value={option.value}
+                  className="focus:bg-cyan-500/10 focus:text-cyan-100"
+                >
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="mt-4 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {FILTER_CATEGORIES.map((tag) => {
+          const isActive = category === tag;
+          return (
+            <motion.button
+              key={tag}
+              type="button"
+              onClick={() => onCategoryChange(tag)}
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
+              className="relative shrink-0"
+            >
+              {isActive && (
+                <motion.span
+                  layoutId="active-category-pill"
+                  className="absolute inset-0 rounded-full bg-gradient-to-r from-cyan-500/25 via-violet-500/25 to-fuchsia-500/25 ring-1 ring-cyan-400/40"
+                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                />
+              )}
+              <Badge
+                variant={isActive ? "default" : "outline"}
+                className={cn(
+                  "relative h-8 cursor-pointer px-4 text-sm transition-all duration-200",
+                  isActive
+                    ? "border-transparent bg-gradient-to-r from-cyan-500 to-violet-600 text-white shadow-lg shadow-cyan-500/20 hover:from-cyan-400 hover:to-violet-500"
+                    : "border-white/10 bg-white/5 text-zinc-300 hover:border-white/20 hover:bg-white/10 hover:text-white"
+                )}
+              >
+                {tag}
+              </Badge>
+            </motion.button>
+          );
+        })}
+      </div>
+    </motion.div>
+  );
+}
+
 export default function Home() {
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
+  const [category, setCategory] = useState<FilterCategory>("全部");
+  const [sort, setSort] = useState<SortOption>("latest");
+
+  const loadGames = useCallback(async (nextCategory: FilterCategory, nextSort: SortOption) => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (nextCategory !== "全部") {
+        params.set("category", nextCategory);
+      }
+      if (nextSort !== "latest") {
+        params.set("sort", nextSort);
+      }
+      const query = params.toString();
+      const response = await fetch(`/api/games${query ? `?${query}` : ""}`);
+      const data = (await response.json()) as { games?: Game[] };
+      setGames(data.games ?? []);
+    } catch {
+      setGames([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    async function loadGames() {
-      try {
-        const response = await fetch("/api/games");
-        const data = (await response.json()) as { games?: Game[] };
-        setGames(data.games ?? []);
-      } catch {
-        setGames([]);
-      } finally {
-        setLoading(false);
-      }
-    }
+    loadGames(category, sort);
+  }, [category, sort, loadGames]);
 
-    loadGames();
-  }, []);
+  const activeSortLabel =
+    SORT_OPTIONS.find((option) => option.value === sort)?.label ?? "最新上傳";
 
   return (
     <div className="dark min-h-full bg-zinc-950 text-zinc-100">
@@ -228,6 +389,11 @@ export default function Home() {
                 variant="outline"
                 size="lg"
                 className="h-12 rounded-xl border-white/10 bg-white/5 px-8 text-base text-zinc-300 backdrop-blur-sm hover:border-white/20 hover:bg-white/10 hover:text-white"
+                onClick={() =>
+                  document
+                    .getElementById("game-grid")
+                    ?.scrollIntoView({ behavior: "smooth" })
+                }
               >
                 瀏覽熱門遊戲
               </Button>
@@ -236,51 +402,89 @@ export default function Home() {
         </section>
 
         {/* Game Grid */}
-        <section className="pb-20">
-          <div className="mb-8 text-center">
+        <section id="game-grid" className="pb-20">
+          <div className="mb-6 text-center">
             <div className="mb-2 inline-flex items-center justify-center gap-2 text-sm font-medium text-cyan-400">
               <TrendingUp className="size-4" />
-              本週熱門
+              探索遊戲
             </div>
             <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
               精選遊戲
             </h2>
             <p className="mt-1 text-sm text-zinc-500">
-              來自 Supabase 的社群作品
+              {category === "全部"
+                ? `依「${activeSortLabel}」排序 · 來自 Supabase 的社群作品`
+                : `「${category}」分類 · ${activeSortLabel}`}
             </p>
-            <Button
-              variant="ghost"
-              className="mt-4 text-zinc-400 hover:text-cyan-300"
-            >
-              查看全部 →
-            </Button>
           </div>
 
-          {loading ? (
-            <div className="flex min-h-48 items-center justify-center">
-              <Loader2 className="size-8 animate-spin text-cyan-400" />
-            </div>
-          ) : games.length > 0 ? (
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {games.map((game, index) => (
-                <GameCard key={game.id} game={game} index={index} />
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-dashed border-white/10 bg-zinc-900/40 py-16 text-center">
-              <Gamepad2 className="mx-auto mb-4 size-10 text-zinc-600" />
-              <p className="text-lg font-medium text-white">尚無遊戲</p>
-              <p className="mt-2 text-sm text-zinc-500">
-                成為第一位上傳作品的創作者吧！
-              </p>
-              <Link
-                href="/dashboard/upload"
-                className={cn(buttonVariants(), "mt-6 inline-flex")}
+          <FilterSortBar
+            category={category}
+            sort={sort}
+            onCategoryChange={setCategory}
+            onSortChange={setSort}
+          />
+
+          <AnimatePresence mode="wait">
+            {loading ? (
+              <motion.div
+                key="skeleton"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
               >
-                上傳新遊戲
-              </Link>
-            </div>
-          )}
+                <GameGridSkeleton />
+              </motion.div>
+            ) : games.length > 0 ? (
+              <motion.div
+                key={`${category}-${sort}-grid`}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.25 }}
+                className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+              >
+                {games.map((game, index) => (
+                  <GameCard key={game.id} game={game} index={index} />
+                ))}
+              </motion.div>
+            ) : (
+              <motion.div
+                key="empty"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.25 }}
+                className="rounded-2xl border border-dashed border-white/10 bg-zinc-900/40 py-16 text-center"
+              >
+                <Gamepad2 className="mx-auto mb-4 size-10 text-zinc-600" />
+                <p className="text-lg font-medium text-white">
+                  {category === "全部" ? "尚無遊戲" : `「${category}」分類尚無遊戲`}
+                </p>
+                <p className="mt-2 text-sm text-zinc-500">
+                  {category === "全部"
+                    ? "成為第一位上傳作品的創作者吧！"
+                    : "試試其他分類，或上傳此類型的作品。"}
+                </p>
+                {category !== "全部" && (
+                  <Button
+                    variant="ghost"
+                    className="mt-4 text-zinc-400 hover:text-cyan-300"
+                    onClick={() => setCategory("全部")}
+                  >
+                    查看全部分類
+                  </Button>
+                )}
+                <Link
+                  href="/dashboard/upload"
+                  className={cn(buttonVariants(), "mt-6 inline-flex")}
+                >
+                  上傳新遊戲
+                </Link>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </section>
       </main>
 

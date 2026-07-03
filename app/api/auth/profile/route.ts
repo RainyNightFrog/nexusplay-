@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
 import { resolveUserProfile } from "@/lib/auth-profile";
+import {
+  isValidWebsite,
+  normalizeTwitterHandle,
+  normalizeWebsite,
+  PROFILE_LIMITS,
+  resolveRoleFromPreferences,
+} from "@/lib/profile-settings";
 import { sanitizePlainText } from "@/lib/sanitize";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
-
-const MAX_DISPLAY_NAME_LENGTH = 40;
 
 export async function GET() {
   try {
@@ -38,18 +43,53 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "請先登入" }, { status: 401 });
     }
 
-    const body = (await request.json()) as { display_name?: string };
+    const body = (await request.json()) as {
+      display_name?: string;
+      website?: string;
+      twitter?: string;
+      playing_games?: boolean;
+      developing_games?: boolean;
+    };
+
     const displayName = sanitizePlainText(
       body.display_name ?? "",
-      MAX_DISPLAY_NAME_LENGTH
+      PROFILE_LIMITS.displayName
+    );
+    const websiteRaw = sanitizePlainText(
+      body.website ?? "",
+      PROFILE_LIMITS.website
+    );
+    const twitterRaw = sanitizePlainText(
+      body.twitter ?? "",
+      PROFILE_LIMITS.twitter
     );
 
     if (!displayName) {
       return NextResponse.json({ error: "請輸入顯示名稱" }, { status: 400 });
     }
 
+    const website = websiteRaw ? normalizeWebsite(websiteRaw) : "";
+    const twitter = twitterRaw ? normalizeTwitterHandle(twitterRaw) : "";
+
+    if (website && !isValidWebsite(website)) {
+      return NextResponse.json({ error: "個人網站網址格式不正確" }, { status: 400 });
+    }
+
+    const playingGames = body.playing_games !== false;
+    const developingGames = body.developing_games === true;
+    const role = resolveRoleFromPreferences(developingGames);
+
+    const metadata = {
+      display_name: displayName,
+      website: website || null,
+      twitter: twitter || null,
+      playing_games: playingGames,
+      developing_games: developingGames,
+      role,
+    };
+
     const { error: authError } = await supabase.auth.updateUser({
-      data: { display_name: displayName },
+      data: metadata,
     });
 
     if (authError) {
@@ -58,7 +98,10 @@ export async function PATCH(request: Request) {
 
     const { error: profileError } = await supabase
       .from("profiles")
-      .update({ display_name: displayName })
+      .update({
+        display_name: displayName,
+        role,
+      })
       .eq("id", user.id);
 
     if (

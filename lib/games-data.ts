@@ -1,12 +1,12 @@
 import type { GameRecord } from "@/lib/supabase";
-import type { Game } from "@/lib/games";
+import { formatPlayCount, type Game } from "@/lib/games";
 
 export function mapRecordToGame(record: GameRecord): Game {
   return {
     id: record.id,
     title: record.title,
     tags: [record.category],
-    players: "新上架",
+    players: formatPlayCount(record.plays_count ?? 0),
     image: record.cover_url,
     creator: "NexusPlay 創作者",
     description: record.description,

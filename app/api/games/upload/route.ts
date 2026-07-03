@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { extractAndUploadGameBuild } from "@/lib/extract-game-zip";
 import { resolveUserRole } from "@/lib/auth-profile";
+import { UPLOAD_CATEGORIES } from "@/lib/games";
 import { sanitizePlainText } from "@/lib/sanitize";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
@@ -92,6 +93,9 @@ export async function POST(request: Request) {
     }
     if (!category) {
       return NextResponse.json({ error: "請選擇遊戲分類" }, { status: 400 });
+    }
+    if (!(UPLOAD_CATEGORIES as readonly string[]).includes(category)) {
+      return NextResponse.json({ error: "無效的遊戲分類" }, { status: 400 });
     }
     if (!(coverFile instanceof File)) {
       return NextResponse.json({ error: "請上傳遊戲封面圖" }, { status: 400 });

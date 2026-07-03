@@ -9,6 +9,32 @@ export type Game = {
   embedUrl: string;
 };
 
+export const FILTER_CATEGORIES = [
+  "全部",
+  "動作",
+  "冒險",
+  "益智",
+  "3D",
+  "策略",
+] as const;
+
+/** 上傳表單可選分類（不含「全部」） */
+export const UPLOAD_CATEGORIES = FILTER_CATEGORIES.filter(
+  (c): c is Exclude<FilterCategory, "全部"> => c !== "全部"
+);
+
+export type UploadCategory = (typeof UPLOAD_CATEGORIES)[number];
+
+export type FilterCategory = (typeof FILTER_CATEGORIES)[number];
+
+export type SortOption = "latest" | "views" | "rating";
+
+export const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: "latest", label: "最新上傳" },
+  { value: "views", label: "最多人玩" },
+  { value: "rating", label: "好評最高" },
+];
+
 export const TAG_COLORS: Record<string, string> = {
   "3D": "bg-violet-500/20 text-violet-300 ring-violet-500/30",
   "2D": "bg-sky-500/20 text-sky-300 ring-sky-500/30",
@@ -20,7 +46,15 @@ export const TAG_COLORS: Record<string, string> = {
   休閒: "bg-teal-500/20 text-teal-300 ring-teal-500/30",
   射擊: "bg-red-500/20 text-red-300 ring-red-500/30",
   冒險: "bg-indigo-500/20 text-indigo-300 ring-indigo-500/30",
+  策略: "bg-blue-500/20 text-blue-300 ring-blue-500/30",
 };
+
+export function formatPlayCount(count: number): string {
+  if (count <= 0) return "新上架";
+  if (count >= 10_000) return `${(count / 10_000).toFixed(1)} 萬`;
+  if (count >= 1_000) return `${(count / 1_000).toFixed(1)}k`;
+  return `${count}`;
+}
 
 export function isSupabaseImage(url: string) {
   return url.includes(".supabase.co/storage/");

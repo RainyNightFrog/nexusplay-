@@ -12,7 +12,9 @@ create table if not exists public.games (
   cover_url text not null,
   game_url text not null,
   creator_id uuid references auth.users (id) on delete set null,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  plays_count bigint not null default 0,
+  rating_avg numeric(3, 2) not null default 0
 );
 
 -- 2. 啟用 Row Level Security

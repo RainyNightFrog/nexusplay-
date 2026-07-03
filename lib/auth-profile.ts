@@ -1,13 +1,27 @@
 import type { User } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { UserProfile, UserRole } from "@/lib/auth";
+import { resolveRoleFromPreferences } from "@/lib/profile-settings";
 
 function normalizeRole(value: unknown): UserRole {
   return value === "creator" ? "creator" : "player";
 }
 
+function readBoolean(value: unknown, fallback: boolean) {
+  return typeof value === "boolean" ? value : fallback;
+}
+
+function readOptionalString(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
 export function profileFromUserMetadata(user: User): UserProfile {
   const metadata = user.user_metadata ?? {};
+  const role = normalizeRole(metadata.role);
+  const developingGames = readBoolean(
+    metadata.developing_games,
+    role === "creator"
+  );
 
   return {
     id: user.id,
@@ -17,8 +31,12 @@ export function profileFromUserMetadata(user: User): UserProfile {
       "玩家",
     avatar_url:
       typeof metadata.avatar_url === "string" ? metadata.avatar_url : null,
-    role: normalizeRole(metadata.role),
+    role: resolveRoleFromPreferences(developingGames),
     created_at: user.created_at,
+    website: readOptionalString(metadata.website),
+    twitter: readOptionalString(metadata.twitter),
+    playing_games: readBoolean(metadata.playing_games, true),
+    developing_games: developingGames,
   };
 }
 
@@ -35,6 +53,8 @@ export async function resolveUserProfile(
   supabase: SupabaseClient,
   user: User
 ): Promise<UserProfile> {
+  const metadataProfile = profileFromUserMetadata(user);
+
   const { data: profile, error } = await supabase
     .from("profiles")
     .select("id, display_name, avatar_url, role, created_at")
@@ -42,9 +62,16 @@ export async function resolveUserProfile(
     .maybeSingle();
 
   if (!error && profile) {
+    const developingGames =
+      metadataProfile.developing_games || normalizeRole(profile.role) === "creator";
+
     return {
-      ...profile,
-      role: normalizeRole(profile.role),
+      ...metadataProfile,
+      display_name: profile.display_name || metadataProfile.display_name,
+      avatar_url: profile.avatar_url ?? metadataProfile.avatar_url,
+      role: resolveRoleFromPreferences(developingGames),
+      created_at: profile.created_at ?? metadataProfile.created_at,
+      developing_games: developingGames,
     };
   }
 
@@ -52,7 +79,7 @@ export async function resolveUserProfile(
     throw new Error(error.message);
   }
 
-  return profileFromUserMetadata(user);
+  return metadataProfile;
 }
 
 export async function resolveUserRole(

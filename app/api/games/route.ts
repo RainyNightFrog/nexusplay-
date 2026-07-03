@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
-import { getGames } from "@/lib/games-service";
+import { getGames, parseSortOption } from "@/lib/games-service";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const games = await getGames();
-    return NextResponse.json({ games });
+    const { searchParams } = new URL(request.url);
+    const category = searchParams.get("category") ?? undefined;
+    const sort = parseSortOption(searchParams.get("sort"));
+
+    const games = await getGames({ category, sort });
+    return NextResponse.json({ games, category: category ?? "全部", sort });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "讀取遊戲列表失敗";

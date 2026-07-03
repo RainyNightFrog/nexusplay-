@@ -20,6 +20,8 @@ import {
   X,
 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CommunityForum } from "@/components/game/community-forum";
 import { isDirectlyPlayable } from "@/lib/games-data";
 import { buildEmbedCode, IFRAME_SANDBOX } from "@/lib/iframe-sandbox";
 import { isSafeEmbedUrl } from "@/lib/sanitize";
@@ -109,6 +111,11 @@ export default function GamePage() {
       cancelled = true;
     };
   }, [gameId]);
+
+  useEffect(() => {
+    if (!game?.id) return;
+    fetch(`/api/games/${game.id}/play`, { method: "POST" }).catch(() => undefined);
+  }, [game?.id]);
 
   const playable = game ? isDirectlyPlayable(game.embedUrl) : false;
   const trustedEmbedUrl =
@@ -403,6 +410,100 @@ export default function GamePage() {
             </div>
           </motion.aside>
         </div>
+
+        {/* Details & Community Tabs */}
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, delay: 0.15 }}
+          className="mt-8 pb-10"
+        >
+          <Tabs defaultValue="details" className="gap-6">
+            <TabsList
+              variant="line"
+              className="h-auto w-full justify-start gap-1 rounded-none border-b border-white/10 bg-transparent p-0"
+            >
+              <TabsTrigger
+                value="details"
+                className="rounded-none border-b-2 border-transparent px-4 py-3 text-sm font-medium text-zinc-400 data-active:border-cyan-400 data-active:bg-transparent data-active:text-cyan-300"
+              >
+                🎮 遊戲詳情
+              </TabsTrigger>
+              <TabsTrigger
+                value="forum"
+                className="rounded-none border-b-2 border-transparent px-4 py-3 text-sm font-medium text-zinc-400 data-active:border-violet-400 data-active:bg-transparent data-active:text-violet-300"
+              >
+                👥 社群討論區
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="details" className="mt-0 outline-none">
+              <div
+                className={cn(
+                  "rounded-2xl border border-white/10 bg-zinc-900/60 p-6",
+                  "shadow-lg shadow-black/40 backdrop-blur-sm"
+                )}
+              >
+                <h3 className="text-lg font-semibold text-white">關於這款遊戲</h3>
+                <p className="mt-4 text-sm leading-relaxed text-zinc-400">
+                  {game.description}
+                </p>
+
+                <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                  <div className="rounded-xl border border-white/8 bg-zinc-950/40 p-4">
+                    <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+                      創作者
+                    </p>
+                    <p className="mt-1 flex items-center gap-2 text-sm text-zinc-200">
+                      <User className="size-4 text-violet-400" />
+                      {game.creator}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-white/8 bg-zinc-950/40 p-4">
+                    <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+                      遊玩次數
+                    </p>
+                    <p className="mt-1 flex items-center gap-2 text-sm text-zinc-200">
+                      <Users className="size-4 text-cyan-400" />
+                      {game.players} 次
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-6">
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">
+                    分類標籤
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {game.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className={cn(
+                          "rounded-md px-2.5 py-1 text-xs font-medium ring-1 ring-inset",
+                          TAG_COLORS[tag] ??
+                            "bg-zinc-700/50 text-zinc-300 ring-zinc-600/40"
+                        )}
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="forum" className="mt-0 outline-none">
+              <div
+                className={cn(
+                  "rounded-2xl border border-white/10 bg-zinc-900/40 p-5 sm:p-6",
+                  "shadow-lg shadow-black/40 backdrop-blur-sm"
+                )}
+              >
+                <CommunityForum gameId={game.id} onToast={showToast} />
+              </div>
+            </TabsContent>
+          </Tabs>
+        </motion.section>
       </main>
 
       {/* Embed modal */}

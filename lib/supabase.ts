@@ -28,4 +28,6 @@ export type GameRecord = {
   game_url: string;
   creator_id: string | null;
   created_at: string;
+  plays_count: number;
+  rating_avg: number;
 };

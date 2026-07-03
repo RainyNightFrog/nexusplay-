@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { uploadGame } from "@/lib/upload-game";
+import { UPLOAD_CATEGORIES, type UploadCategory } from "@/lib/games";
 import {
   formatMaxSize,
   MAX_COVER_BYTES,
@@ -33,14 +34,10 @@ import {
 } from "@/lib/upload-limits";
 import { cn } from "@/lib/utils";
 
-const CATEGORIES = ["動作", "冒險", "益智", "3D"] as const;
-
-type Category = (typeof CATEGORIES)[number];
-
 type FormState = {
   title: string;
   description: string;
-  category: Category | "";
+  category: UploadCategory | "";
 };
 
 const inputClassName = cn(
@@ -455,7 +452,7 @@ export default function UploadPage() {
                   onChange={(event) =>
                     setForm((prev) => ({
                       ...prev,
-                      category: event.target.value as Category | "",
+                      category: event.target.value as UploadCategory | "",
                     }))
                   }
                   className={cn(
@@ -468,7 +465,7 @@ export default function UploadPage() {
                   <option value="" disabled>
                     選擇分類...
                   </option>
-                  {CATEGORIES.map((category) => (
+                  {UPLOAD_CATEGORIES.map((category) => (
                     <option key={category} value={category} className="bg-zinc-900">
                       {category}
                     </option>

@@ -61,9 +61,25 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  if (request.nextUrl.pathname.startsWith("/settings")) {
+    if (!user) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/auth";
+      redirectUrl.searchParams.set("redirect", "/settings");
+      return NextResponse.redirect(redirectUrl);
+    }
+  }
+
   return supabaseResponse;
 }
 
 export const config = {
-  matcher: ["/dashboard", "/dashboard/:path*", "/account", "/account/:path*"],
+  matcher: [
+    "/dashboard",
+    "/dashboard/:path*",
+    "/account",
+    "/account/:path*",
+    "/settings",
+    "/settings/:path*",
+  ],
 };

@@ -6,6 +6,10 @@ export type UserProfile = {
   avatar_url: string | null;
   role: UserRole;
   created_at: string;
+  website: string | null;
+  twitter: string | null;
+  playing_games: boolean;
+  developing_games: boolean;
 };
 
 export function getInitials(name: string) {
