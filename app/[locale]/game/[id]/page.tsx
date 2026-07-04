@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
@@ -53,12 +53,14 @@ export default function GamePage() {
 
 function GamePageContent() {
   const t = useTranslations("game");
+  const td = useTranslations("dashboard");
   const tc = useTranslations("common");
   const tn = useTranslations("nav");
   const { localizedDescription, localizedTag } = useGameI18n();
   const { formatCount } = useFormatCount();
   const { translateApiError } = useApiError();
   const params = useParams();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const gameId = params.id as string;
 
@@ -67,6 +69,7 @@ function GamePageContent() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [migrating, setMigrating] = useState(false);
   const [forumPostCount, setForumPostCount] = useState(0);
+  const [isDraftPreview, setIsDraftPreview] = useState(false);
 
   const [liked, setLiked] = useState(false);
   const [favorited, setFavorited] = useState(false);
@@ -86,10 +89,13 @@ function GamePageContent() {
       setLoadError(null);
 
       try {
-        const response = await fetch(`/api/games/${gameId}`);
+        const response = await fetch(`/api/games/${gameId}`, {
+          credentials: "same-origin",
+        });
         const data = (await response.json()) as {
           game?: Game;
           error?: string;
+          isDraftPreview?: boolean;
         };
 
         if (!response.ok || !data.game) {
@@ -126,6 +132,7 @@ function GamePageContent() {
 
         if (!cancelled) {
           setGame(loadedGame);
+          setIsDraftPreview(Boolean(data.isDraftPreview));
         }
       } catch {
         if (!cancelled) {
@@ -145,7 +152,27 @@ function GamePageContent() {
     return () => {
       cancelled = true;
     };
-  }, [gameId, tc]);
+  }, [gameId, tc, translateApiError]);
+
+  useEffect(() => {
+    if (!game?.title) return;
+
+    const draftSaved = searchParams.get("draftSaved") === "1";
+    const published = searchParams.get("published") === "1";
+
+    if (!draftSaved && !published) return;
+
+    showToast(
+      draftSaved
+        ? td("draftSavedSuccessDesc", { title: game.title })
+        : td("publicLiveSuccessDesc", { title: game.title, id: game.id })
+    );
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete("draftSaved");
+    url.searchParams.delete("published");
+    window.history.replaceState({}, "", url.toString());
+  }, [game?.title, game?.id, searchParams, showToast, td]);
 
   useEffect(() => {
     if (!game?.id) return;
@@ -261,6 +288,12 @@ function GamePageContent() {
           </div>
         </div>
       </header>
+
+      {isDraftPreview && (
+        <div className="border-b border-amber-400/20 bg-amber-500/10 px-4 py-2.5 text-center text-sm text-amber-200">
+          {t("draftPreviewBanner")}
+        </div>
+      )}
 
       <main className="relative mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
         <div className="grid gap-6 lg:grid-cols-[1fr_360px] lg:gap-8 xl:grid-cols-[1fr_400px]">

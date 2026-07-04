@@ -20,12 +20,15 @@ drop policy if exists "Creators insert own games" on public.games;
 drop policy if exists "Creators update own games" on public.games;
 drop policy if exists "Creators delete own games" on public.games;
 
--- 4. games 表政策：公開讀取
+-- 4. games 表政策：公開讀取 Public；創作者可讀自己的 Draft
 create policy "Public read games"
   on public.games
   for select
   to anon, authenticated
-  using (true);
+  using (
+    publish_status = 'public'
+    or (auth.uid() is not null and auth.uid() = creator_id)
+  );
 
 -- 5. 僅已登入的創作者可新增（creator_id 必須為本人）
 create policy "Creators insert own games"

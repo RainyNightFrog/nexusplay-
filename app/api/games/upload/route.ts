@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { extractAndUploadGameBuild } from "@/lib/extract-game-zip";
 import { resolveUserRole } from "@/lib/auth-profile";
+import { parseMonetizationFromFormData } from "@/lib/game-publish";
 import { UPLOAD_CATEGORIES } from "@/lib/games";
 import { sanitizePlainText } from "@/lib/sanitize";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
@@ -134,6 +135,11 @@ export async function POST(request: Request) {
       );
     }
 
+    const monetization = parseMonetizationFromFormData(formData);
+    if (!monetization.ok) {
+      return NextResponse.json({ error: monetization.error }, { status: 400 });
+    }
+
     const supabase = createServerSupabase();
     let coverPath: string | null = null;
     let buildPaths: string[] = [];
@@ -162,6 +168,9 @@ export async function POST(request: Request) {
           cover_url: coverUpload.publicUrl,
           game_url: buildUpload.playUrl,
           creator_id: user.id,
+          publish_status: monetization.data.publish_status,
+          tips_enabled: monetization.data.tips_enabled,
+          suggested_tip_amount: monetization.data.suggested_tip_amount,
         })
         .select()
         .single();

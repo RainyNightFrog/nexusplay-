@@ -20,7 +20,7 @@ export async function getGames(options: GetGamesOptions = {}): Promise<Game[]> {
   const { category, sort = "latest" } = options;
   const supabase = createServerSupabase();
 
-  let query = supabase.from("games").select("*");
+  let query = supabase.from("games").select("*").eq("publish_status", "public");
 
   if (category && category !== "全部") {
     query = query.eq("category", category);

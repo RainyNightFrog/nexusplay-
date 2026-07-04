@@ -10,7 +10,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import type { DashboardTrendPoint } from "@/lib/dashboard-analytics";
+import type { RevenueTrendPoint } from "@/lib/dashboard-revenue";
+import { formatRevenueMoney } from "@/lib/dashboard-revenue";
 
 type ChartTooltipProps = {
   active?: boolean;
@@ -18,15 +19,16 @@ type ChartTooltipProps = {
     color?: string;
     name?: string;
     value?: number;
+    dataKey?: string;
   }>;
   label?: string;
 };
 
-function TrendTooltip({ active, payload, label }: ChartTooltipProps) {
+function RevenueTooltip({ active, payload, label }: ChartTooltipProps) {
   if (!active || !payload?.length) return null;
 
   return (
-    <div className="rounded-xl border border-white/10 bg-zinc-900/95 px-4 py-3 shadow-2xl shadow-black/40 backdrop-blur-xl">
+    <div className="rounded-xl border border-emerald-400/20 bg-zinc-900/95 px-4 py-3 shadow-2xl shadow-emerald-500/10 backdrop-blur-xl">
       <p className="mb-2 text-xs font-medium text-zinc-400">{label}</p>
       <div className="space-y-1.5">
         {payload.map((entry) => (
@@ -42,7 +44,9 @@ function TrendTooltip({ active, payload, label }: ChartTooltipProps) {
               {entry.name}
             </span>
             <span className="font-semibold text-white">
-              {entry.value?.toLocaleString()}
+              {entry.dataKey === "amount"
+                ? formatRevenueMoney(entry.value ?? 0)
+                : (entry.value ?? 0).toLocaleString()}
             </span>
           </div>
         ))}
@@ -51,28 +55,28 @@ function TrendTooltip({ active, payload, label }: ChartTooltipProps) {
   );
 }
 
-type TrendChartProps = {
-  data: DashboardTrendPoint[];
+type RevenueChartProps = {
+  data: RevenueTrendPoint[];
 };
 
-export function TrendChart({ data }: TrendChartProps) {
+export function RevenueChart({ data }: RevenueChartProps) {
   const t = useTranslations("dashboard");
 
   return (
-    <div className="h-[320px] w-full min-h-[320px]">
+    <div className="h-[280px] w-full min-h-[280px]">
       <ResponsiveContainer width="100%" height="100%" minWidth={0}>
         <AreaChart
           data={data}
-          margin={{ top: 12, right: 8, left: -12, bottom: 0 }}
+          margin={{ top: 12, right: 8, left: -8, bottom: 0 }}
         >
           <defs>
-            <linearGradient id="visitorsGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#22d3ee" stopOpacity={0.45} />
-              <stop offset="100%" stopColor="#22d3ee" stopOpacity={0.02} />
+            <linearGradient id="revenueAmountGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#34d399" stopOpacity={0.45} />
+              <stop offset="100%" stopColor="#34d399" stopOpacity={0.02} />
             </linearGradient>
-            <linearGradient id="playsGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#a78bfa" stopOpacity={0.42} />
-              <stop offset="100%" stopColor="#a78bfa" stopOpacity={0.02} />
+            <linearGradient id="revenueTipsGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#f472b6" stopOpacity={0.4} />
+              <stop offset="100%" stopColor="#f472b6" stopOpacity={0.02} />
             </linearGradient>
           </defs>
           <CartesianGrid
@@ -88,31 +92,41 @@ export function TrendChart({ data }: TrendChartProps) {
             dy={8}
           />
           <YAxis
+            yAxisId="amount"
             axisLine={false}
             tickLine={false}
-            tick={{ fill: "#71717a", fontSize: 12 }}
-            width={42}
+            tick={{ fill: "#71717a", fontSize: 11 }}
+            width={48}
+            tickFormatter={(value: number) => `$${value}`}
           />
-          <Tooltip content={<TrendTooltip />} />
+          <YAxis
+            yAxisId="tips"
+            orientation="right"
+            axisLine={false}
+            tickLine={false}
+            tick={{ fill: "#71717a", fontSize: 11 }}
+            width={32}
+          />
+          <Tooltip content={<RevenueTooltip />} />
           <Area
+            yAxisId="amount"
             type="monotone"
-            dataKey="visitors"
-            name={t("chartViews")}
-            stroke="#22d3ee"
+            dataKey="amount"
+            name={t("revenueChartAmount")}
+            stroke="#34d399"
             strokeWidth={2.5}
-            fill="url(#visitorsGradient)"
+            fill="url(#revenueAmountGradient)"
             animationDuration={1400}
-            animationEasing="ease-out"
           />
           <Area
+            yAxisId="tips"
             type="monotone"
-            dataKey="plays"
-            name={t("chartPlays")}
-            stroke="#a78bfa"
-            strokeWidth={2.5}
-            fill="url(#playsGradient)"
+            dataKey="tips"
+            name={t("revenueChartTips")}
+            stroke="#f472b6"
+            strokeWidth={2}
+            fill="url(#revenueTipsGradient)"
             animationDuration={1600}
-            animationEasing="ease-out"
           />
         </AreaChart>
       </ResponsiveContainer>

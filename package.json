@@ -9,6 +9,7 @@
     "lint": "eslint",
     "db:rls": "node scripts/run-rls-policies.mjs",
     "db:stats": "node scripts/run-add-game-stats.mjs",
+    "db:publish": "node scripts/run-add-publish-monetization.mjs",
     "db:forum": "node scripts/run-forum.mjs",
     "db:avatars": "node scripts/run-avatars.mjs",
     "db:seed": "node scripts/seed-platform.mjs",

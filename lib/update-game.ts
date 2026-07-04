@@ -1,3 +1,5 @@
+import type { GamePublishStatus } from "@/lib/game-publish";
+
 export type UpdateGameInput = {
   title: string;
   description: string;
@@ -5,6 +7,9 @@ export type UpdateGameInput = {
   coverFile?: File | null;
   gameZipFile?: File | null;
   publishVersion?: boolean;
+  publishStatus: GamePublishStatus;
+  tipsEnabled: boolean;
+  suggestedTipAmount: string;
 };
 
 export type UpdateGameResult = {
@@ -17,12 +22,29 @@ export type UpdateGameResult = {
     game_url: string;
     creator_id: string | null;
     created_at: string;
+    publish_status: GamePublishStatus;
+    tips_enabled: boolean;
+    suggested_tip_amount: number | null;
   };
 };
 
 export type ManageGameRecord = UpdateGameResult["game"] & {
   isOrphan?: boolean;
 };
+
+function appendMonetizationFields(
+  formData: FormData,
+  input: Pick<
+    UpdateGameInput,
+    "publishStatus" | "tipsEnabled" | "suggestedTipAmount"
+  >
+) {
+  formData.append("publishStatus", input.publishStatus);
+  formData.append("tipsEnabled", String(input.tipsEnabled));
+  if (input.tipsEnabled && input.suggestedTipAmount.trim()) {
+    formData.append("suggestedTipAmount", input.suggestedTipAmount.trim());
+  }
+}
 
 export async function fetchManageGame(
   gameId: number
@@ -60,6 +82,7 @@ export async function updateGame(
   formData.append("description", input.description);
   formData.append("category", input.category);
   formData.append("publishVersion", String(input.publishVersion ?? false));
+  appendMonetizationFields(formData, input);
 
   if (input.coverFile) {
     formData.append("cover", input.coverFile);
@@ -78,14 +101,16 @@ export async function updateGame(
     body: formData,
   });
 
-  onProgress?.("正在寫入資料庫...");
-
   const payload = (await response.json()) as UpdateGameResult & {
     error?: string;
   };
 
   if (!response.ok) {
     throw new Error(payload.error ?? "更新失敗，請稍後再試");
+  }
+
+  if (!payload.game) {
+    throw new Error("更新失敗，請稍後再試");
   }
 
   return { game: payload.game };

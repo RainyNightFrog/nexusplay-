@@ -7,7 +7,7 @@ import {
   type ChangeEvent,
   type DragEvent,
 } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -22,9 +22,14 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import { Link } from "@/i18n/navigation";
+import { Link, getPathname } from "@/i18n/navigation";
 import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  PublishMonetizationFields,
+  type PublishMonetizationValues,
+} from "@/components/dashboard/publish-monetization-fields";
 import { uploadGame } from "@/lib/upload-game";
+import { DEFAULT_PUBLISH_STATUS } from "@/lib/game-publish";
 import { useApiError } from "@/hooks/use-api-error";
 import { UPLOAD_CATEGORIES, type UploadCategory } from "@/lib/games";
 import {
@@ -206,6 +211,7 @@ export default function UploadPage() {
   const tCommon = useTranslations("common");
   const tHome = useTranslations("home");
   const { translateApiError } = useApiError();
+  const locale = useLocale();
   const coverMaxSize = formatMaxSize(MAX_COVER_BYTES);
   const zipMaxSize = formatMaxSize(MAX_ZIP_BYTES);
   const [form, setForm] = useState<FormState>({
@@ -216,6 +222,11 @@ export default function UploadPage() {
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [gameZip, setGameZip] = useState<File | null>(null);
+  const [monetization, setMonetization] = useState<PublishMonetizationValues>({
+    publishStatus: DEFAULT_PUBLISH_STATUS,
+    tipsEnabled: false,
+    suggestedTipAmount: "",
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState("");
   const [toast, setToast] = useState<{
@@ -300,6 +311,10 @@ export default function UploadPage() {
       alert(t("alertZip"));
       return;
     }
+    if (monetization.tipsEnabled && !monetization.suggestedTipAmount.trim()) {
+      alert(t("alertSuggestedTip"));
+      return;
+    }
 
     setIsSubmitting(true);
     setSubmitStatus(t("preparingUpload"));
@@ -312,21 +327,48 @@ export default function UploadPage() {
           category: form.category,
           coverFile,
           gameZipFile: gameZip,
+          publishStatus: monetization.publishStatus,
+          tipsEnabled: monetization.tipsEnabled,
+          suggestedTipAmount: monetization.suggestedTipAmount,
         },
         setSubmitStatus
       );
 
       console.log("[NexusPlay] 遊戲上傳成功:", game);
 
+      const isDraft = monetization.publishStatus === "draft";
+
+      if (isDraft) {
+        const previewPath = getPathname({
+          locale,
+          href: `/game/${game.id}`,
+        });
+        window.location.replace(`${previewPath}?draftSaved=1`);
+        return;
+      }
+
       showToast(
         "success",
-        t("publishSuccess"),
-        t("publishSuccessDesc", { title: game.title, id: game.id })
+        t("publicLiveSuccess"),
+        t("publicLiveSuccessDesc", { title: game.title, id: game.id })
       );
 
       setForm({ title: "", description: "", category: "" });
+      setMonetization({
+        publishStatus: DEFAULT_PUBLISH_STATUS,
+        tipsEnabled: false,
+        suggestedTipAmount: "",
+      });
       handleCoverClear();
       setGameZip(null);
+
+      const livePath = getPathname({
+        locale,
+        href: `/game/${game.id}`,
+      });
+      window.setTimeout(() => {
+        window.location.replace(`${livePath}?published=1`);
+      }, 900);
     } catch (error) {
       const raw = error instanceof Error ? error.message : null;
       const message = translateApiError(raw) ?? raw ?? t("uploadFailed");
@@ -337,6 +379,8 @@ export default function UploadPage() {
       setSubmitStatus("");
     }
   };
+
+  const isDraftUpload = monetization.publishStatus === "draft";
 
   return (
     <div className="dark relative min-h-full text-zinc-100">
@@ -506,6 +550,12 @@ export default function UploadPage() {
               />
             </section>
 
+            <PublishMonetizationFields
+              values={monetization}
+              onChange={setMonetization}
+              disabled={isSubmitting}
+            />
+
             {/* Submit */}
             <div className="border-t border-white/5 pt-6">
               <Button
@@ -521,17 +571,18 @@ export default function UploadPage() {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="size-5 animate-spin" />
-                    {submitStatus || tCommon("publishing")}
+                    {submitStatus ||
+                      (isDraftUpload ? t("savingDraft") : tCommon("publishing"))}
                   </>
                 ) : (
                   <>
                     <Upload className="size-5" />
-                    {t("publishGame")}
+                    {isDraftUpload ? t("saveDraft") : t("publishGame")}
                   </>
                 )}
               </Button>
               <p className="mt-3 text-center text-xs text-zinc-600">
-                {t("submitReviewNote")}
+                {t("publishStatusNote")}
               </p>
             </div>
           </form>

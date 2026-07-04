@@ -30,4 +30,7 @@ export type GameRecord = {
   created_at: string;
   plays_count: number;
   rating_avg: number;
+  publish_status: "draft" | "public";
+  tips_enabled: boolean;
+  suggested_tip_amount: number | null;
 };

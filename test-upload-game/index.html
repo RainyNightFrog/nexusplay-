@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Neon Dodge · NexusPlay 測試遊戲</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: radial-gradient(circle at 50% 0%, #1e1b4b, #09090b 55%);
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+        color: #fafafa;
+        overflow: hidden;
+      }
+      .wrap {
+        text-align: center;
+        padding: 16px;
+        width: min(520px, 100%);
+      }
+      h1 {
+        font-size: 1.35rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        background: linear-gradient(90deg, #22d3ee, #a78bfa, #f472b6);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        margin-bottom: 6px;
+      }
+      p {
+        font-size: 0.85rem;
+        color: #a1a1aa;
+        margin-bottom: 12px;
+      }
+      canvas {
+        display: block;
+        margin: 0 auto;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        box-shadow: 0 0 40px rgba(34, 211, 238, 0.15);
+        background: #0a0a0f;
+        cursor: none;
+        max-width: 100%;
+        touch-action: none;
+      }
+      .hud {
+        display: flex;
+        justify-content: space-between;
+        margin: 10px 2px 0;
+        font-size: 0.9rem;
+        color: #d4d4d8;
+      }
+      .hud strong {
+        color: #22d3ee;
+      }
+      button {
+        margin-top: 14px;
+        padding: 10px 22px;
+        border: none;
+        border-radius: 999px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: white;
+        background: linear-gradient(90deg, #06b6d4, #8b5cf6);
+        box-shadow: 0 0 20px rgba(139, 92, 246, 0.35);
+        cursor: pointer;
+      }
+      button:hover {
+        filter: brightness(1.08);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>Neon Dodge</h1>
+      <p>移動滑鼠或手指，避開紫色隕石 · 撐越久分數越高</p>
+      <canvas id="game" width="480" height="320"></canvas>
+      <div class="hud">
+        <span>分數：<strong id="score">0</strong></span>
+        <span>最高：<strong id="best">0</strong></span>
+      </div>
+      <button id="restart" type="button">再玩一次</button>
+    </div>
+    <script>
+      const canvas = document.getElementById("game");
+      const ctx = canvas.getContext("2d");
+      const scoreEl = document.getElementById("score");
+      const bestEl = document.getElementById("best");
+      const restartBtn = document.getElementById("restart");
+
+      const W = canvas.width;
+      const H = canvas.height;
+      let player = { x: W / 2, y: H / 2, r: 14 };
+      let rocks = [];
+      let score = 0;
+      let best = Number(localStorage.getItem("neon-dodge-best") || 0);
+      let alive = true;
+      let spawnTimer = 0;
+      let pointer = { x: W / 2, y: H / 2 };
+
+      bestEl.textContent = best;
+
+      function reset() {
+        player = { x: W / 2, y: H / 2, r: 14 };
+        rocks = [];
+        score = 0;
+        alive = true;
+        spawnTimer = 0;
+        scoreEl.textContent = "0";
+      }
+
+      function spawnRock() {
+        const edge = Math.floor(Math.random() * 4);
+        let x, y, vx, vy;
+        const speed = 2 + Math.random() * 2.5 + score * 0.01;
+        if (edge === 0) {
+          x = Math.random() * W;
+          y = -20;
+          vx = (Math.random() - 0.5) * 2;
+          vy = speed;
+        } else if (edge === 1) {
+          x = W + 20;
+          y = Math.random() * H;
+          vx = -speed;
+          vy = (Math.random() - 0.5) * 2;
+        } else if (edge === 2) {
+          x = Math.random() * W;
+          y = H + 20;
+          vx = (Math.random() - 0.5) * 2;
+          vy = -speed;
+        } else {
+          x = -20;
+          y = Math.random() * H;
+          vx = speed;
+          vy = (Math.random() - 0.5) * 2;
+        }
+        rocks.push({ x, y, vx, vy, r: 10 + Math.random() * 14 });
+      }
+
+      function dist(a, b) {
+        const dx = a.x - b.x;
+        const dy = a.y - b.y;
+        return Math.hypot(dx, dy);
+      }
+
+      function update(dt) {
+        if (!alive) return;
+
+        player.x += (pointer.x - player.x) * 0.18;
+        player.y += (pointer.y - player.y) * 0.18;
+
+        spawnTimer += dt;
+        if (spawnTimer > Math.max(280 - score, 90)) {
+          spawnTimer = 0;
+          spawnRock();
+        }
+
+        for (const rock of rocks) {
+          rock.x += rock.vx;
+          rock.y += rock.vy;
+        }
+        rocks = rocks.filter(
+          (r) => r.x > -40 && r.x < W + 40 && r.y > -40 && r.y < H + 40
+        );
+
+        for (const rock of rocks) {
+          if (dist(player, rock) < player.r + rock.r - 4) {
+            alive = false;
+            if (score > best) {
+              best = score;
+              localStorage.setItem("neon-dodge-best", String(best));
+              bestEl.textContent = best;
+            }
+          }
+        }
+
+        score += dt * 0.02;
+        scoreEl.textContent = Math.floor(score);
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, W, H);
+
+        const grd = ctx.createRadialGradient(
+          player.x,
+          player.y,
+          4,
+          player.x,
+          player.y,
+          120
+        );
+        grd.addColorStop(0, "rgba(34,211,238,0.12)");
+        grd.addColorStop(1, "rgba(34,211,238,0)");
+        ctx.fillStyle = grd;
+        ctx.fillRect(0, 0, W, H);
+
+        for (const rock of rocks) {
+          ctx.beginPath();
+          ctx.arc(rock.x, rock.y, rock.r, 0, Math.PI * 2);
+          ctx.fillStyle = "rgba(167,139,250,0.85)";
+          ctx.shadowColor = "#a78bfa";
+          ctx.shadowBlur = 16;
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        }
+
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, player.r, 0, Math.PI * 2);
+        const pg = ctx.createRadialGradient(
+          player.x - 4,
+          player.y - 4,
+          2,
+          player.x,
+          player.y,
+          player.r
+        );
+        pg.addColorStop(0, "#67e8f9");
+        pg.addColorStop(1, "#0891b2");
+        ctx.fillStyle = pg;
+        ctx.shadowColor = "#22d3ee";
+        ctx.shadowBlur = 20;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        if (!alive) {
+          ctx.fillStyle = "rgba(0,0,0,0.55)";
+          ctx.fillRect(0, 0, W, H);
+          ctx.fillStyle = "#fff";
+          ctx.textAlign = "center";
+          ctx.font = "bold 28px system-ui";
+          ctx.fillText("撞到了！", W / 2, H / 2 - 8);
+          ctx.font = "16px system-ui";
+          ctx.fillStyle = "#d4d4d8";
+          ctx.fillText("點「再玩一次」重新開始", W / 2, H / 2 + 22);
+        }
+      }
+
+      let last = performance.now();
+      function loop(now) {
+        const dt = now - last;
+        last = now;
+        update(dt);
+        draw();
+        requestAnimationFrame(loop);
+      }
+
+      function setPointer(clientX, clientY) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = W / rect.width;
+        const scaleY = H / rect.height;
+        pointer.x = (clientX - rect.left) * scaleX;
+        pointer.y = (clientY - rect.top) * scaleY;
+      }
+
+      canvas.addEventListener("mousemove", (e) => setPointer(e.clientX, e.clientY));
+      canvas.addEventListener(
+        "touchmove",
+        (e) => {
+          e.preventDefault();
+          const t = e.touches[0];
+          if (t) setPointer(t.clientX, t.clientY);
+        },
+        { passive: false }
+      );
+      restartBtn.addEventListener("click", reset);
+
+      reset();
+      requestAnimationFrame(loop);
+    </script>
+  </body>
+</html>

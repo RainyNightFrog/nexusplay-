@@ -8,7 +8,7 @@ import {
   type ChangeEvent,
   type DragEvent,
 } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import Image from "next/image";
 import { useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -25,9 +25,14 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
-import { Link, useRouter } from "@/i18n/navigation";
+import { Link, getPathname } from "@/i18n/navigation";
 import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  PublishMonetizationFields,
+  type PublishMonetizationValues,
+} from "@/components/dashboard/publish-monetization-fields";
 import { fetchManageGame, updateGame } from "@/lib/update-game";
+import { DEFAULT_PUBLISH_STATUS, normalizePublishStatus } from "@/lib/game-publish";
 import { useApiError } from "@/hooks/use-api-error";
 import { UPLOAD_CATEGORIES, type UploadCategory } from "@/lib/games";
 import {
@@ -225,8 +230,8 @@ export default function EditGamePage() {
   const { translateApiError } = useApiError();
   const coverMaxSize = formatMaxSize(MAX_COVER_BYTES);
   const zipMaxSize = formatMaxSize(MAX_ZIP_BYTES);
+  const locale = useLocale();
   const params = useParams();
-  const router = useRouter();
   const gameId = Number.parseInt(String(params.id), 10);
 
   const [form, setForm] = useState<FormState>({
@@ -238,6 +243,11 @@ export default function EditGamePage() {
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [gameZip, setGameZip] = useState<File | null>(null);
+  const [monetization, setMonetization] = useState<PublishMonetizationValues>({
+    publishStatus: DEFAULT_PUBLISH_STATUS,
+    tipsEnabled: false,
+    suggestedTipAmount: "",
+  });
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isOrphan, setIsOrphan] = useState(false);
@@ -277,6 +287,14 @@ export default function EditGamePage() {
         });
         setExistingCoverUrl(game.cover_url);
         setIsOrphan(orphan);
+        setMonetization({
+          publishStatus: normalizePublishStatus(game.publish_status),
+          tipsEnabled: game.tips_enabled ?? false,
+          suggestedTipAmount:
+            game.suggested_tip_amount != null
+              ? String(game.suggested_tip_amount)
+              : "",
+        });
       })
       .catch((error) => {
         if (cancelled) return;
@@ -361,10 +379,19 @@ export default function EditGamePage() {
       showToast("error", t("missingZip"), t("missingZipDesc"));
       return;
     }
+    if (monetization.tipsEnabled && !monetization.suggestedTipAmount.trim()) {
+      alert(t("alertSuggestedTip"));
+      return;
+    }
 
     setIsSubmitting(true);
+    const isDraftSave = monetization.publishStatus === "draft";
     setSubmitStatus(
-      publishVersion ? t("publishingVersion") : t("savingChanges")
+      publishVersion
+        ? t("publishingVersion")
+        : isDraftSave
+          ? t("savingDraft")
+          : t("savingChanges")
     );
 
     try {
@@ -377,16 +404,11 @@ export default function EditGamePage() {
           coverFile,
           gameZipFile: gameZip,
           publishVersion,
+          publishStatus: monetization.publishStatus,
+          tipsEnabled: monetization.tipsEnabled,
+          suggestedTipAmount: monetization.suggestedTipAmount,
         },
         setSubmitStatus
-      );
-
-      showToast(
-        "success",
-        publishVersion ? t("versionPublished") : t("changesSaved"),
-        publishVersion
-          ? t("versionLiveDesc", { title: game.title })
-          : t("infoUpdatedDesc", { title: game.title })
       );
 
       if (publishVersion) {
@@ -397,7 +419,30 @@ export default function EditGamePage() {
         handleCoverClear();
       }
 
-      window.setTimeout(() => router.push("/dashboard"), 1800);
+      if (isDraftSave) {
+        const previewPath = getPathname({
+          locale,
+          href: `/game/${game.id}`,
+        });
+        window.location.replace(`${previewPath}?draftSaved=1`);
+        return;
+      }
+
+      showToast(
+        "success",
+        publishVersion ? t("versionPublished") : t("changesSaved"),
+        publishVersion
+          ? t("versionLiveDesc", { title: game.title })
+          : t("infoUpdatedDesc", { title: game.title })
+      );
+
+      const livePath = getPathname({
+        locale,
+        href: `/game/${game.id}`,
+      });
+      window.setTimeout(() => {
+        window.location.replace(`${livePath}?published=1`);
+      }, 900);
     } catch (error) {
       const raw = error instanceof Error ? error.message : null;
       const message = translateApiError(raw) ?? raw ?? t("updateFailed");
@@ -433,6 +478,7 @@ export default function EditGamePage() {
   }
 
   const coverDisplayUrl = coverPreview ?? existingCoverUrl;
+  const isDraftEdit = monetization.publishStatus === "draft";
 
   return (
     <div className="dark relative min-h-full text-zinc-100">
@@ -602,6 +648,12 @@ export default function EditGamePage() {
               />
             </section>
 
+            <PublishMonetizationFields
+              values={monetization}
+              onChange={setMonetization}
+              disabled={isSubmitting}
+            />
+
             <div className="flex flex-col gap-3 border-t border-white/5 pt-6 sm:flex-row">
               <motion.div
                 whileHover={{ scale: 1.02 }}
@@ -622,12 +674,13 @@ export default function EditGamePage() {
                   {isSubmitting && !gameZip ? (
                     <>
                       <Loader2 className="size-5 animate-spin" />
-                      {submitStatus || tCommon("saving")}
+                      {submitStatus ||
+                        (isDraftEdit ? t("savingDraft") : tCommon("saving"))}
                     </>
                   ) : (
                     <>
                       <Save className="size-5" />
-                      {t("saveChanges")}
+                      {isDraftEdit ? t("saveDraft") : t("saveChanges")}
                     </>
                   )}
                 </Button>

@@ -11,7 +11,8 @@ import {
   uploadBuffer,
 } from "@/lib/game-storage";
 import { UPLOAD_CATEGORIES } from "@/lib/games";
-import { getGameById } from "@/lib/games-service";
+import { mapRecordToGame } from "@/lib/games-data";
+import { canViewGame, parseMonetizationFromFormData } from "@/lib/game-publish";
 import { sanitizePlainText } from "@/lib/sanitize";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
@@ -36,13 +37,37 @@ export async function GET(
       return NextResponse.json({ error: "無效的遊戲 ID" }, { status: 400 });
     }
 
-    const game = await getGameById(numericId);
+    const supabase = createServerSupabase();
+    const { data: record, error: recordError } = await supabase
+      .from("games")
+      .select("*")
+      .eq("id", numericId)
+      .maybeSingle();
 
-    if (!game) {
+    if (recordError) {
+      throw new Error(`讀取遊戲失敗：${recordError.message}`);
+    }
+
+    if (!record) {
       return NextResponse.json({ error: "找不到此遊戲" }, { status: 404 });
     }
 
-    return NextResponse.json({ game });
+    const authClient = await createAuthServerClient();
+    const {
+      data: { user },
+    } = await authClient.auth.getUser();
+
+    if (!canViewGame(record, user?.id)) {
+      return NextResponse.json({ error: "找不到此遊戲" }, { status: 404 });
+    }
+
+    const game = mapRecordToGame(record);
+
+    return NextResponse.json({
+      game,
+      isDraftPreview:
+        record.publish_status === "draft" && user?.id === record.creator_id,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "讀取遊戲失敗";
     return NextResponse.json({ error: message }, { status: 500 });
@@ -169,6 +194,11 @@ export async function PATCH(
       }
     }
 
+    const monetization = parseMonetizationFromFormData(formData);
+    if (!monetization.ok) {
+      return NextResponse.json({ error: monetization.error }, { status: 400 });
+    }
+
     const oldCoverPath = extractPublicStoragePath(record.cover_url, COVERS_BUCKET);
     const oldGameUrl = record.game_url;
 
@@ -204,6 +234,9 @@ export async function PATCH(
         category,
         cover_url: newCoverUrl,
         game_url: newGameUrl,
+        publish_status: monetization.data.publish_status,
+        tips_enabled: monetization.data.tips_enabled,
+        suggested_tip_amount: monetization.data.suggested_tip_amount,
         ...(isOrphan ? { creator_id: user.id } : {}),
       };
 
@@ -278,6 +311,86 @@ export async function PATCH(
       );
     }
 
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const numericId = Number.parseInt(id, 10);
+
+    if (Number.isNaN(numericId)) {
+      return NextResponse.json({ error: "無效的遊戲 ID" }, { status: 400 });
+    }
+
+    const authClient = await createAuthServerClient();
+    const {
+      data: { user },
+    } = await authClient.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "請先登入" }, { status: 401 });
+    }
+
+    const role = await resolveUserRole(authClient, user);
+
+    if (role !== "creator") {
+      return NextResponse.json(
+        { error: "需要創作者身分才能刪除遊戲" },
+        { status: 403 }
+      );
+    }
+
+    const supabase = createServerSupabase();
+    const authResult = await authorizeGameEdit(supabase, numericId, user.id);
+
+    if (!authResult.ok) {
+      return NextResponse.json(
+        { error: authResult.message },
+        { status: authResult.status }
+      );
+    }
+
+    const record = authResult.record;
+    const isOrphan = authResult.isOrphan;
+
+    let deleteQuery = supabase.from("games").delete().eq("id", numericId);
+
+    if (isOrphan) {
+      deleteQuery = deleteQuery.is("creator_id", null);
+    } else {
+      deleteQuery = deleteQuery.eq("creator_id", user.id);
+    }
+
+    const { error: deleteError } = await deleteQuery;
+
+    if (deleteError) {
+      throw new Error(`刪除遊戲失敗：${deleteError.message}`);
+    }
+
+    const coverPath = extractPublicStoragePath(record.cover_url, COVERS_BUCKET);
+    if (coverPath) {
+      await removeStoragePaths(supabase, COVERS_BUCKET, [coverPath]);
+    }
+
+    const gameUrl = record.game_url;
+    if (gameUrl) {
+      const zipPath = extractPublicStoragePath(gameUrl, FILES_BUCKET);
+      if (zipPath?.toLowerCase().endsWith(".zip")) {
+        await removeStoragePaths(supabase, FILES_BUCKET, [zipPath]);
+      } else {
+        await removeBuildFolder(supabase, gameUrl);
+      }
+    }
+
+    return NextResponse.json({ ok: true, id: numericId });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "刪除遊戲失敗";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

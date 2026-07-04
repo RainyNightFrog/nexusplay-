@@ -3,6 +3,7 @@ export const API_ERROR_KEY_BY_MESSAGE: Record<string, string> = {
   "請先登入": "loginRequired",
   "需要創作者身分才能上傳遊戲": "creatorRequiredUpload",
   "需要創作者身分才能更新遊戲": "creatorRequiredUpdate",
+  "需要創作者身分才能刪除遊戲": "creatorRequiredDelete",
   "需要創作者身分才能管理遊戲": "creatorRequiredManage",
   "需要創作者身分才能編輯遊戲": "creatorRequiredEdit",
   "無效的遊戲 ID": "invalidGameId",
@@ -10,7 +11,7 @@ export const API_ERROR_KEY_BY_MESSAGE: Record<string, string> = {
   "找不到此遊戲": "gameNotFound",
   "找不到此貼文": "postNotFound",
   "你沒有權限編輯此遊戲": "noEditPermission",
-  "請輸入遊戲名稱": "titleRequired",
+  "請輸入建議打賞金額": "suggestedTipRequired",
   "請輸入遊戲簡介": "descriptionRequired",
   "請選擇遊戲分類": "categoryRequired",
   "無效的遊戲分類": "invalidCategory",
@@ -46,4 +47,5 @@ export const API_ERROR_KEY_BY_MESSAGE: Record<string, string> = {
   "更新過程發生未知錯誤": "updateUnknown",
   "上傳過程發生未知錯誤": "uploadUnknown",
   "讀取創作者遊戲失敗": "loadCreatorGamesFailed",
+  "刪除遊戲失敗": "deleteGameFailed",
 };

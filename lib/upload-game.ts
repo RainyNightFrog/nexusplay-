@@ -1,9 +1,14 @@
+import type { GamePublishStatus } from "@/lib/game-publish";
+
 export type UploadGameInput = {
   title: string;
   description: string;
   category: string;
   coverFile: File;
   gameZipFile: File;
+  publishStatus: GamePublishStatus;
+  tipsEnabled: boolean;
+  suggestedTipAmount: string;
 };
 
 export type UploadGameResult = {
@@ -16,6 +21,9 @@ export type UploadGameResult = {
     game_url: string;
     creator_id: string;
     created_at: string;
+    publish_status: GamePublishStatus;
+    tips_enabled: boolean;
+    suggested_tip_amount: number | null;
   };
 };
 
@@ -31,6 +39,11 @@ export async function uploadGame(
   formData.append("category", input.category);
   formData.append("cover", input.coverFile);
   formData.append("gameZip", input.gameZipFile);
+  formData.append("publishStatus", input.publishStatus);
+  formData.append("tipsEnabled", String(input.tipsEnabled));
+  if (input.tipsEnabled && input.suggestedTipAmount.trim()) {
+    formData.append("suggestedTipAmount", input.suggestedTipAmount.trim());
+  }
 
   onProgress?.("正在上傳遊戲壓縮檔...");
 

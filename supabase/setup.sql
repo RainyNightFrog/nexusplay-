@@ -14,7 +14,11 @@ create table if not exists public.games (
   creator_id uuid references auth.users (id) on delete set null,
   created_at timestamptz not null default now(),
   plays_count bigint not null default 0,
-  rating_avg numeric(3, 2) not null default 0
+  rating_avg numeric(3, 2) not null default 0,
+  publish_status text not null default 'public',
+  tips_enabled boolean not null default false,
+  suggested_tip_amount numeric(10, 2),
+  constraint games_publish_status_check check (publish_status in ('draft', 'public'))
 );
 
 -- 2. 啟用 Row Level Security
@@ -27,7 +31,10 @@ create policy "Public read games"
   on public.games
   for select
   to anon, authenticated
-  using (true);
+  using (
+    publish_status = 'public'
+    or (auth.uid() is not null and auth.uid() = creator_id)
+  );
 
 -- 4. 建立 Storage Buckets
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
