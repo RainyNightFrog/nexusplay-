@@ -33,4 +33,5 @@ export type GameRecord = {
   publish_status: "draft" | "public";
   tips_enabled: boolean;
   suggested_tip_amount: number | null;
+  status: "pending" | "approved" | "rejected";
 };

@@ -171,6 +171,7 @@ export async function POST(request: Request) {
           publish_status: monetization.data.publish_status,
           tips_enabled: monetization.data.tips_enabled,
           suggested_tip_amount: monetization.data.suggested_tip_amount,
+          status: "pending",
         })
         .select()
         .single();

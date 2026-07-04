@@ -85,7 +85,10 @@ export async function PATCH(request: Request) {
       body.developing_games !== undefined
         ? body.developing_games === true
         : currentProfile.developing_games;
-    const role = resolveRoleFromPreferences(developingGames);
+    const isAdmin = user.user_metadata?.role === "admin";
+    const role = isAdmin
+      ? "admin"
+      : resolveRoleFromPreferences(developingGames);
 
     const metadata = {
       display_name: displayName,
@@ -108,7 +111,7 @@ export async function PATCH(request: Request) {
       .from("profiles")
       .update({
         display_name: displayName,
-        role,
+        ...(isAdmin ? {} : { role: resolveRoleFromPreferences(developingGames) }),
       })
       .eq("id", user.id);
 

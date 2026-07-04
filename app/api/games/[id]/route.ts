@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { extractAndUploadGameBuild } from "@/lib/extract-game-zip";
 import { authorizeGameEdit } from "@/lib/game-auth";
+import { isAdminUser } from "@/lib/admin-auth";
 import { resolveUserRole } from "@/lib/auth-profile";
 import {
   COVERS_BUCKET,
@@ -57,7 +58,7 @@ export async function GET(
       data: { user },
     } = await authClient.auth.getUser();
 
-    if (!canViewGame(record, user?.id)) {
+    if (!canViewGame(record, user?.id, { isAdmin: isAdminUser(user) })) {
       return NextResponse.json({ error: "找不到此遊戲" }, { status: 404 });
     }
 

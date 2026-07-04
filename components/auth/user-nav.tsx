@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
-import { Loader2, LogOut, Palette, Settings, UserRound } from "lucide-react";
+import { Loader2, LogOut, Palette, Settings, Shield, UserRound } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { getInitials } from "@/lib/auth";
@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 
 export function UserNav() {
   const t = useTranslations("nav");
-  const { profile, loading, signOut, isCreator } = useAuth();
+  const { profile, loading, signOut, isCreator, isAdmin } = useAuth();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -92,9 +92,24 @@ export function UserNav() {
               {profile.display_name}
             </p>
             <p className="mt-0.5 text-xs text-zinc-500">
-              {isCreator ? t("roleCreator") : t("rolePlayer")}
+              {isAdmin
+                ? t("roleAdmin")
+                : isCreator
+                  ? t("roleCreator")
+                  : t("rolePlayer")}
             </p>
           </div>
+
+          {isAdmin && (
+            <Link
+              href="/admin"
+              onClick={() => setOpen(false)}
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white"
+            >
+              <Shield className="size-4 text-amber-400" />
+              {t("adminCenter")}
+            </Link>
+          )}
 
           {isCreator && (
             <Link

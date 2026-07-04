@@ -21,6 +21,7 @@ type AuthContextValue = {
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   isCreator: boolean;
+  isAdmin: boolean;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -120,6 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signOut,
       refreshProfile,
       isCreator: profile?.role === "creator",
+      isAdmin: profile?.is_admin === true,
     }),
     [profile, loading, signOut, refreshProfile]
   );

@@ -13,7 +13,9 @@
     "db:forum": "node scripts/run-forum.mjs",
     "db:avatars": "node scripts/run-avatars.mjs",
     "db:seed": "node scripts/seed-platform.mjs",
-    "db:assign-creator": "node scripts/assign-game-creator.mjs"
+    "db:assign-creator": "node scripts/assign-game-creator.mjs",
+    "db:admin": "node scripts/run-admin-control-center.mjs",
+    "db:assign-admin": "node scripts/assign-admin.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

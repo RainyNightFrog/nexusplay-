@@ -1,0 +1,195 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { createServerSupabase } from "@/lib/supabase-server";
+
+export type GameApprovalStatus = "pending" | "approved" | "rejected";
+export type FeedbackStatus = "unread" | "resolved";
+
+export type AdminGameRecord = {
+  id: number;
+  title: string;
+  description: string;
+  category: string;
+  cover_url: string;
+  creator_id: string | null;
+  created_at: string;
+  publish_status: "draft" | "public";
+  status: GameApprovalStatus;
+};
+
+export type AdminFeedbackRecord = {
+  id: string;
+  user_id: string | null;
+  email: string | null;
+  subject: string;
+  message: string;
+  status: FeedbackStatus;
+  created_at: string;
+};
+
+export type AdminLogRecord = {
+  id: string;
+  admin_id: string;
+  action: string;
+  details: string | null;
+  created_at: string;
+};
+
+export async function listAdminGames(
+  status: GameApprovalStatus | "all" = "pending"
+): Promise<AdminGameRecord[]> {
+  const supabase = createServerSupabase();
+  let query = supabase
+    .from("games")
+    .select(
+      "id, title, description, category, cover_url, creator_id, created_at, publish_status, status"
+    )
+    .order("created_at", { ascending: false });
+
+  if (status !== "all") {
+    query = query.eq("status", status);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    throw new Error(`讀取遊戲審批列表失敗：${error.message}`);
+  }
+
+  return (data ?? []) as AdminGameRecord[];
+}
+
+export async function updateGameApproval(
+  gameId: number,
+  status: "approved" | "rejected",
+  details?: string | null
+) {
+  const supabase = createServerSupabase();
+  const updates: Record<string, unknown> = { status };
+
+  if (status === "rejected") {
+    updates.publish_status = "draft";
+  }
+
+  const { data, error } = await supabase
+    .from("games")
+    .update(updates)
+    .eq("id", gameId)
+    .select(
+      "id, title, description, category, cover_url, creator_id, created_at, publish_status, status"
+    )
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`更新遊戲審批狀態失敗：${error.message}`);
+  }
+
+  if (!data) {
+    throw new Error("找不到此遊戲");
+  }
+
+  return { game: data as AdminGameRecord, logDetails: details ?? null };
+}
+
+export async function listAdminFeedbacks(
+  authClient: SupabaseClient,
+  status: FeedbackStatus | "all" = "unread"
+): Promise<AdminFeedbackRecord[]> {
+  let query = authClient
+    .from("player_feedbacks")
+    .select("id, user_id, email, subject, message, status, created_at")
+    .order("created_at", { ascending: false });
+
+  if (status !== "all") {
+    query = query.eq("status", status);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    throw new Error(`讀取玩家反饋失敗：${error.message}`);
+  }
+
+  return (data ?? []) as AdminFeedbackRecord[];
+}
+
+export async function resolveFeedback(
+  authClient: SupabaseClient,
+  feedbackId: string
+) {
+  const { data, error } = await authClient
+    .from("player_feedbacks")
+    .update({ status: "resolved" })
+    .eq("id", feedbackId)
+    .select("id, user_id, email, subject, message, status, created_at")
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`更新反饋狀態失敗：${error.message}`);
+  }
+
+  if (!data) {
+    throw new Error("找不到此反饋");
+  }
+
+  return data as AdminFeedbackRecord;
+}
+
+export async function listAdminLogs(
+  authClient: SupabaseClient,
+  limit = 50
+): Promise<AdminLogRecord[]> {
+  const { data, error } = await authClient
+    .from("admin_logs")
+    .select("id, admin_id, action, details, created_at")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    throw new Error(`讀取操作日誌失敗：${error.message}`);
+  }
+
+  return (data ?? []) as AdminLogRecord[];
+}
+
+export async function writeAdminLog(
+  authClient: SupabaseClient,
+  adminId: string,
+  action: string,
+  details?: string | null
+) {
+  const { error } = await authClient.from("admin_logs").insert({
+    admin_id: adminId,
+    action,
+    details: details?.trim() || null,
+  });
+
+  if (error) {
+    throw new Error(`寫入操作日誌失敗：${error.message}`);
+  }
+}
+
+export async function getAdminStats() {
+  const supabase = createServerSupabase();
+
+  const [pendingGames, unreadFeedbacks] = await Promise.all([
+    supabase
+      .from("games")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending"),
+    supabase
+      .from("player_feedbacks")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "unread"),
+  ]);
+
+  if (pendingGames.error) {
+    throw new Error(`讀取統計失敗：${pendingGames.error.message}`);
+  }
+
+  if (unreadFeedbacks.error) {
+    throw new Error(`讀取統計失敗：${unreadFeedbacks.error.message}`);
+  }
+
+  return {
+    pendingGames: pendingGames.count ?? 0,
+    unreadFeedbacks: unreadFeedbacks.count ?? 0,
+  };
+}

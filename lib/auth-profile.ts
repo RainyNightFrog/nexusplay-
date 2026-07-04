@@ -17,7 +17,8 @@ function readOptionalString(value: unknown): string | null {
 
 export function profileFromUserMetadata(user: User): UserProfile {
   const metadata = user.user_metadata ?? {};
-  const role = normalizeRole(metadata.role);
+  const isAdmin = metadata.role === "admin";
+  const role = isAdmin ? "player" : normalizeRole(metadata.role);
   const developingGames = readBoolean(
     metadata.developing_games,
     role === "creator"
@@ -31,7 +32,8 @@ export function profileFromUserMetadata(user: User): UserProfile {
       "玩家",
     avatar_url:
       typeof metadata.avatar_url === "string" ? metadata.avatar_url : null,
-    role: resolveRoleFromPreferences(developingGames),
+    role: isAdmin ? "player" : resolveRoleFromPreferences(developingGames),
+    is_admin: isAdmin,
     created_at: user.created_at,
     website: readOptionalString(metadata.website),
     twitter: readOptionalString(metadata.twitter),
@@ -62,6 +64,7 @@ export async function resolveUserProfile(
     .maybeSingle();
 
   if (!error && profile) {
+    const isAdmin = metadataProfile.is_admin;
     const developingGames =
       metadataProfile.developing_games || normalizeRole(profile.role) === "creator";
 
@@ -69,7 +72,8 @@ export async function resolveUserProfile(
       ...metadataProfile,
       display_name: profile.display_name || metadataProfile.display_name,
       avatar_url: profile.avatar_url ?? metadataProfile.avatar_url,
-      role: resolveRoleFromPreferences(developingGames),
+      role: isAdmin ? "player" : resolveRoleFromPreferences(developingGames),
+      is_admin: isAdmin,
       created_at: profile.created_at ?? metadataProfile.created_at,
       developing_games: developingGames,
     };

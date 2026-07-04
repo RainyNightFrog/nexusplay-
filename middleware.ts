@@ -2,6 +2,7 @@ import createIntlMiddleware from "next-intl/middleware";
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { resolveUserRole } from "@/lib/auth-profile";
+import { isAdminUser } from "@/lib/admin-auth";
 import { routing } from "@/i18n/routing";
 
 const intlMiddleware = createIntlMiddleware(routing);
@@ -42,6 +43,26 @@ export async function middleware(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  if (pathnameWithoutLocale.startsWith("/admin")) {
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.pathname = "/auth";
+    redirectUrl.searchParams.set(
+      "redirect",
+      pathnameWithoutLocale === "/admin"
+        ? "/admin"
+        : pathnameWithoutLocale
+    );
+
+    if (!user) {
+      return NextResponse.redirect(redirectUrl);
+    }
+
+    if (!isAdminUser(user)) {
+      redirectUrl.searchParams.set("hint", "admin");
+      return NextResponse.redirect(redirectUrl);
+    }
+  }
 
   if (pathnameWithoutLocale.startsWith("/dashboard")) {
     const redirectUrl = request.nextUrl.clone();

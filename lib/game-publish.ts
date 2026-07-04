@@ -65,14 +65,19 @@ export function parseMonetizationFromFormData(
 }
 
 export function canViewGame(
-  record: Pick<GameRecord, "publish_status" | "creator_id">,
-  userId?: string | null
+  record: Pick<GameRecord, "publish_status" | "creator_id" | "status">,
+  userId?: string | null,
+  options?: { isAdmin?: boolean }
 ) {
-  if (record.publish_status !== "draft") {
+  if (options?.isAdmin) {
     return true;
   }
 
-  return Boolean(userId && record.creator_id && userId === record.creator_id);
+  if (userId && record.creator_id && userId === record.creator_id) {
+    return true;
+  }
+
+  return record.publish_status === "public" && record.status === "approved";
 }
 
 export function normalizePublishStatus(

@@ -5,6 +5,7 @@ export type UserProfile = {
   display_name: string;
   avatar_url: string | null;
   role: UserRole;
+  is_admin: boolean;
   created_at: string;
   website: string | null;
   twitter: string | null;
@@ -21,4 +22,8 @@ export function getInitials(name: string) {
 
 export function isCreator(profile: UserProfile | null | undefined) {
   return profile?.role === "creator";
+}
+
+export function isAdmin(profile: UserProfile | null | undefined) {
+  return profile?.is_admin === true;
 }
