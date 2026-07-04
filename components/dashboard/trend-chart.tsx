@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   Area,
   AreaChart,
@@ -67,6 +68,8 @@ function TrendTooltip({ active, payload, label }: ChartTooltipProps) {
 }
 
 export function TrendChart() {
+  const t = useTranslations("dashboard");
+
   return (
     <div className="h-[320px] w-full min-h-[320px]">
       <ResponsiveContainer width="100%" height="100%" minWidth={0}>
@@ -106,7 +109,7 @@ export function TrendChart() {
           <Area
             type="monotone"
             dataKey="visitors"
-            name="瀏覽人數"
+            name={t("chartViews")}
             stroke="#22d3ee"
             strokeWidth={2.5}
             fill="url(#visitorsGradient)"
@@ -116,7 +119,7 @@ export function TrendChart() {
           <Area
             type="monotone"
             dataKey="plays"
-            name="遊玩次數"
+            name={t("chartPlays")}
             stroke="#a78bfa"
             strokeWidth={2.5}
             fill="url(#playsGradient)"

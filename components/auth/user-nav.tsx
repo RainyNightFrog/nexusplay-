@@ -2,14 +2,16 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Loader2, LogOut, Palette, Settings, UserRound } from "lucide-react";
+import { Link } from "@/i18n/navigation";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { getInitials } from "@/lib/auth";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 
 export function UserNav() {
+  const t = useTranslations("nav");
   const { profile, loading, signOut, isCreator } = useAuth();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -47,7 +49,7 @@ export function UserNav() {
           "border-0 bg-gradient-to-r from-cyan-500 to-violet-600 text-white shadow-md shadow-cyan-500/20 hover:from-cyan-400 hover:to-violet-500"
         )}
       >
-        玩家登入
+        {t("login")}
       </Link>
     );
   }
@@ -64,7 +66,7 @@ export function UserNav() {
           "border border-cyan-400/30 bg-gradient-to-br from-cyan-500/30 to-violet-600/40",
           "shadow-md shadow-cyan-500/20 transition-transform hover:scale-105"
         )}
-        aria-label="使用者選單"
+        aria-label={t("userMenu")}
       >
         {profile.avatar_url ? (
           <Image
@@ -90,7 +92,7 @@ export function UserNav() {
               {profile.display_name}
             </p>
             <p className="mt-0.5 text-xs text-zinc-500">
-              {isCreator ? "創作者" : "玩家"}
+              {isCreator ? t("roleCreator") : t("rolePlayer")}
             </p>
           </div>
 
@@ -101,7 +103,7 @@ export function UserNav() {
               className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white"
             >
               <Palette className="size-4 text-violet-400" />
-              創作者後台
+              {t("creatorDashboard")}
             </Link>
           )}
 
@@ -111,7 +113,7 @@ export function UserNav() {
             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white"
           >
             <UserRound className="size-4 text-cyan-400" />
-            個人資料
+            {t("profile")}
           </Link>
 
           <Link
@@ -120,7 +122,7 @@ export function UserNav() {
             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white"
           >
             <Settings className="size-4 text-violet-400" />
-            設定
+            {t("settings")}
           </Link>
 
           <button
@@ -132,7 +134,7 @@ export function UserNav() {
             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-rose-300"
           >
             <LogOut className="size-4" />
-            登出
+            {t("signOut")}
           </button>
         </div>
       )}
@@ -141,6 +143,7 @@ export function UserNav() {
 }
 
 export function CreatorDashboardLink() {
+  const t = useTranslations("nav");
   const { profile, loading } = useAuth();
 
   const href = !profile
@@ -170,7 +173,7 @@ export function CreatorDashboardLink() {
         "hidden border-white/10 bg-white/5 text-zinc-200 backdrop-blur-sm hover:border-violet-400/30 hover:bg-violet-500/10 hover:text-white sm:inline-flex"
       )}
     >
-      創作者後台
+      {t("creatorDashboard")}
     </Link>
   );
 }

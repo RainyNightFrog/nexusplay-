@@ -1,11 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
 import { Crown, Heart, Share2, Star, Users } from "lucide-react";
 import { FEATURED_GAMES } from "@/lib/platform-catalog";
 import { TAG_COLORS, type Game } from "@/lib/games";
+import { useGameI18n } from "@/hooks/use-game-i18n";
+import { useFormatCount } from "@/hooks/use-format-count";
 import { cn } from "@/lib/utils";
 
 const ACCENT_STYLES = {
@@ -42,6 +45,10 @@ type FeaturedGamesProps = {
 };
 
 export function FeaturedGames({ games, loading }: FeaturedGamesProps) {
+  const t = useTranslations("home");
+  const tc = useTranslations("common");
+  const { localizedBadge, localizedDescription, localizedTag } = useGameI18n();
+  const { formatCount } = useFormatCount();
   const featuredEntries = FEATURED_GAMES.map((catalog) => {
     const live = resolveFeaturedGame(catalog.title, games);
     const accent = catalog.featuredAccent;
@@ -53,9 +60,9 @@ export function FeaturedGames({ games, loading }: FeaturedGamesProps) {
         id: 0,
         title: catalog.title,
         tags: catalog.categories,
-        players: `${(catalog.playsCount / 1000).toFixed(1)}k`,
-        likes: `${(catalog.likesCount / 1000).toFixed(1)}k`,
-        shares: `${(catalog.sharesCount / 1000).toFixed(1)}k`,
+        players: catalog.playsCount,
+        likes: catalog.likesCount,
+        shares: catalog.sharesCount,
         image: catalog.coverPath.startsWith("/")
           ? catalog.coverPath
           : catalog.coverPath,
@@ -77,13 +84,13 @@ export function FeaturedGames({ games, loading }: FeaturedGamesProps) {
       <div className="mb-8 text-center">
         <div className="mb-2 inline-flex items-center justify-center gap-2 text-sm font-medium text-amber-400">
           <Crown className="size-4" />
-          三大台柱
+          {t("featuredBadge")}
         </div>
         <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
-          平台明星遊戲
+          {t("featuredTitle")}
         </h2>
         <p className="mt-1 text-sm text-zinc-500">
-          VOID GACHA · CoreDefense · CyberFortune — 華麗設計 × 硬核體驗
+          {t("featuredDesc")}
         </p>
       </div>
 
@@ -134,7 +141,7 @@ export function FeaturedGames({ games, loading }: FeaturedGamesProps) {
                         styles.badge
                       )}
                     >
-                      {game.featuredBadge}
+                      {localizedBadge(game.title, game.featuredBadge)}
                     </span>
                   )}
                 </div>
@@ -145,9 +152,9 @@ export function FeaturedGames({ games, loading }: FeaturedGamesProps) {
                       {game.title}
                     </h3>
                     <p className="mt-0.5 text-xs text-zinc-500">
-                      創作者 ·{" "}
+                      {tc("creatorPrefix")}{" "}
                       <span className="font-medium text-zinc-300">
-                        {game.creator}
+                        {game.creator || tc("defaultCreator")}
                       </span>
                     </p>
                   </div>
@@ -162,27 +169,27 @@ export function FeaturedGames({ games, loading }: FeaturedGamesProps) {
                             "bg-zinc-700/50 text-zinc-300 ring-zinc-600/40"
                         )}
                       >
-                        {tag}
+                        {localizedTag(tag)}
                       </span>
                     ))}
                   </div>
 
                   <p className="line-clamp-2 text-sm leading-relaxed text-zinc-400">
-                    {game.description}
+                    {localizedDescription(game.title, game.description)}
                   </p>
 
                   <div className="flex flex-wrap items-center gap-4 border-t border-white/5 pt-3 text-xs">
                     <span className={cn("flex items-center gap-1.5", styles.stat)}>
                       <Users className="size-3.5" />
-                      {game.players}
+                      {formatCount(game.players)}
                     </span>
                     <span className="flex items-center gap-1.5 text-rose-300/90">
                       <Heart className="size-3.5" />
-                      {game.likes}
+                      {formatCount(game.likes)}
                     </span>
                     <span className="flex items-center gap-1.5 text-fuchsia-300/90">
                       <Share2 className="size-3.5" />
-                      {game.shares}
+                      {formatCount(game.shares)}
                     </span>
                     {game.ratingAvg && (
                       <span className="ml-auto flex items-center gap-1 text-amber-300/90">

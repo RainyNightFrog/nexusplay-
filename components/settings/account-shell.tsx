@@ -1,5 +1,9 @@
-import Link from "next/link";
+"use client";
+
+import { useTranslations } from "next-intl";
 import { ArrowLeft, Gamepad2 } from "lucide-react";
+import { Link } from "@/i18n/navigation";
+import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -15,9 +19,12 @@ export function AccountShell({
   title,
   description,
   backHref = "/",
-  backLabel = "返回首頁",
+  backLabel,
   children,
 }: AccountShellProps) {
+  const t = useTranslations("nav");
+  const resolvedBackLabel = backLabel ?? t("backHome");
+
   return (
     <div className="dark relative min-h-full text-zinc-100">
       <header className="sticky top-0 z-40 border-b border-white/5 bg-zinc-950/70 backdrop-blur-xl">
@@ -30,7 +37,7 @@ export function AccountShell({
             )}
           >
             <ArrowLeft className="size-4" />
-            <span className="hidden sm:inline">{backLabel}</span>
+            <span className="hidden sm:inline">{resolvedBackLabel}</span>
           </Link>
           <Link href="/" className="flex items-center gap-2">
             <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400 to-violet-600">
@@ -38,6 +45,9 @@ export function AccountShell({
             </div>
             <span className="text-sm font-semibold text-white">NexusPlay</span>
           </Link>
+          <div className="absolute right-4 sm:right-6">
+            <LanguageSwitcher />
+          </div>
         </div>
       </header>
 

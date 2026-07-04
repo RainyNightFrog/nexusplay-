@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import { useLocale, useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
@@ -27,15 +28,16 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
+import { useApiError } from "@/hooks/use-api-error";
 import {
   FORUM_CATEGORIES,
   FORUM_LIMITS,
-  formatForumDate,
   getForumCategoryMeta,
   type ForumCategory,
   type ForumComment,
   type ForumPostWithGame,
 } from "@/lib/forum";
+import { localeDateMap, type AppLocale } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
 
 type GameOption = { id: number; title: string };
@@ -61,6 +63,7 @@ const CATEGORY_ACCENT: Record<ForumCategory, string> = {
 };
 
 function CategoryBadge({ category }: { category: string }) {
+  const t = useTranslations("forum");
   const meta = getForumCategoryMeta(category);
   return (
     <Badge
@@ -70,7 +73,7 @@ function CategoryBadge({ category }: { category: string }) {
         meta.badgeClass
       )}
     >
-      {meta.emoji} {meta.label}
+      {meta.emoji} {t(`categories.${meta.value}`)}
     </Badge>
   );
 }
@@ -126,7 +129,29 @@ export function CommunityForum({
   onPostsLoaded,
 }: CommunityForumProps) {
   const { profile, loading: authLoading } = useAuth();
+  const t = useTranslations("forum");
+  const tc = useTranslations("common");
+  const { translateApiError } = useApiError();
+  const locale = useLocale();
   const isHub = hubMode;
+
+  const formatDate = useCallback(
+    (iso: string) => {
+      const date = new Date(iso);
+      if (Number.isNaN(date.getTime())) return iso;
+      return date.toLocaleString(
+        localeDateMap[locale as AppLocale] ?? locale,
+        {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }
+      );
+    },
+    [locale]
+  );
 
   const [posts, setPosts] = useState<ForumPostWithGame[]>([]);
   const [postsLoading, setPostsLoading] = useState(true);
@@ -192,10 +217,10 @@ export function CommunityForum({
 
       if (!response.ok) {
         setPosts(nextPosts);
-        setPostsError(data.error ?? "讀取討論區失敗");
+        setPostsError(translateApiError(data.error) ?? t("readFailed"));
         onPostsChange?.(nextPosts.length);
         if (nextPosts.length === 0) {
-          onToast(data.error ?? "讀取討論區失敗");
+          onToast(translateApiError(data.error) ?? t("readFailed"));
         }
         return;
       }
@@ -205,13 +230,13 @@ export function CommunityForum({
       onPostsLoaded?.(nextPosts);
     } catch {
       setPosts([]);
-      setPostsError("無法連線討論區，請重新整理頁面");
+      setPostsError(t("connectionFailed"));
       onPostsChange?.(0);
-      onToast("讀取討論區失敗");
+      onToast(t("readFailed"));
     } finally {
       setPostsLoading(false);
     }
-  }, [gameId, isHub, onPostsChange, onPostsLoaded, onToast]);
+  }, [gameId, isHub, onPostsChange, onPostsLoaded, onToast, t]);
 
   const loadComments = useCallback(
     async (postId: number, postGameId: number) => {
@@ -227,12 +252,12 @@ export function CommunityForum({
         setComments(data.comments ?? []);
       } catch {
         setComments([]);
-        onToast("讀取回覆失敗");
+        onToast(t("readCommentsFailed"));
       } finally {
         setCommentsLoading(false);
       }
     },
-    [onToast]
+    [onToast, t]
   );
 
   useEffect(() => {
@@ -255,13 +280,13 @@ export function CommunityForum({
 
   const handleCreatePost = async () => {
     if (!profile) {
-      onToast("請先登入才能發表文章");
+      onToast(t("loginRequiredPost"));
       return;
     }
 
     const targetGameId = isHub ? composeGameId : gameId;
     if (!targetGameId) {
-      onToast("請選擇要發文的遊戲");
+      onToast(t("selectGamePost"));
       return;
     }
 
@@ -269,11 +294,11 @@ export function CommunityForum({
     const content = newContent.trim();
 
     if (!title) {
-      onToast("請輸入文章標題");
+      onToast(t("titleRequired"));
       return;
     }
     if (!content) {
-      onToast("請輸入文章內容");
+      onToast(t("contentRequired"));
       return;
     }
 
@@ -294,7 +319,7 @@ export function CommunityForum({
       };
 
       if (!response.ok || !data.post) {
-        onToast(data.error ?? "發表文章失敗");
+        onToast(translateApiError(data.error) ?? t("postFailed"));
         return;
       }
 
@@ -314,9 +339,9 @@ export function CommunityForum({
       setNewCategory("general");
       setNewContent("");
       setSelectedPost(createdPost);
-      onToast("文章已發表");
+      onToast(t("postSuccess"));
     } catch {
-      onToast("發表文章失敗");
+      onToast(t("postFailed"));
     } finally {
       setCreating(false);
     }
@@ -326,18 +351,18 @@ export function CommunityForum({
     if (!selectedPost) return;
 
     if (!profile) {
-      onToast("請先登入才能參與討論");
+      onToast(t("loginRequiredReply"));
       return;
     }
 
     if (selectedPost.id < 0) {
-      onToast("此為示範貼文，請發起新討論參與交流");
+      onToast(t("seedPost"));
       return;
     }
 
     const content = replyContent.trim();
     if (!content) {
-      onToast("請輸入回覆內容");
+      onToast(t("replyRequired"));
       return;
     }
 
@@ -357,7 +382,7 @@ export function CommunityForum({
       };
 
       if (!response.ok || !data.comment) {
-        onToast(data.error ?? "發表回覆失敗");
+        onToast(translateApiError(data.error) ?? t("replyFailed"));
         return;
       }
 
@@ -375,9 +400,9 @@ export function CommunityForum({
           ? { ...prev, comment_count: (prev.comment_count ?? 0) + 1 }
           : prev
       );
-      onToast("留言已發表");
+      onToast(t("replySuccess"));
     } catch {
-      onToast("發表回覆失敗");
+      onToast(t("replyFailed"));
     } finally {
       setReplying(false);
     }
@@ -401,22 +426,26 @@ export function CommunityForum({
         <div>
           <h3 className="flex items-center gap-2 text-xl font-bold text-white">
             <MessagesSquare className="size-5 text-violet-400" />
-            {isHub ? "最新討論" : "社群討論區"}
+            {isHub ? t("latest") : t("title")}
           </h3>
           <p className="mt-1 text-sm text-zinc-500">
             {isHub
-              ? "瀏覽全站討論、選擇遊戲發表文章，或分享攻略與 Bug 回報"
-              : `${gameTitle ? `《${gameTitle}》` : "本遊戲"}的玩家交流、Bug 回報與攻略分享`}
+              ? t("hubDesc")
+              : gameTitle
+                ? t("gameDesc", { title: gameTitle })
+                : t("gameDescDefault")}
           </p>
           <p className="mt-1 text-xs text-zinc-600">
-            共 {posts.length} 則討論串
-            {profile ? ` · 以 ${profile.display_name} 身分發文` : " · 登入後可發表文章與留言"}
+            {t("threadStats", { count: posts.length })}
+            {profile
+              ? t("postAs", { name: profile.display_name })
+              : t("loginToPost")}
             {" · "}
             <Link
               href="/community/rules"
               className="text-violet-400/80 transition-colors hover:text-violet-300"
             >
-              社群規則
+              {t("rulesLink")}
             </Link>
           </p>
         </div>
@@ -439,7 +468,7 @@ export function CommunityForum({
               className="gap-1.5 text-zinc-400 hover:text-violet-300"
             >
               <ArrowLeft className="size-4" />
-              返回討論列表
+              {t("backToList")}
             </Button>
 
             <article
@@ -463,7 +492,7 @@ export function CommunityForum({
                     </Link>
                   )}
                   <span className="text-xs text-zinc-500">
-                    {formatForumDate(selectedPost.created_at)}
+                    {formatDate(selectedPost.created_at)}
                   </span>
                 </div>
                 <h4 className="mt-3 text-2xl font-bold tracking-tight text-white">
@@ -484,7 +513,7 @@ export function CommunityForum({
             <section className="space-y-4">
               <h5 className="flex items-center gap-2 text-sm font-semibold text-zinc-300">
                 <span className="size-1.5 rounded-full bg-violet-400" />
-                留言 ({comments.length})
+                {t("comments", { count: comments.length })}
               </h5>
 
               {commentsLoading ? (
@@ -509,7 +538,7 @@ export function CommunityForum({
                           userId={comment.user_id}
                         />
                         <span className="text-xs text-zinc-500">
-                          {formatForumDate(comment.created_at)}
+                          {formatDate(comment.created_at)}
                         </span>
                       </div>
                       <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-zinc-400">
@@ -520,7 +549,7 @@ export function CommunityForum({
                 </div>
               ) : (
                 <div className="rounded-xl border border-dashed border-white/10 py-10 text-center text-sm text-zinc-500">
-                  尚無留言，成為第一位回應的玩家吧！
+                  {t("noComments")}
                 </div>
               )}
 
@@ -540,8 +569,8 @@ export function CommunityForum({
                       }
                       placeholder={
                         isSeedPost
-                          ? "示範文章無法留言，請發表新文章參與討論"
-                          : "寫下你的留言…（Ctrl+Enter 快速送出）"
+                          ? t("seedReplyPlaceholder")
+                          : t("replyPlaceholder")
                       }
                       maxLength={FORUM_LIMITS.comment}
                       rows={3}
@@ -562,20 +591,20 @@ export function CommunityForum({
                         ) : (
                           <Send className="size-4" />
                         )}
-                        發表留言
+                        {t("submitReply")}
                       </Button>
                     </div>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center gap-3 py-4 text-center">
-                    <p className="text-sm text-zinc-400">登入後即可參與討論</p>
+                    <p className="text-sm text-zinc-400">{t("loginToDiscuss")}</p>
                     <Button
                       nativeButton={false}
                       render={<Link href="/auth" />}
                       variant="outline"
                       className="border-white/10 bg-white/5 text-zinc-200 hover:border-violet-400/30"
                     >
-                      前往登入
+                      {t("goLogin")}
                     </Button>
                   </div>
                 )}
@@ -600,7 +629,7 @@ export function CommunityForum({
               >
                 <h4 className="mb-4 flex items-center gap-2 text-sm font-semibold text-white">
                   <MessageSquarePlus className="size-4 text-violet-400" />
-                  發表文章
+                  {t("createPost")}
                 </h4>
                 <div className="space-y-4">
                   <div
@@ -613,7 +642,7 @@ export function CommunityForum({
                   >
                     {isHub && games && games.length > 0 && (
                       <div className="space-y-2">
-                        <Label className="text-zinc-300">所屬遊戲</Label>
+                        <Label className="text-zinc-300">{t("gameField")}</Label>
                         <Select
                           value={composeGameId?.toString() ?? ""}
                           onValueChange={(value) => {
@@ -623,7 +652,7 @@ export function CommunityForum({
                           }}
                         >
                           <SelectTrigger className="w-full border-white/10 bg-white/5 text-zinc-100">
-                            <SelectValue placeholder="選擇遊戲" />
+                            <SelectValue placeholder={t("selectGame")} />
                           </SelectTrigger>
                           <SelectContent className="border-white/10 bg-zinc-900 text-zinc-100 ring-white/10">
                             {games.map((game) => (
@@ -641,19 +670,19 @@ export function CommunityForum({
                     )}
                     <div className="space-y-2">
                       <Label htmlFor="forum-title-inline" className="text-zinc-300">
-                        標題
+                        {t("postTitle")}
                       </Label>
                       <Input
                         id="forum-title-inline"
                         value={newTitle}
                         onChange={(event) => setNewTitle(event.target.value)}
-                        placeholder="例如：第三關怎麼過？"
+                        placeholder={t("titlePlaceholder")}
                         maxLength={FORUM_LIMITS.title}
                         className="border-white/10 bg-white/5 text-zinc-100 placeholder:text-zinc-500 focus-visible:border-violet-400/40 focus-visible:ring-violet-500/20"
                       />
                     </div>
                     <div className="space-y-2 sm:w-44">
-                      <Label className="text-zinc-300">分類</Label>
+                      <Label className="text-zinc-300">{t("category")}</Label>
                       <Select
                         value={newCategory}
                         onValueChange={(value) =>
@@ -661,7 +690,7 @@ export function CommunityForum({
                         }
                       >
                         <SelectTrigger className="w-full border-white/10 bg-white/5 text-zinc-100">
-                          <SelectValue placeholder="選擇分類" />
+                          <SelectValue placeholder={t("selectCategory")} />
                         </SelectTrigger>
                         <SelectContent className="border-white/10 bg-zinc-900 text-zinc-100 ring-white/10">
                           {FORUM_CATEGORIES.map((item) => (
@@ -670,7 +699,7 @@ export function CommunityForum({
                               value={item.value}
                               className="focus:bg-violet-500/10 focus:text-violet-100"
                             >
-                              {item.emoji} {item.label}
+                              {item.emoji} {t(`categories.${item.value}`)}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -679,7 +708,7 @@ export function CommunityForum({
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="forum-content-inline" className="text-zinc-300">
-                      內容
+                      {t("content")}
                     </Label>
                     <Textarea
                       id="forum-content-inline"
@@ -688,7 +717,7 @@ export function CommunityForum({
                       onKeyDown={(event) =>
                         handleSubmitOnShortcut(event, handleCreatePost)
                       }
-                      placeholder="描述你的問題、建議或攻略心得…（Ctrl+Enter 快速發表）"
+                      placeholder={t("contentPlaceholder")}
                       maxLength={FORUM_LIMITS.content}
                       rows={4}
                       className="min-h-28 resize-none border-white/10 bg-white/5 text-zinc-100 placeholder:text-zinc-500 focus-visible:border-violet-400/40 focus-visible:ring-violet-500/20"
@@ -713,7 +742,7 @@ export function CommunityForum({
                       ) : (
                         <MessageSquarePlus className="size-4" />
                       )}
-                      發表文章
+                      {t("submitPost")}
                     </Button>
                   </div>
                 </div>
@@ -723,9 +752,9 @@ export function CommunityForum({
             {!authLoading && !profile && (
               <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-white/10 bg-zinc-900/30 py-8 text-center sm:flex-row sm:justify-between sm:px-6 sm:text-left">
                 <div>
-                  <p className="font-medium text-white">登入後即可發表文章與留言</p>
+                  <p className="font-medium text-white">{t("loginPromptTitle")}</p>
                   <p className="mt-1 text-sm text-zinc-500">
-                    加入討論、回報 Bug 或分享攻略心得
+                    {t("loginPromptDesc")}
                   </p>
                 </div>
                 <Button
@@ -733,7 +762,7 @@ export function CommunityForum({
                   render={<Link href="/auth" />}
                   className="gap-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white"
                 >
-                  前往登入
+                  {t("goLogin")}
                 </Button>
               </div>
             )}
@@ -742,7 +771,7 @@ export function CommunityForum({
               <div className="flex flex-wrap items-center gap-2">
                 <span className="mr-1 flex items-center gap-1.5 text-xs font-medium text-zinc-500">
                   <Gamepad2 className="size-3.5" />
-                  遊戲
+                  {t("filterGame")}
                 </span>
                 <button
                   type="button"
@@ -754,7 +783,7 @@ export function CommunityForum({
                       : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-zinc-200"
                   )}
                 >
-                  全部 ({posts.length})
+                  {tc("all")} ({posts.length})
                 </button>
                 {games.map((game) => (
                   <button
@@ -779,7 +808,7 @@ export function CommunityForum({
             <div className="flex flex-wrap items-center gap-2">
               <span className="mr-1 flex items-center gap-1.5 text-xs font-medium text-zinc-500">
                 <Filter className="size-3.5" />
-                篩選
+                {t("filter")}
               </span>
               <button
                 type="button"
@@ -791,7 +820,7 @@ export function CommunityForum({
                     : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-zinc-200"
                 )}
               >
-                全部 ({categoryCounts.all ?? 0})
+                {tc("all")} ({categoryCounts.all ?? 0})
               </button>
               {FORUM_CATEGORIES.map((item) => (
                 <button
@@ -805,7 +834,7 @@ export function CommunityForum({
                       : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-zinc-200"
                   )}
                 >
-                  {item.emoji} {item.label}
+                  {item.emoji} {t(`categories.${item.value}`)}
                   {(categoryCounts[item.value] ?? 0) > 0 &&
                     ` (${categoryCounts[item.value]})`}
                 </button>
@@ -845,12 +874,12 @@ export function CommunityForum({
                         </span>
                       )}
                       <span className="text-xs text-zinc-500">
-                        {formatForumDate(post.created_at)}
+                        {formatDate(post.created_at)}
                       </span>
                       {(post.comment_count ?? 0) > 0 && (
                         <span className="flex items-center gap-1 text-xs text-zinc-500">
                           <MessageCircle className="size-3.5" />
-                          {post.comment_count} 則留言
+                          {t("commentCount", { count: post.comment_count ?? 0 })}
                         </span>
                       )}
                     </div>
@@ -871,13 +900,13 @@ export function CommunityForum({
                 <MessagesSquare className="mx-auto mb-3 size-10 text-zinc-600" />
                 <p className="font-medium text-white">
                   {postsError
-                    ? "討論區載入失敗"
+                    ? t("loadFailed")
                     : categoryFilter !== "all"
-                      ? "此分類尚無討論串"
-                      : "尚無討論串"}
+                      ? t("noThreadsCategory")
+                      : t("noThreads")}
                 </p>
                 <p className="mt-1 text-sm text-zinc-500">
-                  {postsError ?? "成為第一位發表文章的玩家！"}
+                  {postsError ?? t("beFirst")}
                 </p>
                 {!profile && (
                   <Button
@@ -885,7 +914,7 @@ export function CommunityForum({
                     render={<Link href="/auth" />}
                     className="mt-5 gap-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white"
                   >
-                    前往登入
+                    {t("goLogin")}
                   </Button>
                 )}
               </div>

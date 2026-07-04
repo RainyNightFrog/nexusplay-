@@ -2,9 +2,9 @@ export type Game = {
   id: number;
   title: string;
   tags: string[];
-  players: string;
-  likes: string;
-  shares: string;
+  players: number;
+  likes: number;
+  shares: number;
   image: string;
   creator: string;
   description: string;
@@ -54,13 +54,6 @@ export const TAG_COLORS: Record<string, string> = {
   冒險: "bg-indigo-500/20 text-indigo-300 ring-indigo-500/30",
   策略: "bg-blue-500/20 text-blue-300 ring-blue-500/30",
 };
-
-export function formatPlayCount(count: number): string {
-  if (count <= 0) return "新上架";
-  if (count >= 10_000) return `${(count / 10_000).toFixed(1)} 萬`;
-  if (count >= 1_000) return `${(count / 1_000).toFixed(1)}k`;
-  return `${count}`;
-}
 
 export function isSupabaseImage(url: string) {
   return url.includes(".supabase.co/storage/");

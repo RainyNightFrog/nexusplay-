@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 import path from "path";
 import { fileURLToPath } from "url";
+import withNextIntl from "./next-intl.config";
 
 const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 
@@ -43,4 +44,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withNextIntl(nextConfig);

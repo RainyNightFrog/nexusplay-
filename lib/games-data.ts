@@ -1,10 +1,9 @@
 import {
   enrichGameRecord,
-  formatEngagementCount,
   getPlatformGameMeta,
 } from "@/lib/platform-catalog";
 import type { GameRecord } from "@/lib/supabase";
-import { formatPlayCount, type Game } from "@/lib/games";
+import type { Game } from "@/lib/games";
 
 function resolveCoverUrl(coverUrl: string) {
   if (!coverUrl) return coverUrl;
@@ -26,11 +25,11 @@ export function mapRecordToGame(record: GameRecord): Game {
     id: enriched.id,
     title: enriched.title,
     tags: meta?.categories ?? [enriched.category],
-    players: formatPlayCount(enriched.plays_count ?? 0),
-    likes: formatEngagementCount(meta?.likesCount ?? 0),
-    shares: formatEngagementCount(meta?.sharesCount ?? 0),
+    players: enriched.plays_count ?? 0,
+    likes: meta?.likesCount ?? 0,
+    shares: meta?.sharesCount ?? 0,
     image: resolveCoverUrl(enriched.cover_url),
-    creator: meta?.creator ?? "NexusPlay 創作者",
+    creator: meta?.creator ?? "",
     description: enriched.description,
     embedUrl: resolvePlayUrl(enriched.game_url || meta?.demoUrl || ""),
     featured: meta?.featured,

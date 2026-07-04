@@ -1,9 +1,26 @@
+import createIntlMiddleware from "next-intl/middleware";
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { resolveUserRole } from "@/lib/auth-profile";
+import { routing } from "@/i18n/routing";
+
+const intlMiddleware = createIntlMiddleware(routing);
+
+function stripLocalePrefix(pathname: string): string {
+  for (const locale of routing.locales) {
+    if (pathname === `/${locale}`) {
+      return "/";
+    }
+    if (pathname.startsWith(`/${locale}/`)) {
+      return pathname.slice(locale.length + 1);
+    }
+  }
+  return pathname;
+}
 
 export async function middleware(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request });
+  const response = intlMiddleware(request);
+  const pathnameWithoutLocale = stripLocalePrefix(request.nextUrl.pathname);
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,12 +31,8 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => {
-            request.cookies.set(name, value);
-          });
-          supabaseResponse = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) => {
-            supabaseResponse.cookies.set(name, value, options);
+            response.cookies.set(name, value, options);
           });
         },
       },
@@ -30,14 +43,14 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (request.nextUrl.pathname.startsWith("/dashboard")) {
+  if (pathnameWithoutLocale.startsWith("/dashboard")) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/auth";
     redirectUrl.searchParams.set(
       "redirect",
-      request.nextUrl.pathname === "/dashboard"
+      pathnameWithoutLocale === "/dashboard"
         ? "/dashboard"
-        : request.nextUrl.pathname
+        : pathnameWithoutLocale
     );
 
     if (!user) {
@@ -52,45 +65,22 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  if (request.nextUrl.pathname.startsWith("/account")) {
+  if (
+    pathnameWithoutLocale.startsWith("/account") ||
+    pathnameWithoutLocale.startsWith("/profile") ||
+    pathnameWithoutLocale.startsWith("/settings")
+  ) {
     if (!user) {
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = "/auth";
-      redirectUrl.searchParams.set("redirect", request.nextUrl.pathname);
+      redirectUrl.searchParams.set("redirect", pathnameWithoutLocale);
       return NextResponse.redirect(redirectUrl);
     }
   }
 
-  if (request.nextUrl.pathname.startsWith("/profile")) {
-    if (!user) {
-      const redirectUrl = request.nextUrl.clone();
-      redirectUrl.pathname = "/auth";
-      redirectUrl.searchParams.set("redirect", "/profile");
-      return NextResponse.redirect(redirectUrl);
-    }
-  }
-
-  if (request.nextUrl.pathname.startsWith("/settings")) {
-    if (!user) {
-      const redirectUrl = request.nextUrl.clone();
-      redirectUrl.pathname = "/auth";
-      redirectUrl.searchParams.set("redirect", "/settings");
-      return NextResponse.redirect(redirectUrl);
-    }
-  }
-
-  return supabaseResponse;
+  return response;
 }
 
 export const config = {
-  matcher: [
-    "/dashboard",
-    "/dashboard/:path*",
-    "/account",
-    "/account/:path*",
-    "/profile",
-    "/profile/:path*",
-    "/settings",
-    "/settings/:path*",
-  ],
+  matcher: ["/((?!api|auth/callback|_next|_vercel|.*\\..*).*)"],
 };
