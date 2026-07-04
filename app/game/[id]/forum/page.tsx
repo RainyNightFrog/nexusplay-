@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
 
 function ForumPageFallback() {
   return (
-    <div className="dark flex min-h-full flex-col items-center justify-center bg-zinc-950 px-4 text-zinc-100">
+    <div className="dark flex min-h-full flex-col items-center justify-center px-4 text-zinc-100">
       <Loader2 className="mb-4 size-10 animate-spin text-violet-400" />
       <p className="text-sm text-zinc-400">載入討論區…</p>
     </div>
@@ -83,7 +83,7 @@ function GameForumContent() {
 
   if (!game) {
     return (
-      <div className="dark flex min-h-full flex-col items-center justify-center bg-zinc-950 px-4 text-zinc-100">
+      <div className="dark flex min-h-full flex-col items-center justify-center px-4 text-zinc-100">
         <MessagesSquare className="mb-4 size-12 text-zinc-600" />
         <h1 className="text-xl font-semibold text-white">找不到此遊戲的討論區</h1>
         <Link href="/community" className={cn(buttonVariants(), "mt-6")}>
@@ -94,20 +94,7 @@ function GameForumContent() {
   }
 
   return (
-    <div className="dark min-h-full bg-zinc-950 text-zinc-100">
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -left-32 top-0 size-[520px] rounded-full bg-violet-600/15 blur-[130px]" />
-        <div className="absolute -right-32 top-1/4 size-[560px] rounded-full bg-fuchsia-500/8 blur-[140px]" />
-        <div
-          className="absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)",
-            backgroundSize: "64px 64px",
-          }}
-        />
-      </div>
-
+    <div className="dark relative min-h-full text-zinc-100">
       <header className="sticky top-0 z-40 border-b border-white/5 bg-zinc-950/70 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-5xl items-center gap-3 px-4 sm:px-6">
           <Link

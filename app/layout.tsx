@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AuthProvider } from "@/components/auth/auth-provider";
 import { AppSettingsProvider } from "@/components/settings/app-settings-provider";
+import { NexusAuroraBackground } from "@/components/ui/nexus-aurora-background";
+import { NexusCursorGlow } from "@/components/ui/nexus-cursor-glow";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -15,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "NexusPlay · 網頁遊戲平台",
-  description: "探索、遊玩與上傳網頁遊戲的電競風平台",
+  title: "NexusPlay",
+  description: "Web game platform for play and upload",
 };
 
 export default function RootLayout({
@@ -29,10 +31,14 @@ export default function RootLayout({
       lang="zh-Hant"
       className={`dark ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
-        <AuthProvider>
-          <AppSettingsProvider>{children}</AppSettingsProvider>
-        </AuthProvider>
+      <body className="relative flex min-h-screen min-h-dvh flex-col bg-transparent">
+        <NexusAuroraBackground />
+        <div className="nexus-app-content">
+          <AuthProvider>
+            <AppSettingsProvider>{children}</AppSettingsProvider>
+          </AuthProvider>
+        </div>
+        <NexusCursorGlow />
       </body>
     </html>
   );

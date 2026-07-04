@@ -140,7 +140,7 @@ export function FeaturedGames({ games, loading }: FeaturedGamesProps) {
                 </div>
 
                 <div className="relative space-y-3 p-5">
-                  <div>
+                  <div className="text-center">
                     <h3 className="text-lg font-bold text-white transition-colors group-hover:text-white/95">
                       {game.title}
                     </h3>
@@ -152,7 +152,7 @@ export function FeaturedGames({ games, loading }: FeaturedGamesProps) {
                     </p>
                   </div>
 
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex flex-wrap justify-center gap-1.5">
                     {game.tags.map((tag) => (
                       <span
                         key={tag}

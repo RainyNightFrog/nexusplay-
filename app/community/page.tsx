@@ -65,12 +65,7 @@ export default function CommunityPage() {
   }));
 
   return (
-    <div className="dark min-h-full bg-zinc-950 text-zinc-100">
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -left-32 top-0 size-[520px] rounded-full bg-violet-600/15 blur-[130px]" />
-        <div className="absolute -right-32 top-1/4 size-[560px] rounded-full bg-fuchsia-500/8 blur-[140px]" />
-      </div>
-
+    <div className="dark relative min-h-full text-zinc-100">
       <header className="sticky top-0 z-40 border-b border-white/5 bg-zinc-950/70 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-5xl items-center gap-4 px-4 sm:px-6">
           <Link

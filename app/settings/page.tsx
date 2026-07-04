@@ -99,7 +99,7 @@ export default function SettingsPage() {
 
   if (loading || !profile || !ready) {
     return (
-      <div className="dark flex min-h-full items-center justify-center bg-zinc-950">
+      <div className="dark flex min-h-full items-center justify-center">
         <Loader2 className="size-8 animate-spin text-violet-400" />
       </div>
     );

@@ -29,7 +29,7 @@ import { cn } from "@/lib/utils";
 
 function GamePageFallback() {
   return (
-    <div className="dark flex min-h-full flex-col items-center justify-center bg-zinc-950 px-4 text-zinc-100">
+    <div className="dark flex min-h-full flex-col items-center justify-center px-4 text-zinc-100">
       <Loader2 className="mb-4 size-10 animate-spin text-cyan-400" />
       <p className="text-sm text-zinc-400">載入遊戲中…</p>
     </div>
@@ -177,7 +177,7 @@ function GamePageContent() {
 
   if (loading) {
     return (
-      <div className="dark flex min-h-full flex-col items-center justify-center bg-zinc-950 px-4 text-zinc-100">
+      <div className="dark flex min-h-full flex-col items-center justify-center px-4 text-zinc-100">
         <Loader2 className="mb-4 size-10 animate-spin text-cyan-400" />
         <p className="text-sm text-zinc-400">
           {migrating ? "正在準備遊戲檔案…" : "載入遊戲中…"}
@@ -188,7 +188,7 @@ function GamePageContent() {
 
   if (!game) {
     return (
-      <div className="dark flex min-h-full flex-col items-center justify-center bg-zinc-950 px-4 text-zinc-100">
+      <div className="dark flex min-h-full flex-col items-center justify-center px-4 text-zinc-100">
         <Gamepad2 className="mb-4 size-12 text-zinc-600" />
         <h1 className="text-xl font-semibold text-white">找不到此遊戲</h1>
         <p className="mt-2 text-sm text-zinc-500">
@@ -202,20 +202,7 @@ function GamePageContent() {
   }
 
   return (
-    <div className="dark min-h-full bg-zinc-950 text-zinc-100">
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -left-32 top-0 size-[480px] rounded-full bg-violet-600/15 blur-[120px]" />
-        <div className="absolute -right-32 top-1/3 size-[520px] rounded-full bg-cyan-500/10 blur-[130px]" />
-        <div
-          className="absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)",
-            backgroundSize: "64px 64px",
-          }}
-        />
-      </div>
-
+    <div className="dark relative min-h-full text-zinc-100">
       <header className="sticky top-0 z-40 border-b border-white/5 bg-zinc-950/70 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
           <Link

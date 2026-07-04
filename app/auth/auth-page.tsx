@@ -119,21 +119,7 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="dark relative min-h-full overflow-hidden bg-zinc-950 text-zinc-100">
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -left-24 top-0 size-[520px] rounded-full bg-violet-600/20 blur-[130px]" />
-        <div className="absolute -right-24 top-1/4 size-[560px] rounded-full bg-cyan-500/15 blur-[140px]" />
-        <div className="absolute bottom-0 left-1/2 size-[640px] -translate-x-1/2 rounded-full bg-fuchsia-600/10 blur-[150px]" />
-        <div
-          className="absolute inset-0 opacity-[0.04]"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)",
-            backgroundSize: "64px 64px",
-          }}
-        />
-      </div>
-
+    <div className="dark relative min-h-full overflow-hidden text-zinc-100">
       <div className="relative mx-auto flex min-h-full max-w-6xl flex-col px-4 py-10 sm:px-6 lg:px-8">
         <Link href="/" className="mb-10 inline-flex w-fit items-center gap-2.5">
           <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400 to-violet-600 shadow-lg shadow-cyan-500/25">

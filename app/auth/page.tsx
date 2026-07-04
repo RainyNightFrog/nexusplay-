@@ -4,7 +4,7 @@ import AuthPage from "./auth-page";
 
 function AuthFallback() {
   return (
-    <div className="dark flex min-h-full items-center justify-center bg-zinc-950">
+    <div className="dark flex min-h-full items-center justify-center">
       <Loader2 className="size-8 animate-spin text-cyan-400" />
     </div>
   );

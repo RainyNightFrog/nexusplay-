@@ -38,6 +38,7 @@ import {
   type Game,
   type SortOption,
 } from "@/lib/games";
+import { ALL_CATEGORY, HOME_COPY } from "@/lib/home-copy";
 import { cn } from "@/lib/utils";
 
 const MotionLink = motion.create(Link);
@@ -100,15 +101,15 @@ function GameCard({ game, index }: { game: Game; index: number }) {
           <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-zinc-400">
             <span className="flex items-center gap-1.5">
               <Users className="size-3.5 text-cyan-400/80" />
-              {game.players} 遊玩
+              {game.players} {HOME_COPY.statsPlaying}
             </span>
             <span className="flex items-center gap-1.5">
               <Heart className="size-3.5 text-rose-400/80" />
-              {game.likes} 讚
+              {game.likes} {HOME_COPY.statsLikes}
             </span>
             <span className="flex items-center gap-1.5">
               <Share2 className="size-3.5 text-fuchsia-400/80" />
-              {game.shares} 分享
+              {game.shares} {HOME_COPY.statsShares}
             </span>
           </div>
         </div>
@@ -174,12 +175,12 @@ function FilterSortBar({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-2 text-sm font-medium text-zinc-400">
           <SlidersHorizontal className="size-4 text-cyan-400" />
-          <span>分類篩選</span>
+          <span>{HOME_COPY.filterLabel}</span>
         </div>
 
         <div className="flex items-center gap-2 text-sm font-medium text-zinc-400 lg:shrink-0">
           <ArrowUpDown className="size-4 text-violet-400" />
-          <span className="hidden sm:inline">排序</span>
+          <span className="hidden sm:inline">{HOME_COPY.sortLabel}</span>
           <Select
             value={sort}
             onValueChange={(value) => onSortChange(value as SortOption)}
@@ -191,7 +192,7 @@ function FilterSortBar({
                 "hover:bg-white/8 focus-visible:border-cyan-400/40 focus-visible:ring-cyan-500/20"
               )}
             >
-              <SelectValue placeholder="選擇排序" />
+              <SelectValue placeholder={HOME_COPY.sortPlaceholder} />
             </SelectTrigger>
             <SelectContent className="border-white/10 bg-zinc-900 text-zinc-100 ring-white/10">
               {SORT_OPTIONS.map((option) => (
@@ -249,14 +250,14 @@ function FilterSortBar({
 export default function Home() {
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
-  const [category, setCategory] = useState<FilterCategory>("全部");
+  const [category, setCategory] = useState<FilterCategory>(ALL_CATEGORY);
   const [sort, setSort] = useState<SortOption>("latest");
 
   const loadGames = useCallback(async (nextCategory: FilterCategory, nextSort: SortOption) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (nextCategory !== "全部") {
+      if (nextCategory !== ALL_CATEGORY) {
         params.set("category", nextCategory);
       }
       if (nextSort !== "latest") {
@@ -278,25 +279,11 @@ export default function Home() {
   }, [category, sort, loadGames]);
 
   const activeSortLabel =
-    SORT_OPTIONS.find((option) => option.value === sort)?.label ?? "最新上傳";
+    SORT_OPTIONS.find((option) => option.value === sort)?.label ??
+    SORT_OPTIONS[0].label;
 
   return (
-    <div className="dark min-h-full bg-zinc-950 text-zinc-100">
-      {/* Ambient background */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -left-32 top-0 size-[480px] rounded-full bg-violet-600/15 blur-[120px]" />
-        <div className="absolute -right-32 top-1/3 size-[520px] rounded-full bg-cyan-500/10 blur-[130px]" />
-        <div className="absolute bottom-0 left-1/2 size-[600px] -translate-x-1/2 rounded-full bg-fuchsia-600/8 blur-[140px]" />
-        <div
-          className="absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)",
-            backgroundSize: "64px 64px",
-          }}
-        />
-      </div>
-
+    <div className="dark relative min-h-full text-zinc-100">
       {/* Navbar */}
       <header className="sticky top-0 z-50 border-b border-white/5 bg-zinc-950/70 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
@@ -319,7 +306,7 @@ export default function Home() {
             <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
             <input
               type="search"
-              placeholder="搜尋遊戲、標籤或創作者..."
+              placeholder={HOME_COPY.searchPlaceholder}
               className={cn(
                 "h-10 w-full rounded-xl border border-white/10 bg-white/5 pl-10 pr-4 text-sm",
                 "text-zinc-100 placeholder:text-zinc-500 backdrop-blur-md",
@@ -338,7 +325,7 @@ export default function Home() {
               )}
             >
               <MessagesSquare className="size-3.5" />
-              社群討論
+              {HOME_COPY.community}
             </Link>
             <CreatorDashboardLink />
             <UserNav />
@@ -362,22 +349,23 @@ export default function Home() {
               className="mb-6 inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-500/10 px-4 py-1.5 text-xs font-medium text-cyan-300 backdrop-blur-sm"
             >
               <Sparkles className="size-3.5" />
-              全新遊戲平台 · 即刻開玩
+              {HOME_COPY.heroBadge}
             </motion.div>
 
             <h1 className="text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl">
               <span className="bg-gradient-to-br from-white via-zinc-100 to-zinc-400 bg-clip-text text-transparent">
-                探索下一款
+                {HOME_COPY.heroTitle1}
               </span>
               <br />
               <span className="bg-gradient-to-r from-cyan-400 via-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
-                傳奇遊戲
+                {HOME_COPY.heroTitle2}
               </span>
             </h1>
 
             <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-zinc-400 sm:text-lg">
-              數千款網頁遊戲，零下載、零等待。創作者可輕鬆上傳作品，玩家盡情暢玩——
-              這是你的電競宇宙入口。
+              {HOME_COPY.heroDesc1}
+              <br />
+              {HOME_COPY.heroDesc2}
             </p>
 
             <motion.div
@@ -389,7 +377,33 @@ export default function Home() {
               <motion.div
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.96 }}
-                className="relative"
+                className="group relative"
+              >
+                <div className="absolute -inset-1 rounded-xl bg-gradient-to-r from-cyan-400 via-violet-500 to-fuchsia-500 opacity-60 blur-lg transition-opacity duration-300 group-hover:opacity-100" />
+                <Button
+                  size="lg"
+                  className={cn(
+                    "group relative h-12 gap-2 overflow-hidden rounded-xl px-8 text-base font-semibold",
+                    "border-0 bg-gradient-to-r from-cyan-500 via-violet-600 to-fuchsia-600 text-white",
+                    "shadow-xl shadow-violet-500/25",
+                    "before:absolute before:inset-0 before:translate-x-[-100%] before:bg-gradient-to-r before:from-transparent before:via-white/25 before:to-transparent before:transition-transform before:duration-700 hover:before:translate-x-[100%]"
+                  )}
+                  onClick={() =>
+                    document
+                      .getElementById("game-grid")
+                      ?.scrollIntoView({ behavior: "smooth" })
+                  }
+                >
+                  <TrendingUp className="size-4 transition-transform duration-300 group-hover:-translate-y-0.5" />
+                  {HOME_COPY.browseGames}
+                  <Zap className="size-4 text-yellow-300 opacity-0 transition-all duration-300 group-hover:opacity-100" />
+                </Button>
+              </motion.div>
+
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.96 }}
+                className="group relative"
               >
                 <div className="absolute -inset-1 rounded-xl bg-gradient-to-r from-cyan-400 via-violet-500 to-fuchsia-500 opacity-60 blur-lg transition-opacity duration-300 group-hover:opacity-100" />
                 <Button
@@ -404,23 +418,10 @@ export default function Home() {
                   )}
                 >
                   <Upload className="size-4 transition-transform duration-300 group-hover:-translate-y-0.5" />
-                  上傳你的遊戲
+                  {HOME_COPY.uploadGame}
                   <Zap className="size-4 text-yellow-300 opacity-0 transition-all duration-300 group-hover:opacity-100" />
                 </Button>
               </motion.div>
-
-              <Button
-                variant="outline"
-                size="lg"
-                className="h-12 rounded-xl border-white/10 bg-white/5 px-8 text-base text-zinc-300 backdrop-blur-sm hover:border-white/20 hover:bg-white/10 hover:text-white"
-                onClick={() =>
-                  document
-                    .getElementById("game-grid")
-                    ?.scrollIntoView({ behavior: "smooth" })
-                }
-              >
-                瀏覽熱門遊戲
-              </Button>
             </motion.div>
           </motion.div>
         </section>
@@ -432,15 +433,15 @@ export default function Home() {
           <div className="mb-6 text-center">
             <div className="mb-2 inline-flex items-center justify-center gap-2 text-sm font-medium text-cyan-400">
               <TrendingUp className="size-4" />
-              探索遊戲
+              {HOME_COPY.exploreGames}
             </div>
             <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
-              精選遊戲
+              {HOME_COPY.featuredGames}
             </h2>
             <p className="mt-1 text-sm text-zinc-500">
-              {category === "全部"
-                ? `依「${activeSortLabel}」排序 · 來自 Supabase 的社群作品`
-                : `「${category}」分類 · ${activeSortLabel}`}
+              {category === ALL_CATEGORY
+                ? HOME_COPY.gridDescAll(activeSortLabel)
+                : HOME_COPY.gridDescCategory(category, activeSortLabel)}
             </p>
           </div>
 
@@ -486,27 +487,29 @@ export default function Home() {
               >
                 <Gamepad2 className="mx-auto mb-4 size-10 text-zinc-600" />
                 <p className="text-lg font-medium text-white">
-                  {category === "全部" ? "尚無遊戲" : `「${category}」分類尚無遊戲`}
+                  {category === ALL_CATEGORY
+                    ? HOME_COPY.emptyAll
+                    : HOME_COPY.emptyCategory(category)}
                 </p>
                 <p className="mt-2 text-sm text-zinc-500">
-                  {category === "全部"
-                    ? "成為第一位上傳作品的創作者吧！"
-                    : "試試其他分類，或上傳此類型的作品。"}
+                  {category === ALL_CATEGORY
+                    ? HOME_COPY.emptyHintAll
+                    : HOME_COPY.emptyHintCategory}
                 </p>
-                {category !== "全部" && (
+                {category !== ALL_CATEGORY && (
                   <Button
                     variant="ghost"
                     className="mt-4 text-zinc-400 hover:text-cyan-300"
-                    onClick={() => setCategory("全部")}
+                    onClick={() => setCategory(ALL_CATEGORY)}
                   >
-                    查看全部分類
+                    {HOME_COPY.viewAllCategories}
                   </Button>
                 )}
                 <Link
                   href="/dashboard/upload"
                   className={cn(buttonVariants(), "mt-6 inline-flex")}
                 >
-                  上傳新遊戲
+                  {HOME_COPY.uploadNewGame}
                 </Link>
               </motion.div>
             )}
@@ -522,10 +525,10 @@ export default function Home() {
               href="/community/rules"
               className="text-zinc-500 transition-colors hover:text-violet-400"
             >
-              社群規則
+              {HOME_COPY.communityRules}
             </Link>
-            {" · "}
-            © 2026 NexusPlay · 網頁遊戲平台
+            {" ? "}
+            {HOME_COPY.footer}
           </p>
         </div>
       </footer>

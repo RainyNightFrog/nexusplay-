@@ -2,6 +2,7 @@
 
 import {
   useCallback,
+  useEffect,
   useRef,
   useState,
   type ChangeEvent,
@@ -9,21 +10,24 @@ import {
 } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft,
   AlertCircle,
+  ArrowLeft,
   CheckCircle2,
   FileArchive,
-  Gamepad2,
   ImageIcon,
   Loader2,
+  Pencil,
+  Rocket,
+  Save,
   Sparkles,
-  Upload,
   X,
 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { uploadGame } from "@/lib/upload-game";
+import { fetchManageGame, updateGame } from "@/lib/update-game";
+import { orphanGameHint } from "@/lib/game-auth";
 import { UPLOAD_CATEGORIES, type UploadCategory } from "@/lib/games";
 import {
   formatMaxSize,
@@ -61,6 +65,7 @@ function DropZone({
   icon: Icon,
   onFileSelect,
   onClear,
+  optional,
 }: {
   label: string;
   hint: string;
@@ -70,6 +75,7 @@ function DropZone({
   icon: typeof ImageIcon;
   onFileSelect: (file: File) => void;
   onClear: () => void;
+  optional?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -79,60 +85,52 @@ function DropZone({
     onFileSelect(selected);
   };
 
-  const onDrop = (event: DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setIsDragging(false);
-    handleFile(event.dataTransfer.files[0]);
-  };
-
-  const onDragOver = (event: DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setIsDragging(true);
-  };
-
-  const onDragLeave = (event: DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setIsDragging(false);
-  };
-
-  const onInputChange = (event: ChangeEvent<HTMLInputElement>) => {
-    handleFile(event.target.files?.[0]);
-    event.target.value = "";
-  };
-
   return (
     <div className="space-y-2 text-center">
-      <label className="block text-sm font-medium text-zinc-200">{label}</label>
+      <label className="block text-sm font-medium text-zinc-200">
+        {label}
+        {optional && (
+          <span className="ml-2 text-xs font-normal text-zinc-500">（選填）</span>
+        )}
+      </label>
       <motion.div
-        onDrop={onDrop}
-        onDragOver={onDragOver}
-        onDragLeave={onDragLeave}
-        onClick={() => !file && inputRef.current?.click()}
-        animate={{
-          scale: isDragging ? 1.01 : 1,
+        onDrop={(event: DragEvent<HTMLDivElement>) => {
+          event.preventDefault();
+          setIsDragging(false);
+          handleFile(event.dataTransfer.files[0]);
         }}
+        onDragOver={(event: DragEvent<HTMLDivElement>) => {
+          event.preventDefault();
+          setIsDragging(true);
+        }}
+        onDragLeave={(event: DragEvent<HTMLDivElement>) => {
+          event.preventDefault();
+          setIsDragging(false);
+        }}
+        onClick={() => inputRef.current?.click()}
+        animate={{ scale: isDragging ? 1.01 : 1 }}
         className={cn(
-          "relative overflow-hidden rounded-2xl border-2 border-dashed transition-all duration-300",
+          "relative cursor-pointer overflow-hidden rounded-2xl border-2 border-dashed transition-all duration-300",
           file
             ? "border-cyan-400/30 bg-cyan-500/5"
             : "border-white/10 bg-zinc-900/40 hover:border-white/20 hover:bg-zinc-900/60",
           isDragging &&
-            "border-cyan-400/70 bg-cyan-500/10 shadow-[0_0_30px_rgba(34,211,238,0.25)]",
-          !file && "cursor-pointer"
+            "border-cyan-400/70 bg-cyan-500/10 shadow-[0_0_30px_rgba(34,211,238,0.25)]"
         )}
       >
         {isDragging && (
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-cyan-500/10 via-transparent to-violet-500/10" />
         )}
-
         <input
           ref={inputRef}
           type="file"
           accept={accept}
           className="hidden"
-          onChange={onInputChange}
+          onChange={(event: ChangeEvent<HTMLInputElement>) => {
+            handleFile(event.target.files?.[0]);
+            event.target.value = "";
+          }}
         />
-
         {file ? (
           <div className="flex flex-col items-center gap-4 p-5 sm:flex-row sm:justify-center">
             {previewUrl ? (
@@ -170,6 +168,18 @@ function DropZone({
               <X className="size-4" />
             </Button>
           </div>
+        ) : previewUrl ? (
+          <div className="flex flex-col items-center gap-4 p-5">
+            <div className="relative size-24 overflow-hidden rounded-xl border border-white/10">
+              <Image
+                src={previewUrl}
+                alt="目前封面"
+                fill
+                className="object-cover"
+              />
+            </div>
+            <p className="text-xs text-zinc-500">點擊或拖放以更換封面</p>
+          </div>
         ) : (
           <div className="flex flex-col items-center px-6 py-10 text-center">
             <div
@@ -196,15 +206,23 @@ function DropZone({
   );
 }
 
-export default function UploadPage() {
+export default function EditGamePage() {
+  const params = useParams();
+  const router = useRouter();
+  const gameId = Number.parseInt(String(params.id), 10);
+
   const [form, setForm] = useState<FormState>({
     title: "",
     description: "",
     category: "",
   });
+  const [existingCoverUrl, setExistingCoverUrl] = useState<string | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [gameZip, setGameZip] = useState<File | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [isOrphan, setIsOrphan] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState("");
   const [toast, setToast] = useState<{
@@ -222,27 +240,69 @@ export default function UploadPage() {
     window.setTimeout(() => setToast(null), type === "success" ? 5000 : 6000);
   };
 
-  const handleCoverSelect = useCallback((file: File) => {
-    const validTypes = ["image/png", "image/jpeg", "image/jpg"];
-    if (!validTypes.includes(file.type)) {
-      showToast("error", "格式錯誤", "封面圖僅支援 .png、.jpg 格式");
+  useEffect(() => {
+    if (Number.isNaN(gameId)) {
+      setLoadError("無效的遊戲 ID");
+      setLoading(false);
       return;
     }
-    if (file.size > MAX_COVER_BYTES) {
-      showToast(
-        "error",
-        "檔案過大",
-        `封面圖不可超過 ${formatMaxSize(MAX_COVER_BYTES)}`
-      );
-      return;
-    }
-    if (coverPreview) URL.revokeObjectURL(coverPreview);
-    setCoverFile(file);
-    setCoverPreview(URL.createObjectURL(file));
-  }, [coverPreview]);
+
+    let cancelled = false;
+
+    fetchManageGame(gameId)
+      .then(({ game, isOrphan: orphan }) => {
+        if (cancelled) return;
+        setForm({
+          title: game.title,
+          description: game.description,
+          category: game.category as UploadCategory,
+        });
+        setExistingCoverUrl(game.cover_url);
+        setIsOrphan(orphan);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setLoadError(
+          error instanceof Error ? error.message : "讀取遊戲資料失敗"
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [gameId]);
+
+  const handleCoverSelect = useCallback(
+    (file: File) => {
+      const validTypes = ["image/png", "image/jpeg", "image/jpg"];
+      if (!validTypes.includes(file.type)) {
+        showToast("error", "格式錯誤", "封面圖僅支援 .png、.jpg 格式");
+        return;
+      }
+      if (file.size > MAX_COVER_BYTES) {
+        showToast(
+          "error",
+          "檔案過大",
+          `封面圖不可超過 ${formatMaxSize(MAX_COVER_BYTES)}`
+        );
+        return;
+      }
+      if (coverPreview?.startsWith("blob:")) {
+        URL.revokeObjectURL(coverPreview);
+      }
+      setCoverFile(file);
+      setCoverPreview(URL.createObjectURL(file));
+    },
+    [coverPreview]
+  );
 
   const handleCoverClear = () => {
-    if (coverPreview) URL.revokeObjectURL(coverPreview);
+    if (coverPreview?.startsWith("blob:")) {
+      URL.revokeObjectURL(coverPreview);
+    }
     setCoverFile(null);
     setCoverPreview(null);
   };
@@ -263,9 +323,7 @@ export default function UploadPage() {
     setGameZip(file);
   };
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-
+  const submitUpdate = async (publishVersion: boolean) => {
     if (!form.title.trim()) {
       alert("請輸入遊戲名稱");
       return;
@@ -278,55 +336,81 @@ export default function UploadPage() {
       alert("請選擇遊戲分類");
       return;
     }
-    if (!coverFile) {
-      alert("請上傳遊戲封面圖");
-      return;
-    }
-    if (!gameZip) {
-      alert("請上傳遊戲壓縮檔");
+    if (publishVersion && !gameZip) {
+      showToast("error", "缺少遊戲包", "發布新版本需上傳新的 .zip 遊戲包");
       return;
     }
 
     setIsSubmitting(true);
-    setSubmitStatus("準備上傳...");
+    setSubmitStatus(publishVersion ? "正在發布新版本..." : "正在儲存變更...");
 
     try {
-      const { game } = await uploadGame(
+      const { game } = await updateGame(
+        gameId,
         {
           title: form.title.trim(),
           description: form.description.trim(),
           category: form.category,
           coverFile,
           gameZipFile: gameZip,
+          publishVersion,
         },
         setSubmitStatus
       );
 
-      console.log("[NexusPlay] 遊戲上傳成功:", game);
-
       showToast(
         "success",
-        "遊戲發布成功！",
-        `「${game.title}」已成功上傳，遊戲 ID：${game.id}`
+        publishVersion ? "新版本已發布！" : "變更已儲存",
+        publishVersion
+          ? `「${game.title}」的新版本已成功上線`
+          : `「${game.title}」的基本資訊已更新`
       );
 
-      setForm({ title: "", description: "", category: "" });
-      handleCoverClear();
-      setGameZip(null);
+      if (publishVersion) {
+        setGameZip(null);
+      }
+      if (coverFile) {
+        setExistingCoverUrl(game.cover_url);
+        handleCoverClear();
+      }
+
+      window.setTimeout(() => router.push("/dashboard"), 1800);
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "上傳失敗，請稍後再試";
-      console.error("[NexusPlay] 遊戲上傳失敗:", error);
-      showToast("error", "上傳失敗", message);
+        error instanceof Error ? error.message : "更新失敗，請稍後再試";
+      showToast("error", "更新失敗", message);
     } finally {
       setIsSubmitting(false);
       setSubmitStatus("");
     }
   };
 
+  if (loading) {
+    return (
+      <div className="dark flex min-h-full flex-col items-center justify-center text-zinc-100">
+        <Loader2 className="mb-4 size-10 animate-spin text-cyan-400" />
+        <p className="text-sm text-zinc-400">載入遊戲資料中…</p>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="dark flex min-h-full flex-col items-center justify-center px-4 text-zinc-100">
+        <AlertCircle className="mb-4 size-10 text-rose-400" />
+        <h1 className="text-xl font-semibold text-white">無法編輯此遊戲</h1>
+        <p className="mt-2 text-sm text-zinc-500">{loadError}</p>
+        <Link href="/dashboard" className={cn(buttonVariants(), "mt-6")}>
+          返回儀表板
+        </Link>
+      </div>
+    );
+  }
+
+  const coverDisplayUrl = coverPreview ?? existingCoverUrl;
+
   return (
     <div className="dark relative min-h-full text-zinc-100">
-      {/* Header */}
       <header className="sticky top-0 z-40 border-b border-white/5 bg-zinc-950/70 backdrop-blur-xl">
         <div className="relative mx-auto flex h-16 max-w-3xl items-center justify-center px-4 sm:px-6">
           <Link
@@ -341,9 +425,9 @@ export default function UploadPage() {
           </Link>
           <div className="flex items-center justify-center gap-2.5">
             <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400 to-violet-600">
-              <Gamepad2 className="size-4 text-white" />
+              <Pencil className="size-4 text-white" />
             </div>
-            <span className="text-sm font-semibold text-white">創作者後台</span>
+            <span className="text-sm font-semibold text-white">編輯遊戲</span>
           </div>
         </div>
       </header>
@@ -355,36 +439,37 @@ export default function UploadPage() {
           transition={{ duration: 0.5 }}
         >
           <div className="mb-8 text-center">
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-violet-400/20 bg-violet-500/10 px-4 py-1.5 text-xs font-medium text-violet-300">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-500/10 px-4 py-1.5 text-xs font-medium text-cyan-300">
               <Sparkles className="size-3.5" />
-              發布你的作品
+              更新你的作品
             </div>
             <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-              上傳新遊戲
+              編輯遊戲內容
             </h1>
             <p className="mx-auto mt-2 max-w-lg text-sm leading-relaxed text-zinc-400">
-              填寫遊戲資訊並上傳檔案，審核通過後即可在 NexusPlay 平台上線。
+              修改基本資訊、更換封面，或上傳新版 zip 以發布新版本。所有檔案均經 zip bomb 與路徑穿越防護。
             </p>
+            {isOrphan && (
+              <p className="mx-auto mt-3 max-w-lg rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+                {orphanGameHint(form.title || "此遊戲")}
+              </p>
+            )}
           </div>
 
           <form
-            onSubmit={handleSubmit}
+            onSubmit={(event) => event.preventDefault()}
             className={cn(
               "space-y-8 rounded-2xl border border-white/10 bg-zinc-900/50 p-6 text-center",
               "shadow-xl shadow-black/40 backdrop-blur-sm sm:p-8"
             )}
           >
-            {/* Basic fields */}
             <section className="space-y-5">
               <h2 className="text-sm font-semibold uppercase tracking-wider text-cyan-400">
                 基本資訊
               </h2>
 
               <div className="space-y-2">
-                <label
-                  htmlFor="title"
-                  className="block text-sm font-medium text-zinc-200"
-                >
+                <label htmlFor="title" className="block text-sm font-medium text-zinc-200">
                   遊戲名稱
                 </label>
                 <input
@@ -395,7 +480,6 @@ export default function UploadPage() {
                   onChange={(event) =>
                     setForm((prev) => ({ ...prev, title: event.target.value }))
                   }
-                  placeholder="輸入你的遊戲名稱..."
                   className={cn(inputClassName, "h-11")}
                   disabled={isSubmitting}
                 />
@@ -418,7 +502,6 @@ export default function UploadPage() {
                       description: event.target.value,
                     }))
                   }
-                  placeholder="描述遊戲玩法、特色與適合的受眾..."
                   rows={4}
                   className={cn(inputClassName, "resize-none py-3 leading-relaxed")}
                   disabled={isSubmitting}
@@ -426,10 +509,7 @@ export default function UploadPage() {
               </div>
 
               <div className="space-y-2">
-                <label
-                  htmlFor="category"
-                  className="block text-sm font-medium text-zinc-200"
-                >
+                <label htmlFor="category" className="block text-sm font-medium text-zinc-200">
                   遊戲分類標籤
                 </label>
                 <select
@@ -441,11 +521,7 @@ export default function UploadPage() {
                       category: event.target.value as UploadCategory | "",
                     }))
                   }
-                  className={cn(
-                    inputClassName,
-                    "h-11 appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%239ca3af%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22m6%209%206%206%206-6%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem] bg-[right_0.75rem_center] bg-no-repeat pr-10 text-center",
-                    !form.category && "text-zinc-500"
-                  )}
+                  className={cn(inputClassName, "h-11 appearance-none pr-10")}
                   disabled={isSubmitting}
                 >
                   <option value="" disabled>
@@ -460,10 +536,9 @@ export default function UploadPage() {
               </div>
             </section>
 
-            {/* File uploads */}
             <section className="space-y-5">
               <h2 className="text-sm font-semibold uppercase tracking-wider text-violet-400">
-                檔案上傳
+                檔案更新
               </h2>
 
               <DropZone
@@ -471,56 +546,92 @@ export default function UploadPage() {
                 hint={`支援 .png、.jpg，最大 ${formatMaxSize(MAX_COVER_BYTES)}`}
                 accept=".png,.jpg,.jpeg,image/png,image/jpeg"
                 file={coverFile}
-                previewUrl={coverPreview}
+                previewUrl={coverDisplayUrl}
                 icon={ImageIcon}
                 onFileSelect={handleCoverSelect}
                 onClear={handleCoverClear}
+                optional
               />
 
               <DropZone
-                label="網頁遊戲壓縮檔"
+                label="新版遊戲壓縮檔"
                 hint={`支援 .zip（含 index.html），最大 ${formatMaxSize(MAX_ZIP_BYTES)}`}
                 accept=".zip,application/zip"
                 file={gameZip}
                 icon={FileArchive}
                 onFileSelect={handleZipSelect}
                 onClear={() => setGameZip(null)}
+                optional
               />
             </section>
 
-            {/* Submit */}
-            <div className="border-t border-white/5 pt-6">
-              <Button
-                type="submit"
-                disabled={isSubmitting}
-                className={cn(
-                  "h-12 w-full gap-2 rounded-xl text-base font-semibold",
-                  "border-0 bg-gradient-to-r from-cyan-500 via-violet-600 to-fuchsia-600 text-white",
-                  "shadow-xl shadow-violet-500/25 hover:from-cyan-400 hover:via-violet-500 hover:to-fuchsia-500",
-                  "disabled:opacity-70"
-                )}
+            <div className="flex flex-col gap-3 border-t border-white/5 pt-6 sm:flex-row">
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="relative flex-1"
               >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="size-5 animate-spin" />
-                    {submitStatus || "發布中..."}
-                  </>
-                ) : (
-                  <>
-                    <Upload className="size-5" />
-                    發布遊戲
-                  </>
-                )}
-              </Button>
-              <p className="mt-3 text-center text-xs text-zinc-600">
-                提交後將進入審核流程，審核結果會通知至你的創作者帳號
-              </p>
+                <Button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={() => submitUpdate(false)}
+                  className={cn(
+                    "group relative h-12 w-full gap-2 overflow-hidden rounded-xl text-base font-semibold",
+                    "border border-white/10 bg-white/5 text-zinc-100 backdrop-blur-sm",
+                    "transition-all duration-500 hover:border-cyan-400/40 hover:bg-cyan-500/10 hover:text-white",
+                    "hover:shadow-[0_0_20px_rgba(6,182,212,0.25)]"
+                  )}
+                >
+                  {isSubmitting && !gameZip ? (
+                    <>
+                      <Loader2 className="size-5 animate-spin" />
+                      {submitStatus || "儲存中..."}
+                    </>
+                  ) : (
+                    <>
+                      <Save className="size-5" />
+                      儲存變更
+                    </>
+                  )}
+                </Button>
+              </motion.div>
+
+              <motion.div
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                className="relative flex-1"
+              >
+                <div className="absolute -inset-1 rounded-xl bg-gradient-to-r from-cyan-400 via-violet-500 to-fuchsia-500 opacity-50 blur-lg transition-opacity duration-500 group-hover:opacity-80" />
+                <Button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={() => submitUpdate(true)}
+                  className={cn(
+                    "group relative h-12 w-full gap-2 overflow-hidden rounded-xl text-base font-semibold",
+                    "border-0 bg-gradient-to-r from-cyan-500 via-violet-600 to-fuchsia-600 text-white",
+                    "animate-pulse shadow-xl shadow-violet-500/25",
+                    "before:absolute before:inset-0 before:translate-x-[-100%] before:bg-gradient-to-r before:from-transparent before:via-white/25 before:to-transparent before:transition-transform before:duration-700 hover:before:translate-x-[100%]",
+                    "hover:animate-none hover:from-cyan-400 hover:via-violet-500 hover:to-fuchsia-500 hover:drop-shadow-[0_0_18px_rgba(6,182,212,0.45)]"
+                  )}
+                >
+                  {isSubmitting && gameZip ? (
+                    <>
+                      <Loader2 className="size-5 animate-spin" />
+                      {submitStatus || "發布中..."}
+                    </>
+                  ) : (
+                    <>
+                      <Rocket className="size-5" />
+                      發布新版本
+                    </>
+                  )}
+                </Button>
+              </motion.div>
             </div>
           </form>
         </motion.div>
       </main>
 
-      {/* Toast notifications */}
       <AnimatePresence>
         {toast && (
           <motion.div
@@ -554,15 +665,6 @@ export default function UploadPage() {
                 <p className="font-semibold text-white">{toast.title}</p>
                 <p className="mt-1 text-sm text-zinc-400">{toast.message}</p>
               </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                onClick={() => setToast(null)}
-                className="shrink-0 text-zinc-500 hover:text-white"
-              >
-                <X className="size-4" />
-              </Button>
             </div>
           </motion.div>
         )}
