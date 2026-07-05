@@ -60,6 +60,21 @@ export function listDefaultWebSubTopics() {
   return [games.rss, games.atom, `${baseUrl}/feed/forum.xml`];
 }
 
+export function forumWebSubTopicUrl() {
+  return `${getSiteUrl()}/feed/forum.xml`;
+}
+
+export async function publishForumFeedToWebSubHub() {
+  return publishFeedToWebSubHub(forumWebSubTopicUrl());
+}
+
+export function triggerForumWebSubPing() {
+  void publishForumFeedToWebSubHub().then((result) => {
+    if (!result.configured) return;
+    console.info("[websub forum ping]", result.ok ? "ok" : result.error ?? result.status);
+  });
+}
+
 export async function pingDefaultWebSubFeeds() {
   const topics = listDefaultWebSubTopics();
   const results: WebSubPublishResult[] = [];

@@ -1,3 +1,6 @@
+import { countPendingForumDigestRetries, listForumDigestRetryQueue } from "@/lib/forum-digest-retry-service";
+import { getWebSubAdminSummary } from "@/lib/websub-subscribe-service";
+import type { ForumDigestRetryQueueItem } from "@/lib/forum-digest-retry-service";
 import { createServerSupabase } from "@/lib/supabase-server";
 
 export type ForumDigestAdminReport = {
@@ -6,6 +9,9 @@ export type ForumDigestAdminReport = {
   failedLast7Days: number;
   sentLast30Days: number;
   failedLast30Days: number;
+  pendingRetries: number;
+  retryQueue: ForumDigestRetryQueueItem[];
+  websub: Awaited<ReturnType<typeof getWebSubAdminSummary>>;
   recent: Array<{
     id: number;
     userId: string;
@@ -44,6 +50,9 @@ export async function getForumDigestAdminReport(): Promise<ForumDigestAdminRepor
     failed7,
     sent30,
     failed30,
+    pendingRetries,
+    websub,
+    retryQueue,
     recentResult,
   ] = await Promise.all([
     supabase
@@ -54,6 +63,9 @@ export async function getForumDigestAdminReport(): Promise<ForumDigestAdminRepor
     countDeliveriesSince("failed", since7),
     countDeliveriesSince("sent", since30),
     countDeliveriesSince("failed", since30),
+    countPendingForumDigestRetries(),
+    getWebSubAdminSummary(),
+    listForumDigestRetryQueue(10),
     supabase
       .from("forum_digest_deliveries")
       .select("id, user_id, locale, post_count, status, error_message, created_at")
@@ -70,6 +82,9 @@ export async function getForumDigestAdminReport(): Promise<ForumDigestAdminRepor
     failedLast7Days: failed7,
     sentLast30Days: sent30,
     failedLast30Days: failed30,
+    pendingRetries,
+    websub,
+    retryQueue,
     recent: (recentResult.data ?? []).map((row) => ({
       id: row.id as number,
       userId: row.user_id as string,

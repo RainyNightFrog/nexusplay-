@@ -5,6 +5,7 @@ import {
   type ForumCategory,
 } from "@/lib/forum";
 import { createForumPost, getForumPostsByGameId } from "@/lib/forum-service";
+import { triggerForumWebSubPing } from "@/lib/websub-service";
 import { sanitizePlainText } from "@/lib/sanitize";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 
@@ -84,6 +85,8 @@ export async function POST(
       },
       authClient
     );
+
+    triggerForumWebSubPing();
 
     return NextResponse.json({ post }, { status: 201 });
   } catch (error) {

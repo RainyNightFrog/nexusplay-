@@ -8,6 +8,7 @@ import { Globe, Heart, Loader2, UserRound } from "lucide-react";
 import { Link, useRouter } from "@/i18n/navigation";
 import { FollowCreatorButton } from "@/components/creator/follow-creator-button";
 import { RssFeedLink } from "@/components/feeds/rss-feed-link";
+import { FeedJsonLink } from "@/components/feeds/feed-json-link";
 import { SiteHeader } from "@/components/layout/site-header";
 import { Badge } from "@/components/ui/badge";
 import { useGameFavoriteActions } from "@/hooks/use-game-favorite-actions";
@@ -130,6 +131,10 @@ export default function CreatorPublicPage() {
               >
                 {t("atomFeed")}
               </a>
+              <FeedJsonLink
+                href={`/api/feeds/preview?feed=creator&id=${creator.id}&limit=10`}
+                label={t("jsonFeed")}
+              />
             </div>
           </div>
         </div>

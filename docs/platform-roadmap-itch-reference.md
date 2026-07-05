@@ -375,6 +375,46 @@ Migration: `npm run db:phase-ac-platform`
 
 環境變數：`WEBSUB_HUB_URL`（可選，如 Google PubSubHubbub）
 
+### Phase AE — WebSub 回調、摘要重試與 Feed JSON 預覽（已實作）
+
+| 功能 | 狀態 | 路徑／備註 |
+|------|------|-----------|
+| WebSub 訂閱回調 | ✓ | `GET/POST /api/websub/callback` — hub 驗證與更新通知 |
+| WebSub 自動續訂 | ✓ | `GET /api/cron/websub-subscribe`；`websub_subscriptions` 表 |
+| 摘要重試佇列 | ✓ | 寄送失敗入列；`GET /api/cron/forum-digest-retry` |
+| Feed JSON 預覽 | ✓ | `GET /api/feeds/preview?feed=games\|forum\|…` |
+| 訂閱中心預覽 UI | ✓ | `/feeds` 顯示最新 5 則 |
+| Admin WebSub／重試 | ✓ | 摘要報表分頁顯示待重試與 WebSub 狀態 |
+
+Migration: `npm run db:phase-ae-platform`
+
+### Phase AF — Admin 營運與分類預覽（已實作）
+
+| 功能 | 狀態 | 路徑／備註 |
+|------|------|-----------|
+| Admin 摘要重試 | ✓ | `POST /api/admin/forum-digest/retry` |
+| Admin WebSub 續訂／Ping | ✓ | `POST /api/admin/websub/subscribe`、`/ping` |
+| 分類 Feed 預覽 UI | ✓ | `/feeds` 分類下拉 + JSON 連結 |
+| 重試佇列列表 | ✓ | Admin 摘要報表顯示待重試項目 |
+
+### Phase AG — Feed 目錄與論壇 WebSub（已實作）
+
+| 功能 | 狀態 | 路徑／備註 |
+|------|------|-----------|
+| Feed 目錄 API | ✓ | `GET /api/feeds/catalog` — 全站 feed URL 清單 |
+| 論壇貼文 WebSub ping | ✓ | 新貼文觸發論壇 feed ping |
+| 遊戲／創作者 JSON 連結 | ✓ | 論壇頁、創作者頁 preview 連結 |
+
+### Phase AH — Feed 健康檢查（已實作）
+
+| 功能 | 狀態 | 路徑／備註 |
+|------|------|-----------|
+| Feed 健康 API | ✓ | `GET /api/feeds/health` |
+| Admin 健康狀態 | ✓ | 摘要報表分頁顯示各 feed 探測結果 |
+| 訂閱中心入口 | ✓ | `/feeds` 連結 catalog／health |
+
+> **Feed／WebSub／Email 摘要全線完成（Phase R–AH）**。後續擴展請依 itch.io 對照表 Phase A–E 金流與帳戶功能為主。
+
 ### Phase E — 創作者提領（已實作）
 
 | 功能 | 狀態 | 路徑／備註 |

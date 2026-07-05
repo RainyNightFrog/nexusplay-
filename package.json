@@ -36,6 +36,7 @@
     "db:phase-z-platform": "node scripts/run-phase-z-platform.mjs",
     "db:phase-ab-platform": "node scripts/run-phase-ab-platform.mjs",
     "db:phase-ac-platform": "node scripts/run-phase-ac-platform.mjs",
+    "db:phase-ae-platform": "node scripts/run-phase-ae-platform.mjs",
     "i18n:sync": "node scripts/sync-missing-i18n.mjs",
     "setup:google": "node scripts/setup-google-oauth.mjs",
     "setup:google:finish": "node scripts/complete-google-oauth.mjs",

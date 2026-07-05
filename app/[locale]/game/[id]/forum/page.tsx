@@ -17,6 +17,7 @@ import { Link } from "@/i18n/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import { CommunityForum } from "@/components/game/community-forum";
 import { RssFeedLink } from "@/components/feeds/rss-feed-link";
+import { FeedJsonLink } from "@/components/feeds/feed-json-link";
 import { UserNav } from "@/components/auth/user-nav";
 import { LeaderboardNavButton } from "@/components/LeaderboardModal";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
@@ -178,10 +179,14 @@ function GameForumContent() {
               <p className="mt-1 line-clamp-2 text-sm text-zinc-400">
                 {game ? localizedDescription(game.title, game.description) : ""}
               </p>
-              <div className="mt-2">
+              <div className="mt-2 flex flex-wrap items-center gap-3">
                 <RssFeedLink
                   href={`/feed/game/${game.id}`}
                   label={t("gameFeedRss")}
+                />
+                <FeedJsonLink
+                  href={`/api/feeds/preview?feed=game&id=${game.id}&limit=10`}
+                  label={t("gameFeedJson")}
                 />
               </div>
             </div>

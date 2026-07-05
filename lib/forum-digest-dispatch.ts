@@ -1,10 +1,8 @@
 import {
-  buildForumDigestPreview,
-  renderForumDigestHtml,
-  renderForumDigestText,
-} from "@/lib/forum-digest-service";
-import { isEmailConfigured, sendEmail } from "@/lib/email-service";
-import { buildForumDigestUnsubscribeUrl } from "@/lib/email-unsubscribe-token";
+  deliverForumDigestToUser,
+  enqueueForumDigestRetry,
+} from "@/lib/forum-digest-retry-service";
+import { isEmailConfigured } from "@/lib/email-service";
 import { readPreferredLocale } from "@/lib/locale-preference-service";
 import { logForumDigestDelivery } from "@/lib/forum-digest-delivery-log";
 import { createServerSupabase } from "@/lib/supabase-server";
@@ -61,48 +59,24 @@ export async function dispatchWeeklyForumDigests(): Promise<ForumDigestDispatchR
     }
 
     try {
-      const locale = await readPreferredLocale(userId);
-      const preview = await buildForumDigestPreview(userId, locale);
-      if (preview.posts.length === 0) {
+      const outcome = await deliverForumDigestToUser(userId);
+
+      if (outcome.kind === "sent") {
+        result.sent += 1;
+        continue;
+      }
+
+      if (outcome.kind === "skipped_empty") {
         result.skippedEmpty += 1;
         continue;
       }
 
-      const { data: userData, error: userError } =
-        await supabase.auth.admin.getUserById(userId);
-
-      if (userError) throw new Error(userError.message);
-
-      const email = userData.user?.email?.trim();
-      if (!email) {
+      if (outcome.kind === "skipped_no_email") {
         result.skippedNoEmail += 1;
         continue;
       }
 
-      const unsubscribeUrl = buildForumDigestUnsubscribeUrl(userId);
-
-      await sendEmail({
-        to: email,
-        subject: preview.subject,
-        html: renderForumDigestHtml(preview, { unsubscribeUrl }),
-        text: renderForumDigestText(preview, { unsubscribeUrl }),
-      });
-
-      await logForumDigestDelivery({
-        userId,
-        locale,
-        postCount: preview.posts.length,
-        status: "sent",
-      });
-
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({ forum_digest_last_sent_at: new Date().toISOString() })
-        .eq("id", userId);
-
-      if (updateError) throw new Error(updateError.message);
-
-      result.sent += 1;
+      throw new Error(outcome.message);
     } catch (dispatchError) {
       result.failed += 1;
       const message =
@@ -118,6 +92,7 @@ export async function dispatchWeeklyForumDigests(): Promise<ForumDigestDispatchR
           status: "failed",
           errorMessage: message,
         });
+        await enqueueForumDigestRetry(userId, message);
       } catch (logError) {
         console.error(
           "[forum digest dispatch log]",

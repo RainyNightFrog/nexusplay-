@@ -5,6 +5,8 @@ import { Rss } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { SiteHeader } from "@/components/layout/site-header";
 import { NavActions } from "@/components/layout/nav-actions";
+import { CategoryFeedPreviewPicker } from "@/components/feeds/category-feed-preview-picker";
+import { FeedPreviewPanel } from "@/components/feeds/feed-preview-panel";
 import { RssFeedLink } from "@/components/feeds/rss-feed-link";
 import { GAME_GENRES } from "@/lib/game-metadata";
 import {
@@ -78,13 +80,38 @@ export function FeedsHub({ stats }: FeedsHubProps) {
               {t("opmlExport")}
             </a>
           </div>
-          <ul className="space-y-2">
+          <ul className="space-y-4">
             {PLATFORM_FEEDS.map((feed) => (
               <li key={feed.href}>
                 <RssFeedLink href={feed.href} label={t(feed.labelKey)} />
+                {feed.href === "/feed.xml" ? <FeedPreviewPanel feed="games" /> : null}
+                {feed.href === "/feed/forum.xml" ? <FeedPreviewPanel feed="forum" /> : null}
               </li>
             ))}
           </ul>
+          <p className="mt-4 text-xs text-zinc-600">
+            {t("previewApiHint")}{" "}
+            <a
+              href="/api/feeds/preview?feed=games&limit=10"
+              className="text-violet-400/90 hover:text-violet-300"
+            >
+              JSON
+            </a>
+            {" · "}
+            <a
+              href="/api/feeds/catalog"
+              className="text-violet-400/90 hover:text-violet-300"
+            >
+              {t("catalogLink")}
+            </a>
+            {" · "}
+            <a
+              href="/api/feeds/health"
+              className="text-violet-400/90 hover:text-violet-300"
+            >
+              {t("healthLink")}
+            </a>
+          </p>
         </section>
 
         <section className="rounded-2xl border border-white/10 bg-zinc-900/50 p-5">
@@ -123,6 +150,7 @@ export function FeedsHub({ stats }: FeedsHubProps) {
               );
             })}
           </ul>
+          <CategoryFeedPreviewPicker />
         </section>
 
         <p className="mt-8 text-center text-xs text-zinc-600">{t("hint")}</p>

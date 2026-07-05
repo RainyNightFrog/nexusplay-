@@ -105,6 +105,7 @@ export default function AdminPage() {
   const locale = useLocale();
 
   const [pageError, setPageError] = useState<string | null>(null);
+  const [pageSuccess, setPageSuccess] = useState<string | null>(null);
 
   const [stats, setStats] = useState<AdminStats>({
     pendingGames: 0,
@@ -347,6 +348,11 @@ export default function AdminPage() {
       {pageError && (
         <div className="mb-6 rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
           {pageError}
+        </div>
+      )}
+      {pageSuccess && (
+        <div className="mb-6 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+          {pageSuccess}
         </div>
       )}
       <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -709,7 +715,13 @@ export default function AdminPage() {
         </TabsContent>
 
         <TabsContent value="digest">
-          <AdminDigestReportPanel onError={setPageError} />
+          <AdminDigestReportPanel
+            onError={setPageError}
+            onSuccess={(message) => {
+              setPageError(null);
+              setPageSuccess(message);
+            }}
+          />
         </TabsContent>
       </Tabs>
 
