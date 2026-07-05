@@ -7,6 +7,7 @@ import { Loader2, LogOut, Palette, Settings, Shield, UserRound } from "lucide-re
 import { Link } from "@/i18n/navigation";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { getInitials } from "@/lib/auth";
+import { getCreatorDashboardHref } from "@/lib/creator-nav";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 
@@ -159,13 +160,9 @@ export function UserNav() {
 
 export function CreatorDashboardLink() {
   const t = useTranslations("nav");
-  const { profile, loading } = useAuth();
+  const { profile, loading, isCreator } = useAuth();
 
-  const href = !profile
-    ? "/auth?redirect=/dashboard"
-    : profile.role === "creator"
-      ? "/dashboard"
-      : "/profile";
+  const href = getCreatorDashboardHref(profile, isCreator);
 
   if (loading && !profile) {
     return (

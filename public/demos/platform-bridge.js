@@ -1,0 +1,385 @@
+/**
+ * NexusPlay 平台橋接：雲端存檔 + 排行榜 + 本地備份
+ * 供 /demos/*.html 嵌入使用
+ */
+(function () {
+  var AUTH_TYPE = "nexusplay:auth";
+  var READY_TYPE = "nexusplay:ready";
+
+  var SLUG_MAP = {
+    "cyber-fortune-preview.html": "cyber-fortune",
+    "core-defense-preview.html": "core-defense",
+  };
+
+  var GRADE_RANK = { S: 5, A: 4, B: 3, C: 2, D: 1, "\u2014": 0 };
+
+  function detectSlug() {
+    var file = location.pathname.split("/").pop() || "";
+    return SLUG_MAP[file] || file.replace(/\.html$/, "") || "demo";
+  }
+
+  function detectGameId() {
+    var params = new URLSearchParams(location.search);
+    var gid = params.get("gid");
+    if (gid && !isNaN(parseInt(gid, 10))) return parseInt(gid, 10);
+    var embedMatch = location.pathname.match(/\/api\/games\/(\d+)\/embed/);
+    if (embedMatch) return parseInt(embedMatch[1], 10);
+    if (window.NexusPlay && window.NexusPlay.gameId) return window.NexusPlay.gameId;
+    return null;
+  }
+
+  var slug = detectSlug();
+  var gameId = detectGameId();
+  var user = null;
+  var authSettled = false;
+  var authWaiters = [];
+
+  function localKey(suffix) {
+    return "nexusplay:" + slug + ":" + suffix;
+  }
+
+  function resolveAuth() {
+    authSettled = true;
+    var copy = user === undefined ? null : user;
+    authWaiters.splice(0).forEach(function (fn) {
+      fn(copy);
+    });
+  }
+
+  window.addEventListener("message", function (e) {
+    if (e.origin !== location.origin) return;
+    var d = e.data;
+    if (!d || d.type !== AUTH_TYPE) return;
+    user = d.user || null;
+    resolveAuth();
+  });
+
+  function waitForAuth(ms) {
+    ms = ms || 6000;
+    return new Promise(function (resolve, reject) {
+      if (authSettled) return resolve(user === undefined ? null : user);
+      var timer = setTimeout(function () {
+        resolve(null);
+      }, ms);
+      authWaiters.push(function (u) {
+        clearTimeout(timer);
+        resolve(u);
+      });
+    });
+  }
+
+  function readLocal(key) {
+    try {
+      var raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : null;
+    } catch (_e) {
+      return null;
+    }
+  }
+
+  function writeLocal(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (_e) {}
+  }
+
+  function betterGrade(a, b) {
+    return (GRADE_RANK[a] || 0) >= (GRADE_RANK[b] || 0) ? a : b;
+  }
+
+  function mergeProgress(local, cloud) {
+    if (!local && !cloud) return null;
+    if (!local) return cloud;
+    if (!cloud) return local;
+    return {
+      bestScore: Math.max(local.bestScore || 0, cloud.bestScore || 0),
+      bestCombo: Math.max(local.bestCombo || 0, cloud.bestCombo || 0),
+      bestKills: Math.max(local.bestKills || 0, cloud.bestKills || 0),
+      bestWave: Math.max(local.bestWave || 0, cloud.bestWave || 0),
+      bestGrade: betterGrade(local.bestGrade || "\u2014", cloud.bestGrade || "\u2014"),
+      totalGames: Math.max(local.totalGames || 0, cloud.totalGames || 0),
+      lastPlayed: local.lastPlayed > cloud.lastPlayed ? local.lastPlayed : cloud.lastPlayed,
+      difficulty: cloud.difficulty || local.difficulty,
+    };
+  }
+
+  async function cloudLoadSave() {
+    if (!gameId) return null;
+    if (window.NexusPlay && window.NexusPlay.loadSave) {
+      try {
+        return await window.NexusPlay.loadSave();
+      } catch (_e) {
+        return null;
+      }
+    }
+    var res = await fetch("/api/games/" + gameId + "/save", { credentials: "same-origin" });
+    if (res.status === 401) return null;
+    if (!res.ok) return null;
+    var data = await res.json();
+    return data.save ?? null;
+  }
+
+  async function cloudSaveSave(payload) {
+    if (!gameId) return null;
+    if (window.NexusPlay && window.NexusPlay.saveSave) {
+      try {
+        return await window.NexusPlay.saveSave(payload);
+      } catch (_e) {
+        return null;
+      }
+    }
+    var res = await fetch("/api/games/" + gameId + "/save", {
+      method: "PUT",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ save: payload }),
+    });
+    if (!res.ok) return null;
+    var data = await res.json();
+    return data.save ?? null;
+  }
+
+  async function cloudFetchLeaderboard(limit) {
+    if (!gameId) return [];
+    var res = await fetch("/api/games/" + gameId + "/leaderboard?limit=" + (limit || 20), {
+      credentials: "same-origin",
+    });
+    if (!res.ok) return [];
+    var data = await res.json();
+    return data.entries || [];
+  }
+
+  async function cloudSubmitScore(payload) {
+    if (!gameId || !user) return null;
+    var res = await fetch("/api/games/" + gameId + "/leaderboard", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (res.status === 401) return { error: "login_required" };
+    if (!res.ok) return null;
+    return await res.json();
+  }
+
+  function getGuestName() {
+    var stored = readLocal("guest-name");
+    if (stored) return stored;
+    var names = ["霓虹駭客", "鋼鐵指揮官", "矩陣行者", "裂變守衛", "量子玩家"];
+    return names[Math.floor(Math.random() * names.length)];
+  }
+
+  function submitLocalScore(entry) {
+    var list = readLocal("leaderboard") || [];
+    var name = user ? user.displayName : getGuestName();
+    if (!user) writeLocal("guest-name", name);
+
+    var newEntry = {
+      playerName: name,
+      score: entry.score,
+      grade: entry.grade || null,
+      meta: entry.meta || {},
+      updatedAt: new Date().toISOString(),
+      isMe: true,
+      local: true,
+    };
+
+    var existingIdx = list.findIndex(function (e) {
+      return e.isMe && e.local;
+    });
+    if (existingIdx >= 0) {
+      if (list[existingIdx].score >= newEntry.score) return list;
+      list[existingIdx] = newEntry;
+    } else {
+      list.push(newEntry);
+    }
+
+    list.sort(function (a, b) {
+      return b.score - a.score;
+    });
+    list = list.slice(0, 20);
+    writeLocal("leaderboard", list);
+    return list;
+  }
+
+  function mergeLeaderboards(cloud, local) {
+    var merged = (cloud || []).slice();
+    (local || []).forEach(function (le) {
+      if (le.isMe) {
+        var idx = merged.findIndex(function (e) {
+          return e.isMe;
+        });
+        if (idx >= 0) {
+          if (le.score > merged[idx].score) merged[idx] = Object.assign({}, le, { rank: merged[idx].rank });
+        } else {
+          merged.push(le);
+        }
+      }
+    });
+    merged.sort(function (a, b) {
+      return b.score - a.score;
+    });
+    return merged.slice(0, 20).map(function (e, i) {
+      return Object.assign({}, e, { rank: i + 1 });
+    });
+  }
+
+  function injectStyles() {
+    if (document.getElementById("np-bridge-styles")) return;
+    var style = document.createElement("style");
+    style.id = "np-bridge-styles";
+    style.textContent =
+      ".np-save-hint{font-size:.72rem;color:#888;margin-top:.35rem;letter-spacing:.06em}" +
+      ".np-save-hint.synced{color:#00ffc8}.np-save-hint.local{color:#d4af37}" +
+      ".np-lb-list{text-align:left;margin:1rem 0;max-height:42vh;overflow-y:auto}" +
+      ".np-lb-row{display:grid;grid-template-columns:2rem 1fr auto auto;gap:.5rem;align-items:center;" +
+      "padding:.55rem .65rem;border-bottom:1px solid rgba(255,255,255,.06);font-size:.82rem}" +
+      ".np-lb-row.me{background:rgba(0,255,200,.06);border-radius:4px}" +
+      ".np-lb-rank{font-weight:800;opacity:.7}.np-lb-rank.top{color:#ffd700;opacity:1}" +
+      ".np-lb-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}" +
+      ".np-lb-score{font-weight:700;font-variant-numeric:tabular-nums}" +
+      ".np-lb-grade{font-size:.75rem;opacity:.85;min-width:1.2rem;text-align:center}" +
+      ".np-lb-empty{color:#888;font-size:.85rem;padding:1.5rem 0;text-align:center}";
+    document.head.appendChild(style);
+  }
+
+  window.PlatformBridge = {
+    slug: slug,
+    gameId: gameId,
+    getUser: function () {
+      return user ? Object.assign({}, user) : null;
+    },
+    waitForAuth: waitForAuth,
+    betterGrade: betterGrade,
+    init: async function () {
+      injectStyles();
+      gameId = detectGameId();
+      this.gameId = gameId;
+      await waitForAuth();
+      try {
+        window.parent.postMessage({ type: READY_TYPE, gameId: gameId }, location.origin);
+      } catch (_e) {}
+      return this.loadProgress();
+    },
+    loadProgress: async function () {
+      var local = readLocal("progress");
+      var cloud = null;
+      try {
+        cloud = await cloudLoadSave();
+      } catch (_e) {}
+      var merged = mergeProgress(local, cloud);
+      if (merged) writeLocal("progress", merged);
+      return merged;
+    },
+    saveProgress: async function (data) {
+      var prev = readLocal("progress") || {};
+      var next = Object.assign({}, prev, data, {
+        lastPlayed: new Date().toISOString(),
+        totalGames: (prev.totalGames || 0) + (data._incrementGames ? 1 : 0),
+      });
+      delete next._incrementGames;
+      if (next.bestGrade) next.bestGrade = betterGrade(prev.bestGrade || "\u2014", next.bestGrade);
+      writeLocal("progress", next);
+      var synced = false;
+      if (gameId && user) {
+        try {
+          var result = await cloudSaveSave(next);
+          synced = !!result;
+        } catch (_e) {}
+      }
+      return { progress: next, synced: synced };
+    },
+    submitScore: async function (entry) {
+      submitLocalScore(entry);
+      var cloudResult = null;
+      if (gameId && user) {
+        cloudResult = await cloudSubmitScore({
+          score: entry.score,
+          grade: entry.grade,
+          meta: entry.meta || {},
+        });
+      }
+      return cloudResult;
+    },
+    fetchLeaderboard: async function (limit) {
+      var local = readLocal("leaderboard") || [];
+      var cloud = [];
+      try {
+        cloud = await cloudFetchLeaderboard(limit || 20);
+      } catch (_e) {}
+      return mergeLeaderboards(cloud, local);
+    },
+    renderLeaderboard: function (container, entries) {
+      injectStyles();
+      if (!container) return;
+      if (!entries || !entries.length) {
+        container.innerHTML = '<div class="np-lb-empty">尚無排行紀錄，完成一場對局即可上榜！</div>';
+        return;
+      }
+      container.innerHTML = entries
+        .map(function (e) {
+          var rankCls = e.rank <= 3 ? " top" : "";
+          var meCls = e.isMe ? " me" : "";
+          var grade = e.grade ? e.grade : "\u2014";
+          return (
+            '<div class="np-lb-row' +
+            meCls +
+            '">' +
+            '<span class="np-lb-rank' +
+            rankCls +
+            '">#' +
+            e.rank +
+            "</span>" +
+            '<span class="np-lb-name">' +
+            escapeHtml(e.playerName) +
+            "</span>" +
+            '<span class="np-lb-grade">' +
+            grade +
+            "</span>" +
+            '<span class="np-lb-score">' +
+            Number(e.score).toLocaleString() +
+            "</span>" +
+            "</div>"
+          );
+        })
+        .join("");
+    },
+    leaveToPlatform: function () {
+      try {
+        if (window.parent !== window) {
+          window.parent.history.back();
+          return;
+        }
+      } catch (_e) {}
+      if (window.history.length > 1) window.history.back();
+    },
+    setSaveHint: function (el, synced, userLoggedIn) {
+      if (!el) return;
+      if (synced) {
+        el.textContent = "\u2601 進度已同步至雲端";
+        el.className = "np-save-hint synced";
+      } else if (userLoggedIn && !gameId) {
+        el.textContent = "\u25A1 本地已保存（無法連線雲端）";
+        el.className = "np-save-hint local";
+      } else if (userLoggedIn) {
+        el.textContent = "\u25A1 本地已保存 · 登入平台帳號可同步雲端";
+        el.className = "np-save-hint local";
+      } else {
+        el.textContent = "\u25A1 進度已保存至本機 · 登入後可同步雲端";
+        el.className = "np-save-hint local";
+      }
+    },
+  };
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  try {
+    window.parent.postMessage({ type: READY_TYPE, gameId: gameId }, location.origin);
+  } catch (_e) {}
+})();

@@ -12,6 +12,7 @@ import {
   Gamepad2,
   Heart,
   Loader2,
+  Maximize2,
   MessagesSquare,
   Share2,
   ThumbsUp,
@@ -21,6 +22,7 @@ import {
   X,
 } from "lucide-react";
 import { GameEmbedBridge } from "@/components/game/game-embed-bridge";
+import { GameDetailSections } from "@/components/game/game-detail-sections";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { Link, useRouter } from "@/i18n/navigation";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -76,8 +78,10 @@ function GamePageContent() {
   const [liked, setLiked] = useState(false);
   const [favorited, setFavorited] = useState(false);
   const [showEmbed, setShowEmbed] = useState(false);
+  const [showFullscreen, setShowFullscreen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const fullscreenIframeRef = useRef<HTMLIFrameElement>(null);
 
   const showToast = useCallback((message: string) => {
     setToast(message);
@@ -206,13 +210,52 @@ function GamePageContent() {
   const trustedEmbedUrl =
     game && playable && isSafeEmbedUrl(game.embedUrl) ? game.embedUrl : null;
 
+  const iframeSrc = useMemo(() => {
+    if (!trustedEmbedUrl || !game) return null;
+    if (trustedEmbedUrl.startsWith("/demos/")) {
+      const sep = trustedEmbedUrl.includes("?") ? "&" : "?";
+      return `${trustedEmbedUrl}${sep}gid=${game.id}`;
+    }
+    return trustedEmbedUrl;
+  }, [trustedEmbedUrl, game]);
+
   const embedCode = useMemo(() => {
-    if (!trustedEmbedUrl) return "";
-    const absoluteUrl = trustedEmbedUrl.startsWith("/")
-      ? `${window.location.origin}${trustedEmbedUrl}`
-      : trustedEmbedUrl;
+    if (!iframeSrc) return "";
+    const absoluteUrl = iframeSrc.startsWith("/")
+      ? `${window.location.origin}${iframeSrc}`
+      : iframeSrc;
     return buildEmbedCode(absoluteUrl);
-  }, [trustedEmbedUrl]);
+  }, [iframeSrc]);
+
+  const handleShare = async () => {
+    if (!game) return;
+    const url = window.location.href;
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({
+          title: game.title,
+          text: `${game.title} · NexusPlay`,
+          url,
+        });
+        showToast(tc("shareSuccess"));
+        return;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+      }
+    }
+    await copyToClipboard(url, tc("linkCopied"));
+  };
+
+  useEffect(() => {
+    if (!showFullscreen) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setShowFullscreen(false);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [showFullscreen]);
 
   const copyToClipboard = async (text: string, successMessage: string) => {
     try {
@@ -319,11 +362,11 @@ function GamePageContent() {
               )}
             >
               <div className="relative h-[min(78vh,820px)] min-h-[560px] w-full bg-black">
-                {trustedEmbedUrl ? (
+                {iframeSrc ? (
                   <>
                     <iframe
                       ref={iframeRef}
-                      src={trustedEmbedUrl}
+                      src={iframeSrc}
                       title={game.title}
                       className="absolute inset-0 size-full border-0"
                       sandbox={IFRAME_SANDBOX}
@@ -357,13 +400,11 @@ function GamePageContent() {
                 <p className="text-xs text-zinc-500">
                   {playable ? t("startPlayHint") : t("reuploadHint")}
                 </p>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() =>
-                      copyToClipboard(window.location.href, tc("linkCopied"))
-                    }
+                    onClick={handleShare}
                     className="gap-1.5 border-white/10 bg-white/5 text-zinc-300 hover:border-cyan-400/30 hover:text-white"
                   >
                     <Share2 className="size-3.5" />
@@ -373,11 +414,21 @@ function GamePageContent() {
                     variant="outline"
                     size="sm"
                     onClick={() => setShowEmbed(true)}
-                    disabled={!trustedEmbedUrl}
+                    disabled={!iframeSrc}
                     className="gap-1.5 border-white/10 bg-white/5 text-zinc-300 hover:border-violet-400/30 hover:text-white disabled:opacity-40"
                   >
                     <Code2 className="size-3.5" />
                     {tc("embed")}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowFullscreen(true)}
+                    disabled={!iframeSrc}
+                    className="gap-1.5 border-white/10 bg-white/5 text-zinc-300 hover:border-amber-400/30 hover:text-white disabled:opacity-40"
+                  >
+                    <Maximize2 className="size-3.5" />
+                    {tc("expandGame")}
                   </Button>
                 </div>
               </div>
@@ -392,7 +443,7 @@ function GamePageContent() {
           >
             <div
               className={cn(
-                "rounded-2xl border border-white/10 bg-zinc-900/60 p-5",
+                "rounded-2xl border border-white/10 bg-zinc-900/60 p-5 text-center",
                 "shadow-lg shadow-black/40 backdrop-blur-sm"
               )}
             >
@@ -400,8 +451,8 @@ function GamePageContent() {
                 {game.title}
               </h2>
 
-              <div className="mt-3 flex items-center gap-2 text-sm text-zinc-400">
-                <User className="size-4 text-violet-400" />
+              <div className="mt-3 flex items-center justify-center gap-2 text-sm text-zinc-400">
+                <User className="size-4 shrink-0 text-violet-400" />
                 <span>
                   {tc("creator")}：
                   <span className="ml-1 font-medium text-zinc-200">
@@ -410,14 +461,14 @@ function GamePageContent() {
                 </span>
               </div>
 
-              <div className="mt-3 flex items-center gap-2 text-sm text-zinc-400">
-                <Users className="size-4 text-cyan-400" />
+              <div className="mt-3 flex items-center justify-center gap-2 text-sm text-zinc-400">
+                <Users className="size-4 shrink-0 text-cyan-400" />
                 <span>
                   {formatCount(game.players)} {tc("plays")}
                 </span>
               </div>
 
-              <div className="mt-2 flex flex-wrap gap-4 text-sm text-zinc-400">
+              <div className="mt-2 flex flex-wrap justify-center gap-4 text-sm text-zinc-400">
                 <span className="flex items-center gap-1.5">
                   <Heart className="size-4 text-rose-400" />
                   {formatCount(game.likes)} {tc("likes")}
@@ -428,7 +479,7 @@ function GamePageContent() {
                 </span>
               </div>
 
-              <div className="mt-4 flex flex-wrap gap-1.5">
+              <div className="mt-4 flex flex-wrap justify-center gap-1.5">
                 {game.tags.map((tag) => (
                   <span
                     key={tag}
@@ -451,7 +502,7 @@ function GamePageContent() {
                 href={`/game/${game.id}/forum`}
                 className={cn(
                   buttonVariants({ variant: "outline" }),
-                  "mt-5 w-full gap-2 border-violet-400/25 bg-violet-500/10 text-violet-200 hover:border-violet-400/40 hover:bg-violet-500/15"
+                  "mt-5 w-full justify-center gap-2 border-violet-400/25 bg-violet-500/10 text-violet-200 hover:border-violet-400/40 hover:bg-violet-500/15"
                 )}
               >
                 <MessagesSquare className="size-4" />
@@ -507,60 +558,77 @@ function GamePageContent() {
           </motion.aside>
         </div>
 
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45, delay: 0.15 }}
-          className="mt-10 pb-10"
-        >
-          <div
-            className={cn(
-              "rounded-2xl border border-white/10 bg-zinc-900/60 p-6 sm:p-8",
-              "shadow-lg shadow-black/40 backdrop-blur-sm"
-            )}
-          >
-            <h3 className="text-lg font-semibold text-white">
-              {tc("aboutGame")}
-            </h3>
-            <p className="mt-4 text-sm leading-relaxed text-zinc-400">
-              {game ? localizedDescription(game.title, game.description) : ""}
-            </p>
-
-            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <div className="rounded-xl border border-white/8 bg-zinc-950/40 p-4">
-                <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-                  {tc("creator")}
-                </p>
-                <p className="mt-1 flex items-center gap-2 text-sm text-zinc-200">
-                  <User className="size-4 text-violet-400" />
-                  {game?.creator || tc("defaultCreator")}
-                </p>
-              </div>
-              <div className="rounded-xl border border-white/8 bg-zinc-950/40 p-4">
-                <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-                  {tc("playCount")}
-                </p>
-                <p className="mt-1 flex items-center gap-2 text-sm text-zinc-200">
-                  <Users className="size-4 text-cyan-400" />
-                  {tc("playsCount", { count: formatCount(game?.players ?? 0) })}
-                </p>
-              </div>
-              <div className="rounded-xl border border-white/8 bg-zinc-950/40 p-4">
-                <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-                  {t("communityForum")}
-                </p>
-                <Link
-                  href={`/game/${game.id}/forum`}
-                  className="mt-1 flex items-center gap-2 text-sm text-violet-300 transition-colors hover:text-violet-200"
-                >
-                  <MessagesSquare className="size-4" />
-                  {tc("threads", { count: forumPostCount })}
-                </Link>
-              </div>
-            </div>
-          </div>
-        </motion.section>
+        {game && (
+          <GameDetailSections
+            gameId={game.id}
+            description={localizedDescription(game.title, game.description)}
+            creator={game.creator || tc("defaultCreator")}
+            playersLabel={tc("playsCount", {
+              count: formatCount(game.players ?? 0),
+            })}
+            forumPostCount={forumPostCount}
+            galleryUrls={game.galleryUrls ?? []}
+            devlogs={game.devlogs ?? []}
+          />
+        )}
       </main>
+
+      <AnimatePresence>
+        {showFullscreen && iframeSrc && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md"
+              onClick={() => setShowFullscreen(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              className={cn(
+                "fixed inset-3 z-50 flex flex-col overflow-hidden sm:inset-4 md:inset-6",
+                "rounded-2xl border border-white/10 bg-zinc-950 shadow-2xl shadow-black/60"
+              )}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-white">
+                    {game.title}
+                  </p>
+                  <p className="text-xs text-zinc-500">{tc("fullscreenHint")}</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => setShowFullscreen(false)}
+                  className="shrink-0 text-zinc-400 hover:text-white"
+                  aria-label={tc("fullscreenHint")}
+                >
+                  <X className="size-4" />
+                </Button>
+              </div>
+              <div className="relative min-h-0 flex-1 bg-black">
+                <iframe
+                  ref={fullscreenIframeRef}
+                  src={iframeSrc}
+                  title={`${game.title} · ${tc("expandGameTitle")}`}
+                  className="absolute inset-0 size-full border-0"
+                  sandbox={IFRAME_SANDBOX}
+                  allowFullScreen
+                  referrerPolicy="no-referrer"
+                />
+                <GameEmbedBridge
+                  iframeRef={fullscreenIframeRef}
+                  gameId={gameId}
+                />
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {showEmbed && (

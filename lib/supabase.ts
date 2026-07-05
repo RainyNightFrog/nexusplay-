@@ -34,4 +34,6 @@ export type GameRecord = {
   tips_enabled: boolean;
   suggested_tip_amount: number | null;
   status: "pending" | "approved" | "rejected";
+  gallery_urls?: unknown;
+  devlog_entries?: unknown;
 };

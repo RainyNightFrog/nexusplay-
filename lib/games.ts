@@ -1,3 +1,5 @@
+import type { GameDevlogEntry } from "@/lib/game-page-content";
+
 export type Game = {
   id: number;
   title: string;
@@ -9,6 +11,8 @@ export type Game = {
   creator: string;
   description: string;
   embedUrl: string;
+  galleryUrls?: string[];
+  devlogs?: GameDevlogEntry[];
   featured?: boolean;
   featuredBadge?: string;
   featuredAccent?: "cyan" | "amber" | "violet";

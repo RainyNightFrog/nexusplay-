@@ -8,6 +8,13 @@ export type PlatformGameMeta = {
   categories: string[];
   description: string;
   coverPath: string;
+  galleryImages?: string[];
+  devlogs?: {
+    title: string;
+    content: string;
+    imageUrls?: string[];
+    createdAtOffsetDays: number;
+  }[];
   playsCount: number;
   likesCount: number;
   sharesCount: number;
@@ -25,6 +32,12 @@ export type SeedForumPost = {
   authorName: string;
   createdAtOffsetDays: number;
   comments?: { authorName: string; content: string; offsetHours: number }[];
+};
+
+export type SeedGameComment = {
+  authorName: string;
+  content: string;
+  offsetHours: number;
 };
 
 export const VOID_GACHA_TITLE = "VOID GACHA";
@@ -64,6 +77,23 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
     featuredBadge: "硬核工業科幻",
     featuredAccent: "amber",
     demoUrl: "/demos/core-defense-preview.html",
+    galleryImages: [
+      "/covers/core-defense-cover.png",
+      "/covers/core-defense-cover.png",
+    ],
+    devlogs: [
+      {
+        title: "登錄 0.9 — 七種砲塔上線",
+        content:
+          "新增雷射、迫擊、狙擊、特斯拉、冰霜與火箭砲塔，並加入八種敵人類型與自動下一波功能。",
+        createdAtOffsetDays: 6,
+      },
+      {
+        title: "Genesis 更新",
+        content: "核心防禦系統重構，優化 canvas 渲染與波次橫幅 UI。",
+        createdAtOffsetDays: 29,
+      },
+    ],
   },
   {
     slug: "cyber-fortune",
@@ -81,6 +111,17 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
     featuredBadge: "賽博博弈旗艦",
     featuredAccent: "cyan",
     demoUrl: "/demos/cyber-fortune-preview.html",
+    galleryImages: [
+      "/covers/cyber-fortune-cover.png",
+      "/covers/cyber-fortune-cover.png",
+    ],
+    devlogs: [
+      {
+        title: "登錄 0.75.5",
+        content: "新增 S/A/B 評級、連擊系統與雲端存檔／排行榜整合。",
+        createdAtOffsetDays: 6,
+      },
+    ],
   },
 ];
 
@@ -221,6 +262,35 @@ export const FORUM_SEED_POSTS: Record<string, SeedForumPost[]> = {
       createdAtOffsetDays: 6,
       content:
         "尖峰時段（晚上 9-11 點）配對有時要等 2-3 分鐘，不知道是不是伺服器負載問題？\n\n有人有同樣狀況嗎？",
+    },
+  ],
+};
+
+export const SEED_GAME_COMMENTS: Record<string, SeedGameComment[]> = {
+  "CoreDefense: Mindustry X": [
+    {
+      authorName: "塔防愛好者",
+      content: "七種砲塔搭配起來超有策略深度，自動下一波功能很貼心！",
+      offsetHours: 2,
+    },
+    {
+      authorName: "工業迷",
+      content: "畫面雖然是 demo 但手感已經很完整了，期待正式版。",
+      offsetHours: 5,
+    },
+  ],
+  "CyberFortune 012": [
+    {
+      authorName: "概率王",
+      content: "連擊系統很上癮，排行榜讓我想一直刷分。",
+      offsetHours: 3,
+    },
+  ],
+  [VOID_GACHA_TITLE]: [
+    {
+      authorName: "虛空旅人",
+      content: "抽卡動畫和霓虹 UI 質感一流，已加入收藏。",
+      offsetHours: 4,
     },
   ],
 };

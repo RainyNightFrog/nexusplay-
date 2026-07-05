@@ -2,6 +2,10 @@ import {
   enrichGameRecord,
   getPlatformGameMeta,
 } from "@/lib/platform-catalog";
+import {
+  resolveDevlogEntries,
+  resolveGalleryUrls,
+} from "@/lib/game-page-content";
 import type { GameRecord } from "@/lib/supabase";
 import type { Game } from "@/lib/games";
 
@@ -35,6 +39,8 @@ export function mapRecordToGame(record: GameRecord): Game {
       enriched.game_url || meta?.demoUrl || "",
       enriched.id
     ),
+    galleryUrls: resolveGalleryUrls(enriched),
+    devlogs: resolveDevlogEntries(enriched),
     featured: meta?.featured,
     featuredBadge: meta?.featuredBadge,
     featuredAccent: meta?.featuredAccent,

@@ -30,6 +30,8 @@ import {
   SelectTrigger,
 } from "@/components/ui/select";
 import { CreatorDashboardLink, UserNav } from "@/components/auth/user-nav";
+import { getCreatorDashboardHref } from "@/lib/creator-nav";
+import { useAuth } from "@/hooks/use-auth";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { FeaturedGames } from "@/components/home/featured-games";
 import {
@@ -260,6 +262,8 @@ function FilterSortBar({
 export default function Home() {
   const t = useTranslations("home");
   const tNav = useTranslations("nav");
+  const { profile, isCreator } = useAuth();
+  const uploadHref = getCreatorDashboardHref(profile, isCreator, "/dashboard/upload");
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState<FilterCategory>(ALL_CATEGORY);
@@ -422,7 +426,7 @@ export default function Home() {
                 <Button
                   size="lg"
                   nativeButton={false}
-                  render={<Link href="/dashboard/upload" />}
+                  render={<Link href={uploadHref} />}
                   className={cn(
                     "group relative h-12 gap-2 overflow-hidden rounded-xl px-8 text-base font-semibold",
                     "border-0 bg-gradient-to-r from-cyan-500 via-violet-600 to-fuchsia-600 text-white",

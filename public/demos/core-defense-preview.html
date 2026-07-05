@@ -6,235 +6,273 @@
   <title>CoreDefense: Mindustry X</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      min-height: 100vh;
-      background: #0a0e14;
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: #060a10;
       color: #e8e6e3;
-      font-family: "Segoe UI", system-ui, sans-serif;
-      overflow: hidden;
+      font-family: "Segoe UI", "Microsoft JhengHei", system-ui, sans-serif;
+      overflow-x: hidden;
+      overflow-y: auto;
     }
-    .screen { display: none; position: relative; z-index: 2; min-height: 100vh; }
-    .screen.active { display: flex; flex-direction: column; align-items: center; justify-content: center; }
     .grid-bg {
       position: fixed; inset: 0; pointer-events: none;
       background-image:
-        linear-gradient(rgba(255,140,50,0.04) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,140,50,0.04) 1px, transparent 1px);
+        linear-gradient(rgba(255,140,50,0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,140,50,0.05) 1px, transparent 1px);
       background-size: 48px 48px;
+      animation: gridShift 20s linear infinite;
     }
-    .glow { position: fixed; border-radius: 50%; filter: blur(80px); opacity: 0.35; pointer-events: none; }
-    .glow-1 { width: 400px; height: 400px; background: #ff6b2b; top: -100px; left: -100px; }
-    .glow-2 { width: 300px; height: 300px; background: #4a90d9; bottom: -80px; right: -80px; }
+    @keyframes gridShift { to { background-position: 48px 48px; } }
+    .glow { position: fixed; border-radius: 50%; filter: blur(90px); opacity: 0.3; pointer-events: none; }
+    .glow-1 { width: 450px; height: 450px; background: #ff6b2b; top: -120px; left: -120px; animation: glowPulse 4s ease infinite; }
+    .glow-2 { width: 350px; height: 350px; background: #4a90d9; bottom: -100px; right: -100px; animation: glowPulse 5s ease infinite reverse; }
+    @keyframes glowPulse { 0%,100% { opacity: 0.25; } 50% { opacity: 0.4; } }
+    .screen { display: none; position: relative; z-index: 2; min-height: 100%; box-sizing: border-box; }
+    .screen.active { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1rem; }
+    #gameScreen.active {
+      justify-content: flex-start;
+      padding: 0.4rem 0.5rem 0.75rem;
+      overflow-y: auto;
+      height: 100%;
+    }
     .panel {
-      text-align: center; padding: 2rem;
-      max-width: 580px; width: 92%;
-      background: rgba(10,14,20,0.85);
-      border: 1px solid rgba(255,107,43,0.25);
-      border-radius: 12px;
+      text-align: center; padding: 2.2rem 2rem;
+      max-width: 620px; width: 92%;
+      max-height: calc(100vh - 2rem);
+      overflow-y: auto;
+      background: linear-gradient(160deg, rgba(18,24,32,0.95), rgba(10,14,20,0.9));
+      border: 1px solid rgba(255,107,43,0.35);
+      border-radius: 14px;
+      box-shadow: 0 0 60px rgba(255,107,43,0.12), inset 0 0 40px rgba(255,107,43,0.03);
+      backdrop-filter: blur(10px);
     }
     .badge {
-      display: inline-block;
-      padding: 0.35rem 1rem;
-      border-radius: 999px;
-      background: rgba(255,107,43,0.15);
-      border: 1px solid rgba(255,107,43,0.35);
-      color: #ffb380;
-      font-size: 0.75rem;
-      font-weight: 600;
-      letter-spacing: 0.12em;
-      margin-bottom: 1rem;
+      display: inline-block; padding: 0.35rem 1.1rem; border-radius: 999px;
+      background: rgba(255,107,43,0.12); border: 1px solid rgba(255,107,43,0.4);
+      color: #ffb380; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.14em; margin-bottom: 1rem;
     }
     h1 {
-      font-size: clamp(1.5rem, 4vw, 2.2rem);
-      font-weight: 800;
-      background: linear-gradient(135deg, #fff 0%, #ffb380 50%, #ff6b2b 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: 0.5rem;
+      font-size: clamp(1.6rem, 4.5vw, 2.4rem); font-weight: 900;
+      color: #ffb380;
+      background: linear-gradient(135deg, #fff 0%, #ffb380 45%, #ff6b2b 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      margin-bottom: 0.45rem; letter-spacing: 0.02em;
     }
-    .sub { color: #8b949e; font-size: 0.9rem; margin-bottom: 1.25rem; line-height: 1.6; }
+    .sub { color: #8b949e; font-size: 0.9rem; margin-bottom: 1.1rem; line-height: 1.65; }
+    .menu-stats {
+      display: flex; gap: 1.25rem; justify-content: center; margin: 1rem 0 1.25rem;
+      padding: 0.7rem; border: 1px solid rgba(255,107,43,0.15); border-radius: 8px;
+      background: rgba(0,0,0,0.3);
+    }
+    .menu-stat { font-size: 0.7rem; color: #6e7681; letter-spacing: 0.08em; }
+    .menu-stat b { display: block; font-size: 1.3rem; color: #ff8c5a; margin-top: 0.15rem; }
     .diff-group { display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; margin: 1rem 0; }
     button {
-      cursor: pointer;
-      border: 1px solid rgba(255,107,43,0.4);
-      background: rgba(255,107,43,0.1);
-      color: #ffb380;
-      padding: 0.6rem 1.1rem;
-      font-size: 0.88rem;
-      border-radius: 6px;
-      transition: all 0.2s;
+      cursor: pointer; border: 1px solid rgba(255,107,43,0.45);
+      background: linear-gradient(180deg, rgba(255,107,43,0.14), rgba(255,107,43,0.05));
+      color: #ffb380; padding: 0.62rem 1.15rem; font-size: 0.86rem; font-weight: 600;
+      border-radius: 6px; transition: all 0.2s; letter-spacing: 0.04em;
     }
-    button:hover { background: rgba(255,107,43,0.22); }
-    button.selected { background: rgba(255,107,43,0.35); border-color: #ff8c5a; color: #fff; }
-    button.primary { background: rgba(255,107,43,0.5); color: #fff; font-weight: 600; }
+    button:hover { background: rgba(255,107,43,0.25); box-shadow: 0 0 20px rgba(255,107,43,0.2); transform: translateY(-1px); }
+    button.selected { background: rgba(255,107,43,0.38); border-color: #ff8c5a; color: #fff; box-shadow: 0 0 15px rgba(255,107,43,0.3); }
+    button.primary { background: linear-gradient(180deg, rgba(255,107,43,0.65), rgba(255,107,43,0.4)); color: #fff; border-color: #ff8c5a; }
+    button.primary:hover { box-shadow: 0 0 25px rgba(255,107,43,0.4); }
+    button:disabled, .tool-btn:disabled { opacity: 0.38; cursor: not-allowed; transform: none; box-shadow: none; }
     .btn-row { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; margin-top: 1rem; }
-    .help-box {
-      text-align: left;
-      font-size: 0.84rem;
-      line-height: 1.75;
-      color: #adbac7;
-      max-height: 55vh;
-      overflow-y: auto;
-    }
+    .help-box { text-align: left; font-size: 0.84rem; line-height: 1.75; color: #adbac7; max-height: 55vh; overflow-y: auto; }
     .help-box h3 { color: #ff8c5a; font-size: 0.92rem; margin: 1rem 0 0.35rem; }
     .help-box h3:first-child { margin-top: 0; }
     .help-box ul { padding-left: 1.2rem; }
     .help-box li { margin-bottom: 0.3rem; }
-    /* Game layout */
-    #gameScreen { padding: 0.5rem; justify-content: flex-start; }
-    .game-wrap {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      width: 100%;
-      max-width: 900px;
-    }
+    #gameScreen { padding: 0; }
+    .game-wrap { display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 680px; }
     .top-bar {
-      width: 100%;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.75rem;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0.5rem 0.75rem;
-      background: rgba(0,0,0,0.5);
-      border: 1px solid rgba(255,107,43,0.2);
-      border-radius: 8px;
-      margin-bottom: 0.5rem;
-      font-size: 0.82rem;
+      width: 100%; display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.35rem;
+      padding: 0.45rem 0.6rem; background: rgba(0,0,0,0.6);
+      border: 1px solid rgba(255,107,43,0.25); border-radius: 8px; margin-bottom: 0.4rem; font-size: 0.74rem;
     }
-    .top-bar b { color: #ff8c5a; }
-    .toolbar {
-      display: flex;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-      margin-bottom: 0.5rem;
+    .top-stat { text-align: center; padding: 0.3rem; border-right: 1px solid rgba(255,107,43,0.1); }
+    .top-stat:last-child { border-right: none; }
+    .top-stat .label { font-size: 0.62rem; color: #6e7681; letter-spacing: 0.1em; display: block; }
+    .top-stat b { color: #ff8c5a; font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+    .core-hp-bar { width: 100%; height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; margin-top: 0.25rem; overflow: hidden; }
+    .core-hp-fill { height: 100%; background: linear-gradient(90deg, #ff4444, #ff8c5a); transition: width 0.3s; box-shadow: 0 0 8px rgba(255,107,43,0.5); }
+    .toolbar { display: flex; gap: 0.35rem; flex-wrap: wrap; margin-bottom: 0.35rem; width: 100%; justify-content: center; }
+    .tower-bar { padding: 0.35rem; background: rgba(0,0,0,0.45); border: 1px solid rgba(255,107,43,0.15); border-radius: 8px; }
+    .action-bar { margin-bottom: 0.5rem; }
+    .tool-btn { padding: 0.4rem 0.65rem; font-size: 0.72rem; }
+    .tool-btn.active { background: rgba(255,107,43,0.45); border-color: #ff8c5a; color: #fff; box-shadow: 0 0 12px rgba(255,107,43,0.3); }
+    .tool-btn.wave-btn { background: rgba(74,144,217,0.2); border-color: rgba(74,144,217,0.5); color: #6eb5ff; }
+    .tool-btn.wave-btn:hover:not(:disabled) { background: rgba(74,144,217,0.35); }
+    .tool-btn.wave-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+    .tool-btn.start-btn { background: rgba(74,222,128,0.2); border-color: rgba(74,222,128,0.55); color: #86efac; }
+    .tool-btn.start-btn:hover { background: rgba(74,222,128,0.35); box-shadow: 0 0 15px rgba(74,222,128,0.25); }
+    .tool-btn.auto-btn.on { background: rgba(250,204,21,0.25); border-color: rgba(250,204,21,0.6); color: #fde047; }
+    .canvas-wrap { position: relative; border-radius: 6px; overflow: hidden; box-shadow: 0 0 40px rgba(255,107,43,0.15), 0 4px 20px rgba(0,0,0,0.5); width: 100%; max-width: 640px; }
+    canvas { display: block; cursor: crosshair; width: 100%; height: auto; aspect-ratio: 4 / 3; background: #0a0e14; }
+    .hint { font-size: 0.72rem; color: #6e7681; margin-top: 0.45rem; text-align: center; letter-spacing: 0.03em; }
+    .wave-banner {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0);
+      z-index: 15; pointer-events: none; text-align: center;
+      animation: waveBanner 2s ease forwards;
     }
-    .tool-btn {
-      padding: 0.45rem 0.75rem;
-      font-size: 0.78rem;
+    @keyframes waveBanner {
+      0% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
+      15% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+      70% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+      100% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
     }
-    .tool-btn.active { background: rgba(255,107,43,0.4); border-color: #ff8c5a; }
-    canvas {
-      display: block;
-      border: 2px solid rgba(255,107,43,0.3);
-      border-radius: 4px;
-      cursor: crosshair;
-      max-width: 100%;
-      background: #0d1117;
-    }
-    .hint { font-size: 0.75rem; color: #6e7681; margin-top: 0.4rem; text-align: center; }
+    .wave-banner h2 { font-size: 2.5rem; font-weight: 900; color: #ff8c5a; text-shadow: 0 0 40px rgba(255,107,43,0.8); letter-spacing: 0.15em; }
+    .wave-banner p { color: #6eb5ff; font-size: 0.9rem; letter-spacing: 0.2em; margin-top: 0.5rem; }
     .overlay-msg {
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,0.75);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 10;
+      position: fixed; inset: 0; background: rgba(0,0,0,0.82);
+      display: none; align-items: center; justify-content: center; z-index: 20;
+      backdrop-filter: blur(6px);
     }
     .overlay-msg.show { display: flex; }
     .overlay-box {
-      text-align: center;
-      padding: 2rem;
-      background: #121820;
-      border: 1px solid rgba(255,107,43,0.4);
-      border-radius: 12px;
-      max-width: 400px;
+      text-align: center; padding: 2.2rem 2rem;
+      background: linear-gradient(160deg, #161e28, #0e141c);
+      border: 1px solid rgba(255,107,43,0.45); border-radius: 14px; max-width: 420px;
+      box-shadow: 0 0 60px rgba(255,107,43,0.2);
     }
-    .overlay-box h2 { color: #ff8c5a; margin-bottom: 0.75rem; }
+    .overlay-box h2 { color: #ff8c5a; margin-bottom: 0.5rem; font-size: 1.6rem; }
+    .overlay-grade { font-size: 3.5rem; font-weight: 900; margin: 0.5rem 0; color: #ffd700; text-shadow: 0 0 30px rgba(255,215,0,0.5); }
+    .overlay-stats { display: flex; gap: 1.5rem; justify-content: center; margin: 1rem 0; font-size: 0.78rem; color: #6e7681; }
+    .overlay-stats b { display: block; color: #ff8c5a; font-size: 1.1rem; margin-top: 0.15rem; }
+    @media (max-width: 520px) {
+      .top-bar { grid-template-columns: repeat(3, 1fr); }
+      .toolbar { gap: 0.35rem; }
+      .tool-btn { padding: 0.4rem 0.55rem; font-size: 0.7rem; }
+    }
   </style>
+  <script src="/demos/platform-bridge.js"></script>
 </head>
 <body>
   <div class="grid-bg"></div>
   <div class="glow glow-1"></div>
   <div class="glow glow-2"></div>
 
-  <!-- 主選單 -->
   <div id="menu" class="screen active">
     <div class="panel">
-      <span class="badge">NeonTowers · 核心裂變</span>
+      <span class="badge">NeonTowers · RANKED TD</span>
       <h1>CoreDefense: Mindustry X</h1>
-      <p class="sub">重工業塔防 · 保護核心裂變爐，抵禦異星機械狂潮</p>
-      <p style="font-size:0.8rem;color:#6e7681;">選擇難度</p>
+      <p class="sub">重工業塔防競技 · 保護核心裂變爐，在狂潮中堅守防線</p>
+      <div class="menu-stats">
+        <div class="menu-stat">最高波次<b id="bestWave">—</b></div>
+        <div class="menu-stat">最高擊殺<b id="bestKills">0</b></div>
+        <div class="menu-stat">最高評級<b id="bestGrade">—</b></div>
+      </div>
+      <p style="font-size:0.78rem;color:#6e7681;letter-spacing:0.1em;">選擇難度</p>
       <div class="diff-group" id="menuDiff">
         <button class="diff-btn selected" data-diff="easy">初級</button>
         <button class="diff-btn" data-diff="normal">中級</button>
         <button class="diff-btn" data-diff="hard">高級</button>
       </div>
       <div class="btn-row">
-        <button class="primary" id="btnStart">開始防禦</button>
+        <button class="primary" id="btnStart">▶ 開始防禦</button>
+        <button id="btnLeaderboard">🏆 排行榜</button>
         <button id="btnHelp">遊戲說明</button>
       </div>
+      <p class="np-save-hint" id="saveHint">讀取進度中…</p>
     </div>
   </div>
 
-  <!-- 說明 -->
+  <div id="leaderboard" class="screen">
+    <div class="panel">
+      <h1>🏆 玩家排行榜</h1>
+      <p class="sub" style="margin-bottom:0.5rem;">綜合戰績排行 · 登入平台帳號可同步至雲端</p>
+      <p id="lbLoading" style="font-size:0.82rem;color:#6e7681;margin:0.5rem 0;">載入中…</p>
+      <div class="np-lb-list" id="lbList"></div>
+      <div class="btn-row"><button class="primary" id="btnLbBack">返回</button></div>
+    </div>
+  </div>
+
   <div id="help" class="screen">
     <div class="panel">
       <h1>遊戲說明</h1>
       <div class="help-box">
         <h3>🎯 遊戲目標</h3>
         <p>在工業基地中央有一座<strong>核心裂變爐</strong>。異星機械會從地圖邊緣湧入，沿直線衝向核心。建造砲塔、消滅敵人、保護核心直到所有波次結束。</p>
-        <h3>🎮 操作方式</h3>
+        <h3>👾 敵人類型</h3>
         <ul>
-          <li><strong>左鍵點擊格子：</strong> 放置選中的砲塔（需足夠礦石）</li>
-          <li><strong>選擇砲塔類型：</strong> 使用上方工具列切換</li>
-          <li><strong>開始下一波：</strong> 準備好後點擊「下一波」按鈕</li>
-          <li>核心或所有波次撐過即勝利；核心 HP 歸零則失敗</li>
+          <li><strong>斥候（紅）：</strong> 速度快、血量低</li>
+          <li><strong>虫群（橙）：</strong> 體型小、數量多、極快</li>
+          <li><strong>幻影（青）：</strong> 高速閃避、中等血量</li>
+          <li><strong>重甲（灰）：</strong> 速度慢、血量高</li>
+          <li><strong>護盾（藍）：</strong> 減傷 50%、需集中火力</li>
+          <li><strong>母巢（綠）：</strong> 死亡分裂出小斥候</li>
+          <li><strong>精英（紫）：</strong> 中速、高獎勵</li>
+          <li><strong>泰坦（暗）：</strong> BOSS 級、超高血量與核心傷害</li>
         </ul>
         <h3>🏭 砲塔種類</h3>
         <ul>
-          <li><strong>機槍塔（50 礦）：</strong> 射速快、傷害低，適合前期</li>
-          <li><strong>雷射塔（120 礦）：</strong> 射速慢、傷害高，對付重甲敵人</li>
-          <li><strong>迫擊塔（200 礦）：</strong> 範圍傷害，對付密集敵群</li>
+          <li><strong>機槍塔（50）：</strong> 射速快、前期清場</li>
+          <li><strong>雷射塔（120）：</strong> 持續光束、高單體傷害</li>
+          <li><strong>迫擊塔（200）：</strong> 範圍爆炸、對付密集敵群</li>
+          <li><strong>狙擊塔（180）：</strong> 超遠射程、高爆發</li>
+          <li><strong>電磁塔（250）：</strong> 連鎖電擊、多目標</li>
+          <li><strong>冰凍塔（150）：</strong> 減速敵人、控場</li>
+          <li><strong>導彈塔（320）：</strong> 追蹤導彈、範圍傷害</li>
         </ul>
-        <h3>⚙️ 難度差異</h3>
+        <h3>⚙️ 操作</h3>
         <ul>
-          <li><strong>初級：</strong> 8 波、核心 100 HP、起始 250 礦、敵人較弱</li>
-          <li><strong>中級：</strong> 12 波、核心 80 HP、起始 200 礦</li>
-          <li><strong>高級：</strong> 15 波、核心 60 HP、起始 150 礦、敵人更強更快</li>
-        </ul>
-        <h3>💡 策略提示</h3>
-        <ul>
-          <li>在敵人路徑轉角處放置砲塔，延長攻擊時間</li>
-          <li>先建機槍塔賺取擊殺獎勵，再升級為雷射/迫擊</li>
-          <li>核心周圍留空，避免砲塔阻擋視野</li>
+          <li><strong>開始：</strong> 部署完畢後點擊開始進入戰鬥</li>
+          <li><strong>下一波：</strong> 手動開始下一波敵襲</li>
+          <li><strong>自動下一波：</strong> 波次清空後自動接續</li>
         </ul>
       </div>
-      <div class="btn-row">
-        <button class="primary" id="btnHelpBack">返回</button>
-      </div>
+      <div class="btn-row"><button class="primary" id="btnHelpBack">返回</button></div>
     </div>
   </div>
 
-  <!-- 遊戲 -->
   <div id="gameScreen" class="screen">
     <div class="game-wrap">
       <div class="top-bar">
-        <span>核心 HP <b id="hudCore">100</b></span>
-        <span>礦石 <b id="hudOre">250</b></span>
-        <span>波次 <b id="hudWave">0</b>/<span id="hudMaxWave">8</span></span>
-        <span>擊殺 <b id="hudKills">0</b></span>
+        <div class="top-stat">
+          <span class="label">CORE HP</span>
+          <b id="hudCore">100</b>
+          <div class="core-hp-bar"><div class="core-hp-fill" id="coreHpFill" style="width:100%"></div></div>
+        </div>
+        <div class="top-stat"><span class="label">ORE</span><b id="hudOre">250</b></div>
+        <div class="top-stat"><span class="label">WAVE</span><b id="hudWave">0</b>/<span id="hudMaxWave">8</span></div>
+        <div class="top-stat"><span class="label">KILLS</span><b id="hudKills">0</b></div>
+        <div class="top-stat"><span class="label">MULTI</span><b id="hudMulti">×1</b></div>
       </div>
-      <div class="toolbar">
-        <button class="tool-btn active" data-tower="gun">🔫 機槍塔 (50)</button>
-        <button class="tool-btn" data-tower="laser">⚡ 雷射塔 (120)</button>
-        <button class="tool-btn" data-tower="mortar">💥 迫擊塔 (200)</button>
-        <button class="tool-btn" id="btnNextWave">▶ 下一波</button>
+      <div class="toolbar tower-bar">
+        <button class="tool-btn active" data-tower="gun" title="機槍塔">🔫50</button>
+        <button class="tool-btn" data-tower="laser" title="雷射塔">⚡120</button>
+        <button class="tool-btn" data-tower="mortar" title="迫擊塔">💥200</button>
+        <button class="tool-btn" data-tower="sniper" title="狙擊塔">🎯180</button>
+        <button class="tool-btn" data-tower="tesla" title="電磁塔">⚙250</button>
+        <button class="tool-btn" data-tower="frost" title="冰凍塔">❄150</button>
+        <button class="tool-btn" data-tower="rocket" title="導彈塔">🚀320</button>
+      </div>
+      <div class="toolbar action-bar">
+        <button class="tool-btn start-btn" id="btnStartBattle">▶ 開始</button>
+        <button class="tool-btn wave-btn" id="btnNextWave" disabled>▶ 下一波</button>
+        <button class="tool-btn auto-btn" id="btnAutoWave">🔄 自動 OFF</button>
         <button class="tool-btn" id="btnPause">⏸ 暫停</button>
         <button class="tool-btn" id="btnQuit">退出</button>
       </div>
-      <canvas id="canvas" width="640" height="480"></canvas>
-      <p class="hint">點擊空白格子放置砲塔 · 橙色核心不可放置 · 敵人從邊緣生成</p>
+      <div class="canvas-wrap">
+        <canvas id="canvas" width="640" height="480"></canvas>
+      </div>
+      <p class="hint">部署砲塔 → 點「開始」→ 手動或自動下一波 · 擊殺連鎖提升 MULTI</p>
     </div>
   </div>
 
-  <!-- 結算 -->
   <div class="overlay-msg" id="overlay">
     <div class="overlay-box">
       <h2 id="overlayTitle">勝利</h2>
-      <p id="overlayMsg" style="color:#adbac7;margin-bottom:1rem;line-height:1.6;"></p>
+      <div class="overlay-grade" id="overlayGrade">S</div>
+      <div class="overlay-stats">
+        <div>波次<b id="ovWave">0</b></div>
+        <div>擊殺<b id="ovKills">0</b></div>
+        <div>核心 HP<b id="ovHp">0</b></div>
+      </div>
+      <p id="overlayMsg" style="color:#adbac7;margin-bottom:1rem;line-height:1.6;font-size:0.88rem;"></p>
       <div class="btn-row">
         <button class="primary" id="btnRetry">再玩一次</button>
         <button id="btnMenu">主選單</button>
@@ -247,28 +285,44 @@
     const CORE = { c: 8, r: 6, hp: 100, maxHp: 100 };
 
     const TOWERS = {
-      gun:    { cost: 50,  range: 90,  damage: 8,  rate: 400, color: '#6eb5ff', name: 'gun' },
-      laser:  { cost: 120, range: 110, damage: 28, rate: 900, color: '#ff6b2b', name: 'laser' },
-      mortar: { cost: 200, range: 130, damage: 18, rate: 1200, color: '#c084fc', name: 'mortar', aoe: 35 },
+      gun:    { cost: 50,  range: 90,  damage: 10, rate: 350,  color: '#6eb5ff', beam: false, aoe: 0,  homing: false, chain: 0, slow: 0 },
+      laser:  { cost: 120, range: 110, damage: 6,  rate: 80,   color: '#ff6b2b', beam: true,  aoe: 0,  homing: false, chain: 0, slow: 0 },
+      mortar: { cost: 200, range: 130, damage: 22, rate: 1100, color: '#c084fc', beam: false, aoe: 38, homing: false, chain: 0, slow: 0 },
+      sniper: { cost: 180, range: 165, damage: 48, rate: 1500, color: '#f472b6', beam: false, aoe: 0,  homing: false, chain: 0, slow: 0 },
+      tesla:  { cost: 250, range: 100, damage: 16, rate: 700,  color: '#facc15', beam: false, aoe: 0,  homing: false, chain: 3, slow: 0 },
+      frost:  { cost: 150, range: 105, damage: 5,  rate: 180,  color: '#67e8f9', beam: true,  aoe: 0,  homing: false, chain: 0, slow: 0.45 },
+      rocket: { cost: 320, range: 145, damage: 38, rate: 950,  color: '#fb923c', beam: false, aoe: 28, homing: true,  chain: 0, slow: 0 },
+    };
+
+    const ENEMY_TYPES = {
+      scout:   { color: '#ff5555', accent: '#ff8888', radius: 9,  speedMul: 1.4,  hpMul: 0.7,  rewardMul: 0.8,  shape: 'triangle', coreDmg: 6,  armor: 0 },
+      swarm:   { color: '#ff9944', accent: '#ffbb77', radius: 6,  speedMul: 1.85, hpMul: 0.35, rewardMul: 0.45, shape: 'circle',   coreDmg: 3,  armor: 0 },
+      phantom: { color: '#44dddd', accent: '#88ffff', radius: 8,  speedMul: 1.65, hpMul: 0.85, rewardMul: 1.1,  shape: 'diamond',  coreDmg: 7,  armor: 0 },
+      heavy:   { color: '#667788', accent: '#99aabb', radius: 14, speedMul: 0.65, hpMul: 2.2,  rewardMul: 1.5,  shape: 'square',   coreDmg: 14, armor: 0 },
+      shield:  { color: '#5599ff', accent: '#88bbff', radius: 11, speedMul: 0.85, hpMul: 1.5,  rewardMul: 1.3,  shape: 'shield',   coreDmg: 8,  armor: 0.5 },
+      brood:   { color: '#55cc66', accent: '#88ee99', radius: 10, speedMul: 1.05, hpMul: 1.1,  rewardMul: 1.2,  shape: 'brood',    coreDmg: 9,  armor: 0, split: 2 },
+      elite:   { color: '#b060ff', accent: '#d090ff', radius: 11, speedMul: 1.0,  hpMul: 1.4,  rewardMul: 2.0,  shape: 'hex',      coreDmg: 10, armor: 0 },
+      titan:   { color: '#334455', accent: '#667788', radius: 17, speedMul: 0.42, hpMul: 5.0,  rewardMul: 3.5,  shape: 'titan',    coreDmg: 22, armor: 0.15 },
     };
 
     const DIFF = {
-      easy:   { waves: 8,  coreHp: 100, startOre: 250, enemyHp: 1, enemySpeed: 1, reward: 15 },
-      normal: { waves: 12, coreHp: 80,  startOre: 200, enemyHp: 1.4, enemySpeed: 1.2, reward: 12 },
-      hard:   { waves: 15, coreHp: 60,  startOre: 150, enemyHp: 1.8, enemySpeed: 1.45, reward: 10 },
+      easy:   { waves: 8,  coreHp: 100, startOre: 280, enemyHp: 1, enemySpeed: 1, reward: 16 },
+      normal: { waves: 12, coreHp: 80,  startOre: 220, enemyHp: 1.4, enemySpeed: 1.2, reward: 13 },
+      hard:   { waves: 15, coreHp: 60,  startOre: 170, enemyHp: 1.8, enemySpeed: 1.45, reward: 11 },
     };
 
-    let difficulty = 'easy';
-    let config = DIFF.easy;
-    let canvas, ctx;
-    let towers = [], enemies = [], bullets = [], particles = [];
+    let difficulty = 'easy', config = DIFF.easy;
+    let canvas, ctx, towers = [], enemies = [], bullets = [], particles = [], floatTexts = [];
+    let beams = [], explosions = [], orePopups = [];
     let ore = 250, kills = 0, wave = 0, waveActive = false, paused = false;
-    let coreHp = 100, selectedTower = 'gun';
-    let animId = null, lastTime = 0;
-    let spawnQueue = [], spawnTimer = 0;
+    let gameStarted = false, autoWave = false, autoWaveTimer = 0;
+    let coreHp = 100, selectedTower = 'gun', killStreak = 0, multi = 1;
+    let animId = null, lastTime = 0, spawnQueue = [], spawnTimer = 0;
+    let mouseX = 0, mouseY = 0, hoverCell = null, shake = 0, corePulse = 0;
+    let bestWave = 0, bestKills = 0, bestGrade = '—';
 
     const $ = (id) => document.getElementById(id);
-    const screens = { menu: $('menu'), help: $('help'), game: $('gameScreen') };
+    const screens = { menu: $('menu'), help: $('help'), game: $('gameScreen'), leaderboard: $('leaderboard') };
 
     function showScreen(name) {
       Object.values(screens).forEach(s => s.classList.remove('active'));
@@ -294,23 +348,87 @@
     $('btnStart').onclick = startGame;
     $('btnHelp').onclick = () => showScreen('help');
     $('btnHelpBack').onclick = () => showScreen('menu');
+    $('btnLeaderboard').onclick = () => openLeaderboard();
+    $('btnLbBack').onclick = () => showScreen('menu');
+    $('btnStartBattle').onclick = beginBattle;
     $('btnNextWave').onclick = startNextWave;
+    $('btnAutoWave').onclick = toggleAutoWave;
     $('btnPause').onclick = togglePause;
     $('btnQuit').onclick = quitGame;
     $('btnRetry').onclick = () => { $('overlay').classList.remove('show'); startGame(); };
     $('btnMenu').onclick = () => { $('overlay').classList.remove('show'); quitGame(); };
 
+    function calcLeaderboardScore(win) {
+      if (win) {
+        return Math.floor(kills * 100 + wave * 200 + coreHp * 5 + multi * 50);
+      }
+      return Math.floor(kills * 50 + wave * 100);
+    }
+
+    function applyProgress(p) {
+      if (!p) return;
+      bestWave = p.bestWave || 0;
+      bestKills = p.bestKills || 0;
+      bestGrade = p.bestGrade || '—';
+      $('bestWave').textContent = bestWave || '—';
+      $('bestKills').textContent = bestKills;
+      $('bestGrade').textContent = bestGrade;
+    }
+
+    function refreshMenuStats() {
+      $('bestWave').textContent = bestWave || '—';
+      $('bestKills').textContent = bestKills;
+      $('bestGrade').textContent = bestGrade;
+    }
+
+    async function openLeaderboard() {
+      showScreen('leaderboard');
+      $('lbLoading').style.display = 'block';
+      $('lbList').innerHTML = '';
+      const entries = await PlatformBridge.fetchLeaderboard(15);
+      $('lbLoading').style.display = 'none';
+      PlatformBridge.renderLeaderboard($('lbList'), entries);
+    }
+
+    async function persistRunResult(win, grade, lbScore) {
+      if (win && wave > bestWave) bestWave = wave;
+      if (kills > bestKills) bestKills = kills;
+      bestGrade = PlatformBridge.betterGrade(bestGrade, grade);
+      refreshMenuStats();
+      const result = await PlatformBridge.saveProgress({
+        bestWave, bestKills, bestGrade,
+        difficulty,
+        _incrementGames: 1,
+      });
+      PlatformBridge.setSaveHint($('saveHint'), result.synced, !!PlatformBridge.getUser());
+      await PlatformBridge.submitScore({
+        score: lbScore,
+        grade,
+        meta: { kills, wave, coreHp: Math.ceil(coreHp), win, multi: multi.toFixed(1), difficulty },
+      });
+    }
+
+    PlatformBridge.init().then(function (p) {
+      applyProgress(p);
+      PlatformBridge.setSaveHint($('saveHint'), false, !!PlatformBridge.getUser());
+    });
+
     function startGame() {
       config = DIFF[difficulty];
       canvas = $('canvas');
       ctx = canvas.getContext('2d');
-      towers = []; enemies = []; bullets = []; particles = [];
+      towers = []; enemies = []; bullets = []; particles = []; beams = [];
+      explosions = []; floatTexts = []; orePopups = [];
       ore = config.startOre; kills = 0; wave = 0; waveActive = false; paused = false;
+      gameStarted = false; autoWave = false; autoWaveTimer = 0;
       coreHp = config.coreHp; CORE.hp = coreHp; CORE.maxHp = config.coreHp;
-      spawnQueue = []; spawnTimer = 0;
+      killStreak = 0; multi = 1; spawnQueue = []; spawnTimer = 0; shake = 0;
       $('hudMaxWave').textContent = config.waves;
+      updateWaveButtons();
       updateHud();
       showScreen('game');
+      canvas.onmousemove = onMouseMove;
+      canvas.onmouseleave = () => { hoverCell = null; };
       canvas.onclick = onCanvasClick;
       lastTime = performance.now();
       if (animId) cancelAnimationFrame(animId);
@@ -320,6 +438,30 @@
     function quitGame() {
       if (animId) cancelAnimationFrame(animId);
       showScreen('menu');
+    }
+
+    function updateWaveButtons() {
+      $('btnStartBattle').disabled = gameStarted;
+      $('btnStartBattle').textContent = gameStarted ? '✓ 已開始' : '▶ 開始';
+      $('btnNextWave').disabled = !gameStarted || waveActive || wave >= config.waves;
+      $('btnAutoWave').textContent = autoWave ? '🔄 自動 ON' : '🔄 自動 OFF';
+      $('btnAutoWave').classList.toggle('on', autoWave);
+    }
+
+    function beginBattle() {
+      if (gameStarted) return;
+      gameStarted = true;
+      updateWaveButtons();
+      floatTexts.push({ x: canvas.width / 2, y: canvas.height / 2, text: '⚔ 戰鬥開始！', color: '#86efac', life: 1200 });
+      if (autoWave) startNextWave();
+    }
+
+    function toggleAutoWave() {
+      autoWave = !autoWave;
+      updateWaveButtons();
+      if (autoWave && gameStarted && !waveActive && wave < config.waves) {
+        autoWaveTimer = 800;
+      }
     }
 
     function togglePause() {
@@ -332,109 +474,163 @@
       $('hudOre').textContent = ore;
       $('hudWave').textContent = wave;
       $('hudKills').textContent = kills;
+      $('hudMulti').textContent = '×' + multi.toFixed(1);
+      $('coreHpFill').style.width = Math.max(0, (coreHp / CORE.maxHp) * 100) + '%';
+    }
+
+    function showWaveBanner(w, subtitle) {
+      const div = document.createElement('div');
+      div.className = 'wave-banner';
+      div.innerHTML = `<h2>WAVE ${w}</h2><p>${subtitle || 'ENEMY ASSAULT DETECTED'}</p>`;
+      document.body.appendChild(div);
+      setTimeout(() => div.remove(), 2000);
+    }
+
+    function pickWaveComposition(w) {
+      const count = 4 + wave * 2;
+      const types = [];
+      for (let i = 0; i < count; i++) types.push('scout');
+      if (w >= 2) for (let i = 0; i < Math.floor(count * 0.25); i++) types[i * 2] = 'swarm';
+      if (w >= 3) types[types.length - 1] = 'heavy';
+      if (w >= 4) types[Math.floor(count / 2)] = 'phantom';
+      if (w >= 5) for (let i = 0; i < Math.floor(count * 0.15); i++) types[i * 3 + 1] = 'brood';
+      if (w >= 6) types[1] = 'shield';
+      if (w >= 7 && w % 2 === 0) types[types.length - 2] = 'elite';
+      if (w >= 8 && w % 4 === 0) types[types.length - 1] = 'titan';
+      if (w % 5 === 0) types[0] = 'elite';
+      return types;
+    }
+
+    function waveSubtitle(w) {
+      if (w % 4 === 0) return '⚠ TITAN CLASS DETECTED';
+      if (w % 3 === 0) return '⚠ ELITE SQUAD INCOMING';
+      if (w >= 5) return '⚠ MIXED ASSAULT WAVE';
+      return 'ENEMY ASSAULT DETECTED';
     }
 
     function isCoreCell(c, r) {
       return c >= CORE.c - 1 && c <= CORE.c + 1 && r >= CORE.r - 1 && r <= CORE.r + 1;
     }
 
-    function getTowerAt(c, r) {
-      return towers.find(t => t.c === c && t.r === r);
+    function getTowerAt(c, r) { return towers.find(t => t.c === c && t.r === r); }
+
+    function onMouseMove(e) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width, scaleY = canvas.height / rect.height;
+      mouseX = (e.clientX - rect.left) * scaleX;
+      mouseY = (e.clientY - rect.top) * scaleY;
+      const c = Math.floor(mouseX / CELL), r = Math.floor(mouseY / CELL);
+      hoverCell = (c >= 0 && c < COLS && r >= 0 && r < ROWS) ? { c, r } : null;
     }
 
     function onCanvasClick(e) {
-      if (paused) return;
-      const rect = canvas.getBoundingClientRect();
-      const scaleX = canvas.width / rect.width;
-      const scaleY = canvas.height / rect.height;
-      const x = (e.clientX - rect.left) * scaleX;
-      const y = (e.clientY - rect.top) * scaleY;
-      const c = Math.floor(x / CELL);
-      const r = Math.floor(y / CELL);
-      if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return;
-      if (isCoreCell(c, r)) return;
-      if (getTowerAt(c, r)) return;
+      if (paused || !hoverCell) return;
+      const { c, r } = hoverCell;
+      if (isCoreCell(c, r) || getTowerAt(c, r)) return;
       const spec = TOWERS[selectedTower];
-      if (ore < spec.cost) return;
+      if (ore < spec.cost) {
+        floatTexts.push({ x: c * CELL + CELL/2, y: r * CELL + CELL/2, text: '礦石不足!', color: '#ff4444', life: 800 });
+        return;
+      }
       ore -= spec.cost;
       towers.push({
         c, r, x: c * CELL + CELL/2, y: r * CELL + CELL/2,
-        ...spec, lastShot: 0, angle: 0,
+        ...spec, lastShot: 0, angle: 0, recoil: 0, idle: Math.random() * Math.PI * 2,
       });
+      addParticles(c * CELL + CELL/2, r * CELL + CELL/2, spec.color, 8);
       updateHud();
     }
 
     function startNextWave() {
-      if (waveActive || wave >= config.waves) return;
+      if (!gameStarted || waveActive || wave >= config.waves) return;
       wave++;
       waveActive = true;
-      const count = 4 + wave * 2;
-      const hpBase = (20 + wave * 8) * config.enemyHp;
-      const speed = (0.6 + wave * 0.05) * config.enemySpeed;
+      autoWaveTimer = 0;
+      showWaveBanner(wave, waveSubtitle(wave));
+      const types = pickWaveComposition(wave);
       spawnQueue = [];
-      for (let i = 0; i < count; i++) {
-        spawnQueue.push({ hp: hpBase, maxHp: hpBase, speed, reward: config.reward + wave * 2 });
-      }
+      types.forEach(type => {
+        const et = ENEMY_TYPES[type];
+        const hpBase = (18 + wave * 7) * config.enemyHp * et.hpMul;
+        const speed = (0.55 + wave * 0.04) * config.enemySpeed * et.speedMul;
+        spawnQueue.push({
+          type, hp: hpBase, maxHp: hpBase, speed,
+          reward: Math.floor((config.reward + wave * 2) * et.rewardMul),
+          coreDmg: et.coreDmg, armor: et.armor || 0, split: et.split || 0,
+          ...et,
+        });
+      });
       spawnTimer = 0;
+      updateWaveButtons();
       updateHud();
     }
 
     function spawnEnemy() {
-      if (spawnQueue.length === 0) return;
+      if (!spawnQueue.length) return;
       const data = spawnQueue.shift();
       const edge = Math.floor(Math.random() * 4);
       let x, y;
-      if (edge === 0) { x = Math.random() * COLS * CELL; y = -10; }
-      else if (edge === 1) { x = COLS * CELL + 10; y = Math.random() * ROWS * CELL; }
-      else if (edge === 2) { x = Math.random() * COLS * CELL; y = ROWS * CELL + 10; }
-      else { x = -10; y = Math.random() * ROWS * CELL; }
-      enemies.push({
-        x, y, ...data,
-        radius: 10,
-      });
+      if (edge === 0) { x = Math.random() * COLS * CELL; y = -15; }
+      else if (edge === 1) { x = COLS * CELL + 15; y = Math.random() * ROWS * CELL; }
+      else if (edge === 2) { x = Math.random() * COLS * CELL; y = ROWS * CELL + 15; }
+      else { x = -15; y = Math.random() * ROWS * CELL; }
+      enemies.push({ x, y, ...data, dead: false, hitFlash: 0 });
+      addParticles(x, y, data.color, 6);
     }
 
-    function dist(a, b) {
-      return Math.hypot(a.x - b.x, a.y - b.y);
-    }
+    function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
 
     function gameLoop(now) {
       animId = requestAnimationFrame(gameLoop);
       const dt = Math.min(now - lastTime, 50);
       lastTime = now;
       if (!paused) update(dt);
-      draw();
+      draw(now);
     }
 
     function update(dt) {
-      if (waveActive && spawnQueue.length > 0) {
+      corePulse += dt * 0.003;
+      if (shake > 0) shake = Math.max(0, shake - dt * 0.05);
+
+      if (waveActive && spawnQueue.length) {
         spawnTimer += dt;
-        if (spawnTimer >= 600) {
-          spawnTimer = 0;
-          spawnEnemy();
+        const interval = wave >= 6 ? 420 : 500;
+        if (spawnTimer >= interval) { spawnTimer = 0; spawnEnemy(); }
+      }
+
+      if (autoWave && gameStarted && !waveActive && wave > 0 && wave < config.waves) {
+        autoWaveTimer += dt;
+        if (autoWaveTimer >= 2500) {
+          autoWaveTimer = 0;
+          startNextWave();
         }
       }
 
-      const coreX = CORE.c * CELL + CELL/2;
-      const coreY = CORE.r * CELL + CELL/2;
+      const coreX = CORE.c * CELL + CELL/2, coreY = CORE.r * CELL + CELL/2;
 
       enemies.forEach(e => {
+        if (e.slowTimer > 0) e.slowTimer -= dt;
+        const slowFactor = e.slowTimer > 0 ? (e.slowFactor || 0.5) : 1;
         const dx = coreX - e.x, dy = coreY - e.y;
         const len = Math.hypot(dx, dy) || 1;
-        e.x += (dx / len) * e.speed * (dt / 16);
-        e.y += (dy / len) * e.speed * (dt / 16);
-        if (dist(e, { x: coreX, y: coreY }) < 28) {
+        e.x += (dx / len) * e.speed * slowFactor * (dt / 16);
+        e.y += (dy / len) * e.speed * slowFactor * (dt / 16);
+        if (e.hitFlash > 0) e.hitFlash -= dt;
+        if (dist(e, { x: coreX, y: coreY }) < 30) {
           e.dead = true;
-          coreHp -= 8;
+          coreHp -= e.coreDmg || 6;
+          shake = e.type === 'titan' ? 18 : 12;
           updateHud();
-          addParticles(coreX, coreY, '#ff4444', 8);
+          addExplosion(coreX, coreY, '#ff4444', 30);
           if (coreHp <= 0) endGame(false);
         }
       });
-
       enemies = enemies.filter(e => !e.dead);
 
+      beams = [];
       towers.forEach(t => {
+        t.idle += dt * 0.001;
+        if (t.recoil > 0) t.recoil = Math.max(0, t.recoil - dt * 0.02);
         let target = null, minD = t.range;
         enemies.forEach(e => {
           const d = dist(t, e);
@@ -443,174 +639,426 @@
         if (target) {
           t.angle = Math.atan2(target.y - t.y, target.x - t.x);
           t.lastShot += dt;
-          if (t.lastShot >= t.rate) {
+          if (t.beam) {
+            beams.push({ x1: t.x, y1: t.y, x2: target.x, y2: target.y, color: t.color, life: 60 });
+            if (t.lastShot >= t.rate) {
+              t.lastShot = 0;
+              damageEnemy(target, t.damage * multi);
+              if (t.slow) applySlow(target, t.slow);
+            }
+          } else if (t.lastShot >= t.rate) {
             t.lastShot = 0;
-            bullets.push({
-              x: t.x, y: t.y,
-              tx: target.x, ty: target.y,
-              damage: t.damage,
-              speed: 6,
-              color: t.color,
-              aoe: t.aoe || 0,
-              target,
-            });
+            t.recoil = t.chain ? 3 : 6;
+            if (t.chain) {
+              chainLightning(t, target);
+            } else {
+              bullets.push({
+                x: t.x, y: t.y, tx: target.x, ty: target.y,
+                damage: t.damage * multi, speed: t.homing ? 5 : (t.aoe ? 4 : 8),
+                color: t.color, aoe: t.aoe, target, trail: [], homing: t.homing,
+              });
+            }
           }
+        } else {
+          t.angle = Math.sin(t.idle) * 0.5;
         }
       });
 
       bullets.forEach(b => {
+        b.trail.push({ x: b.x, y: b.y });
+        if (b.trail.length > 8) b.trail.shift();
+        if (b.homing && b.target && !b.target.dead) {
+          b.tx = b.target.x;
+          b.ty = b.target.y;
+        }
         const dx = b.tx - b.x, dy = b.ty - b.y;
         const len = Math.hypot(dx, dy) || 1;
         b.x += (dx / len) * b.speed * (dt / 16);
         b.y += (dy / len) * b.speed * (dt / 16);
-        if (Math.hypot(b.tx - b.x, b.ty - b.y) < 8) {
+        if (Math.hypot(b.tx - b.x, b.ty - b.y) < 10) {
           b.hit = true;
           if (b.aoe) {
-            enemies.forEach(e => {
-              if (dist(b, e) < b.aoe) damageEnemy(e, b.damage);
-            });
-            addParticles(b.x, b.y, b.color, 6);
+            addExplosion(b.x, b.y, b.color, b.aoe);
+            enemies.forEach(e => { if (dist(b, e) < b.aoe) damageEnemy(e, b.damage); });
           } else if (b.target && !b.target.dead) {
             damageEnemy(b.target, b.damage);
-            addParticles(b.x, b.y, b.color, 3);
+            addParticles(b.x, b.y, b.color, 4);
+          } else {
+            addExplosion(b.x, b.y, b.color, 16);
           }
         }
       });
       bullets = bullets.filter(b => !b.hit);
 
-      particles.forEach(p => {
-        p.x += p.vx; p.y += p.vy; p.life -= dt;
-      });
+      particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.life -= dt; p.vy += 0.04; });
       particles = particles.filter(p => p.life > 0);
 
-      if (waveActive && spawnQueue.length === 0 && enemies.length === 0) {
+      explosions.forEach(ex => { ex.r += ex.speed * (dt / 16); ex.life -= dt; ex.alpha = ex.life / ex.maxLife; });
+      explosions = explosions.filter(ex => ex.life > 0);
+
+      floatTexts.forEach(ft => { ft.y -= 0.5; ft.life -= dt; });
+      floatTexts = floatTexts.filter(ft => ft.life > 0);
+
+      orePopups.forEach(op => { op.y -= 1; op.life -= dt; });
+      orePopups = orePopups.filter(op => op.life > 0);
+
+      if (waveActive && !spawnQueue.length && !enemies.length) {
         waveActive = false;
-        ore += 30 + wave * 10;
+        const bonus = 35 + wave * 12;
+        ore += bonus;
+        floatTexts.push({ x: canvas.width/2, y: canvas.height/2 - 30, text: `+${bonus} 礦石`, color: '#ffd700', life: 1200 });
         updateHud();
-        if (wave >= config.waves) endGame(true);
+        updateWaveButtons();
+        if (wave >= config.waves) {
+          endGame(true);
+        } else if (autoWave && gameStarted) {
+          autoWaveTimer = 0;
+        }
+      }
+    }
+
+    function applySlow(e, factor) {
+      e.slowTimer = 1200;
+      e.slowFactor = factor;
+    }
+
+    function chainLightning(tower, first) {
+      const hit = [first];
+      let current = first;
+      for (let i = 1; i < tower.chain; i++) {
+        let next = null, minD = 65;
+        enemies.forEach(e => {
+          if (e.dead || hit.includes(e)) return;
+          const d = dist(current, e);
+          if (d < minD) { minD = d; next = e; }
+        });
+        if (!next) break;
+        hit.push(next);
+        beams.push({ x1: current.x, y1: current.y, x2: next.x, y2: next.y, color: tower.color, life: 80 });
+        current = next;
+      }
+      hit.forEach((e, i) => damageEnemy(e, tower.damage * multi * (i === 0 ? 1 : 0.65)));
+      addParticles(first.x, first.y, tower.color, 6);
+    }
+
+    function spawnMiniScouts(x, y, n) {
+      const et = ENEMY_TYPES.scout;
+      for (let i = 0; i < n; i++) {
+        const hpBase = (12 + wave * 4) * config.enemyHp * et.hpMul * 0.5;
+        enemies.push({
+          x: x + (Math.random() - 0.5) * 20, y: y + (Math.random() - 0.5) * 20,
+          type: 'scout', hp: hpBase, maxHp: hpBase,
+          speed: 0.7 * config.enemySpeed * et.speedMul,
+          reward: Math.floor(config.reward * 0.4), coreDmg: 4, armor: 0, split: 0,
+          ...et, dead: false, hitFlash: 0,
+        });
       }
     }
 
     function damageEnemy(e, dmg) {
-      e.hp -= dmg;
+      const reduced = dmg * (1 - (e.armor || 0));
+      e.hp -= reduced;
+      e.hitFlash = 100;
       if (e.hp <= 0 && !e.dead) {
         e.dead = true;
+        if (e.split > 0) spawnMiniScouts(e.x, e.y, e.split);
         kills++;
-        ore += e.reward;
-        addParticles(e.x, e.y, '#ffaa44', 5);
+        killStreak++;
+        if (killStreak >= 5) multi = Math.min(2.5, 1 + killStreak * 0.05);
+        const reward = Math.floor(e.reward * multi);
+        ore += reward;
+        orePopups.push({ x: e.x, y: e.y, text: `+${reward}`, life: 700 });
+        addExplosion(e.x, e.y, e.color, e.radius * 2);
         updateHud();
       }
     }
 
     function addParticles(x, y, color, n) {
       for (let i = 0; i < n; i++) {
-        particles.push({
-          x, y,
-          vx: (Math.random() - 0.5) * 3,
-          vy: (Math.random() - 0.5) * 3,
-          life: 400 + Math.random() * 300,
-          color,
-        });
+        const a = Math.random() * Math.PI * 2, s = 1.5 + Math.random() * 4;
+        particles.push({ x, y, vx: Math.cos(a)*s, vy: Math.sin(a)*s, life: 350 + Math.random()*250, color, size: 2 + Math.random()*2 });
       }
+    }
+
+    function addExplosion(x, y, color, radius) {
+      explosions.push({ x, y, r: 4, maxR: radius, speed: 3, life: 400, maxLife: 400, color, alpha: 1 });
+      addParticles(x, y, color, 10);
+    }
+
+    function getGrade(win) {
+      if (!win) return 'D';
+      const hpPct = coreHp / CORE.maxHp;
+      if (hpPct >= 0.7) return 'S';
+      if (hpPct >= 0.5) return 'A';
+      if (hpPct >= 0.3) return 'B';
+      return 'C';
     }
 
     function endGame(win) {
       paused = true;
+      const grade = getGrade(win);
       $('overlayTitle').textContent = win ? '🏆 防線堅守成功' : '💥 核心裂變失控';
+      $('overlayGrade').textContent = grade;
+      $('overlayGrade').style.color = win ? '#ffd700' : '#888';
+      $('ovWave').textContent = wave;
+      $('ovKills').textContent = kills;
+      $('ovHp').textContent = Math.ceil(coreHp);
       $('overlayMsg').textContent = win
-        ? `成功抵禦 ${config.waves} 波攻勢！擊殺 ${kills} 個敵人，剩餘核心 HP ${Math.ceil(coreHp)}。`
-        : `核心被摧毀。你堅守了 ${wave} 波，擊殺 ${kills} 個敵人。`;
+        ? `成功抵禦 ${config.waves} 波攻勢！最高 MULTI ×${multi.toFixed(1)}`
+        : `核心被摧毀。堅守 ${wave} 波，擊殺 ${kills} 個敵人。`;
+      refreshMenuStats();
       $('overlay').classList.add('show');
+      persistRunResult(win, grade, calcLeaderboardScore(win));
+    }
+
+    function drawEnemy(e) {
+      ctx.save();
+      ctx.translate(e.x, e.y);
+      if (e.slowTimer > 0) {
+        ctx.shadowColor = '#67e8f9';
+        ctx.shadowBlur = 10;
+      }
+      if (e.hitFlash > 0) { ctx.globalAlpha = 0.5 + Math.sin(e.hitFlash * 0.2) * 0.5; }
+      ctx.fillStyle = e.color;
+      ctx.strokeStyle = e.accent;
+      ctx.lineWidth = 2;
+      if (e.shape === 'triangle') {
+        ctx.beginPath();
+        ctx.moveTo(0, -e.radius);
+        ctx.lineTo(e.radius * 0.9, e.radius * 0.7);
+        ctx.lineTo(-e.radius * 0.9, e.radius * 0.7);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+      } else if (e.shape === 'circle') {
+        ctx.beginPath(); ctx.arc(0, 0, e.radius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      } else if (e.shape === 'diamond') {
+        ctx.beginPath();
+        ctx.moveTo(0, -e.radius); ctx.lineTo(e.radius, 0);
+        ctx.lineTo(0, e.radius); ctx.lineTo(-e.radius, 0);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+      } else if (e.shape === 'square' || e.shape === 'titan') {
+        const s = e.shape === 'titan' ? e.radius * 1.15 : e.radius;
+        ctx.fillRect(-s, -s, s * 2, s * 2);
+        ctx.strokeRect(-s + 1, -s + 1, s * 2 - 2, s * 2 - 2);
+        if (e.shape === 'titan') {
+          ctx.fillStyle = '#ff4444';
+          ctx.font = 'bold 8px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('T', 0, 3);
+        }
+      } else if (e.shape === 'shield') {
+        ctx.beginPath(); ctx.arc(0, 0, e.radius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.strokeStyle = '#88bbff';
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(0, 0, e.radius + 3, 0, Math.PI * 2); ctx.stroke();
+      } else if (e.shape === 'brood') {
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+          const a = (Math.PI / 3) * i - Math.PI / 6;
+          const px = Math.cos(a) * e.radius, py = Math.sin(a) * e.radius;
+          i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+        }
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#aaffaa';
+        ctx.beginPath(); ctx.arc(0, 0, 3, 0, Math.PI * 2); ctx.fill();
+      } else {
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+          const a = (Math.PI/3)*i - Math.PI/6;
+          const px = Math.cos(a)*e.radius, py = Math.sin(a)*e.radius;
+          i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+        }
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = e.accent;
+        ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI*2); ctx.fill();
+      }
+      const hpPct = e.hp / e.maxHp;
+      const barW = e.shape === 'titan' ? 34 : 28;
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      ctx.fillRect(-barW/2, -e.radius - 10, barW, 5);
+      ctx.fillStyle = hpPct > 0.5 ? '#4ade80' : hpPct > 0.25 ? '#fbbf24' : '#f87171';
+      ctx.fillRect(-barW/2, -e.radius - 10, barW * hpPct, 5);
+      ctx.restore();
+    }
+
+    function drawTower(t) {
+      const px = t.c * CELL, py = t.r * CELL;
+      ctx.fillStyle = 'rgba(20,28,40,0.92)';
+      ctx.fillRect(px + 2, py + 2, CELL - 4, CELL - 4);
+      const grd = ctx.createLinearGradient(px, py, px + CELL, py + CELL);
+      grd.addColorStop(0, t.color + '33');
+      grd.addColorStop(1, 'transparent');
+      ctx.fillStyle = grd;
+      ctx.fillRect(px + 2, py + 2, CELL - 4, CELL - 4);
+      ctx.strokeStyle = t.color;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(px + 4, py + 4, CELL - 8, CELL - 8);
+      const recoilOff = t.recoil ? -t.recoil : 0;
+      ctx.save();
+      ctx.translate(t.x, t.y);
+      ctx.rotate(t.angle);
+      ctx.fillStyle = t.color;
+      ctx.fillRect(recoilOff - 4, -5, 18, 10);
+      ctx.fillRect(recoilOff + 10, -3, 8, 6);
+      ctx.restore();
     }
 
     function draw() {
-      ctx.fillStyle = '#0d1117';
+      ctx.save();
+      if (shake > 0) {
+        ctx.translate((Math.random()-0.5)*shake, (Math.random()-0.5)*shake);
+      }
+
+      ctx.fillStyle = '#0a0e14';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      ctx.strokeStyle = 'rgba(255,140,50,0.08)';
       for (let c = 0; c <= COLS; c++) {
-        ctx.beginPath(); ctx.moveTo(c * CELL, 0); ctx.lineTo(c * CELL, ROWS * CELL); ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,140,50,0.06)';
+        ctx.beginPath(); ctx.moveTo(c*CELL, 0); ctx.lineTo(c*CELL, ROWS*CELL); ctx.stroke();
       }
       for (let r = 0; r <= ROWS; r++) {
-        ctx.beginPath(); ctx.moveTo(0, r * CELL); ctx.lineTo(COLS * CELL, r * CELL); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, r*CELL); ctx.lineTo(COLS*CELL, r*CELL); ctx.stroke();
       }
 
       const cx = CORE.c * CELL, cy = CORE.r * CELL;
-      const pulse = 0.5 + Math.sin(Date.now() / 400) * 0.15;
-      ctx.fillStyle = `rgba(255,107,43,${0.15 + pulse * 0.1})`;
-      ctx.fillRect(cx - CELL, cy - CELL, CELL * 3, CELL * 3);
+      const pulse = 0.5 + Math.sin(corePulse) * 0.2;
+      const coreGrd = ctx.createRadialGradient(cx+CELL/2, cy+CELL/2, 5, cx+CELL/2, cy+CELL/2, CELL*2);
+      coreGrd.addColorStop(0, `rgba(255,140,50,${0.3 + pulse*0.15})`);
+      coreGrd.addColorStop(1, 'transparent');
+      ctx.fillStyle = coreGrd;
+      ctx.fillRect(cx - CELL, cy - CELL, CELL*3, CELL*3);
+
       ctx.strokeStyle = '#ff6b2b';
       ctx.lineWidth = 2;
-      ctx.strokeRect(cx - CELL + 2, cy - CELL + 2, CELL * 3 - 4, CELL * 3 - 4);
+      ctx.strokeRect(cx - CELL + 3, cy - CELL + 3, CELL*3 - 6, CELL*3 - 6);
       ctx.fillStyle = '#ff8c5a';
+      ctx.shadowColor = '#ff6b2b';
+      ctx.shadowBlur = 15 + pulse * 10;
       ctx.beginPath();
-      ctx.arc(cx + CELL/2, cy + CELL/2, 14 + pulse * 4, 0, Math.PI * 2);
+      ctx.arc(cx + CELL/2, cy + CELL/2, 16 + pulse*5, 0, Math.PI*2);
       ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = `rgba(255,200,100,${0.4 + pulse*0.3})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(cx + CELL/2, cy + CELL/2, 22 + pulse*8, 0, Math.PI*2);
+      ctx.stroke();
       ctx.fillStyle = '#fff';
-      ctx.font = '10px sans-serif';
+      ctx.font = 'bold 11px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('CORE', cx + CELL/2, cy + CELL/2 + 3);
+      ctx.fillText('CORE', cx + CELL/2, cy + CELL/2 + 4);
 
-      ctx.lineWidth = 1;
-      towers.forEach(t => {
-        ctx.fillStyle = 'rgba(30,40,55,0.9)';
-        ctx.fillRect(t.c * CELL + 3, t.r * CELL + 3, CELL - 6, CELL - 6);
-        ctx.strokeStyle = t.color;
-        ctx.strokeRect(t.c * CELL + 3, t.r * CELL + 3, CELL - 6, CELL - 6);
-        ctx.strokeStyle = t.color;
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(t.x, t.y);
-        ctx.lineTo(t.x + Math.cos(t.angle) * 14, t.y + Math.sin(t.angle) * 14);
-        ctx.stroke();
-        ctx.lineWidth = 1;
-      });
+      towers.forEach(drawTower);
 
-      enemies.forEach(e => {
-        ctx.fillStyle = '#3d4450';
-        ctx.beginPath();
-        ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#ff4444';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        const hpPct = e.hp / e.maxHp;
-        ctx.fillStyle = '#333';
-        ctx.fillRect(e.x - 12, e.y - 18, 24, 4);
-        ctx.fillStyle = hpPct > 0.5 ? '#4ade80' : '#f87171';
-        ctx.fillRect(e.x - 12, e.y - 18, 24 * hpPct, 4);
-      });
+      if (hoverCell && !isCoreCell(hoverCell.c, hoverCell.r) && !getTowerAt(hoverCell.c, hoverCell.r)) {
+        const spec = TOWERS[selectedTower];
+        const hx = hoverCell.c * CELL + CELL/2, hy = hoverCell.r * CELL + CELL/2;
+        const canAfford = ore >= spec.cost;
+        ctx.fillStyle = canAfford ? 'rgba(110,181,255,0.12)' : 'rgba(255,68,68,0.12)';
+        ctx.fillRect(hoverCell.c*CELL+2, hoverCell.r*CELL+2, CELL-4, CELL-4);
+        ctx.strokeStyle = canAfford ? 'rgba(110,181,255,0.4)' : 'rgba(255,68,68,0.4)';
+        ctx.setLineDash([4,4]);
+        ctx.beginPath(); ctx.arc(hx, hy, spec.range, 0, Math.PI*2); ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      enemies.forEach(drawEnemy);
 
       bullets.forEach(b => {
+        b.trail.forEach((p, i) => {
+          ctx.globalAlpha = (i / b.trail.length) * 0.5;
+          ctx.fillStyle = b.color;
+          ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, Math.PI*2); ctx.fill();
+        });
+        ctx.globalAlpha = 1;
         ctx.fillStyle = b.color;
-        ctx.beginPath();
-        ctx.arc(b.x, b.y, b.aoe ? 5 : 3, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.shadowColor = b.color;
+        ctx.shadowBlur = 8;
+        ctx.beginPath(); ctx.arc(b.x, b.y, b.aoe ? 5 : 3.5, 0, Math.PI*2); ctx.fill();
+        ctx.shadowBlur = 0;
       });
 
-      particles.forEach(p => {
-        ctx.globalAlpha = p.life / 700;
-        ctx.fillStyle = p.color;
-        ctx.fillRect(p.x - 2, p.y - 2, 4, 4);
+      beams.forEach(b => {
+        ctx.strokeStyle = b.color;
+        ctx.lineWidth = 3;
+        ctx.shadowColor = b.color;
+        ctx.shadowBlur = 12;
+        ctx.globalAlpha = 0.85;
+        ctx.beginPath(); ctx.moveTo(b.x1, b.y1); ctx.lineTo(b.x2, b.y2); ctx.stroke();
+        ctx.shadowBlur = 0;
         ctx.globalAlpha = 1;
       });
 
-      if (wave === 0 && !waveActive) {
+      explosions.forEach(ex => {
+        ctx.globalAlpha = ex.alpha * 0.6;
+        ctx.strokeStyle = ex.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(ex.x, ex.y, ex.r, 0, Math.PI*2); ctx.stroke();
+        ctx.globalAlpha = ex.alpha * 0.2;
+        ctx.fillStyle = ex.color;
+        ctx.beginPath(); ctx.arc(ex.x, ex.y, ex.r * 0.6, 0, Math.PI*2); ctx.fill();
+        ctx.globalAlpha = 1;
+      });
+
+      particles.forEach(p => {
+        ctx.globalAlpha = Math.max(0, p.life / 600);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
+        ctx.globalAlpha = 1;
+      });
+
+      floatTexts.forEach(ft => {
+        ctx.globalAlpha = Math.max(0, ft.life / 800);
+        ctx.fillStyle = ft.color;
+        ctx.font = 'bold 14px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(ft.text, ft.x, ft.y);
+        ctx.globalAlpha = 1;
+      });
+
+      orePopups.forEach(op => {
+        ctx.globalAlpha = Math.max(0, op.life / 700);
+        ctx.fillStyle = '#ffd700';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(op.text, op.x, op.y);
+        ctx.globalAlpha = 1;
+      });
+
+      if (!gameStarted) {
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#86efac';
+        ctx.font = 'bold 20px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('部署砲塔，點擊「開始」', canvas.width/2, canvas.height/2 - 8);
+        ctx.fillStyle = '#ffb380';
+        ctx.font = '13px sans-serif';
+        ctx.fillText('可開啟「自動下一波」連續迎戰', canvas.width/2, canvas.height/2 + 18);
+      } else if (wave === 0 && !waveActive) {
+        ctx.fillStyle = 'rgba(0,0,0,0.45)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#6eb5ff';
+        ctx.font = 'bold 18px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('準備完成 · 點擊「下一波」', canvas.width/2, canvas.height/2);
+        if (autoWave) {
+          ctx.fillStyle = '#fde047';
+          ctx.font = '12px sans-serif';
+          ctx.fillText('自動下一波已開啟', canvas.width/2, canvas.height/2 + 22);
+        }
+      }
+
+      if (paused && !$('overlay').classList.contains('show')) {
         ctx.fillStyle = 'rgba(0,0,0,0.5)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#ffb380';
-        ctx.font = '18px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('先放置砲塔，再點擊「下一波」', canvas.width/2, canvas.height/2);
-      }
-      if (paused && !$('overlay').classList.contains('show')) {
-        ctx.fillStyle = 'rgba(0,0,0,0.4)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = '#fff';
-        ctx.font = '24px sans-serif';
+        ctx.font = 'bold 28px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('暫停中', canvas.width/2, canvas.height/2);
+        ctx.fillText('⏸ PAUSED', canvas.width/2, canvas.height/2);
       }
+
+      ctx.restore();
     }
   </script>
 </body>

@@ -6,6 +6,10 @@ export function buildNexusPlayEmbedSdkScript() {
   var READY_TYPE='nexusplay:ready';
   var match=location.pathname.match(/\\/api\\/games\\/(\\d+)\\/embed/);
   var gameId=match?parseInt(match[1],10):null;
+  if(!gameId){
+    var gidParam=new URLSearchParams(location.search).get('gid');
+    if(gidParam&&!isNaN(parseInt(gidParam,10)))gameId=parseInt(gidParam,10);
+  }
   var user=undefined;
   var authWaiters=[];
   var authSettled=false;

@@ -1,5 +1,11 @@
 import type { GamePublishStatus } from "@/lib/game-publish";
 
+import {
+  MAX_DEVLOG_CONTENT_LENGTH,
+  MAX_DEVLOG_TITLE_LENGTH,
+  MAX_GALLERY_IMAGES,
+} from "@/lib/game-page-content";
+
 export type UpdateGameInput = {
   title: string;
   description: string;
@@ -10,6 +16,11 @@ export type UpdateGameInput = {
   publishStatus: GamePublishStatus;
   tipsEnabled: boolean;
   suggestedTipAmount: string;
+  galleryUrls?: string[];
+  galleryFiles?: File[];
+  devlogTitle?: string;
+  devlogContent?: string;
+  devlogImageFiles?: File[];
 };
 
 export type UpdateGameResult = {
@@ -25,6 +36,8 @@ export type UpdateGameResult = {
     publish_status: GamePublishStatus;
     tips_enabled: boolean;
     suggested_tip_amount: number | null;
+    gallery_urls?: unknown;
+    devlog_entries?: unknown;
   };
 };
 
@@ -89,6 +102,26 @@ export async function updateGame(
   }
   if (input.gameZipFile) {
     formData.append("gameZip", input.gameZipFile);
+  }
+
+  formData.append(
+    "galleryUrls",
+    JSON.stringify(input.galleryUrls ?? [])
+  );
+  for (const file of input.galleryFiles ?? []) {
+    formData.append("galleryImages", file);
+  }
+
+  if (input.publishVersion) {
+    if (input.devlogTitle?.trim()) {
+      formData.append("devlogTitle", input.devlogTitle.trim());
+    }
+    if (input.devlogContent?.trim()) {
+      formData.append("devlogContent", input.devlogContent.trim());
+    }
+    for (const file of input.devlogImageFiles ?? []) {
+      formData.append("devlogImages", file);
+    }
   }
 
   onProgress?.(

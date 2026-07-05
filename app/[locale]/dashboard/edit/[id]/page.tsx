@@ -32,7 +32,12 @@ import {
   type PublishMonetizationValues,
 } from "@/components/dashboard/publish-monetization-fields";
 import { PlatformAuthNotice } from "@/components/dashboard/platform-auth-notice";
+import {
+  DevlogPublishFields,
+  GalleryUploadFields,
+} from "@/components/dashboard/game-page-content-fields";
 import { fetchManageGame, updateGame } from "@/lib/update-game";
+import { parseStringArray } from "@/lib/game-page-content";
 import { DEFAULT_PUBLISH_STATUS, normalizePublishStatus } from "@/lib/game-publish";
 import { useApiError } from "@/hooks/use-api-error";
 import { UPLOAD_CATEGORIES, type UploadCategory } from "@/lib/games";
@@ -244,6 +249,11 @@ export default function EditGamePage() {
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [gameZip, setGameZip] = useState<File | null>(null);
+  const [existingGalleryUrls, setExistingGalleryUrls] = useState<string[]>([]);
+  const [newGalleryFiles, setNewGalleryFiles] = useState<File[]>([]);
+  const [devlogTitle, setDevlogTitle] = useState("");
+  const [devlogContent, setDevlogContent] = useState("");
+  const [devlogImageFiles, setDevlogImageFiles] = useState<File[]>([]);
   const [monetization, setMonetization] = useState<PublishMonetizationValues>({
     publishStatus: DEFAULT_PUBLISH_STATUS,
     tipsEnabled: false,
@@ -287,6 +297,7 @@ export default function EditGamePage() {
           category: game.category as UploadCategory,
         });
         setExistingCoverUrl(game.cover_url);
+        setExistingGalleryUrls(parseStringArray(game.gallery_urls));
         setIsOrphan(orphan);
         setMonetization({
           publishStatus: normalizePublishStatus(game.publish_status),
@@ -408,12 +419,24 @@ export default function EditGamePage() {
           publishStatus: monetization.publishStatus,
           tipsEnabled: monetization.tipsEnabled,
           suggestedTipAmount: monetization.suggestedTipAmount,
+          galleryUrls: existingGalleryUrls,
+          galleryFiles: newGalleryFiles,
+          devlogTitle: publishVersion ? devlogTitle : undefined,
+          devlogContent: publishVersion ? devlogContent : undefined,
+          devlogImageFiles: publishVersion ? devlogImageFiles : undefined,
         },
         setSubmitStatus
       );
 
       if (publishVersion) {
         setGameZip(null);
+        setDevlogTitle("");
+        setDevlogContent("");
+        setDevlogImageFiles([]);
+      }
+      if (newGalleryFiles.length > 0) {
+        setExistingGalleryUrls(parseStringArray(game.gallery_urls));
+        setNewGalleryFiles([]);
       }
       if (coverFile) {
         setExistingCoverUrl(game.cover_url);
@@ -647,6 +670,51 @@ export default function EditGamePage() {
                 onClear={() => setGameZip(null)}
                 optional
               />
+
+              <GalleryUploadFields
+                label={t("screenshotGallery")}
+                hint={t("screenshotGalleryHint")}
+                optionalLabel={tCommon("optional")}
+                existingUrls={existingGalleryUrls}
+                newFiles={newGalleryFiles}
+                onExistingRemove={(url) =>
+                  setExistingGalleryUrls((prev) =>
+                    prev.filter((item) => item !== url)
+                  )
+                }
+                onFilesAdd={(files) =>
+                  setNewGalleryFiles((prev) => [...prev, ...files])
+                }
+                onFileRemove={(index) =>
+                  setNewGalleryFiles((prev) =>
+                    prev.filter((_, itemIndex) => itemIndex !== index)
+                  )
+                }
+                disabled={isSubmitting}
+              />
+
+              {gameZip && (
+                <DevlogPublishFields
+                  titleLabel={t("devlogTitle")}
+                  contentLabel={t("devlogContent")}
+                  imagesLabel={t("devlogImages")}
+                  hint={t("devlogPublishHint")}
+                  title={devlogTitle}
+                  content={devlogContent}
+                  imageFiles={devlogImageFiles}
+                  onTitleChange={setDevlogTitle}
+                  onContentChange={setDevlogContent}
+                  onImagesAdd={(files) =>
+                    setDevlogImageFiles((prev) => [...prev, ...files])
+                  }
+                  onImageRemove={(index) =>
+                    setDevlogImageFiles((prev) =>
+                      prev.filter((_, itemIndex) => itemIndex !== index)
+                    )
+                  }
+                  disabled={isSubmitting}
+                />
+              )}
             </section>
 
             <PublishMonetizationFields

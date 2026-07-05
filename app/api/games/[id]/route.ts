@@ -25,6 +25,10 @@ import {
   MAX_TITLE_LENGTH,
   MAX_ZIP_BYTES,
 } from "@/lib/upload-limits";
+import {
+  resolveDevlogUpdate,
+  resolveGalleryUpdate,
+} from "@/lib/game-page-upload";
 
 /** 創作者可更新的欄位；公開發布時重置審批狀態為 pending */
 function buildCreatorUpdatePayload(
@@ -37,6 +41,8 @@ function buildCreatorUpdatePayload(
     publishStatus: "draft" | "public";
     tipsEnabled: boolean;
     suggestedTipAmount: number | null;
+    galleryUrls: string[];
+    devlogEntries: unknown;
   },
   options: { userId: string; isOrphan: boolean }
 ) {
@@ -49,6 +55,8 @@ function buildCreatorUpdatePayload(
     publish_status: input.publishStatus,
     tips_enabled: input.tipsEnabled,
     suggested_tip_amount: input.suggestedTipAmount,
+    gallery_urls: input.galleryUrls,
+    devlog_entries: input.devlogEntries,
   };
 
   if (options.isOrphan) {
@@ -267,6 +275,29 @@ export async function PATCH(
         newGameUrl = buildUpload.playUrl;
       }
 
+      let galleryUrls: string[];
+      let devlogEntries: unknown;
+
+      try {
+        galleryUrls = await resolveGalleryUpdate(
+          supabase,
+          formData,
+          record.gallery_urls ?? []
+        );
+        devlogEntries = await resolveDevlogUpdate(
+          supabase,
+          formData,
+          record.devlog_entries ?? [],
+          publishVersion
+        );
+      } catch (contentError) {
+        const message =
+          contentError instanceof Error
+            ? contentError.message
+            : "處理遊戲介紹圖片失敗";
+        return NextResponse.json({ error: message }, { status: 400 });
+      }
+
       const updatePayload = buildCreatorUpdatePayload(
         {
           title,
@@ -277,6 +308,8 @@ export async function PATCH(
           publishStatus: monetization.data.publish_status,
           tipsEnabled: monetization.data.tips_enabled,
           suggestedTipAmount: monetization.data.suggested_tip_amount,
+          galleryUrls,
+          devlogEntries,
         },
         { userId: user.id, isOrphan }
       );
@@ -301,7 +334,10 @@ export async function PATCH(
           updateError.message.includes("status") &&
           updateError.message.includes("schema cache")
             ? " 請先在 Supabase SQL Editor 執行 supabase/add-game-status.sql（或 npm run db:status）。"
-            : "";
+            : updateError.message.includes("gallery_urls") &&
+                updateError.message.includes("schema cache")
+              ? " 請先在 Supabase SQL Editor 執行 supabase/game-page-content.sql（或 npm run db:game-page）。"
+              : "";
         throw new Error(`資料庫更新失敗：${updateError.message}${hint}`);
       }
 

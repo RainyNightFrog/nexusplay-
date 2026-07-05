@@ -14,6 +14,7 @@ import {
   MAX_TITLE_LENGTH,
   MAX_ZIP_BYTES,
 } from "@/lib/upload-limits";
+import { resolveGalleryUpdate } from "@/lib/game-page-upload";
 
 const COVERS_BUCKET = "game-covers";
 const FILES_BUCKET = "game-files";
@@ -158,6 +159,17 @@ export async function POST(request: Request) {
       const buildUpload = await extractAndUploadGameBuild(supabase, zipBuffer);
       buildPaths = buildUpload.uploadedPaths;
 
+      let galleryUrls: string[] = [];
+      try {
+        galleryUrls = await resolveGalleryUpdate(supabase, formData, []);
+      } catch (contentError) {
+        const message =
+          contentError instanceof Error
+            ? contentError.message
+            : "處理遊戲介紹圖片失敗";
+        return NextResponse.json({ error: message }, { status: 400 });
+      }
+
       // creator_id 必須由伺服器從 session 寫入，不可由前端 FormData 傳入
       const { data, error } = await supabase
         .from("games")
@@ -172,6 +184,8 @@ export async function POST(request: Request) {
           tips_enabled: monetization.data.tips_enabled,
           suggested_tip_amount: monetization.data.suggested_tip_amount,
           status: "pending",
+          gallery_urls: galleryUrls,
+          devlog_entries: [],
         })
         .select()
         .single();

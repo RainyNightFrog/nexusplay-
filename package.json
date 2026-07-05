@@ -12,6 +12,8 @@
     "db:publish": "node scripts/run-add-publish-monetization.mjs",
     "db:status": "node scripts/run-add-game-status.mjs",
     "db:game-saves": "node scripts/run-game-saves.mjs",
+    "db:leaderboard": "node scripts/run-leaderboard.mjs",
+    "db:game-page": "node scripts/run-game-page-content.mjs",
     "setup:google": "node scripts/setup-google-oauth.mjs",
     "setup:google:finish": "node scripts/complete-google-oauth.mjs",
     "setup:google:ui": "node scripts/open-google-setup-ui.mjs",
