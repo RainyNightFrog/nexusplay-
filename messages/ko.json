@@ -106,7 +106,10 @@
     "timeJustNow": "Just now",
     "timeMinutes": "{count} min ago",
     "timeHours": "{count} hr ago",
-    "timeDays": "{count} days ago"
+    "timeDays": "{count} days ago",
+    "favoriteAdded": "Added to favorites",
+    "favoriteRemoved": "Removed from favorites",
+    "favoriteFailed": "Favorite action failed"
   },
   "home": {
     "statsPlaying": "플레이 중",
@@ -174,7 +177,13 @@
     "rssForum": "Forum RSS",
     "atomFeed": "Atom Feed",
     "feedsHub": "Feed hub",
-    "opmlFeed": "OPML export"
+    "opmlFeed": "OPML export",
+    "favoritesSectionTitle": "My favorites",
+    "favoritesSectionDesc": "Jump back to games you love",
+    "favoritesViewAll": "View all favorites",
+    "followingFeedTitle": "New from creators you follow",
+    "followingFeedDesc": "Latest releases from creators you follow",
+    "followingViewAll": "Manage following"
   },
   "game": {
     "communityForum": "커뮤니티 포럼",
@@ -216,7 +225,19 @@
     "commentFailed": "Failed to post comment. Please try again.",
     "forumHint": "You can also start a full thread in the community forum",
     "gameFeedRss": "Subscribe to game updates",
-    "gameFeedJson": "JSON preview"
+    "gameFeedJson": "JSON preview",
+    "tipReceiptTitle": "Tip receipt",
+    "tipReceiptBilling": "Billing address",
+    "tipReceiptNoBilling": "No billing address yet. Go to",
+    "tipReceiptBillingLink": "Billing settings",
+    "tipBillingHint": "Set a billing address to show on receipts",
+    "tipSavedCardsTitle": "Use a saved card",
+    "tipUseNewCard": "Use a new card",
+    "tipAnonymousLabel": "Show anonymously on supporter wall",
+    "tipAnonymousDesc": "When checked, your name is hidden on the public supporter wall (creators still see transaction records).",
+    "anonymousSupporter": "Anonymous supporter",
+    "supporterWallTitle": "Recent supporters",
+    "viewCreatorProfile": "View creator profile"
   },
   "dashboard": {
     "uploadGame": "게임 업로드",
@@ -461,7 +482,8 @@
     "publicLiveSuccessDesc": "\"{title}\" is public. Opening game page…",
     "statVisitors": "Unique visitors",
     "statUniquePlayers": "Unique players",
-    "statPageViews": "Page views"
+    "statPageViews": "Page views",
+    "unreadTipsBadge": "{count} new tip(s)"
   },
   "auth": {
     "callbackFailed": "로그인 인증 실패, 다시 시도해 주세요",
@@ -507,7 +529,13 @@
       "footnote": "Super admins skip this step automatically.",
       "loadFailed": "Failed to read sign-in state",
       "saveFailed": "Failed to save account intent"
-    }
+    },
+    "mfaChallengeTitle": "Two-factor authentication",
+    "mfaChallengeDesc": "This account has 2FA enabled. Enter the 6-digit code from your authenticator app.",
+    "mfaCodeLabel": "Verification code",
+    "mfaVerifyBtn": "Verify and sign in",
+    "mfaCancelBtn": "Cancel",
+    "mfaVerifyFailed": "Invalid code, please try again"
   },
   "profile": {
     "title": "프로필",
@@ -964,7 +992,13 @@
     "disclaimerP1": "NexusPlay is not fully liable for user-uploaded games, creator statements, or interactions between users. Games are provided by creators; we provide hosting and discovery.",
     "disclaimerP2": "The service is provided \"as is\" without guarantees of uninterrupted or error-free operation. To the extent permitted by law, we are not liable for losses from network issues, third-party services, or force majeure.",
     "disclaimerP3": "Tax reporting and compliance with local laws (consumer protection, AML, etc.) are the responsibility of creators and payers; seek professional advice when needed.",
-    "paymentsP7": "We may adjust the site-wide platform fee. Any change will be announced at least {days} days in advance and applies only to new transactions after the effective date — never retroactively to settled or withdrawn amounts."
+    "paymentsP7": "We may adjust the site-wide platform fee. Any change will be announced at least {days} days in advance and applies only to new transactions after the effective date — never retroactively to settled or withdrawn amounts.",
+    "navPrivacy": "Privacy Policy",
+    "privacyTitle": "Privacy Policy",
+    "privacyP1": "NexusPlay collects account data (email, display name), uploaded game content, play and analytics events, and tip/payout records to operate the platform.",
+    "privacyP2": "Billing addresses are used for receipts and compliance; payment card data is processed by Stripe and full card numbers are not stored on our servers.",
+    "privacyP3": "You can export personal data or delete your account under Data & account. Exports include tip receipts and transaction history.",
+    "privacyP4": "We may use cookies and analytics to improve the service; if Google Analytics is enabled, you can limit tracking in your browser settings."
   },
   "accountSettings": {
     "navGroupAccount": "Account",
@@ -1123,7 +1157,45 @@
     "tipNotifyInAppHint": "When off, tips won't appear in the notification center.",
     "tipNotifySaveFailed": "Failed to update tip notification settings",
     "tipNotifyPushLabel": "Tip push notifications",
-    "tipNotifyPushHint": "Enable browser push in General settings first; alerts when you receive tips."
+    "tipNotifyPushHint": "Enable browser push in General settings first; alerts when you receive tips.",
+    "navFavorites": "Favorites",
+    "navFollowing": "Following",
+    "favoritesTitle": "My favorites",
+    "favoritesDesc": "Games you saved for quick access.",
+    "favoritesEmpty": "No favorites yet",
+    "favoritesBrowse": "Browse games",
+    "followingTitle": "Following",
+    "followingDesc": "Creators you follow — jump to their pages and new releases.",
+    "followingEmpty": "Not following anyone yet",
+    "followingUnfollow": "Unfollow",
+    "paymentSaveCard": "Save card",
+    "paymentSetupCancel": "Cancel",
+    "paymentSetupFailed": "Could not start card setup",
+    "paymentRemoveCard": "Remove",
+    "paymentRemoveFailed": "Failed to remove card",
+    "paymentTipsSection": "My tips",
+    "paymentTipsDesc": "Games you supported and amounts. Download receipts for your records.",
+    "paymentTipsEmpty": "No tip history yet",
+    "paymentTipsReceipt": "Receipt",
+    "paymentTipStatus_succeeded": "Succeeded",
+    "paymentTipStatus_preview": "Preview",
+    "paymentTipStatus_pending": "Pending",
+    "paymentTipStatus_failed": "Failed",
+    "paymentTipStatus_refunded": "Refunded",
+    "twoFactorEnabled": "Enabled",
+    "twoFactorDisabled": "Disabled",
+    "twoFactorEnableBtn": "Enable 2FA",
+    "twoFactorDisableBtn": "Disable 2FA",
+    "twoFactorConfirmBtn": "Confirm and enable",
+    "twoFactorCancelBtn": "Cancel",
+    "twoFactorScanHint": "Scan the QR code with Google Authenticator or another TOTP app, then enter the 6-digit code.",
+    "twoFactorCodeLabel": "Verification code",
+    "twoFactorQrAlt": "2FA QR code",
+    "twoFactorActiveHint": "Two-factor authentication is enabled on your account.",
+    "twoFactorLoadFailed": "Failed to load 2FA status",
+    "twoFactorEnrollFailed": "Could not start 2FA setup",
+    "twoFactorVerifyFailed": "Invalid code, please try again",
+    "twoFactorDisableFailed": "Failed to disable 2FA"
   },
   "notifications": {
     "title": "Notifications",

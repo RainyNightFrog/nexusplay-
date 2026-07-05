@@ -197,7 +197,10 @@
     "timeJustNow": "Just now",
     "timeMinutes": "{count} min ago",
     "timeHours": "{count} hr ago",
-    "timeDays": "{count} days ago"
+    "timeDays": "{count} days ago",
+    "favoriteAdded": "Added to favorites",
+    "favoriteRemoved": "Removed from favorites",
+    "favoriteFailed": "Favorite action failed"
   },
   "home": {
     "statsPlaying": "playing",
@@ -265,7 +268,13 @@
       "latest": "Latest uploads",
       "views": "Most played",
       "rating": "Highest rated"
-    }
+    },
+    "favoritesSectionTitle": "My favorites",
+    "favoritesSectionDesc": "Jump back to games you love",
+    "favoritesViewAll": "View all favorites",
+    "followingFeedTitle": "New from creators you follow",
+    "followingFeedDesc": "Latest releases from creators you follow",
+    "followingViewAll": "Manage following"
   },
   "game": {
     "communityForum": "Community Forum",
@@ -307,7 +316,19 @@
     "tipClose": "Close",
     "tipCheckoutFailed": "Could not start tip checkout",
     "tipLegalLink": "Payments & Tips Policy",
-    "tipPayButton": "Confirm payment"
+    "tipPayButton": "Confirm payment",
+    "tipReceiptTitle": "Tip receipt",
+    "tipReceiptBilling": "Billing address",
+    "tipReceiptNoBilling": "No billing address yet. Go to",
+    "tipReceiptBillingLink": "Billing settings",
+    "tipBillingHint": "Set a billing address to show on receipts",
+    "tipSavedCardsTitle": "Use a saved card",
+    "tipUseNewCard": "Use a new card",
+    "tipAnonymousLabel": "Show anonymously on supporter wall",
+    "tipAnonymousDesc": "When checked, your name is hidden on the public supporter wall (creators still see transaction records).",
+    "anonymousSupporter": "Anonymous supporter",
+    "supporterWallTitle": "Recent supporters",
+    "viewCreatorProfile": "View creator profile"
   },
   "dashboard": {
     "uploadGame": "Upload Game",
@@ -552,7 +573,8 @@
     "alertCover": "Please upload a cover image",
     "alertZip": "Please upload a game zip file",
     "invalidGameId": "Invalid game ID",
-    "readFailed": "Failed to load game data"
+    "readFailed": "Failed to load game data",
+    "unreadTipsBadge": "{count} new tip(s)"
   },
   "auth": {
     "callbackFailed": "Login verification failed, please try again",
@@ -598,7 +620,13 @@
       "footnote": "Super admins skip this step automatically.",
       "loadFailed": "Failed to read sign-in state",
       "saveFailed": "Failed to save account intent"
-    }
+    },
+    "mfaChallengeTitle": "Two-factor authentication",
+    "mfaChallengeDesc": "This account has 2FA enabled. Enter the 6-digit code from your authenticator app.",
+    "mfaCodeLabel": "Verification code",
+    "mfaVerifyBtn": "Verify and sign in",
+    "mfaCancelBtn": "Cancel",
+    "mfaVerifyFailed": "Invalid code, please try again"
   },
   "profile": {
     "title": "Profile",
@@ -809,7 +837,7 @@
     "payoutTitle": "Payout settings",
     "payoutDesc": "Connect Stripe to receive tip revenue (marketplace model)",
     "payoutPreviewBanner": "Payout preview",
-    "payoutPreviewDesc": "Set STRIPE_SECRET_KEY and STRIPE_PAYMENTS_LIVE=true to enable real Stripe Connect onboarding. Balance is display-only for now.",
+    "payoutPreviewDesc": "Set STRIPE_SECRET_KEY and STRIPE_PAYMENTS_LIVE=true for live Stripe. Preview mode supports simulated withdrawals.",
     "payoutBalanceSection": "Creator balance",
     "payoutBalanceLabel": "Pending balance (USD)",
     "payoutThresholdNote": "Withdraw when balance reaches ${amount} USD",
@@ -830,7 +858,6 @@
     "payoutRecordStatus_preview_paid": "Preview done",
     "payoutRecordStatus_failed": "Failed",
     "payoutRecordStatus_pending": "Pending",
-    "payoutPreviewDesc": "Set STRIPE_SECRET_KEY and STRIPE_PAYMENTS_LIVE=true for live Stripe. Preview mode supports simulated withdrawals.",
     "payoutStripeSection": "Stripe Connect",
     "payoutStripeDesc": "Complete identity verification and bank linking via Stripe Express. Tax forms (e.g. W-8BEN) handled by Stripe.",
     "payoutConnectStripe": "Connect Stripe for payouts",
@@ -847,7 +874,45 @@
     "payoutOnboardReturn": "Returned from Stripe — syncing status…",
     "twoFactorTitle": "Two-factor authentication",
     "twoFactorDesc": "Recommended for creator accounts with earnings",
-    "twoFactorComingSoon": "Coming soon"
+    "twoFactorComingSoon": "Coming soon",
+    "navFavorites": "Favorites",
+    "navFollowing": "Following",
+    "favoritesTitle": "My favorites",
+    "favoritesDesc": "Games you saved for quick access.",
+    "favoritesEmpty": "No favorites yet",
+    "favoritesBrowse": "Browse games",
+    "followingTitle": "Following",
+    "followingDesc": "Creators you follow — jump to their pages and new releases.",
+    "followingEmpty": "Not following anyone yet",
+    "followingUnfollow": "Unfollow",
+    "paymentSaveCard": "Save card",
+    "paymentSetupCancel": "Cancel",
+    "paymentSetupFailed": "Could not start card setup",
+    "paymentRemoveCard": "Remove",
+    "paymentRemoveFailed": "Failed to remove card",
+    "paymentTipsSection": "My tips",
+    "paymentTipsDesc": "Games you supported and amounts. Download receipts for your records.",
+    "paymentTipsEmpty": "No tip history yet",
+    "paymentTipsReceipt": "Receipt",
+    "paymentTipStatus_succeeded": "Succeeded",
+    "paymentTipStatus_preview": "Preview",
+    "paymentTipStatus_pending": "Pending",
+    "paymentTipStatus_failed": "Failed",
+    "paymentTipStatus_refunded": "Refunded",
+    "twoFactorEnabled": "Enabled",
+    "twoFactorDisabled": "Disabled",
+    "twoFactorEnableBtn": "Enable 2FA",
+    "twoFactorDisableBtn": "Disable 2FA",
+    "twoFactorConfirmBtn": "Confirm and enable",
+    "twoFactorCancelBtn": "Cancel",
+    "twoFactorScanHint": "Scan the QR code with Google Authenticator or another TOTP app, then enter the 6-digit code.",
+    "twoFactorCodeLabel": "Verification code",
+    "twoFactorQrAlt": "2FA QR code",
+    "twoFactorActiveHint": "Two-factor authentication is enabled on your account.",
+    "twoFactorLoadFailed": "Failed to load 2FA status",
+    "twoFactorEnrollFailed": "Could not start 2FA setup",
+    "twoFactorVerifyFailed": "Invalid code, please try again",
+    "twoFactorDisableFailed": "Failed to disable 2FA"
   },
   "community": {
     "hub": "Community Hub",
@@ -1233,6 +1298,12 @@
     "disclaimerTitle": "Disclaimer",
     "disclaimerP1": "NexusPlay is not fully liable for user-uploaded games, creator statements, or interactions between users. Games are provided by creators; we provide hosting and discovery.",
     "disclaimerP2": "The service is provided \"as is\" without guarantees of uninterrupted or error-free operation. To the extent permitted by law, we are not liable for losses from network issues, third-party services, or force majeure.",
-    "disclaimerP3": "Tax reporting and compliance with local laws (consumer protection, AML, etc.) are the responsibility of creators and payers; seek professional advice when needed."
+    "disclaimerP3": "Tax reporting and compliance with local laws (consumer protection, AML, etc.) are the responsibility of creators and payers; seek professional advice when needed.",
+    "navPrivacy": "Privacy Policy",
+    "privacyTitle": "Privacy Policy",
+    "privacyP1": "NexusPlay collects account data (email, display name), uploaded game content, play and analytics events, and tip/payout records to operate the platform.",
+    "privacyP2": "Billing addresses are used for receipts and compliance; payment card data is processed by Stripe and full card numbers are not stored on our servers.",
+    "privacyP3": "You can export personal data or delete your account under Data & account. Exports include tip receipts and transaction history.",
+    "privacyP4": "We may use cookies and analytics to improve the service; if Google Analytics is enabled, you can limit tracking in your browser settings."
   }
 }
