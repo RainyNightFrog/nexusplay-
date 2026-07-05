@@ -50,7 +50,7 @@ export function resolvePlayUrl(gameUrl: string, gameId?: number) {
     gameId &&
     gameUrl.includes("/storage/v1/object/public/game-files/builds/")
   ) {
-    return `/api/games/${gameId}/embed/`;
+    return `/api/games/${gameId}/embed/index.html`;
   }
   return gameUrl;
 }
