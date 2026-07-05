@@ -243,6 +243,13 @@
     "suggestedTipAmountLabel": "建議打賞金額（Suggested Price）",
     "suggestedTipAmountPlaceholder": "例如 5.00",
     "suggestedTipAmountHint": "僅作為玩家參考，實際贊助金額由玩家自行決定。",
+    "platformAuthNoticeTitle": "平台統一登入與雲端存檔",
+    "platformAuthNoticeBadge": "無需自建登入",
+    "platformAuthNoticeDesc": "玩家會在 NexusPlay 網站以 Google 或 Email 登入，你的遊戲無需再嵌入 Google OAuth 或自建帳號系統。",
+    "platformAuthNoticePoint1": "登入發生在遊戲頁外層（非 iframe 內），Google 登入可正常運作。",
+    "platformAuthNoticePoint2": "iframe 內已自動注入 NexusPlay SDK，可讀取玩家身份與雲端存檔。",
+    "platformAuthNoticePoint3": "若需存檔，請在遊戲程式碼呼叫 NexusPlay.loadSave() / saveSave()，勿自行接第三方 OAuth。",
+    "platformAuthNoticeSdkToggle": "查看 SDK 範例程式碼",
     "publishStatusNote": "草稿僅創作者可預覽；切換為公開後即會出現在首頁。",
     "alertSuggestedTip": "請輸入建議打賞金額",
     "publishYourWork": "發布你的作品",
@@ -319,7 +326,9 @@
     "roleCreator": "創作者",
     "password": "密碼",
     "passwordPlaceholder": "至少 6 個字元",
-    "createAccountBtn": "建立帳號"
+    "createAccountBtn": "建立帳號",
+    "orContinueWith": "或",
+    "continueWithGoogle": "使用 Google 登入"
   },
   "profile": {
     "title": "個人資料",

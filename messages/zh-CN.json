@@ -243,6 +243,13 @@
     "suggestedTipAmountLabel": "建议打赏金额（Suggested Price）",
     "suggestedTipAmountPlaceholder": "例如 5.00",
     "suggestedTipAmountHint": "仅作为玩家参考，实际赞助金额由玩家自行决定。",
+    "platformAuthNoticeTitle": "平台统一登录与云端存档",
+    "platformAuthNoticeBadge": "无需自建登录",
+    "platformAuthNoticeDesc": "玩家会在 NexusPlay 网站以 Google 或 Email 登录，你的游戏无需再嵌入 Google OAuth 或自建账号系统。",
+    "platformAuthNoticePoint1": "登录发生在游戏页外层（非 iframe 内），Google 登录可正常运作。",
+    "platformAuthNoticePoint2": "iframe 内已自动注入 NexusPlay SDK，可读取玩家身份与云端存档。",
+    "platformAuthNoticePoint3": "若需存档，请在游戏代码调用 NexusPlay.loadSave() / saveSave()，勿自行接第三方 OAuth。",
+    "platformAuthNoticeSdkToggle": "查看 SDK 示例代码",
     "publishStatusNote": "草稿仅创作者可预览；切换为公开后即会出现在首页。",
     "alertSuggestedTip": "请输入建议打赏金额",
     "publishYourWork": "发布你的作品",
@@ -319,7 +326,9 @@
     "roleCreator": "创作者",
     "password": "密码",
     "passwordPlaceholder": "至少 6 个字符",
-    "createAccountBtn": "建立账号"
+    "createAccountBtn": "建立账号",
+    "orContinueWith": "或",
+    "continueWithGoogle": "使用 Google 登录"
   },
   "profile": {
     "title": "个人资料",

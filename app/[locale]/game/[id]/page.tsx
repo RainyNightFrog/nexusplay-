@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useParams, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -20,6 +20,7 @@ import {
   Users,
   X,
 } from "lucide-react";
+import { GameEmbedBridge } from "@/components/game/game-embed-bridge";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { Link, useRouter } from "@/i18n/navigation";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -75,6 +76,7 @@ function GamePageContent() {
   const [favorited, setFavorited] = useState(false);
   const [showEmbed, setShowEmbed] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const showToast = useCallback((message: string) => {
     setToast(message);
@@ -314,14 +316,18 @@ function GamePageContent() {
             >
               <div className="relative h-[min(78vh,820px)] min-h-[560px] w-full bg-black">
                 {trustedEmbedUrl ? (
-                  <iframe
-                    src={trustedEmbedUrl}
-                    title={game.title}
-                    className="absolute inset-0 size-full border-0"
-                    sandbox={IFRAME_SANDBOX}
-                    allowFullScreen
-                    referrerPolicy="no-referrer"
-                  />
+                  <>
+                    <iframe
+                      ref={iframeRef}
+                      src={trustedEmbedUrl}
+                      title={game.title}
+                      className="absolute inset-0 size-full border-0"
+                      sandbox={IFRAME_SANDBOX}
+                      allowFullScreen
+                      referrerPolicy="no-referrer"
+                    />
+                    <GameEmbedBridge iframeRef={iframeRef} gameId={gameId} />
+                  </>
                 ) : (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-6 text-center">
                     <Upload className="size-10 text-zinc-600" />

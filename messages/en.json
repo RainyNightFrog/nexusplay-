@@ -243,6 +243,13 @@
     "suggestedTipAmountLabel": "Suggested tip amount",
     "suggestedTipAmountPlaceholder": "e.g. 5.00",
     "suggestedTipAmountHint": "For reference only — players decide the actual amount.",
+    "platformAuthNoticeTitle": "Platform login & cloud saves",
+    "platformAuthNoticeBadge": "No custom login needed",
+    "platformAuthNoticeDesc": "Players sign in on NexusPlay with Google or Email. Your game does not need its own OAuth or account system.",
+    "platformAuthNoticePoint1": "Login happens on the outer game page (not inside the iframe), so Google sign-in works reliably.",
+    "platformAuthNoticePoint2": "The NexusPlay SDK is auto-injected in the iframe for player identity and cloud saves.",
+    "platformAuthNoticePoint3": "For saves, call NexusPlay.loadSave() / saveSave() in your game — do not wire third-party OAuth yourself.",
+    "platformAuthNoticeSdkToggle": "View SDK example",
     "publishStatusNote": "Drafts are creator-only previews. Switch to Public to appear on the homepage.",
     "alertSuggestedTip": "Please enter a suggested tip amount",
     "publishYourWork": "Publish your work",
@@ -319,7 +326,9 @@
     "roleCreator": "Creator",
     "password": "Password",
     "passwordPlaceholder": "At least 6 characters",
-    "createAccountBtn": "Create account"
+    "createAccountBtn": "Create account",
+    "orContinueWith": "or",
+    "continueWithGoogle": "Continue with Google"
   },
   "profile": {
     "title": "Profile",

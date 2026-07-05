@@ -26,6 +26,42 @@ import {
   MAX_ZIP_BYTES,
 } from "@/lib/upload-limits";
 
+/** 創作者可更新的欄位；公開發布時重置審批狀態為 pending */
+function buildCreatorUpdatePayload(
+  input: {
+    title: string;
+    description: string;
+    category: string;
+    coverUrl: string;
+    gameUrl: string;
+    publishStatus: "draft" | "public";
+    tipsEnabled: boolean;
+    suggestedTipAmount: number | null;
+  },
+  options: { userId: string; isOrphan: boolean }
+) {
+  const payload: Record<string, unknown> = {
+    title: input.title,
+    description: input.description,
+    category: input.category,
+    cover_url: input.coverUrl,
+    game_url: input.gameUrl,
+    publish_status: input.publishStatus,
+    tips_enabled: input.tipsEnabled,
+    suggested_tip_amount: input.suggestedTipAmount,
+  };
+
+  if (options.isOrphan) {
+    payload.creator_id = options.userId;
+  }
+
+  if (input.publishStatus === "public") {
+    payload.status = "pending";
+  }
+
+  return payload;
+}
+
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -117,6 +153,8 @@ export async function PATCH(
 
     const record = authResult.record;
     const isOrphan = authResult.isOrphan;
+    // 孤兒遊戲綁定 creator_id 需 service role；其餘更新走登入者 client 以觸發 RLS
+    const dbClient = isOrphan ? supabase : authClient;
 
     const formData = await request.formData();
 
@@ -229,19 +267,21 @@ export async function PATCH(
         newGameUrl = buildUpload.playUrl;
       }
 
-      const updatePayload = {
-        title,
-        description,
-        category,
-        cover_url: newCoverUrl,
-        game_url: newGameUrl,
-        publish_status: monetization.data.publish_status,
-        tips_enabled: monetization.data.tips_enabled,
-        suggested_tip_amount: monetization.data.suggested_tip_amount,
-        ...(isOrphan ? { creator_id: user.id } : {}),
-      };
+      const updatePayload = buildCreatorUpdatePayload(
+        {
+          title,
+          description,
+          category,
+          coverUrl: newCoverUrl,
+          gameUrl: newGameUrl,
+          publishStatus: monetization.data.publish_status,
+          tipsEnabled: monetization.data.tips_enabled,
+          suggestedTipAmount: monetization.data.suggested_tip_amount,
+        },
+        { userId: user.id, isOrphan }
+      );
 
-      let updateQuery = supabase
+      let updateQuery = dbClient
         .from("games")
         .update(updatePayload)
         .eq("id", numericId);
@@ -257,7 +297,12 @@ export async function PATCH(
         .single();
 
       if (updateError) {
-        throw new Error(`資料庫更新失敗：${updateError.message}`);
+        const hint =
+          updateError.message.includes("status") &&
+          updateError.message.includes("schema cache")
+            ? " 請先在 Supabase SQL Editor 執行 supabase/add-game-status.sql（或 npm run db:status）。"
+            : "";
+        throw new Error(`資料庫更新失敗：${updateError.message}${hint}`);
       }
 
       if (hasCover && oldCoverPath && oldCoverPath !== newCoverPath) {

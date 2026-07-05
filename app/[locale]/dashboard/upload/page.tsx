@@ -28,6 +28,7 @@ import {
   PublishMonetizationFields,
   type PublishMonetizationValues,
 } from "@/components/dashboard/publish-monetization-fields";
+import { PlatformAuthNotice } from "@/components/dashboard/platform-auth-notice";
 import { uploadGame } from "@/lib/upload-game";
 import { DEFAULT_PUBLISH_STATUS } from "@/lib/game-publish";
 import { useApiError } from "@/hooks/use-api-error";
@@ -556,7 +557,7 @@ export default function UploadPage() {
               disabled={isSubmitting}
             />
 
-            {/* Submit */}
+            <PlatformAuthNotice />
             <div className="border-t border-white/5 pt-6">
               <Button
                 type="submit"

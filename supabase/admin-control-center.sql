@@ -43,6 +43,34 @@ create index if not exists games_status_idx
 comment on column public.games.status is
   '管理員審批狀態：pending（待審）、approved（通過）、rejected（退回）';
 
+-- 強化創作者更新政策：不可自行核准
+drop policy if exists "Creators update own games" on public.games;
+
+create policy "Creators update own games"
+  on public.games
+  for update
+  to authenticated
+  using (auth.uid() = creator_id)
+  with check (
+    auth.uid() = creator_id
+    and (
+      status = (
+        select g.status
+        from public.games as g
+        where g.id = games.id
+      )
+      or status = 'pending'
+    )
+    and not (
+      status = 'approved'
+      and status is distinct from (
+        select g.status
+        from public.games as g
+        where g.id = games.id
+      )
+    )
+  );
+
 -- ================================================================
 -- 2. 📩 建立 player_feedbacks 表
 -- ================================================================

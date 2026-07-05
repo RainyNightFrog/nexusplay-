@@ -77,7 +77,8 @@ export function canViewGame(
     return true;
   }
 
-  return record.publish_status === "public" && record.status === "approved";
+  const approvalStatus = record.status ?? "approved";
+  return record.publish_status === "public" && approvalStatus === "approved";
 }
 
 export function normalizePublishStatus(

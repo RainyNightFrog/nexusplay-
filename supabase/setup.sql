@@ -18,7 +18,9 @@ create table if not exists public.games (
   publish_status text not null default 'public',
   tips_enabled boolean not null default false,
   suggested_tip_amount numeric(10, 2),
-  constraint games_publish_status_check check (publish_status in ('draft', 'public'))
+  status text not null default 'pending',
+  constraint games_publish_status_check check (publish_status in ('draft', 'public')),
+  constraint games_status_check check (status in ('pending', 'approved', 'rejected'))
 );
 
 -- 2. 啟用 Row Level Security

@@ -31,6 +31,7 @@ import {
   PublishMonetizationFields,
   type PublishMonetizationValues,
 } from "@/components/dashboard/publish-monetization-fields";
+import { PlatformAuthNotice } from "@/components/dashboard/platform-auth-notice";
 import { fetchManageGame, updateGame } from "@/lib/update-game";
 import { DEFAULT_PUBLISH_STATUS, normalizePublishStatus } from "@/lib/game-publish";
 import { useApiError } from "@/hooks/use-api-error";
@@ -653,6 +654,8 @@ export default function EditGamePage() {
               onChange={setMonetization}
               disabled={isSubmitting}
             />
+
+            <PlatformAuthNotice />
 
             <div className="flex flex-col gap-3 border-t border-white/5 pt-6 sm:flex-row">
               <motion.div
