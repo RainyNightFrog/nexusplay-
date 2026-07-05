@@ -11,68 +11,440 @@
       background: #050508;
       color: #f0e6d3;
       font-family: "Segoe UI", system-ui, sans-serif;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       overflow: hidden;
     }
     .matrix {
-      position: fixed; inset: 0;
+      position: fixed; inset: 0; pointer-events: none;
       background:
         repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,200,0.03) 2px, rgba(0,255,200,0.03) 4px),
         repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(212,175,55,0.03) 2px, rgba(212,175,55,0.03) 4px);
     }
+    .screen { display: none; position: relative; z-index: 1; min-height: 100vh; padding: 1.5rem; }
+    .screen.active { display: flex; flex-direction: column; align-items: center; justify-content: center; }
     .frame {
-      position: relative; z-index: 1;
-      padding: 3rem;
+      position: relative;
+      padding: 2rem 2.5rem;
       border: 1px solid rgba(212,175,55,0.35);
       box-shadow: 0 0 60px rgba(0,255,200,0.08), inset 0 0 80px rgba(212,175,55,0.04);
       text-align: center;
-      max-width: 520px;
+      max-width: 640px;
+      width: 100%;
     }
     .corner { position: absolute; width: 24px; height: 24px; border-color: #d4af37; border-style: solid; }
     .c-tl { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
     .c-tr { top: -1px; right: -1px; border-width: 2px 2px 0 0; }
     .c-bl { bottom: -1px; left: -1px; border-width: 0 0 2px 2px; }
     .c-br { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
-    .badge {
-      font-size: 0.7rem;
-      letter-spacing: 0.2em;
-      color: #00ffc8;
-      margin-bottom: 1rem;
-    }
+    .badge { font-size: 0.7rem; letter-spacing: 0.2em; color: #00ffc8; margin-bottom: 0.75rem; }
     h1 {
-      font-size: clamp(1.6rem, 4.5vw, 2.25rem);
+      font-size: clamp(1.5rem, 4vw, 2rem);
       font-weight: 700;
       color: #d4af37;
       text-shadow: 0 0 30px rgba(212,175,55,0.4);
-      margin-bottom: 0.35rem;
+      margin-bottom: 0.5rem;
     }
-    .num { font-size: 2.5rem; font-weight: 300; color: #00ffc8; letter-spacing: 0.3em; margin: 1rem 0; }
-    .sub { color: #8a8278; font-size: 0.9rem; line-height: 1.65; }
-    .stats { display: flex; gap: 1rem; justify-content: center; margin-top: 2rem; flex-wrap: wrap; }
-    .stat {
-      padding: 0.75rem 1.25rem;
-      border: 1px solid rgba(0,255,200,0.2);
-      font-size: 0.8rem;
+    .sub { color: #8a8278; font-size: 0.88rem; line-height: 1.65; margin-bottom: 1.5rem; }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: center; margin-top: 1rem; }
+    button {
+      cursor: pointer;
+      border: 1px solid rgba(0,255,200,0.35);
+      background: rgba(0,255,200,0.08);
+      color: #00ffc8;
+      padding: 0.65rem 1.25rem;
+      font-size: 0.9rem;
+      letter-spacing: 0.05em;
+      transition: all 0.2s;
     }
-    .stat b { display: block; color: #d4af37; font-size: 1.1rem; margin-bottom: 0.2rem; }
+    button:hover { background: rgba(0,255,200,0.18); box-shadow: 0 0 20px rgba(0,255,200,0.2); }
+    button.gold { border-color: rgba(212,175,55,0.5); background: rgba(212,175,55,0.1); color: #d4af37; }
+    button.gold:hover { background: rgba(212,175,55,0.22); }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .diff-group { display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; margin: 1rem 0; }
+    .diff-btn.selected { background: rgba(212,175,55,0.25); border-color: #d4af37; color: #d4af37; }
+    .help-box {
+      text-align: left;
+      font-size: 0.85rem;
+      line-height: 1.75;
+      color: #b8b0a4;
+      max-height: 50vh;
+      overflow-y: auto;
+      padding-right: 0.5rem;
+    }
+    .help-box h3 { color: #d4af37; font-size: 0.95rem; margin: 1rem 0 0.4rem; }
+    .help-box h3:first-child { margin-top: 0; }
+    .help-box ul { padding-left: 1.2rem; }
+    .help-box li { margin-bottom: 0.35rem; }
+    /* Game HUD */
+    .hud {
+      width: 100%;
+      max-width: 720px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+      padding: 0.75rem 1rem;
+      border: 1px solid rgba(212,175,55,0.25);
+      background: rgba(0,0,0,0.5);
+    }
+    .hud-item { font-size: 0.85rem; }
+    .hud-item b { color: #d4af37; font-size: 1.1rem; }
+    .timer-bar {
+      width: 100%;
+      height: 6px;
+      background: rgba(255,255,255,0.08);
+      margin-bottom: 1rem;
+      max-width: 720px;
+    }
+    .timer-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #00ffc8, #d4af37);
+      transition: width 0.1s linear;
+    }
+    .game-area { width: 100%; max-width: 720px; text-align: center; }
+    .round-label { color: #8a8278; font-size: 0.8rem; margin-bottom: 0.5rem; letter-spacing: 0.15em; }
+    .sequence {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin: 1.5rem 0;
+      min-height: 90px;
+      align-items: center;
+    }
+    .card {
+      width: 64px;
+      height: 88px;
+      border: 2px solid rgba(0,255,200,0.4);
+      background: linear-gradient(145deg, rgba(0,255,200,0.12), rgba(0,0,0,0.6));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      font-weight: 700;
+      color: #00ffc8;
+      text-shadow: 0 0 15px rgba(0,255,200,0.6);
+      box-shadow: 0 0 20px rgba(0,255,200,0.1);
+      animation: cardIn 0.35s ease;
+    }
+    .card.unknown {
+      border-color: rgba(212,175,55,0.6);
+      color: #d4af37;
+      font-size: 1.5rem;
+      animation: pulse 1.2s ease infinite;
+    }
+    @keyframes cardIn { from { opacity: 0; transform: translateY(12px) scale(0.9); } to { opacity: 1; transform: none; } }
+    @keyframes pulse { 0%,100% { box-shadow: 0 0 15px rgba(212,175,55,0.2); } 50% { box-shadow: 0 0 30px rgba(212,175,55,0.5); } }
+    .pick-row { display: flex; gap: 1rem; justify-content: center; margin-top: 1rem; }
+    .pick-btn {
+      width: 80px; height: 100px;
+      font-size: 2.5rem;
+      font-weight: 700;
+    }
+    .pick-btn.correct { background: rgba(0,255,100,0.25); border-color: #0f6; }
+    .pick-btn.wrong { background: rgba(255,60,60,0.25); border-color: #f44; }
+    .feedback {
+      min-height: 2rem;
+      margin-top: 1rem;
+      font-size: 0.95rem;
+      color: #00ffc8;
+    }
+    .result-title { font-size: 1.8rem; color: #d4af37; margin-bottom: 0.5rem; }
+    .result-score { font-size: 3rem; color: #00ffc8; margin: 1rem 0; }
   </style>
 </head>
 <body>
   <div class="matrix"></div>
-  <div class="frame">
-    <span class="corner c-tl"></span><span class="corner c-tr"></span>
-    <span class="corner c-bl"></span><span class="corner c-br"></span>
-    <div class="badge">ELITEROYAL GAMING</div>
-    <h1>CyberFortune 012</h1>
-    <div class="num">0 · 1 · 2</div>
-    <p class="sub">賽博博弈 × 大數據統計 · 復古電競霓虹旗艦</p>
-    <div class="stats">
-      <div class="stat"><b>64.2k</b>遊玩</div>
-      <div class="stat"><b>5.6k</b>按讚</div>
-      <div class="stat"><b>4.76</b>評分</div>
+
+  <!-- 主選單 -->
+  <div id="menu" class="screen active">
+    <div class="frame">
+      <span class="corner c-tl"></span><span class="corner c-tr"></span>
+      <span class="corner c-bl"></span><span class="corner c-br"></span>
+      <div class="badge">ELITEROYAL GAMING</div>
+      <h1>CyberFortune 012</h1>
+      <p class="sub">012 矩陣駭客協議 · 破解數據序列，在概率戰場中成為唯一贏家</p>
+      <p style="font-size:0.8rem;color:#6a6458;margin-bottom:0.5rem;">選擇難度</p>
+      <div class="diff-group" id="menuDiff">
+        <button class="diff-btn selected" data-diff="easy">初級</button>
+        <button class="diff-btn" data-diff="normal">中級</button>
+        <button class="diff-btn" data-diff="hard">高級</button>
+      </div>
+      <div class="btn-row">
+        <button class="gold" id="btnStart">開始破解</button>
+        <button id="btnHelp">遊戲說明</button>
+      </div>
     </div>
   </div>
+
+  <!-- 說明 -->
+  <div id="help" class="screen">
+    <div class="frame">
+      <span class="corner c-tl"></span><span class="corner c-tr"></span>
+      <span class="corner c-bl"></span><span class="corner c-br"></span>
+      <h1>遊戲說明</h1>
+      <div class="help-box">
+        <h3>🎯 遊戲目標</h3>
+        <p>你是一名賽博駭客，需破解 AI 生成的 012 數據序列。每回合顯示一串由 <strong>0、1、2</strong> 組成的規律序列，最後一張為「？」——請在限時內預測下一個數字。</p>
+        <h3>🎮 操作方式</h3>
+        <ul>
+          <li>觀察序列規律，點擊下方 <strong>0 / 1 / 2</strong> 按鈕作答</li>
+          <li>答對得分，連續答對可獲得額外加分</li>
+          <li>時間耗盡視為答錯</li>
+        </ul>
+        <h3>🧩 常見規律提示</h3>
+        <ul>
+          <li><strong>循環：</strong> 0→1→2→0→1→2…</li>
+          <li><strong>交替：</strong> 0→2→0→2… 或 1→0→1→0…</li>
+          <li><strong>遞增：</strong> 每步 +1（模 3）：1→2→0→1…</li>
+          <li><strong>求和：</strong> 前兩數相加 mod 3：0,1,1,2,0,2…</li>
+          <li><strong>鏡像：</strong> 對稱重複模式</li>
+        </ul>
+        <h3>⚙️ 難度差異</h3>
+        <ul>
+          <li><strong>初級：</strong> 10 回合、每題 12 秒、需答對 6 題過關、規律較明顯</li>
+          <li><strong>中級：</strong> 12 回合、每題 8 秒、需答對 8 題過關</li>
+          <li><strong>高級：</strong> 15 回合、每題 5 秒、需答對 11 題過關、複合規律</li>
+        </ul>
+      </div>
+      <div class="btn-row">
+        <button class="gold" id="btnHelpBack">返回</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 遊戲中 -->
+  <div id="game" class="screen">
+    <div class="hud">
+      <div class="hud-item">回合 <b id="hudRound">1</b>/<span id="hudTotal">10</span></div>
+      <div class="hud-item">得分 <b id="hudScore">0</b></div>
+      <div class="hud-item">連擊 <b id="hudCombo">0</b></div>
+      <div class="hud-item">目標 <b id="hudTarget">6</b></div>
+    </div>
+    <div class="timer-bar"><div class="timer-fill" id="timerFill" style="width:100%"></div></div>
+    <div class="game-area">
+      <div class="round-label">012 矩陣序列 · 預測下一個數字</div>
+      <div class="sequence" id="sequence"></div>
+      <div class="pick-row">
+        <button class="pick-btn" data-pick="0">0</button>
+        <button class="pick-btn" data-pick="1">1</button>
+        <button class="pick-btn" data-pick="2">2</button>
+      </div>
+      <div class="feedback" id="feedback"></div>
+    </div>
+  </div>
+
+  <!-- 結算 -->
+  <div id="result" class="screen">
+    <div class="frame">
+      <span class="corner c-tl"></span><span class="corner c-tr"></span>
+      <span class="corner c-bl"></span><span class="corner c-br"></span>
+      <div class="result-title" id="resultTitle">破解成功</div>
+      <div class="result-score" id="resultScore">0</div>
+      <p class="sub" id="resultMsg"></p>
+      <div class="btn-row">
+        <button class="gold" id="btnRetry">再玩一次</button>
+        <button id="btnMenu">主選單</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const DIFF = {
+      easy:   { rounds: 10, time: 12, target: 6,  patterns: ['cycle','alt02','inc'] },
+      normal: { rounds: 12, time: 8,  target: 8,  patterns: ['cycle','alt02','alt01','inc','sum'] },
+      hard:   { rounds: 15, time: 5,  target: 11, patterns: ['cycle','alt02','alt01','inc','sum','mirror','combo'] },
+    };
+
+    let difficulty = 'easy';
+    let round = 0, score = 0, correct = 0, combo = 0;
+    let config = DIFF.easy;
+    let sequence = [], answer = 0;
+    let timerId = null, timeLeft = 0, totalTime = 0;
+    let locked = false;
+
+    const $ = (id) => document.getElementById(id);
+    const screens = { menu: $('menu'), help: $('help'), game: $('game'), result: $('result') };
+
+    function showScreen(name) {
+      Object.values(screens).forEach(s => s.classList.remove('active'));
+      screens[name].classList.add('active');
+    }
+
+    document.querySelectorAll('.diff-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        difficulty = btn.dataset.diff;
+      });
+    });
+
+    $('btnStart').onclick = startGame;
+    $('btnHelp').onclick = () => showScreen('help');
+    $('btnHelpBack').onclick = () => showScreen('menu');
+    $('btnRetry').onclick = startGame;
+    $('btnMenu').onclick = () => showScreen('menu');
+
+    document.querySelectorAll('.pick-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (locked) return;
+        submitAnswer(parseInt(btn.dataset.pick, 10), btn);
+      });
+    });
+
+    function startGame() {
+      config = DIFF[difficulty];
+      round = 0; score = 0; correct = 0; combo = 0;
+      $('hudTotal').textContent = config.rounds;
+      $('hudTarget').textContent = config.target;
+      updateHud();
+      showScreen('game');
+      nextRound();
+    }
+
+    function updateHud() {
+      $('hudRound').textContent = Math.min(round + 1, config.rounds);
+      $('hudScore').textContent = score;
+      $('hudCombo').textContent = combo;
+    }
+
+    function genPattern(type) {
+      const r = () => Math.floor(Math.random() * 3);
+      let seq = [];
+      switch (type) {
+        case 'cycle': {
+          const start = r();
+          for (let i = 0; i < 6; i++) seq.push((start + i) % 3);
+          break;
+        }
+        case 'alt02': {
+          const start = Math.random() < 0.5 ? 0 : 2;
+          for (let i = 0; i < 6; i++) seq.push(i % 2 === 0 ? start : (start === 0 ? 2 : 0));
+          break;
+        }
+        case 'alt01': {
+          const start = Math.random() < 0.5 ? 0 : 1;
+          for (let i = 0; i < 6; i++) seq.push(i % 2 === 0 ? start : (start === 0 ? 1 : 0));
+          break;
+        }
+        case 'inc': {
+          const start = r();
+          for (let i = 0; i < 6; i++) seq.push((start + i) % 3);
+          break;
+        }
+        case 'sum': {
+          seq = [r(), r()];
+          for (let i = 2; i < 6; i++) seq.push((seq[i-1] + seq[i-2]) % 3);
+          break;
+        }
+        case 'mirror': {
+          const half = [r(), r(), r()];
+          seq = [...half, ...half.slice().reverse()];
+          break;
+        }
+        case 'combo': {
+          const base = r();
+          for (let i = 0; i < 6; i++) seq.push((base + i * 2) % 3);
+          break;
+        }
+        default:
+          for (let i = 0; i < 6; i++) seq.push(i % 3);
+      }
+      return seq;
+    }
+
+    function extendSequence() {
+      const type = config.patterns[Math.floor(Math.random() * config.patterns.length)];
+      const full = genPattern(type);
+      const showLen = difficulty === 'easy' ? 4 : 5;
+      return { display: full.slice(0, showLen), answer: full[showLen] };
+    }
+
+    function nextRound() {
+      if (round >= config.rounds) return endGame();
+      locked = false;
+      $('feedback').textContent = '';
+      document.querySelectorAll('.pick-btn').forEach(b => {
+        b.classList.remove('correct', 'wrong');
+        b.disabled = false;
+      });
+
+      const data = extendSequence();
+      sequence = data.display;
+      answer = data.answer;
+
+      const el = $('sequence');
+      el.innerHTML = '';
+      sequence.forEach((n, i) => {
+        const c = document.createElement('div');
+        c.className = 'card';
+        c.textContent = n;
+        c.style.animationDelay = (i * 0.08) + 's';
+        el.appendChild(c);
+      });
+      const q = document.createElement('div');
+      q.className = 'card unknown';
+      q.textContent = '?';
+      el.appendChild(q);
+
+      updateHud();
+      startTimer();
+      round++;
+    }
+
+    function startTimer() {
+      clearInterval(timerId);
+      totalTime = config.time;
+      timeLeft = totalTime;
+      $('timerFill').style.width = '100%';
+      timerId = setInterval(() => {
+        timeLeft -= 0.1;
+        const pct = Math.max(0, (timeLeft / totalTime) * 100);
+        $('timerFill').style.width = pct + '%';
+        if (timeLeft <= 0) {
+          clearInterval(timerId);
+          submitAnswer(-1, null);
+        }
+      }, 100);
+    }
+
+    function submitAnswer(pick, btn) {
+      if (locked) return;
+      locked = true;
+      clearInterval(timerId);
+      document.querySelectorAll('.pick-btn').forEach(b => b.disabled = true);
+
+      const isCorrect = pick === answer;
+      if (isCorrect) {
+        correct++;
+        combo++;
+        const bonus = Math.min(combo - 1, 5) * 10;
+        const timeBonus = Math.floor(timeLeft * 5);
+        score += 100 + bonus + timeBonus;
+        $('feedback').textContent = `✓ 破解成功！+${100 + bonus + timeBonus}（連擊 ×${combo}）`;
+        if (btn) btn.classList.add('correct');
+      } else {
+        combo = 0;
+        const ans = pick === -1 ? '逾時' : pick;
+        $('feedback').textContent = `✗ 破解失敗（你的答案：${ans}，正確：${answer}）`;
+        if (btn) btn.classList.add('wrong');
+        document.querySelector(`.pick-btn[data-pick="${answer}"]`)?.classList.add('correct');
+      }
+      updateHud();
+      setTimeout(nextRound, 1400);
+    }
+
+    function endGame() {
+      clearInterval(timerId);
+      const win = correct >= config.target;
+      $('resultTitle').textContent = win ? '🎉 破解成功' : '💀 協議中斷';
+      $('resultScore').textContent = score;
+      $('resultMsg').textContent = win
+        ? `答對 ${correct}/${config.rounds} 題，成功突破 012 矩陣防火牆！`
+        : `答對 ${correct}/${config.rounds} 題，未達目標 ${config.target} 題。再分析規律試試！`;
+      showScreen('result');
+    }
+  </script>
 </body>
 </html>

@@ -8,28 +8,29 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       min-height: 100vh;
-      background: linear-gradient(135deg, #0a0e14 0%, #1a1410 50%, #0d1117 100%);
+      background: #0a0e14;
       color: #e8e6e3;
       font-family: "Segoe UI", system-ui, sans-serif;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       overflow: hidden;
     }
+    .screen { display: none; position: relative; z-index: 2; min-height: 100vh; }
+    .screen.active { display: flex; flex-direction: column; align-items: center; justify-content: center; }
     .grid-bg {
-      position: fixed; inset: 0;
+      position: fixed; inset: 0; pointer-events: none;
       background-image:
         linear-gradient(rgba(255,140,50,0.04) 1px, transparent 1px),
         linear-gradient(90deg, rgba(255,140,50,0.04) 1px, transparent 1px);
       background-size: 48px 48px;
     }
-    .glow { position: fixed; border-radius: 50%; filter: blur(80px); opacity: 0.4; }
+    .glow { position: fixed; border-radius: 50%; filter: blur(80px); opacity: 0.35; pointer-events: none; }
     .glow-1 { width: 400px; height: 400px; background: #ff6b2b; top: -100px; left: -100px; }
     .glow-2 { width: 300px; height: 300px; background: #4a90d9; bottom: -80px; right: -80px; }
     .panel {
-      position: relative; z-index: 1;
-      text-align: center; padding: 2.5rem;
-      max-width: 560px;
+      text-align: center; padding: 2rem;
+      max-width: 580px; width: 92%;
+      background: rgba(10,14,20,0.85);
+      border: 1px solid rgba(255,107,43,0.25);
+      border-radius: 12px;
     }
     .badge {
       display: inline-block;
@@ -41,11 +42,10 @@
       font-size: 0.75rem;
       font-weight: 600;
       letter-spacing: 0.12em;
-      text-transform: uppercase;
-      margin-bottom: 1.25rem;
+      margin-bottom: 1rem;
     }
     h1 {
-      font-size: clamp(1.75rem, 5vw, 2.5rem);
+      font-size: clamp(1.5rem, 4vw, 2.2rem);
       font-weight: 800;
       background: linear-gradient(135deg, #fff 0%, #ffb380 50%, #ff6b2b 100%);
       -webkit-background-clip: text;
@@ -53,49 +53,565 @@
       background-clip: text;
       margin-bottom: 0.5rem;
     }
-    .sub { color: #8b949e; font-size: 0.95rem; margin-bottom: 1.5rem; }
-    .stats {
-      display: flex; gap: 1.5rem; justify-content: center;
-      flex-wrap: wrap; margin-top: 2rem;
+    .sub { color: #8b949e; font-size: 0.9rem; margin-bottom: 1.25rem; line-height: 1.6; }
+    .diff-group { display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; margin: 1rem 0; }
+    button {
+      cursor: pointer;
+      border: 1px solid rgba(255,107,43,0.4);
+      background: rgba(255,107,43,0.1);
+      color: #ffb380;
+      padding: 0.6rem 1.1rem;
+      font-size: 0.88rem;
+      border-radius: 6px;
+      transition: all 0.2s;
     }
-    .stat {
-      padding: 1rem 1.5rem;
-      background: rgba(255,255,255,0.04);
+    button:hover { background: rgba(255,107,43,0.22); }
+    button.selected { background: rgba(255,107,43,0.35); border-color: #ff8c5a; color: #fff; }
+    button.primary { background: rgba(255,107,43,0.5); color: #fff; font-weight: 600; }
+    .btn-row { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; margin-top: 1rem; }
+    .help-box {
+      text-align: left;
+      font-size: 0.84rem;
+      line-height: 1.75;
+      color: #adbac7;
+      max-height: 55vh;
+      overflow-y: auto;
+    }
+    .help-box h3 { color: #ff8c5a; font-size: 0.92rem; margin: 1rem 0 0.35rem; }
+    .help-box h3:first-child { margin-top: 0; }
+    .help-box ul { padding-left: 1.2rem; }
+    .help-box li { margin-bottom: 0.3rem; }
+    /* Game layout */
+    #gameScreen { padding: 0.5rem; justify-content: flex-start; }
+    .game-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      max-width: 900px;
+    }
+    .top-bar {
+      width: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 0.75rem;
+      background: rgba(0,0,0,0.5);
       border: 1px solid rgba(255,107,43,0.2);
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+      font-size: 0.82rem;
+    }
+    .top-bar b { color: #ff8c5a; }
+    .toolbar {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.5rem;
+    }
+    .tool-btn {
+      padding: 0.45rem 0.75rem;
+      font-size: 0.78rem;
+    }
+    .tool-btn.active { background: rgba(255,107,43,0.4); border-color: #ff8c5a; }
+    canvas {
+      display: block;
+      border: 2px solid rgba(255,107,43,0.3);
+      border-radius: 4px;
+      cursor: crosshair;
+      max-width: 100%;
+      background: #0d1117;
+    }
+    .hint { font-size: 0.75rem; color: #6e7681; margin-top: 0.4rem; text-align: center; }
+    .overlay-msg {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.75);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+    .overlay-msg.show { display: flex; }
+    .overlay-box {
+      text-align: center;
+      padding: 2rem;
+      background: #121820;
+      border: 1px solid rgba(255,107,43,0.4);
       border-radius: 12px;
-      min-width: 120px;
+      max-width: 400px;
     }
-    .stat-val { font-size: 1.5rem; font-weight: 700; color: #ff8c5a; }
-    .stat-lbl { font-size: 0.7rem; color: #6e7681; margin-top: 0.25rem; text-transform: uppercase; letter-spacing: 0.08em; }
-    .pulse {
-      width: 80px; height: 80px; margin: 0 auto 1.5rem;
-      border: 3px solid rgba(255,107,43,0.4);
-      border-radius: 50%;
-      animation: pulse 2s ease-in-out infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); opacity: 0.8; box-shadow: 0 0 0 0 rgba(255,107,43,0.3); }
-      50% { transform: scale(1.05); opacity: 1; box-shadow: 0 0 40px 10px rgba(255,107,43,0.15); }
-    }
+    .overlay-box h2 { color: #ff8c5a; margin-bottom: 0.75rem; }
   </style>
 </head>
 <body>
   <div class="grid-bg"></div>
   <div class="glow glow-1"></div>
   <div class="glow glow-2"></div>
-  <div class="panel">
-    <div class="pulse"></div>
-    <span class="badge">NeonTowers · 核心裂變</span>
-    <h1>CoreDefense: Mindustry X</h1>
-    <p class="sub">重工業塔防 × 全自動化工廠物流 · 3D 旗艦體驗</p>
-    <p style="font-size:0.9rem;line-height:1.7;color:#adbac7;max-width:420px;margin:0 auto;">
-      建立採礦帝國，拉起鋼鐵防線，抵禦異星機械狂潮。
-    </p>
-    <div class="stats">
-      <div class="stat"><div class="stat-val">98.5k</div><div class="stat-lbl">遊玩次數</div></div>
-      <div class="stat"><div class="stat-val">8.9k</div><div class="stat-lbl">按讚</div></div>
-      <div class="stat"><div class="stat-val">4.91</div><div class="stat-lbl">評分</div></div>
+
+  <!-- 主選單 -->
+  <div id="menu" class="screen active">
+    <div class="panel">
+      <span class="badge">NeonTowers · 核心裂變</span>
+      <h1>CoreDefense: Mindustry X</h1>
+      <p class="sub">重工業塔防 · 保護核心裂變爐，抵禦異星機械狂潮</p>
+      <p style="font-size:0.8rem;color:#6e7681;">選擇難度</p>
+      <div class="diff-group" id="menuDiff">
+        <button class="diff-btn selected" data-diff="easy">初級</button>
+        <button class="diff-btn" data-diff="normal">中級</button>
+        <button class="diff-btn" data-diff="hard">高級</button>
+      </div>
+      <div class="btn-row">
+        <button class="primary" id="btnStart">開始防禦</button>
+        <button id="btnHelp">遊戲說明</button>
+      </div>
     </div>
   </div>
+
+  <!-- 說明 -->
+  <div id="help" class="screen">
+    <div class="panel">
+      <h1>遊戲說明</h1>
+      <div class="help-box">
+        <h3>🎯 遊戲目標</h3>
+        <p>在工業基地中央有一座<strong>核心裂變爐</strong>。異星機械會從地圖邊緣湧入，沿直線衝向核心。建造砲塔、消滅敵人、保護核心直到所有波次結束。</p>
+        <h3>🎮 操作方式</h3>
+        <ul>
+          <li><strong>左鍵點擊格子：</strong> 放置選中的砲塔（需足夠礦石）</li>
+          <li><strong>選擇砲塔類型：</strong> 使用上方工具列切換</li>
+          <li><strong>開始下一波：</strong> 準備好後點擊「下一波」按鈕</li>
+          <li>核心或所有波次撐過即勝利；核心 HP 歸零則失敗</li>
+        </ul>
+        <h3>🏭 砲塔種類</h3>
+        <ul>
+          <li><strong>機槍塔（50 礦）：</strong> 射速快、傷害低，適合前期</li>
+          <li><strong>雷射塔（120 礦）：</strong> 射速慢、傷害高，對付重甲敵人</li>
+          <li><strong>迫擊塔（200 礦）：</strong> 範圍傷害，對付密集敵群</li>
+        </ul>
+        <h3>⚙️ 難度差異</h3>
+        <ul>
+          <li><strong>初級：</strong> 8 波、核心 100 HP、起始 250 礦、敵人較弱</li>
+          <li><strong>中級：</strong> 12 波、核心 80 HP、起始 200 礦</li>
+          <li><strong>高級：</strong> 15 波、核心 60 HP、起始 150 礦、敵人更強更快</li>
+        </ul>
+        <h3>💡 策略提示</h3>
+        <ul>
+          <li>在敵人路徑轉角處放置砲塔，延長攻擊時間</li>
+          <li>先建機槍塔賺取擊殺獎勵，再升級為雷射/迫擊</li>
+          <li>核心周圍留空，避免砲塔阻擋視野</li>
+        </ul>
+      </div>
+      <div class="btn-row">
+        <button class="primary" id="btnHelpBack">返回</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 遊戲 -->
+  <div id="gameScreen" class="screen">
+    <div class="game-wrap">
+      <div class="top-bar">
+        <span>核心 HP <b id="hudCore">100</b></span>
+        <span>礦石 <b id="hudOre">250</b></span>
+        <span>波次 <b id="hudWave">0</b>/<span id="hudMaxWave">8</span></span>
+        <span>擊殺 <b id="hudKills">0</b></span>
+      </div>
+      <div class="toolbar">
+        <button class="tool-btn active" data-tower="gun">🔫 機槍塔 (50)</button>
+        <button class="tool-btn" data-tower="laser">⚡ 雷射塔 (120)</button>
+        <button class="tool-btn" data-tower="mortar">💥 迫擊塔 (200)</button>
+        <button class="tool-btn" id="btnNextWave">▶ 下一波</button>
+        <button class="tool-btn" id="btnPause">⏸ 暫停</button>
+        <button class="tool-btn" id="btnQuit">退出</button>
+      </div>
+      <canvas id="canvas" width="640" height="480"></canvas>
+      <p class="hint">點擊空白格子放置砲塔 · 橙色核心不可放置 · 敵人從邊緣生成</p>
+    </div>
+  </div>
+
+  <!-- 結算 -->
+  <div class="overlay-msg" id="overlay">
+    <div class="overlay-box">
+      <h2 id="overlayTitle">勝利</h2>
+      <p id="overlayMsg" style="color:#adbac7;margin-bottom:1rem;line-height:1.6;"></p>
+      <div class="btn-row">
+        <button class="primary" id="btnRetry">再玩一次</button>
+        <button id="btnMenu">主選單</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const COLS = 16, ROWS = 12, CELL = 40;
+    const CORE = { c: 8, r: 6, hp: 100, maxHp: 100 };
+
+    const TOWERS = {
+      gun:    { cost: 50,  range: 90,  damage: 8,  rate: 400, color: '#6eb5ff', name: 'gun' },
+      laser:  { cost: 120, range: 110, damage: 28, rate: 900, color: '#ff6b2b', name: 'laser' },
+      mortar: { cost: 200, range: 130, damage: 18, rate: 1200, color: '#c084fc', name: 'mortar', aoe: 35 },
+    };
+
+    const DIFF = {
+      easy:   { waves: 8,  coreHp: 100, startOre: 250, enemyHp: 1, enemySpeed: 1, reward: 15 },
+      normal: { waves: 12, coreHp: 80,  startOre: 200, enemyHp: 1.4, enemySpeed: 1.2, reward: 12 },
+      hard:   { waves: 15, coreHp: 60,  startOre: 150, enemyHp: 1.8, enemySpeed: 1.45, reward: 10 },
+    };
+
+    let difficulty = 'easy';
+    let config = DIFF.easy;
+    let canvas, ctx;
+    let towers = [], enemies = [], bullets = [], particles = [];
+    let ore = 250, kills = 0, wave = 0, waveActive = false, paused = false;
+    let coreHp = 100, selectedTower = 'gun';
+    let animId = null, lastTime = 0;
+    let spawnQueue = [], spawnTimer = 0;
+
+    const $ = (id) => document.getElementById(id);
+    const screens = { menu: $('menu'), help: $('help'), game: $('gameScreen') };
+
+    function showScreen(name) {
+      Object.values(screens).forEach(s => s.classList.remove('active'));
+      screens[name].classList.add('active');
+    }
+
+    document.querySelectorAll('.diff-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        difficulty = btn.dataset.diff;
+      });
+    });
+
+    document.querySelectorAll('.tool-btn[data-tower]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tool-btn[data-tower]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedTower = btn.dataset.tower;
+      });
+    });
+
+    $('btnStart').onclick = startGame;
+    $('btnHelp').onclick = () => showScreen('help');
+    $('btnHelpBack').onclick = () => showScreen('menu');
+    $('btnNextWave').onclick = startNextWave;
+    $('btnPause').onclick = togglePause;
+    $('btnQuit').onclick = quitGame;
+    $('btnRetry').onclick = () => { $('overlay').classList.remove('show'); startGame(); };
+    $('btnMenu').onclick = () => { $('overlay').classList.remove('show'); quitGame(); };
+
+    function startGame() {
+      config = DIFF[difficulty];
+      canvas = $('canvas');
+      ctx = canvas.getContext('2d');
+      towers = []; enemies = []; bullets = []; particles = [];
+      ore = config.startOre; kills = 0; wave = 0; waveActive = false; paused = false;
+      coreHp = config.coreHp; CORE.hp = coreHp; CORE.maxHp = config.coreHp;
+      spawnQueue = []; spawnTimer = 0;
+      $('hudMaxWave').textContent = config.waves;
+      updateHud();
+      showScreen('game');
+      canvas.onclick = onCanvasClick;
+      lastTime = performance.now();
+      if (animId) cancelAnimationFrame(animId);
+      gameLoop(lastTime);
+    }
+
+    function quitGame() {
+      if (animId) cancelAnimationFrame(animId);
+      showScreen('menu');
+    }
+
+    function togglePause() {
+      paused = !paused;
+      $('btnPause').textContent = paused ? '▶ 繼續' : '⏸ 暫停';
+    }
+
+    function updateHud() {
+      $('hudCore').textContent = Math.max(0, Math.ceil(coreHp));
+      $('hudOre').textContent = ore;
+      $('hudWave').textContent = wave;
+      $('hudKills').textContent = kills;
+    }
+
+    function isCoreCell(c, r) {
+      return c >= CORE.c - 1 && c <= CORE.c + 1 && r >= CORE.r - 1 && r <= CORE.r + 1;
+    }
+
+    function getTowerAt(c, r) {
+      return towers.find(t => t.c === c && t.r === r);
+    }
+
+    function onCanvasClick(e) {
+      if (paused) return;
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const x = (e.clientX - rect.left) * scaleX;
+      const y = (e.clientY - rect.top) * scaleY;
+      const c = Math.floor(x / CELL);
+      const r = Math.floor(y / CELL);
+      if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return;
+      if (isCoreCell(c, r)) return;
+      if (getTowerAt(c, r)) return;
+      const spec = TOWERS[selectedTower];
+      if (ore < spec.cost) return;
+      ore -= spec.cost;
+      towers.push({
+        c, r, x: c * CELL + CELL/2, y: r * CELL + CELL/2,
+        ...spec, lastShot: 0, angle: 0,
+      });
+      updateHud();
+    }
+
+    function startNextWave() {
+      if (waveActive || wave >= config.waves) return;
+      wave++;
+      waveActive = true;
+      const count = 4 + wave * 2;
+      const hpBase = (20 + wave * 8) * config.enemyHp;
+      const speed = (0.6 + wave * 0.05) * config.enemySpeed;
+      spawnQueue = [];
+      for (let i = 0; i < count; i++) {
+        spawnQueue.push({ hp: hpBase, maxHp: hpBase, speed, reward: config.reward + wave * 2 });
+      }
+      spawnTimer = 0;
+      updateHud();
+    }
+
+    function spawnEnemy() {
+      if (spawnQueue.length === 0) return;
+      const data = spawnQueue.shift();
+      const edge = Math.floor(Math.random() * 4);
+      let x, y;
+      if (edge === 0) { x = Math.random() * COLS * CELL; y = -10; }
+      else if (edge === 1) { x = COLS * CELL + 10; y = Math.random() * ROWS * CELL; }
+      else if (edge === 2) { x = Math.random() * COLS * CELL; y = ROWS * CELL + 10; }
+      else { x = -10; y = Math.random() * ROWS * CELL; }
+      enemies.push({
+        x, y, ...data,
+        radius: 10,
+      });
+    }
+
+    function dist(a, b) {
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    }
+
+    function gameLoop(now) {
+      animId = requestAnimationFrame(gameLoop);
+      const dt = Math.min(now - lastTime, 50);
+      lastTime = now;
+      if (!paused) update(dt);
+      draw();
+    }
+
+    function update(dt) {
+      if (waveActive && spawnQueue.length > 0) {
+        spawnTimer += dt;
+        if (spawnTimer >= 600) {
+          spawnTimer = 0;
+          spawnEnemy();
+        }
+      }
+
+      const coreX = CORE.c * CELL + CELL/2;
+      const coreY = CORE.r * CELL + CELL/2;
+
+      enemies.forEach(e => {
+        const dx = coreX - e.x, dy = coreY - e.y;
+        const len = Math.hypot(dx, dy) || 1;
+        e.x += (dx / len) * e.speed * (dt / 16);
+        e.y += (dy / len) * e.speed * (dt / 16);
+        if (dist(e, { x: coreX, y: coreY }) < 28) {
+          e.dead = true;
+          coreHp -= 8;
+          updateHud();
+          addParticles(coreX, coreY, '#ff4444', 8);
+          if (coreHp <= 0) endGame(false);
+        }
+      });
+
+      enemies = enemies.filter(e => !e.dead);
+
+      towers.forEach(t => {
+        let target = null, minD = t.range;
+        enemies.forEach(e => {
+          const d = dist(t, e);
+          if (d < minD) { minD = d; target = e; }
+        });
+        if (target) {
+          t.angle = Math.atan2(target.y - t.y, target.x - t.x);
+          t.lastShot += dt;
+          if (t.lastShot >= t.rate) {
+            t.lastShot = 0;
+            bullets.push({
+              x: t.x, y: t.y,
+              tx: target.x, ty: target.y,
+              damage: t.damage,
+              speed: 6,
+              color: t.color,
+              aoe: t.aoe || 0,
+              target,
+            });
+          }
+        }
+      });
+
+      bullets.forEach(b => {
+        const dx = b.tx - b.x, dy = b.ty - b.y;
+        const len = Math.hypot(dx, dy) || 1;
+        b.x += (dx / len) * b.speed * (dt / 16);
+        b.y += (dy / len) * b.speed * (dt / 16);
+        if (Math.hypot(b.tx - b.x, b.ty - b.y) < 8) {
+          b.hit = true;
+          if (b.aoe) {
+            enemies.forEach(e => {
+              if (dist(b, e) < b.aoe) damageEnemy(e, b.damage);
+            });
+            addParticles(b.x, b.y, b.color, 6);
+          } else if (b.target && !b.target.dead) {
+            damageEnemy(b.target, b.damage);
+            addParticles(b.x, b.y, b.color, 3);
+          }
+        }
+      });
+      bullets = bullets.filter(b => !b.hit);
+
+      particles.forEach(p => {
+        p.x += p.vx; p.y += p.vy; p.life -= dt;
+      });
+      particles = particles.filter(p => p.life > 0);
+
+      if (waveActive && spawnQueue.length === 0 && enemies.length === 0) {
+        waveActive = false;
+        ore += 30 + wave * 10;
+        updateHud();
+        if (wave >= config.waves) endGame(true);
+      }
+    }
+
+    function damageEnemy(e, dmg) {
+      e.hp -= dmg;
+      if (e.hp <= 0 && !e.dead) {
+        e.dead = true;
+        kills++;
+        ore += e.reward;
+        addParticles(e.x, e.y, '#ffaa44', 5);
+        updateHud();
+      }
+    }
+
+    function addParticles(x, y, color, n) {
+      for (let i = 0; i < n; i++) {
+        particles.push({
+          x, y,
+          vx: (Math.random() - 0.5) * 3,
+          vy: (Math.random() - 0.5) * 3,
+          life: 400 + Math.random() * 300,
+          color,
+        });
+      }
+    }
+
+    function endGame(win) {
+      paused = true;
+      $('overlayTitle').textContent = win ? '🏆 防線堅守成功' : '💥 核心裂變失控';
+      $('overlayMsg').textContent = win
+        ? `成功抵禦 ${config.waves} 波攻勢！擊殺 ${kills} 個敵人，剩餘核心 HP ${Math.ceil(coreHp)}。`
+        : `核心被摧毀。你堅守了 ${wave} 波，擊殺 ${kills} 個敵人。`;
+      $('overlay').classList.add('show');
+    }
+
+    function draw() {
+      ctx.fillStyle = '#0d1117';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.strokeStyle = 'rgba(255,140,50,0.08)';
+      for (let c = 0; c <= COLS; c++) {
+        ctx.beginPath(); ctx.moveTo(c * CELL, 0); ctx.lineTo(c * CELL, ROWS * CELL); ctx.stroke();
+      }
+      for (let r = 0; r <= ROWS; r++) {
+        ctx.beginPath(); ctx.moveTo(0, r * CELL); ctx.lineTo(COLS * CELL, r * CELL); ctx.stroke();
+      }
+
+      const cx = CORE.c * CELL, cy = CORE.r * CELL;
+      const pulse = 0.5 + Math.sin(Date.now() / 400) * 0.15;
+      ctx.fillStyle = `rgba(255,107,43,${0.15 + pulse * 0.1})`;
+      ctx.fillRect(cx - CELL, cy - CELL, CELL * 3, CELL * 3);
+      ctx.strokeStyle = '#ff6b2b';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(cx - CELL + 2, cy - CELL + 2, CELL * 3 - 4, CELL * 3 - 4);
+      ctx.fillStyle = '#ff8c5a';
+      ctx.beginPath();
+      ctx.arc(cx + CELL/2, cy + CELL/2, 14 + pulse * 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.font = '10px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('CORE', cx + CELL/2, cy + CELL/2 + 3);
+
+      ctx.lineWidth = 1;
+      towers.forEach(t => {
+        ctx.fillStyle = 'rgba(30,40,55,0.9)';
+        ctx.fillRect(t.c * CELL + 3, t.r * CELL + 3, CELL - 6, CELL - 6);
+        ctx.strokeStyle = t.color;
+        ctx.strokeRect(t.c * CELL + 3, t.r * CELL + 3, CELL - 6, CELL - 6);
+        ctx.strokeStyle = t.color;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(t.x, t.y);
+        ctx.lineTo(t.x + Math.cos(t.angle) * 14, t.y + Math.sin(t.angle) * 14);
+        ctx.stroke();
+        ctx.lineWidth = 1;
+      });
+
+      enemies.forEach(e => {
+        ctx.fillStyle = '#3d4450';
+        ctx.beginPath();
+        ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#ff4444';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        const hpPct = e.hp / e.maxHp;
+        ctx.fillStyle = '#333';
+        ctx.fillRect(e.x - 12, e.y - 18, 24, 4);
+        ctx.fillStyle = hpPct > 0.5 ? '#4ade80' : '#f87171';
+        ctx.fillRect(e.x - 12, e.y - 18, 24 * hpPct, 4);
+      });
+
+      bullets.forEach(b => {
+        ctx.fillStyle = b.color;
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.aoe ? 5 : 3, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      particles.forEach(p => {
+        ctx.globalAlpha = p.life / 700;
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x - 2, p.y - 2, 4, 4);
+        ctx.globalAlpha = 1;
+      });
+
+      if (wave === 0 && !waveActive) {
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#ffb380';
+        ctx.font = '18px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('先放置砲塔，再點擊「下一波」', canvas.width/2, canvas.height/2);
+      }
+      if (paused && !$('overlay').classList.contains('show')) {
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#fff';
+        ctx.font = '24px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('暫停中', canvas.width/2, canvas.height/2);
+      }
+    }
+  </script>
 </body>
 </html>
