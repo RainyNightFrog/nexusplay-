@@ -200,10 +200,13 @@ function GamePageContent() {
   const trustedEmbedUrl =
     game && playable && isSafeEmbedUrl(game.embedUrl) ? game.embedUrl : null;
 
-  const embedCode = useMemo(
-    () => (trustedEmbedUrl ? buildEmbedCode(trustedEmbedUrl) : ""),
-    [trustedEmbedUrl]
-  );
+  const embedCode = useMemo(() => {
+    if (!trustedEmbedUrl) return "";
+    const absoluteUrl = trustedEmbedUrl.startsWith("/")
+      ? `${window.location.origin}${trustedEmbedUrl}`
+      : trustedEmbedUrl;
+    return buildEmbedCode(absoluteUrl);
+  }, [trustedEmbedUrl]);
 
   const copyToClipboard = async (text: string, successMessage: string) => {
     try {

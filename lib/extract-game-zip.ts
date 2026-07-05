@@ -60,32 +60,7 @@ const BLOCKED_EXTENSIONS = new Set([
   ".env",
 ]);
 
-const MIME_TYPES: Record<string, string> = {
-  ".html": "text/html",
-  ".htm": "text/html",
-  ".css": "text/css",
-  ".js": "application/javascript",
-  ".mjs": "application/javascript",
-  ".json": "application/json",
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".gif": "image/gif",
-  ".webp": "image/webp",
-  ".svg": "image/svg+xml",
-  ".woff": "font/woff",
-  ".woff2": "font/woff2",
-  ".ttf": "font/ttf",
-  ".mp3": "audio/mpeg",
-  ".wav": "audio/wav",
-  ".ogg": "audio/ogg",
-  ".wasm": "application/wasm",
-};
-
-function guessContentType(filePath: string) {
-  const extension = filePath.slice(filePath.lastIndexOf(".")).toLowerCase();
-  return MIME_TYPES[extension] ?? "application/octet-stream";
-}
+import { guessContentType } from "@/lib/game-mime";
 
 function normalizeZipPath(path: string) {
   return path.replace(/\\/g, "/").replace(/^\/+/, "");
@@ -241,12 +216,15 @@ export async function extractAndUploadGameBuild(
 
       const storagePath = `builds/${buildId}/${normalizedPath}`;
 
+      const mime = guessContentType(normalizedPath);
+      const blob = new Blob([content], { type: mime });
+
       const { error } = await supabase.storage
         .from(FILES_BUCKET)
-        .upload(storagePath, content, {
+        .upload(storagePath, blob, {
           cacheControl: "3600",
           upsert: true,
-          contentType: guessContentType(normalizedPath),
+          contentType: mime,
         });
 
       if (error) {

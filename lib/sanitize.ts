@@ -28,8 +28,11 @@ export function sanitizePlainText(
   return stripped;
 }
 
-/** Allow https game-files on Supabase storage, or same-origin demo previews. */
+/** Allow https game-files on Supabase storage, same-origin embed proxy, or demo previews. */
 export function isSafeEmbedUrl(url: string): boolean {
+  if (url.startsWith("/api/games/") && url.includes("/embed")) {
+    return true;
+  }
   if (url.startsWith("/demos/") && url.endsWith(".html")) {
     return true;
   }

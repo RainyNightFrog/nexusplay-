@@ -31,7 +31,10 @@ export function mapRecordToGame(record: GameRecord): Game {
     image: resolveCoverUrl(enriched.cover_url),
     creator: meta?.creator ?? "",
     description: enriched.description,
-    embedUrl: resolvePlayUrl(enriched.game_url || meta?.demoUrl || ""),
+    embedUrl: resolvePlayUrl(
+      enriched.game_url || meta?.demoUrl || "",
+      enriched.id
+    ),
     featured: meta?.featured,
     featuredBadge: meta?.featuredBadge,
     featuredAccent: meta?.featuredAccent,
@@ -39,9 +42,15 @@ export function mapRecordToGame(record: GameRecord): Game {
   };
 }
 
-export function resolvePlayUrl(gameUrl: string) {
+export function resolvePlayUrl(gameUrl: string, gameId?: number) {
   if (gameUrl.toLowerCase().endsWith(".zip")) {
     return gameUrl;
+  }
+  if (
+    gameId &&
+    gameUrl.includes("/storage/v1/object/public/game-files/builds/")
+  ) {
+    return `/api/games/${gameId}/embed/`;
   }
   return gameUrl;
 }
