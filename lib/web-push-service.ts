@@ -1,4 +1,4 @@
-import webpush from "web-push";
+import type webpushModule from "web-push";
 import {
   deletePushSubscription,
   listPushSubscriptions,
@@ -10,13 +10,23 @@ import {
 } from "@/lib/web-push-config";
 import { getSiteUrl } from "@/lib/site-url";
 
+let webpush: typeof webpushModule | null = null;
 let configured = false;
 
-function ensureWebPushConfigured() {
+async function getWebPush() {
+  if (!webpush) {
+    const mod = await import("web-push");
+    webpush = mod.default;
+  }
+  return webpush;
+}
+
+async function ensureWebPushConfigured() {
   if (configured) return isWebPushConfigured();
   if (!isWebPushConfigured()) return false;
 
-  webpush.setVapidDetails(
+  const wp = await getWebPush();
+  wp.setVapidDetails(
     getVapidSubject(),
     getVapidPublicKey(),
     process.env.VAPID_PRIVATE_KEY!.trim()
@@ -32,11 +42,12 @@ export type WebPushPayload = {
 };
 
 export async function sendWebPushToUser(userId: string, payload: WebPushPayload): Promise<number> {
-  if (!ensureWebPushConfigured()) return 0;
+  if (!(await ensureWebPushConfigured())) return 0;
 
   const subscriptions = await listPushSubscriptions(userId);
   if (subscriptions.length === 0) return 0;
 
+  const wp = await getWebPush();
   const siteUrl = getSiteUrl();
   const targetUrl = payload.url
     ? payload.url.startsWith("http")
@@ -55,7 +66,7 @@ export async function sendWebPushToUser(userId: string, payload: WebPushPayload)
   await Promise.all(
     subscriptions.map(async (subscription) => {
       try {
-        await webpush.sendNotification(
+        await wp.sendNotification(
           {
             endpoint: subscription.endpoint,
             keys: {
