@@ -77,6 +77,7 @@ const REQUIRED = [
 
 const CRON_EMAIL = ["CRON_SECRET", "RESEND_API_KEY", "EMAIL_FROM"];
 const OPTIONAL = [
+  "PLATFORM_PREVIEW_MODE",
   "NEXT_PUBLIC_SITE_URL",
   "WEBSUB_HUB_URL",
   "EMAIL_UNSUBSCRIBE_SECRET",
@@ -96,6 +97,16 @@ console.log("--- Cron / Email digest ---");
 for (const key of CRON_EMAIL) console.log(`${key}: ${envStatus(env, key)}`);
 console.log("--- Optional ---");
 for (const key of OPTIONAL) console.log(`${key}: ${envStatus(env, key)}`);
+
+const previewExplicit = env.PLATFORM_PREVIEW_MODE?.trim().toLowerCase() === "true";
+const paymentsLive =
+  env.STRIPE_SECRET_KEY?.trim() &&
+  env.STRIPE_PAYMENTS_LIVE?.trim().toLowerCase() === "true";
+const emailReady =
+  env.RESEND_API_KEY?.trim() && env.EMAIL_FROM?.trim();
+const previewMode =
+  previewExplicit || (!paymentsLive && !emailReady);
+console.log(`\nPLATFORM_MODE: ${previewMode ? "PREVIEW (email/payments skipped)" : "LIVE"}`);
 
 const db = await checkTables(env);
 console.log("\n=== Supabase tables ===");
