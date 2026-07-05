@@ -28,6 +28,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { UserRole } from "@/lib/auth";
 import { buildChooseRolePath } from "@/lib/account-intent";
+import { MfaChallengePanel } from "@/components/auth/mfa-challenge-panel";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -58,6 +59,7 @@ export default function AuthPage() {
   const [error, setError] = useState<string | null>(
     callbackError ? t("callbackFailed") : null
   );
+  const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
 
   const hintMessage = useMemo(() => {
     if (hint === "creator") {
@@ -158,6 +160,24 @@ export default function AuthPage() {
       });
 
       if (signInError) throw signInError;
+
+      const { data: aal, error: aalError } =
+        await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+
+      if (!aalError && aal?.nextLevel === "aal2" && aal.currentLevel !== "aal2") {
+        const { data: factors, error: factorsError } =
+          await supabase.auth.mfa.listFactors();
+
+        if (!factorsError) {
+          const verified = (factors.totp ?? []).find(
+            (factor) => factor.status === "verified"
+          );
+          if (verified) {
+            setMfaFactorId(verified.id);
+            return;
+          }
+        }
+      }
 
       await goAfterAuth();
     } catch (submitError) {
@@ -282,6 +302,16 @@ export default function AuthPage() {
                   </div>
                 )}
 
+                {mfaFactorId ? (
+                  <MfaChallengePanel
+                    factorId={mfaFactorId}
+                    onSuccess={() => void goAfterAuth()}
+                    onCancel={() => {
+                      setMfaFactorId(null);
+                      void createClient().auth.signOut();
+                    }}
+                  />
+                ) : (
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <AnimatePresence mode="wait">
                     {mode === "register" && (
@@ -453,6 +483,7 @@ export default function AuthPage() {
                     )}
                   </Button>
                 </form>
+                )}
               </CardContent>
             </Card>
           </motion.div>

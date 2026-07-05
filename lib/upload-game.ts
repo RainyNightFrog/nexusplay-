@@ -1,4 +1,6 @@
 import type { GamePublishStatus } from "@/lib/game-publish";
+import type { GamePublishMetadata } from "@/lib/game-metadata";
+import { appendPublishMetadataToFormData } from "@/lib/game-metadata";
 
 export type UploadGameInput = {
   title: string;
@@ -9,6 +11,7 @@ export type UploadGameInput = {
   publishStatus: GamePublishStatus;
   tipsEnabled: boolean;
   suggestedTipAmount: string;
+  metadata: GamePublishMetadata;
 };
 
 export type UploadGameResult = {
@@ -44,6 +47,7 @@ export async function uploadGame(
   if (input.tipsEnabled && input.suggestedTipAmount.trim()) {
     formData.append("suggestedTipAmount", input.suggestedTipAmount.trim());
   }
+  appendPublishMetadataToFormData(formData, input.metadata);
 
   onProgress?.("正在上傳遊戲壓縮檔...");
 

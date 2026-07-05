@@ -1,4 +1,6 @@
 import type { GamePublishStatus } from "@/lib/game-publish";
+import type { GamePublishMetadata } from "@/lib/game-metadata";
+import { appendPublishMetadataToFormData } from "@/lib/game-metadata";
 
 import {
   MAX_DEVLOG_CONTENT_LENGTH,
@@ -21,6 +23,7 @@ export type UpdateGameInput = {
   devlogTitle?: string;
   devlogContent?: string;
   devlogImageFiles?: File[];
+  metadata: GamePublishMetadata;
 };
 
 export type UpdateGameResult = {
@@ -38,11 +41,20 @@ export type UpdateGameResult = {
     suggested_tip_amount: number | null;
     gallery_urls?: unknown;
     devlog_entries?: unknown;
+    tags?: unknown;
+    viewport_width?: number;
+    viewport_height?: number;
+    fullscreen_button?: boolean;
+    ai_disclosed?: boolean | null;
+    ai_content_types?: unknown;
+    details_html?: string;
+    platform_fee_percent?: number | null;
   };
 };
 
 export type ManageGameRecord = UpdateGameResult["game"] & {
   isOrphan?: boolean;
+  platform_fee_percent?: number | null;
 };
 
 function appendMonetizationFields(
@@ -96,6 +108,7 @@ export async function updateGame(
   formData.append("category", input.category);
   formData.append("publishVersion", String(input.publishVersion ?? false));
   appendMonetizationFields(formData, input);
+  appendPublishMetadataToFormData(formData, input.metadata);
 
   if (input.coverFile) {
     formData.append("cover", input.coverFile);

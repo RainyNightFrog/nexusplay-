@@ -4,6 +4,7 @@ import {
   forumPostBelongsToGame,
   getForumCommentsByPostId,
 } from "@/lib/forum-service";
+import { notifyForumPostAuthorOfReply } from "@/lib/forum-reply-notify";
 import { FORUM_LIMITS } from "@/lib/forum";
 import { sanitizePlainText } from "@/lib/sanitize";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
@@ -86,6 +87,13 @@ export async function POST(
       },
       authClient
     );
+
+    void notifyForumPostAuthorOfReply({
+      postId: numericPostId,
+      gameId,
+      replierUserId: user.id,
+      replyContent: content,
+    });
 
     return NextResponse.json({ comment }, { status: 201 });
   } catch (error) {

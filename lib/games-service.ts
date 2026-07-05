@@ -55,6 +55,23 @@ export async function getGames(options: GetGamesOptions = {}): Promise<Game[]> {
   });
 }
 
+export async function getPublicGameById(id: number): Promise<Game | null> {
+  const supabase = createServerSupabase();
+  const { data, error } = await supabase
+    .from("games")
+    .select("*")
+    .eq("id", id)
+    .eq("publish_status", "public")
+    .eq("status", "approved")
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`讀取遊戲失敗：${error.message}`);
+  }
+
+  return data ? mapRecordToGame(data) : null;
+}
+
 export async function getGameById(id: number): Promise<Game | null> {
   const supabase = createServerSupabase();
   const { data, error } = await supabase

@@ -36,4 +36,12 @@ export type GameRecord = {
   status: "pending" | "approved" | "rejected";
   gallery_urls?: unknown;
   devlog_entries?: unknown;
+  tags?: unknown;
+  viewport_width?: number;
+  viewport_height?: number;
+  fullscreen_button?: boolean;
+  ai_disclosed?: boolean | null;
+  ai_content_types?: unknown;
+  details_html?: string;
+  platform_fee_percent?: number | null;
 };

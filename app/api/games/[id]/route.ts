@@ -12,10 +12,22 @@ import {
   uploadBuffer,
 } from "@/lib/game-storage";
 import { deleteGameAndAssets } from "@/lib/game-delete-server";
-import { UPLOAD_CATEGORIES } from "@/lib/games";
 import { mapRecordToGame } from "@/lib/games-data";
 import { canViewGame, parseMonetizationFromFormData } from "@/lib/game-publish";
-import { sanitizePlainText } from "@/lib/sanitize";
+import { triggerNewGameFollowerNotify } from "@/lib/creator-follow-notify";
+import { isGamePubliclyLive } from "@/lib/game-live-service";
+import {
+  hasStoredPartnerAccess,
+  partnerAccessCookieName,
+  redeemPartnerAccessCode,
+  validatePartnerAccessCode,
+} from "@/lib/partner-access-service";
+import { GAME_GENRES } from "@/lib/game-metadata";
+import {
+  buildMetadataDbPayload,
+  parsePublishMetadataFromFormData,
+} from "@/lib/game-metadata";
+import { sanitizePlainText, sanitizeRichHtml } from "@/lib/sanitize";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
 import {
@@ -26,6 +38,8 @@ import {
   MAX_TITLE_LENGTH,
   MAX_ZIP_BYTES,
 } from "@/lib/upload-limits";
+import { MAX_DETAILS_HTML_LENGTH } from "@/lib/game-metadata";
+import { resolvePlatformFeePercentForSave } from "@/lib/tip-fee-policy";
 import {
   resolveDevlogUpdate,
   resolveGalleryUpdate,
@@ -44,6 +58,7 @@ function buildCreatorUpdatePayload(
     suggestedTipAmount: number | null;
     galleryUrls: string[];
     devlogEntries: unknown;
+    metadataPayload: Record<string, unknown>;
   },
   options: { userId: string; isOrphan: boolean }
 ) {
@@ -58,6 +73,7 @@ function buildCreatorUpdatePayload(
     suggested_tip_amount: input.suggestedTipAmount,
     gallery_urls: input.galleryUrls,
     devlog_entries: input.devlogEntries,
+    ...input.metadataPayload,
   };
 
   if (options.isOrphan) {
@@ -72,7 +88,7 @@ function buildCreatorUpdatePayload(
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -103,17 +119,73 @@ export async function GET(
       data: { user },
     } = await authClient.auth.getUser();
 
-    if (!canViewGame(record, user?.id, { isAdmin: isAdminUser(user) })) {
+    const cookieStore = request.headers.get("cookie") ?? "";
+    const cookieName = `${partnerAccessCookieName(numericId)}=`;
+    const cookieMatch = cookieStore
+      .split(";")
+      .map((part) => part.trim())
+      .find((part) => part.startsWith(cookieName));
+    const cookieCode = cookieMatch
+      ? decodeURIComponent(cookieMatch.slice(cookieName.length))
+      : null;
+
+    const accessParam = new URL(request.url).searchParams.get("access");
+    let partnerCodeForCookie: string | null = null;
+    let hasPartnerAccess = await hasStoredPartnerAccess(
+      numericId,
+      cookieCode
+    );
+
+    if (!hasPartnerAccess && accessParam) {
+      const accessRecord = await validatePartnerAccessCode(
+        numericId,
+        accessParam
+      );
+      if (accessRecord) {
+        hasPartnerAccess = true;
+        partnerCodeForCookie = accessRecord.code;
+        await redeemPartnerAccessCode(accessRecord);
+      }
+    }
+
+    if (
+      !canViewGame(record, user?.id, {
+        isAdmin: isAdminUser(user),
+        hasPartnerAccess,
+      })
+    ) {
       return NextResponse.json({ error: "找不到此遊戲" }, { status: 404 });
     }
 
     const game = mapRecordToGame(record);
+    const isCreatorPreview =
+      record.publish_status === "draft" && user?.id === record.creator_id;
+    const isPartnerPreview =
+      record.publish_status === "draft" &&
+      hasPartnerAccess &&
+      user?.id !== record.creator_id;
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       game,
-      isDraftPreview:
-        record.publish_status === "draft" && user?.id === record.creator_id,
+      isDraftPreview: isCreatorPreview,
+      isPartnerPreview,
     });
+
+    if (partnerCodeForCookie) {
+      response.cookies.set(
+        partnerAccessCookieName(numericId),
+        partnerCodeForCookie,
+        {
+          httpOnly: true,
+          sameSite: "lax",
+          secure: process.env.NODE_ENV === "production",
+          maxAge: 60 * 60 * 24 * 30,
+          path: "/",
+        }
+      );
+    }
+
+    return response;
   } catch (error) {
     const message = error instanceof Error ? error.message : "讀取遊戲失敗";
     return NextResponse.json({ error: message }, { status: 500 });
@@ -193,7 +265,7 @@ export async function PATCH(
     if (!category) {
       return NextResponse.json({ error: "請選擇遊戲分類" }, { status: 400 });
     }
-    if (!(UPLOAD_CATEGORIES as readonly string[]).includes(category)) {
+    if (!(GAME_GENRES as readonly string[]).includes(category)) {
       return NextResponse.json({ error: "無效的遊戲分類" }, { status: 400 });
     }
 
@@ -246,6 +318,25 @@ export async function PATCH(
     if (!monetization.ok) {
       return NextResponse.json({ error: monetization.error }, { status: 400 });
     }
+
+    const metadataResult = parsePublishMetadataFromFormData(formData);
+    if (!metadataResult.ok) {
+      return NextResponse.json({ error: metadataResult.error }, { status: 400 });
+    }
+
+    const metadataPayload: Record<string, unknown> = {
+      ...buildMetadataDbPayload({
+        ...metadataResult.data,
+        detailsHtml: sanitizeRichHtml(
+          metadataResult.data.detailsHtml,
+          MAX_DETAILS_HTML_LENGTH
+        ),
+      }),
+      platform_fee_percent: resolvePlatformFeePercentForSave(
+        record.platform_fee_percent,
+        monetization.data.tips_enabled
+      ),
+    };
 
     const oldCoverPath = extractPublicStoragePath(record.cover_url, COVERS_BUCKET);
     const oldGameUrl = record.game_url;
@@ -311,6 +402,7 @@ export async function PATCH(
           suggestedTipAmount: monetization.data.suggested_tip_amount,
           galleryUrls,
           devlogEntries,
+          metadataPayload,
         },
         { userId: user.id, isOrphan }
       );
@@ -338,7 +430,10 @@ export async function PATCH(
             : updateError.message.includes("gallery_urls") &&
                 updateError.message.includes("schema cache")
               ? " 請先在 Supabase SQL Editor 執行 supabase/game-page-content.sql（或 npm run db:game-page）。"
-              : "";
+              : updateError.message.includes("tags") &&
+                  updateError.message.includes("schema cache")
+                ? " 請先在 Supabase SQL Editor 執行 supabase/game-publish-metadata.sql（或 npm run db:publish-metadata）。"
+                : "";
         throw new Error(`資料庫更新失敗：${updateError.message}${hint}`);
       }
 
@@ -353,6 +448,20 @@ export async function PATCH(
         } else {
           await removeBuildFolder(supabase, oldGameUrl);
         }
+      }
+
+      const wasLive = isGamePubliclyLive(record);
+      if (
+        !wasLive &&
+        isGamePubliclyLive(updated) &&
+        updated.creator_id &&
+        typeof updated.id === "number"
+      ) {
+        void triggerNewGameFollowerNotify({
+          gameId: updated.id,
+          creatorId: updated.creator_id,
+          gameTitle: updated.title,
+        });
       }
 
       return NextResponse.json({ game: updated });

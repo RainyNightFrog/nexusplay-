@@ -3,7 +3,10 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Coins, Rocket, Wrench } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
+import { TipsFeeDisclosure } from "@/components/dashboard/tips-fee-disclosure";
+import { PlatformFeeLockBadge } from "@/components/dashboard/platform-fee-lock-badge";
 import type { GamePublishStatus } from "@/lib/game-publish";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +20,7 @@ type PublishMonetizationFieldsProps = {
   values: PublishMonetizationValues;
   onChange: (values: PublishMonetizationValues) => void;
   disabled?: boolean;
+  lockedPlatformFeePercent?: number | null;
 };
 
 const inputClassName = cn(
@@ -38,6 +42,7 @@ export function PublishMonetizationFields({
   values,
   onChange,
   disabled = false,
+  lockedPlatformFeePercent = null,
 }: PublishMonetizationFieldsProps) {
   const t = useTranslations("dashboard");
 
@@ -177,7 +182,12 @@ export function PublishMonetizationFields({
               transition={{ duration: 0.35, ease: "easeOut" }}
               className="overflow-hidden"
             >
-              <div className="mt-4 space-y-2 border-t border-fuchsia-400/10 pt-4">
+              <div className="mt-4 space-y-4 border-t border-fuchsia-400/10 pt-4">
+                <PlatformFeeLockBadge
+                  lockedPercent={lockedPlatformFeePercent}
+                  tipsEnabled={values.tipsEnabled}
+                />
+                <div className="space-y-2">
                 <label
                   htmlFor="suggested-tip-amount"
                   className="block text-sm font-medium text-zinc-200"
@@ -205,6 +215,24 @@ export function PublishMonetizationFields({
                   />
                 </div>
                 <p className="text-xs text-zinc-500">{t("suggestedTipAmountHint")}</p>
+                </div>
+
+                <TipsFeeDisclosure
+                  variant="full"
+                  exampleTipAmount={
+                    Number.parseFloat(values.suggestedTipAmount) || 10
+                  }
+                  className="mt-4"
+                />
+                <p className="mt-3 text-center text-[11px] text-zinc-600">
+                  {t("tipsLegalLinkPrefix")}{" "}
+                  <Link
+                    href="/legal#payments"
+                    className="text-violet-400/80 underline-offset-2 hover:text-violet-300 hover:underline"
+                  >
+                    {t("tipsLegalLinkLabel")}
+                  </Link>
+                </p>
               </div>
             </motion.div>
           )}

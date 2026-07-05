@@ -89,7 +89,10 @@ export async function POST(
       entries?: Array<{ label?: string; save?: unknown }>;
     };
 
-    const entries = body.entries ?? [];
+    const entries = (body.entries ?? []).filter(
+      (entry): entry is { label?: string; save: unknown } =>
+        entry.save !== undefined && entry.save !== null
+    );
     if (entries.length === 0) {
       return NextResponse.json({ error: "請提供至少一筆存檔資料" }, { status: 400 });
     }

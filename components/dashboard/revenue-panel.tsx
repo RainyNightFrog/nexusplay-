@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
 import {
@@ -12,6 +13,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -20,6 +22,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
+import { TipsFeeDisclosure } from "@/components/dashboard/tips-fee-disclosure";
 import {
   formatRevenueMoney,
   type DashboardRevenueAnalytics,
@@ -76,19 +79,34 @@ const REVENUE_ACCENTS: Record<
 };
 
 type RevenuePanelProps = {
-  data: DashboardRevenueAnalytics;
+  data: DashboardRevenueAnalytics | null;
+  loading?: boolean;
+  error?: string | null;
   scopeKey: string;
   selectedGameId?: number;
   showBreakdown?: boolean;
+  unreadTipCount?: number;
+  onClearUnreadTips?: () => void;
 };
 
 export function RevenuePanel({
   data,
+  loading = false,
+  error = null,
   scopeKey,
   selectedGameId,
   showBreakdown = true,
+  unreadTipCount = 0,
+  onClearUnreadTips,
 }: RevenuePanelProps) {
   const t = useTranslations("dashboard");
+
+  useEffect(() => {
+    if (unreadTipCount <= 0) return;
+    fetch("/api/auth/creator-notifications", { method: "POST" })
+      .then(() => onClearUnreadTips?.())
+      .catch(() => undefined);
+  }, [unreadTipCount, onClearUnreadTips]);
 
   const formatRelativeTime = (tip: DashboardRevenueAnalytics["recentTips"][0]) => {
     if (tip.relativeTimeKey === "revenueTimeJustNow") {
@@ -100,13 +118,65 @@ export function RevenuePanel({
     return t("revenueTimeDays", { count: tip.relativeTimeValue ?? 1 });
   };
 
+  if (loading && !data) {
+    return (
+      <section className="mb-8 space-y-6">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">
+              <Coins className="size-3.5" />
+              {t("revenueLiveBadge")}
+            </div>
+            <h2 className="text-2xl font-bold tracking-tight text-white">
+              {t("revenueSectionTitle")}
+            </h2>
+            <p className="mt-1 text-sm text-zinc-400">{t("revenueSectionDesc")}</p>
+          </div>
+        </div>
+        <Card className="border-white/10 bg-zinc-900/60 py-0">
+          <CardContent className="flex h-48 items-center justify-center">
+            <Loader2 className="size-8 animate-spin text-emerald-400" />
+          </CardContent>
+        </Card>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="mb-8 space-y-6">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight text-white">
+              {t("revenueSectionTitle")}
+            </h2>
+          </div>
+        </div>
+        <Card className="border-red-400/20 bg-red-500/5 py-0">
+          <CardContent className="px-6 py-8 text-center text-sm text-red-300">
+            {error}
+          </CardContent>
+        </Card>
+      </section>
+    );
+  }
+
+  if (!data) return null;
+
   return (
     <section className="mb-8 space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">
-            <Coins className="size-3.5" />
-            {t("revenueMockBadge")}
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">
+              <Coins className="size-3.5" />
+              {t("revenueLiveBadge")}
+            </div>
+            {unreadTipCount > 0 && (
+              <Badge className="border-0 bg-fuchsia-500/20 text-fuchsia-200">
+                {t("unreadTipsBadge", { count: unreadTipCount })}
+              </Badge>
+            )}
           </div>
           <h2 className="text-2xl font-bold tracking-tight text-white">
             {t("revenueSectionTitle")}
@@ -142,6 +212,17 @@ export function RevenuePanel({
         </Card>
       ) : (
         <>
+          <TipsFeeDisclosure variant="compact" className="mb-2" />
+
+          <p className="text-xs leading-relaxed text-zinc-500">
+            {t("revenueLiveDataNote")}
+          </p>
+          {data.previewTipCount > 0 && (
+            <p className="text-xs leading-relaxed text-amber-400/80">
+              {t("revenuePreviewTipsNote", { count: data.previewTipCount })}
+            </p>
+          )}
+
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {data.stats.map((stat, index) => {
               const Icon = REVENUE_ICONS[stat.key];
@@ -236,9 +317,16 @@ export function RevenuePanel({
                         <p className="text-sm font-bold text-emerald-300">
                           {formatRevenueMoney(tip.amount)}
                         </p>
-                        <p className="text-[11px] text-zinc-500">
-                          {formatRelativeTime(tip)}
-                        </p>
+                        <div className="flex items-center justify-end gap-1.5">
+                          {tip.status === "preview" && (
+                            <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-300">
+                              {t("revenuePreviewTipBadge")}
+                            </span>
+                          )}
+                          <p className="text-[11px] text-zinc-500">
+                            {formatRelativeTime(tip)}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   ))

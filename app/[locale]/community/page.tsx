@@ -18,6 +18,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { NavActions } from "@/components/layout/nav-actions";
 import { SiteHeader } from "@/components/layout/site-header";
 import { CommunityForum } from "@/components/game/community-forum";
+import { RssFeedLink } from "@/components/feeds/rss-feed-link";
 import { FEATURED_GAMES } from "@/lib/platform-catalog";
 import { isSupabaseImage, type Game } from "@/lib/games";
 import type { ForumPostWithGame } from "@/lib/forum";
@@ -123,6 +124,17 @@ export default function CommunityPage() {
             <ScrollText className="size-3.5" />
             {t("readRules")}
           </Link>
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-3">
+            <RssFeedLink href="/feed/forum.xml" label={t("rssFeed")} />
+            <a
+              href="/feed/forum.xml?format=atom"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-sm text-cyan-400/90 transition-colors hover:text-cyan-300"
+            >
+              {t("atomFeed")}
+            </a>
+          </div>
           {!loading && games.length > 0 && (
             <p className="mt-2 text-xs text-zinc-500">
               {t("stats", { games: games.length, posts: totalPosts })}

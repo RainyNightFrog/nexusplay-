@@ -3,11 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
-import { Loader2, LogOut, Palette, Settings, Shield, UserRound } from "lucide-react";
+import { Loader2, LogOut, Heart, Palette, Settings, Shield, UserRound, Bell } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { getInitials } from "@/lib/auth";
 import { getCreatorDashboardHref } from "@/lib/creator-nav";
+import { NotificationBell } from "@/components/layout/notification-bell";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 
@@ -58,7 +59,9 @@ export function UserNav() {
   const initials = getInitials(profile.display_name);
 
   return (
-    <div className="relative" ref={menuRef}>
+    <div className="flex items-center gap-2">
+      <NotificationBell />
+      <div className="relative" ref={menuRef}>
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
@@ -133,6 +136,24 @@ export function UserNav() {
           </Link>
 
           <Link
+            href="/settings/favorites"
+            onClick={() => setOpen(false)}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white"
+          >
+            <Heart className="size-4 text-rose-400" />
+            {t("favorites")}
+          </Link>
+
+          <Link
+            href="/notifications"
+            onClick={() => setOpen(false)}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white"
+          >
+            <Bell className="size-4 text-amber-400" />
+            {t("notifications")}
+          </Link>
+
+          <Link
             href="/settings"
             onClick={() => setOpen(false)}
             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white"
@@ -154,6 +175,7 @@ export function UserNav() {
           </button>
         </div>
       )}
+      </div>
     </div>
   );
 }

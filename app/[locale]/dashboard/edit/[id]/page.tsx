@@ -33,16 +33,25 @@ import {
   type PublishMonetizationValues,
 } from "@/components/dashboard/publish-monetization-fields";
 import { PlatformAuthNotice } from "@/components/dashboard/platform-auth-notice";
+import { PartnerAccessPanel } from "@/components/dashboard/partner-access-panel";
 import { LegacyImportPanel } from "@/components/dashboard/legacy-import-panel";
 import {
   DevlogPublishFields,
   GalleryUploadFields,
 } from "@/components/dashboard/game-page-content-fields";
+import {
+  GamePublishMetadataFields,
+  DEFAULT_GAME_PUBLISH_METADATA,
+} from "@/components/dashboard/game-publish-metadata-fields";
 import { fetchManageGame, updateGame } from "@/lib/update-game";
 import { parseStringArray } from "@/lib/game-page-content";
 import { DEFAULT_PUBLISH_STATUS, normalizePublishStatus } from "@/lib/game-publish";
+import {
+  metadataFromGameRecord,
+  type GameGenre,
+  type GamePublishMetadata,
+} from "@/lib/game-metadata";
 import { useApiError } from "@/hooks/use-api-error";
-import { UPLOAD_CATEGORIES, type UploadCategory } from "@/lib/games";
 import {
   formatMaxSize,
   MAX_COVER_BYTES,
@@ -55,7 +64,7 @@ import { cn } from "@/lib/utils";
 type FormState = {
   title: string;
   description: string;
-  category: UploadCategory | "";
+  genre: GameGenre | "";
 };
 
 const inputClassName = cn(
@@ -234,7 +243,6 @@ export default function EditGamePage() {
   const t = useTranslations("dashboard");
   const tErrors = useTranslations("errors");
   const tCommon = useTranslations("common");
-  const tHome = useTranslations("home");
   const { translateApiError } = useApiError();
   const coverMaxSize = formatMaxSize(MAX_COVER_BYTES);
   const zipMaxSize = formatMaxSize(MAX_ZIP_BYTES);
@@ -245,8 +253,11 @@ export default function EditGamePage() {
   const [form, setForm] = useState<FormState>({
     title: "",
     description: "",
-    category: "",
+    genre: "",
   });
+  const [metadata, setMetadata] = useState<GamePublishMetadata>(
+    DEFAULT_GAME_PUBLISH_METADATA
+  );
   const [existingCoverUrl, setExistingCoverUrl] = useState<string | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
@@ -261,6 +272,9 @@ export default function EditGamePage() {
     tipsEnabled: false,
     suggestedTipAmount: "",
   });
+  const [lockedPlatformFeePercent, setLockedPlatformFeePercent] = useState<
+    number | null
+  >(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isOrphan, setIsOrphan] = useState(false);
@@ -296,8 +310,9 @@ export default function EditGamePage() {
         setForm({
           title: game.title,
           description: game.description,
-          category: game.category as UploadCategory,
+          genre: game.category as GameGenre,
         });
+        setMetadata(metadataFromGameRecord(game));
         setExistingCoverUrl(game.cover_url);
         setExistingGalleryUrls(parseStringArray(game.gallery_urls));
         setIsOrphan(orphan);
@@ -309,6 +324,11 @@ export default function EditGamePage() {
               ? String(game.suggested_tip_amount)
               : "",
         });
+        setLockedPlatformFeePercent(
+          typeof game.platform_fee_percent === "number"
+            ? game.platform_fee_percent
+            : null
+        );
       })
       .catch((error) => {
         if (cancelled) return;
@@ -385,8 +405,16 @@ export default function EditGamePage() {
       alert(t("alertDesc"));
       return;
     }
-    if (!form.category) {
+    if (!form.genre) {
       alert(t("alertCategory"));
+      return;
+    }
+    if (metadata.aiDisclosed === null) {
+      alert("請選擇此專案是否包含 AI 生成內容");
+      return;
+    }
+    if (metadata.aiDisclosed === true && metadata.aiContentTypes.length === 0) {
+      alert("選擇「包含 AI 生成內容」時，請至少勾選一項 AI 內容類型");
       return;
     }
     if (publishVersion && !gameZip) {
@@ -414,7 +442,7 @@ export default function EditGamePage() {
         {
           title: form.title.trim(),
           description: form.description.trim(),
-          category: form.category,
+          category: form.genre,
           coverFile,
           gameZipFile: gameZip,
           publishVersion,
@@ -426,6 +454,7 @@ export default function EditGamePage() {
           devlogTitle: publishVersion ? devlogTitle : undefined,
           devlogContent: publishVersion ? devlogContent : undefined,
           devlogImageFiles: publishVersion ? devlogImageFiles : undefined,
+          metadata,
         },
         setSubmitStatus
       );
@@ -607,34 +636,17 @@ export default function EditGamePage() {
                   disabled={isSubmitting}
                 />
               </div>
-
-              <div className="space-y-2">
-                <label htmlFor="category" className="block text-sm font-medium text-zinc-200">
-                  {t("gameCategory")}
-                </label>
-                <select
-                  id="category"
-                  value={form.category}
-                  onChange={(event) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      category: event.target.value as UploadCategory | "",
-                    }))
-                  }
-                  className={cn(inputClassName, "h-11 appearance-none pr-10")}
-                  disabled={isSubmitting}
-                >
-                  <option value="" disabled>
-                    {t("selectCategory")}
-                  </option>
-                  {UPLOAD_CATEGORIES.map((category) => (
-                    <option key={category} value={category} className="bg-zinc-900">
-                      {tHome(`categories.${category}`)}
-                    </option>
-                  ))}
-                </select>
-              </div>
             </section>
+
+            <GamePublishMetadataFields
+              genre={form.genre}
+              metadata={metadata}
+              onGenreChange={(genre) =>
+                setForm((prev) => ({ ...prev, genre }))
+              }
+              onMetadataChange={setMetadata}
+              disabled={isSubmitting}
+            />
 
             <section className="space-y-5">
               <h2 className="text-sm font-semibold uppercase tracking-wider text-violet-400">
@@ -724,7 +736,12 @@ export default function EditGamePage() {
               values={monetization}
               onChange={setMonetization}
               disabled={isSubmitting}
+              lockedPlatformFeePercent={lockedPlatformFeePercent}
             />
+
+            {monetization.publishStatus === "draft" && !Number.isNaN(gameId) && (
+              <PartnerAccessPanel gameId={gameId} />
+            )}
 
             <PlatformAuthNotice />
             {!Number.isNaN(gameId) && <LegacyImportPanel gameId={String(gameId)} />}

@@ -5,6 +5,9 @@ import {
   updateGameApproval,
   writeAdminLog,
 } from "@/lib/admin-service";
+import { triggerNewGameFollowerNotify } from "@/lib/creator-follow-notify";
+import { triggerWebSubFeedPing } from "@/lib/websub-service";
+import { createServerSupabase } from "@/lib/supabase-server";
 
 export async function PATCH(
   request: Request,
@@ -32,11 +35,32 @@ export async function PATCH(
       );
     }
 
+    const supabase = createServerSupabase();
+    const { data: before } = await supabase
+      .from("games")
+      .select("status")
+      .eq("id", gameId)
+      .maybeSingle();
+
     const { game, logDetails } = await updateGameApproval(
       gameId,
       body.status,
       body.details
     );
+
+    if (
+      body.status === "approved" &&
+      before?.status !== "approved" &&
+      game.publish_status === "public" &&
+      game.creator_id
+    ) {
+      void triggerNewGameFollowerNotify({
+        gameId: game.id,
+        creatorId: game.creator_id,
+        gameTitle: game.title,
+      });
+      triggerWebSubFeedPing();
+    }
 
     await writeAdminLog(
       auth.supabase!,

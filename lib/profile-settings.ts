@@ -2,6 +2,7 @@ export const PROFILE_LIMITS = {
   displayName: 40,
   website: 200,
   twitter: 50,
+  supportEmail: 120,
   avatarBytes: 2 * 1024 * 1024,
 } as const;
 
@@ -26,6 +27,15 @@ export function isValidWebsite(value: string): boolean {
   } catch {
     return false;
   }
+}
+
+export function isValidEmail(value: string): boolean {
+  if (!value) return true;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+export function normalizeSupportEmail(value: string): string {
+  return value.trim().toLowerCase();
 }
 
 export function resolveRoleFromPreferences(developingGames: boolean): "player" | "creator" {

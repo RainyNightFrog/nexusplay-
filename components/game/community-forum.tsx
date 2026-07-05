@@ -12,6 +12,7 @@ import {
   MessageCircle,
   MessageSquarePlus,
   MessagesSquare,
+  Search,
   Send,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -158,6 +159,7 @@ export function CommunityForum({
   const [postsError, setPostsError] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
   const [gameFilter, setGameFilter] = useState<GameFilter>("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedPost, setSelectedPost] = useState<ForumPostWithGame | null>(
     null
   );
@@ -180,9 +182,26 @@ export function CommunityForum({
     if (gameFilter !== "all") {
       result = result.filter((post) => post.game_id === gameFilter);
     }
-    if (categoryFilter === "all") return result;
-    return result.filter((post) => post.category === categoryFilter);
-  }, [posts, categoryFilter, gameFilter]);
+    if (categoryFilter !== "all") {
+      result = result.filter((post) => post.category === categoryFilter);
+    }
+
+    const normalized = searchQuery.trim().toLowerCase();
+    if (!normalized) return result;
+
+    return result.filter((post) => {
+      const haystack = [
+        post.title,
+        post.content,
+        post.author_name,
+        post.game_title ?? "",
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      return haystack.includes(normalized);
+    });
+  }, [posts, categoryFilter, gameFilter, searchQuery]);
 
   const gameCounts = useMemo(() => {
     const counts: Record<number, number> = {};
@@ -775,6 +794,17 @@ export function CommunityForum({
               </div>
             )}
 
+            <div className="relative mx-auto max-w-md">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
+              <Input
+                type="search"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder={t("searchPlaceholder")}
+                className="border-white/10 bg-white/5 pl-10 text-zinc-100 placeholder:text-zinc-500"
+              />
+            </div>
+
             {isHub && games && games.length > 0 && (
               <div className="flex flex-wrap items-center justify-center gap-2">
                 <span className="mr-1 flex items-center gap-1.5 text-xs font-medium text-zinc-500">
@@ -909,12 +939,15 @@ export function CommunityForum({
                 <p className="font-medium text-white">
                   {postsError
                     ? t("loadFailed")
-                    : categoryFilter !== "all"
-                      ? t("noThreadsCategory")
-                      : t("noThreads")}
+                    : searchQuery.trim()
+                      ? t("searchNoResults")
+                      : categoryFilter !== "all"
+                        ? t("noThreadsCategory")
+                        : t("noThreads")}
                 </p>
                 <p className="mt-1 text-sm text-zinc-500">
-                  {postsError ?? t("beFirst")}
+                  {postsError ??
+                    (searchQuery.trim() ? t("searchNoResultsHint") : t("beFirst"))}
                 </p>
                 {!profile && (
                   <Button

@@ -6,8 +6,17 @@ import {
   resolveDevlogEntries,
   resolveGalleryUrls,
 } from "@/lib/game-page-content";
+import { metadataFromGameRecord } from "@/lib/game-metadata";
 import type { GameRecord } from "@/lib/supabase";
 import type { Game } from "@/lib/games";
+
+function resolveTags(record: GameRecord, category: string): string[] {
+  const metadata = metadataFromGameRecord(record);
+  if (metadata.tags.length > 0) {
+    return [category, ...metadata.tags.filter((tag) => tag !== category)];
+  }
+  return [category];
+}
 
 function resolveCoverUrl(coverUrl: string) {
   if (!coverUrl) return coverUrl;
@@ -25,15 +34,19 @@ export function mapRecordToGame(record: GameRecord): Game {
   const enriched = enrichGameRecord(record);
   const meta = getPlatformGameMeta(enriched.title);
 
+  const publishMetadata = metadataFromGameRecord(enriched);
+
   return {
     id: enriched.id,
     title: enriched.title,
-    tags: meta?.categories ?? [enriched.category],
+    tags: meta?.categories ?? resolveTags(enriched, enriched.category),
+    genre: enriched.category,
     players: enriched.plays_count ?? 0,
     likes: meta?.likesCount ?? 0,
     shares: meta?.sharesCount ?? 0,
     image: resolveCoverUrl(enriched.cover_url),
     creator: meta?.creator ?? "",
+    creatorId: enriched.creator_id ?? null,
     description: enriched.description,
     embedUrl: resolvePlayUrl(
       enriched.game_url || meta?.demoUrl || "",
@@ -41,10 +54,18 @@ export function mapRecordToGame(record: GameRecord): Game {
     ),
     galleryUrls: resolveGalleryUrls(enriched),
     devlogs: resolveDevlogEntries(enriched),
+    detailsHtml: publishMetadata.detailsHtml || undefined,
+    viewportWidth: publishMetadata.viewportWidth,
+    viewportHeight: publishMetadata.viewportHeight,
+    fullscreenButton: publishMetadata.fullscreenButton,
+    aiDisclosed: publishMetadata.aiDisclosed,
+    aiContentTypes: publishMetadata.aiContentTypes,
     featured: meta?.featured,
     featuredBadge: meta?.featuredBadge,
     featuredAccent: meta?.featuredAccent,
     ratingAvg: meta?.ratingAvg ?? Number(enriched.rating_avg),
+    tipsEnabled: enriched.tips_enabled ?? false,
+    suggestedTipAmount: enriched.suggested_tip_amount ?? null,
   };
 }
 

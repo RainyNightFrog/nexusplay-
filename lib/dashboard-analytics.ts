@@ -11,9 +11,9 @@ export type DashboardTrendPoint = {
 
 export type DashboardStatKey =
   | "statPlays"
-  | "statLikes"
-  | "statPlayTime"
-  | "statShares";
+  | "statVisitors"
+  | "statUniquePlayers"
+  | "statPageViews";
 
 export type DashboardStat = {
   key: DashboardStatKey;
@@ -157,9 +157,9 @@ function buildAllHighlights(timeRange: HighlightTimeRange): DashboardHighlight[]
 const ALL_ANALYTICS: DashboardAnalytics = {
   stats: [
     { key: "statPlays", value: "249,120", change: "+22.6%" },
-    { key: "statLikes", value: "21,700", change: "+18.9%" },
-    { key: "statPlayTime", value: "4m 32s", change: "+6.8%" },
-    { key: "statShares", value: "5,180", change: "+31.4%" },
+    { key: "statVisitors", value: "21,700", change: "+18.9%" },
+    { key: "statUniquePlayers", value: "4,320", change: "+6.8%" },
+    { key: "statPageViews", value: "5,180", change: "+31.4%" },
   ],
   trend: [
     { date: "3/21", visitors: 820, plays: 540 },
@@ -234,17 +234,17 @@ function buildGameAnalytics(game: CreatorGameRecord): DashboardAnalytics {
         change: formatChange(seed),
       },
       {
-        key: "statLikes",
+        key: "statVisitors",
         value: formatNumber(likes),
         change: formatChange(seed + 11),
       },
       {
-        key: "statPlayTime",
-        value: formatPlayTime(playTimeSeconds),
+        key: "statUniquePlayers",
+        value: formatNumber(Math.round(plays * 0.04)),
         change: formatChange(seed + 23),
       },
       {
-        key: "statShares",
+        key: "statPageViews",
         value: formatNumber(shares),
         change: formatChange(seed + 37),
       },

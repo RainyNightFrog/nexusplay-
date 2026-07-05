@@ -30,10 +30,15 @@ import {
   type PublishMonetizationValues,
 } from "@/components/dashboard/publish-monetization-fields";
 import { PlatformAuthNotice } from "@/components/dashboard/platform-auth-notice";
+import {
+  GamePublishMetadataFields,
+  DEFAULT_GAME_PUBLISH_METADATA,
+} from "@/components/dashboard/game-publish-metadata-fields";
 import { uploadGame } from "@/lib/upload-game";
 import { DEFAULT_PUBLISH_STATUS } from "@/lib/game-publish";
 import { useApiError } from "@/hooks/use-api-error";
-import { UPLOAD_CATEGORIES, type UploadCategory } from "@/lib/games";
+import type { GameGenre } from "@/lib/game-metadata";
+import type { GamePublishMetadata } from "@/lib/game-metadata";
 import {
   formatMaxSize,
   MAX_COVER_BYTES,
@@ -46,7 +51,7 @@ import { cn } from "@/lib/utils";
 type FormState = {
   title: string;
   description: string;
-  category: UploadCategory | "";
+  genre: GameGenre | "";
 };
 
 const inputClassName = cn(
@@ -211,7 +216,6 @@ export default function UploadPage() {
   const t = useTranslations("dashboard");
   const tErrors = useTranslations("errors");
   const tCommon = useTranslations("common");
-  const tHome = useTranslations("home");
   const { translateApiError } = useApiError();
   const locale = useLocale();
   const coverMaxSize = formatMaxSize(MAX_COVER_BYTES);
@@ -219,8 +223,11 @@ export default function UploadPage() {
   const [form, setForm] = useState<FormState>({
     title: "",
     description: "",
-    category: "",
+    genre: "",
   });
+  const [metadata, setMetadata] = useState<GamePublishMetadata>(
+    DEFAULT_GAME_PUBLISH_METADATA
+  );
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [gameZip, setGameZip] = useState<File | null>(null);
@@ -301,8 +308,16 @@ export default function UploadPage() {
       alert(t("alertDesc"));
       return;
     }
-    if (!form.category) {
+    if (!form.genre) {
       alert(t("alertCategory"));
+      return;
+    }
+    if (metadata.aiDisclosed === null) {
+      alert("請選擇此專案是否包含 AI 生成內容");
+      return;
+    }
+    if (metadata.aiDisclosed === true && metadata.aiContentTypes.length === 0) {
+      alert("選擇「包含 AI 生成內容」時，請至少勾選一項 AI 內容類型");
       return;
     }
     if (!coverFile) {
@@ -326,12 +341,13 @@ export default function UploadPage() {
         {
           title: form.title.trim(),
           description: form.description.trim(),
-          category: form.category,
+          category: form.genre,
           coverFile,
           gameZipFile: gameZip,
           publishStatus: monetization.publishStatus,
           tipsEnabled: monetization.tipsEnabled,
           suggestedTipAmount: monetization.suggestedTipAmount,
+          metadata,
         },
         setSubmitStatus
       );
@@ -355,7 +371,8 @@ export default function UploadPage() {
         t("publicLiveSuccessDesc", { title: game.title, id: game.id })
       );
 
-      setForm({ title: "", description: "", category: "" });
+      setForm({ title: "", description: "", genre: "" });
+      setMetadata(DEFAULT_GAME_PUBLISH_METADATA);
       setMonetization({
         publishStatus: DEFAULT_PUBLISH_STATUS,
         tipsEnabled: false,
@@ -485,41 +502,17 @@ export default function UploadPage() {
                   disabled={isSubmitting}
                 />
               </div>
-
-              <div className="space-y-2">
-                <label
-                  htmlFor="category"
-                  className="block text-sm font-medium text-zinc-200"
-                >
-                  {t("gameCategory")}
-                </label>
-                <select
-                  id="category"
-                  value={form.category}
-                  onChange={(event) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      category: event.target.value as UploadCategory | "",
-                    }))
-                  }
-                  className={cn(
-                    inputClassName,
-                    "h-11 appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%239ca3af%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22m6%209%206%206%206-6%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem] bg-[right_0.75rem_center] bg-no-repeat pr-10 text-center",
-                    !form.category && "text-zinc-500"
-                  )}
-                  disabled={isSubmitting}
-                >
-                  <option value="" disabled>
-                    {t("selectCategory")}
-                  </option>
-                  {UPLOAD_CATEGORIES.map((category) => (
-                    <option key={category} value={category} className="bg-zinc-900">
-                      {tHome(`categories.${category}`)}
-                    </option>
-                  ))}
-                </select>
-              </div>
             </section>
+
+            <GamePublishMetadataFields
+              genre={form.genre}
+              metadata={metadata}
+              onGenreChange={(genre) =>
+                setForm((prev) => ({ ...prev, genre }))
+              }
+              onMetadataChange={setMetadata}
+              disabled={isSubmitting}
+            />
 
             {/* File uploads */}
             <section className="space-y-5">

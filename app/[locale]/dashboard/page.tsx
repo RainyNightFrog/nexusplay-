@@ -10,6 +10,7 @@ import {
   ArrowLeft,
   BarChart3,
   Clock3,
+  Eye,
   Gamepad2,
   Heart,
   Loader2,
@@ -18,6 +19,7 @@ import {
   Trash2,
   TrendingUp,
   Upload,
+  Users,
 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
@@ -47,13 +49,15 @@ import {
 } from "@/components/ui/dialog";
 import {
   ALL_GAMES_SCOPE,
-  getDashboardAnalytics,
-  getDashboardHighlights,
   HIGHLIGHT_TIME_RANGES,
   type AnalyticsScope,
+  type DashboardAnalytics,
+  type DashboardHighlight,
   type HighlightTimeRange,
 } from "@/lib/dashboard-analytics";
-import { getDashboardRevenue } from "@/lib/dashboard-revenue";
+import { fetchDashboardAnalytics } from "@/lib/fetch-dashboard-analytics";
+import { fetchDashboardRevenue } from "@/lib/fetch-dashboard-revenue";
+import type { DashboardRevenueAnalytics } from "@/lib/dashboard-revenue";
 import { RevenuePanel } from "@/components/dashboard/revenue-panel";
 import {
   fetchCreatorGames,
@@ -79,9 +83,9 @@ const TrendChart = dynamic(
 
 const STAT_ICONS = {
   statPlays: Gamepad2,
-  statLikes: Heart,
-  statPlayTime: Clock3,
-  statShares: Share2,
+  statVisitors: Eye,
+  statUniquePlayers: Users,
+  statPageViews: Activity,
 } as const;
 
 const HIGHLIGHT_TIME_LABEL_KEYS: Record<HighlightTimeRange, string> = {
@@ -100,20 +104,20 @@ const STAT_ACCENTS: Record<
       "from-cyan-500/20 to-cyan-500/5 text-cyan-300 ring-cyan-400/20",
     iconBg: "bg-cyan-500/15 text-cyan-400",
   },
-  statLikes: {
+  statVisitors: {
     accent:
       "from-rose-500/20 to-rose-500/5 text-rose-300 ring-rose-400/20",
     iconBg: "bg-rose-500/15 text-rose-400",
   },
-  statPlayTime: {
+  statUniquePlayers: {
+    accent:
+      "from-amber-500/20 to-amber-500/5 text-amber-300 ring-amber-400/20",
+    iconBg: "bg-amber-500/15 text-amber-400",
+  },
+  statPageViews: {
     accent:
       "from-violet-500/20 to-violet-500/5 text-violet-300 ring-violet-400/20",
     iconBg: "bg-violet-500/15 text-violet-400",
-  },
-  statShares: {
-    accent:
-      "from-fuchsia-500/20 to-fuchsia-500/5 text-fuchsia-300 ring-fuchsia-400/20",
-    iconBg: "bg-fuchsia-500/15 text-fuchsia-400",
   },
 };
 
@@ -149,6 +153,16 @@ export default function CreatorDashboardPage() {
   );
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [revenue, setRevenue] = useState<DashboardRevenueAnalytics | null>(
+    null
+  );
+  const [revenueLoading, setRevenueLoading] = useState(true);
+  const [revenueError, setRevenueError] = useState<string | null>(null);
+  const [unreadTipCount, setUnreadTipCount] = useState(0);
+  const [analytics, setAnalytics] = useState<DashboardAnalytics | null>(null);
+  const [highlights, setHighlights] = useState<DashboardHighlight[]>([]);
+  const [analyticsLoading, setAnalyticsLoading] = useState(true);
+  const [analyticsError, setAnalyticsError] = useState<string | null>(null);
 
   const loadGames = useCallback(async () => {
     setGamesLoading(true);
@@ -170,6 +184,72 @@ export default function CreatorDashboardPage() {
     void loadGames();
   }, [loadGames]);
 
+  useEffect(() => {
+    fetch("/api/auth/creator-notifications")
+      .then((response) => response.json())
+      .then((data: { unreadCount?: number }) => {
+        setUnreadTipCount(data.unreadCount ?? 0);
+      })
+      .catch(() => setUnreadTipCount(0));
+  }, []);
+
+  useEffect(() => {
+    if (gamesLoading) return;
+
+    let cancelled = false;
+    setRevenueLoading(true);
+    setRevenueError(null);
+
+    fetchDashboardRevenue(analyticsScope)
+      .then((data) => {
+        if (!cancelled) setRevenue(data);
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setRevenueError(
+            error instanceof Error ? error.message : t("revenueLoadFailed")
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setRevenueLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [analyticsScope, gamesLoading, games.length, t]);
+
+  useEffect(() => {
+    if (gamesLoading) return;
+
+    let cancelled = false;
+    setAnalyticsLoading(true);
+    setAnalyticsError(null);
+
+    fetchDashboardAnalytics(analyticsScope, highlightTimeRange)
+      .then((payload) => {
+        if (!cancelled) {
+          setAnalytics(payload.analytics);
+          setHighlights(payload.highlights);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setAnalyticsError(
+            error instanceof Error ? error.message : t("analyticsLoadFailed")
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setAnalyticsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [analyticsScope, highlightTimeRange, gamesLoading, games.length, t]);
+
   const selectedGame = useMemo(
     () =>
       analyticsScope === ALL_GAMES_SCOPE
@@ -178,23 +258,8 @@ export default function CreatorDashboardPage() {
     [analyticsScope, games]
   );
 
-  const analytics = useMemo(
-    () => getDashboardAnalytics(analyticsScope, games),
-    [analyticsScope, games]
-  );
-
-  const highlights = useMemo(
-    () => getDashboardHighlights(analyticsScope, games, highlightTimeRange),
-    [analyticsScope, games, highlightTimeRange]
-  );
-
   const highlightPeriodLabel = t(
     HIGHLIGHT_TIME_LABEL_KEYS[highlightTimeRange]
-  );
-
-  const revenue = useMemo(
-    () => getDashboardRevenue(analyticsScope, games),
-    [analyticsScope, games]
   );
 
   const handleDeleteConfirm = async () => {
@@ -291,7 +356,7 @@ export default function CreatorDashboardPage() {
         >
           <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-500/10 px-4 py-1.5 text-xs font-medium text-cyan-300">
             <Sparkles className="size-3.5" />
-            {selectedGame ? t("overviewBadgeGame") : t("overviewBadge")}
+            {t("analyticsLiveBadge")}
           </div>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
@@ -301,7 +366,7 @@ export default function CreatorDashboardPage() {
                   : t("welcomeBack")}
               </h1>
               <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-400 sm:text-base">
-                {selectedGame ? t("welcomeDescGame") : t("welcomeDesc")}
+                {selectedGame ? t("welcomeDescGameLive") : t("welcomeDescLive")}
               </p>
             </div>
 
@@ -338,6 +403,24 @@ export default function CreatorDashboardPage() {
             </div>
           </div>
         </motion.div>
+
+        {analyticsError ? (
+          <Card className="mb-8 border-red-400/20 bg-red-500/5 py-0">
+            <CardContent className="px-6 py-8 text-center text-sm text-red-300">
+              {analyticsError}
+            </CardContent>
+          </Card>
+        ) : analyticsLoading && !analytics ? (
+          <Card className="mb-8 border-white/10 bg-zinc-900/60 py-0">
+            <CardContent className="flex h-48 items-center justify-center">
+              <Loader2 className="size-8 animate-spin text-cyan-400" />
+            </CardContent>
+          </Card>
+        ) : analytics ? (
+          <>
+        <p className="mb-4 text-xs leading-relaxed text-zinc-500">
+          {t("analyticsLiveDataNote")}
+        </p>
 
         <section className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {analytics.stats.map((stat, index) => {
@@ -485,12 +568,18 @@ export default function CreatorDashboardPage() {
             </Card>
           </motion.div>
         </section>
+          </>
+        ) : null}
 
         <RevenuePanel
           data={revenue}
+          loading={revenueLoading}
+          error={revenueError}
           scopeKey={scopeSelectValue}
           selectedGameId={selectedGame?.id}
           showBreakdown={analyticsScope === ALL_GAMES_SCOPE}
+          unreadTipCount={unreadTipCount}
+          onClearUnreadTips={() => setUnreadTipCount(0)}
         />
 
         <motion.section

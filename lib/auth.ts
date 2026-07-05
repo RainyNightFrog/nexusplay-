@@ -11,6 +11,9 @@ export type UserProfile = {
   twitter: string | null;
   playing_games: boolean;
   developing_games: boolean;
+  support_email: string | null;
+  profile_public: boolean;
+  show_in_leaderboard: boolean;
 };
 
 export function getInitials(name: string) {

@@ -4,12 +4,17 @@ import { notFound } from "next/navigation";
 import { NextIntlClientProvider, hasLocale } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { PageViewTracker } from "@/components/analytics/page-view-tracker";
+import { GoogleAnalyticsProvider } from "@/components/analytics/google-analytics-provider";
 import { ActivityPulseTracker } from "@/components/activity/activity-pulse-tracker";
 import { AuthProvider } from "@/components/auth/auth-provider";
 import { AppSettingsProvider } from "@/components/settings/app-settings-provider";
 import { NexusAuroraBackground } from "@/components/ui/nexus-aurora-background";
 import { NexusCursorGlow } from "@/components/ui/nexus-cursor-glow";
+import { PlatformAnnouncementBanner } from "@/components/layout/platform-announcement-banner";
+import { SiteFooter } from "@/components/layout/site-footer";
 import { routing } from "@/i18n/routing";
+import { feedAlternateTypes, platformGamesFeedAlternates } from "@/lib/feed-discovery";
+import { getSiteUrl } from "@/lib/site-url";
 import "../globals.css";
 
 const geistSans = Geist({
@@ -23,8 +28,23 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "NexusPlay",
+  metadataBase: new URL(getSiteUrl()),
+  title: {
+    default: "NexusPlay",
+    template: "%s · NexusPlay",
+  },
   description: "Web game platform for play and upload",
+  alternates: {
+    types: feedAlternateTypes(platformGamesFeedAlternates()),
+  },
+  openGraph: {
+    type: "website",
+    siteName: "NexusPlay",
+    locale: "zh_HK",
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
 };
 
 export function generateStaticParams() {
@@ -54,13 +74,16 @@ export default async function LocaleLayout({
     >
       <body className="relative flex min-h-screen min-h-dvh flex-col bg-transparent">
         <NexusAuroraBackground />
-        <div className="nexus-app-content">
+        <div className="nexus-app-content flex min-h-screen min-h-dvh flex-col">
           <NextIntlClientProvider messages={messages} locale={locale}>
             <AuthProvider>
               <AppSettingsProvider>
                 <PageViewTracker />
+                <GoogleAnalyticsProvider />
                 <ActivityPulseTracker />
-                {children}
+                <PlatformAnnouncementBanner />
+                <div className="flex-1">{children}</div>
+                <SiteFooter />
               </AppSettingsProvider>
             </AuthProvider>
           </NextIntlClientProvider>

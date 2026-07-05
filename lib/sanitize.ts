@@ -1,3 +1,5 @@
+import DOMPurify from "isomorphic-dompurify";
+
 const HTML_ENTITIES: Record<string, string> = {
   "&": "&amp;",
   "<": "&lt;",
@@ -26,6 +28,38 @@ export function sanitizePlainText(
   }
 
   return stripped;
+}
+
+/** Sanitize rich HTML from TipTap before storage. */
+export function sanitizeRichHtml(html: string, maxLength: number): string {
+  const cleaned = DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: [
+      "p",
+      "br",
+      "strong",
+      "em",
+      "u",
+      "s",
+      "h1",
+      "h2",
+      "h3",
+      "ul",
+      "ol",
+      "li",
+      "a",
+      "blockquote",
+      "code",
+      "pre",
+      "hr",
+    ],
+    ALLOWED_ATTR: ["href", "target", "rel"],
+  });
+
+  if (cleaned.length > maxLength) {
+    return cleaned.slice(0, maxLength);
+  }
+
+  return cleaned;
 }
 
 /** Allow https game-files on Supabase storage, same-origin embed proxy, or demo previews. */

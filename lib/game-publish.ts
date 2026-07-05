@@ -67,13 +67,17 @@ export function parseMonetizationFromFormData(
 export function canViewGame(
   record: Pick<GameRecord, "publish_status" | "creator_id" | "status">,
   userId?: string | null,
-  options?: { isAdmin?: boolean }
+  options?: { isAdmin?: boolean; hasPartnerAccess?: boolean }
 ) {
   if (options?.isAdmin) {
     return true;
   }
 
   if (userId && record.creator_id && userId === record.creator_id) {
+    return true;
+  }
+
+  if (options?.hasPartnerAccess && record.publish_status === "draft") {
     return true;
   }
 

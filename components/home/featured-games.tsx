@@ -42,9 +42,20 @@ function resolveFeaturedGame(catalogTitle: string, games: Game[]) {
 type FeaturedGamesProps = {
   games: Game[];
   loading?: boolean;
+  favoriteCounts?: Record<number, number>;
+  favoritedIds?: Set<number>;
+  favoriteBusyId?: number | null;
+  onFavoriteClick?: (gameId: number) => void;
 };
 
-export function FeaturedGames({ games, loading }: FeaturedGamesProps) {
+export function FeaturedGames({
+  games,
+  loading,
+  favoriteCounts = {},
+  favoritedIds = new Set<number>(),
+  favoriteBusyId = null,
+  onFavoriteClick,
+}: FeaturedGamesProps) {
   const t = useTranslations("home");
   const tc = useTranslations("common");
   const { localizedBadge, localizedDescription, localizedTag } = useGameI18n();
@@ -98,6 +109,10 @@ export function FeaturedGames({ games, loading }: FeaturedGamesProps) {
         {featuredEntries.map(({ catalog, game, accent, styles }, index) => {
           const href = game.id > 0 ? `/game/${game.id}/forum` : "#";
           const isClickable = game.id > 0 && !loading;
+          const favoriteCount =
+            game.id > 0 ? (favoriteCounts[game.id] ?? game.likes) : game.likes;
+          const favorited = game.id > 0 && favoritedIds.has(game.id);
+          const favoriteBusy = favoriteBusyId === game.id;
 
           return (
             <motion.div
@@ -184,8 +199,37 @@ export function FeaturedGames({ games, loading }: FeaturedGamesProps) {
                       {formatCount(game.players)}
                     </span>
                     <span className="flex items-center gap-1.5 text-rose-300/90">
-                      <Heart className="size-3.5" />
-                      {formatCount(game.likes)}
+                      {game.id > 0 && onFavoriteClick ? (
+                        <button
+                          type="button"
+                          disabled={favoriteBusy}
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            onFavoriteClick(game.id);
+                          }}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 rounded-md transition hover:text-rose-200 disabled:opacity-50",
+                            favorited && "text-rose-300"
+                          )}
+                          aria-label={
+                            favorited ? t("statsFavorited") : t("statsFavorite")
+                          }
+                        >
+                          <Heart
+                            className={cn(
+                              "size-3.5",
+                              favorited && "fill-rose-400 text-rose-400"
+                            )}
+                          />
+                          {formatCount(favoriteCount)}
+                        </button>
+                      ) : (
+                        <>
+                          <Heart className="size-3.5" />
+                          {formatCount(favoriteCount)}
+                        </>
+                      )}
                     </span>
                     <span className="flex items-center gap-1.5 text-fuchsia-300/90">
                       <Share2 className="size-3.5" />

@@ -222,7 +222,7 @@ export async function deleteGameAsAdmin(
     : `違規刪除遊戲 #${gameId}「${data.title}」`;
 
   return {
-    game: data as AdminGameRecord,
+    game: data as unknown as AdminGameRecord,
     logDetails,
   };
 }

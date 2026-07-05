@@ -22,6 +22,8 @@ import {
   X,
 } from "lucide-react";
 import { GameEmbedBridge } from "@/components/game/game-embed-bridge";
+import { TipSupportPanel } from "@/components/game/tip-support-panel";
+import { SupporterWall } from "@/components/game/supporter-wall";
 import { GameDetailSections } from "@/components/game/game-detail-sections";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { SiteHeader } from "@/components/layout/site-header";
@@ -33,10 +35,12 @@ import { buildEmbedCode, IFRAME_SANDBOX } from "@/lib/iframe-sandbox";
 import { isSafeEmbedUrl } from "@/lib/sanitize";
 import { TAG_COLORS, type Game } from "@/lib/games";
 import { useGameI18n } from "@/hooks/use-game-i18n";
+import { useAuth } from "@/hooks/use-auth";
 import { useFormatCount } from "@/hooks/use-format-count";
 import { useApiError } from "@/hooks/use-api-error";
 import { useEscapeKey, useScrollLock } from "@/hooks/use-scroll-lock";
 import { cn } from "@/lib/utils";
+import { trackGaEvent } from "@/components/analytics/google-analytics";
 
 function GamePageFallback() {
   const tc = useTranslations("common");
@@ -66,6 +70,7 @@ function GamePageContent() {
   const { localizedDescription, localizedTag } = useGameI18n();
   const { formatCount } = useFormatCount();
   const { translateApiError } = useApiError();
+  const { profile } = useAuth();
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -77,9 +82,12 @@ function GamePageContent() {
   const [migrating, setMigrating] = useState(false);
   const [forumPostCount, setForumPostCount] = useState(0);
   const [isDraftPreview, setIsDraftPreview] = useState(false);
+  const [isPartnerPreview, setIsPartnerPreview] = useState(false);
 
   const [liked, setLiked] = useState(false);
   const [favorited, setFavorited] = useState(false);
+  const [favoriteSubmitting, setFavoriteSubmitting] = useState(false);
+  const [favoriteCount, setFavoriteCount] = useState(0);
   const [showEmbed, setShowEmbed] = useState(false);
   const [showFullscreen, setShowFullscreen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -124,6 +132,7 @@ function GamePageContent() {
           game?: Game;
           error?: string;
           isDraftPreview?: boolean;
+          isPartnerPreview?: boolean;
         };
 
         if (!response.ok || !data.game) {
@@ -161,6 +170,7 @@ function GamePageContent() {
         if (!cancelled) {
           setGame(loadedGame);
           setIsDraftPreview(Boolean(data.isDraftPreview));
+          setIsPartnerPreview(Boolean(data.isPartnerPreview));
         }
       } catch {
         if (!cancelled) {
@@ -181,6 +191,70 @@ function GamePageContent() {
       cancelled = true;
     };
   }, [gameId, tc, translateApiError]);
+
+  useEffect(() => {
+    if (!game?.id) return;
+
+    fetch(`/api/games/${game.id}/social-stats`)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data: { favoriteCount?: number } | null) => {
+        if (typeof data?.favoriteCount === "number") {
+          setFavoriteCount(data.favoriteCount);
+        }
+      })
+      .catch(() => undefined);
+  }, [game?.id]);
+
+  useEffect(() => {
+    if (!profile || !game?.id) return;
+
+    fetch(`/api/auth/favorites?gameId=${game.id}`)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data: { favorited?: boolean } | null) => {
+        if (data) setFavorited(data.favorited === true);
+      })
+      .catch(() => undefined);
+  }, [profile, game?.id]);
+
+  async function toggleFavorite() {
+    if (!game) return;
+
+    if (!profile) {
+      router.push(`/auth?redirect=${encodeURIComponent(`/game/${game.id}`)}`);
+      return;
+    }
+
+    setFavoriteSubmitting(true);
+    try {
+      const response = await fetch(
+        favorited
+          ? `/api/auth/favorites?gameId=${game.id}`
+          : "/api/auth/favorites",
+        {
+          method: favorited ? "DELETE" : "POST",
+          headers: favorited ? undefined : { "Content-Type": "application/json" },
+          body: favorited ? undefined : JSON.stringify({ gameId: game.id }),
+        }
+      );
+
+      if (!response.ok) {
+        const data = (await response.json()) as { error?: string };
+        throw new Error(data.error ?? tc("favoriteFailed"));
+      }
+
+      setFavorited((prev) => !prev);
+      setFavoriteCount((count) => (favorited ? Math.max(0, count - 1) : count + 1));
+      showToast(favorited ? tc("favoriteRemoved") : tc("favoriteAdded"));
+    } catch (favoriteError) {
+      showToast(
+        (favoriteError instanceof Error
+          ? translateApiError(favoriteError.message)
+          : null) ?? tc("favoriteFailed")
+      );
+    } finally {
+      setFavoriteSubmitting(false);
+    }
+  }
 
   useEffect(() => {
     if (!game?.title) return;
@@ -208,7 +282,11 @@ function GamePageContent() {
       method: "POST",
       credentials: "same-origin",
     }).catch(() => undefined);
-  }, [game?.id, locale]);
+    trackGaEvent("game_play", {
+      game_id: game.id,
+      game_title: game.title,
+    });
+  }, [game?.id, game?.title, locale]);
 
   useEffect(() => {
     if (!game?.id) return;
@@ -245,8 +323,16 @@ function GamePageContent() {
     const absoluteUrl = iframeSrc.startsWith("/")
       ? `${window.location.origin}${iframeSrc}`
       : iframeSrc;
-    return buildEmbedCode(absoluteUrl);
-  }, [iframeSrc]);
+    return buildEmbedCode(
+      absoluteUrl,
+      game?.viewportWidth ?? 960,
+      game?.viewportHeight ?? 600
+    );
+  }, [iframeSrc, game?.viewportWidth, game?.viewportHeight]);
+
+  const viewportWidth = game?.viewportWidth ?? 960;
+  const viewportHeight = game?.viewportHeight ?? 600;
+  const showCreatorFullscreen = game?.fullscreenButton ?? true;
 
   const handleShare = async () => {
     if (!game) return;
@@ -357,6 +443,11 @@ function GamePageContent() {
           {t("draftPreviewBanner")}
         </div>
       )}
+      {isPartnerPreview && (
+        <div className="border-b border-violet-400/20 bg-violet-500/10 px-4 py-2.5 text-center text-sm text-violet-200">
+          {t("partnerPreviewBanner")}
+        </div>
+      )}
 
       <main className="relative mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
         <div className="grid gap-6 lg:grid-cols-[1fr_360px] lg:gap-8 xl:grid-cols-[1fr_400px]">
@@ -407,8 +498,16 @@ function GamePageContent() {
                   "relative w-full bg-black",
                   showFullscreen && iframeSrc
                     ? "min-h-0 flex-1"
-                    : "h-[min(78vh,820px)] min-h-[560px]"
+                    : "mx-auto max-h-[78vh]"
                 )}
+                style={
+                  showFullscreen || !iframeSrc
+                    ? undefined
+                    : {
+                        aspectRatio: `${viewportWidth} / ${viewportHeight}`,
+                        width: `min(100%, ${viewportWidth}px)`,
+                      }
+                }
               >
                 {iframeSrc ? (
                   <>
@@ -421,6 +520,23 @@ function GamePageContent() {
                       allowFullScreen
                       referrerPolicy="no-referrer"
                     />
+                    {showCreatorFullscreen && !showFullscreen && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => setShowFullscreen(true)}
+                        className={cn(
+                          "absolute bottom-3 right-3 z-10 size-9 rounded-lg",
+                          "border border-white/15 bg-zinc-950/80 text-zinc-200 backdrop-blur-sm",
+                          "hover:border-cyan-400/40 hover:bg-zinc-900 hover:text-cyan-200",
+                          "shadow-[0_0_20px_rgba(34,211,238,0.15)]"
+                        )}
+                        aria-label={tc("expandGame")}
+                      >
+                        <Maximize2 className="size-4" />
+                      </Button>
+                    )}
                     <GameEmbedBridge
                       iframeRef={iframeRef}
                       gameId={gameId}
@@ -478,7 +594,7 @@ function GamePageContent() {
                       variant="outline"
                       size="sm"
                       onClick={() => setShowFullscreen(true)}
-                      disabled={!iframeSrc}
+                      disabled={!iframeSrc || !showCreatorFullscreen}
                       className="gap-1.5 border-white/10 bg-white/5 text-zinc-300 hover:border-amber-400/30 hover:text-white disabled:opacity-40"
                     >
                       <Maximize2 className="size-3.5" />
@@ -491,7 +607,11 @@ function GamePageContent() {
 
             {showFullscreen && iframeSrc && (
               <div
-                className="h-[min(78vh,820px)] min-h-[560px]"
+                className="mx-auto max-h-[78vh] w-full"
+                style={{
+                  aspectRatio: `${viewportWidth} / ${viewportHeight}`,
+                  width: `min(100%, ${viewportWidth}px)`,
+                }}
                 aria-hidden
               />
             )}
@@ -517,9 +637,18 @@ function GamePageContent() {
                 <User className="size-4 shrink-0 text-violet-400" />
                 <span>
                   {tc("creator")}：
-                  <span className="ml-1 font-medium text-zinc-200">
-                    {game.creator || tc("defaultCreator")}
-                  </span>
+                  {game.creatorId ? (
+                    <Link
+                      href={`/creator/${game.creatorId}`}
+                      className="ml-1 font-medium text-violet-300 hover:underline"
+                    >
+                      {game.creator || tc("defaultCreator")}
+                    </Link>
+                  ) : (
+                    <span className="ml-1 font-medium text-zinc-200">
+                      {game.creator || tc("defaultCreator")}
+                    </span>
+                  )}
                 </span>
               </div>
 
@@ -577,6 +706,15 @@ function GamePageContent() {
               </Link>
             </div>
 
+            <TipSupportPanel
+              gameId={game.id}
+              gameTitle={game.title}
+              tipsEnabled={game.tipsEnabled}
+              suggestedTipAmount={game.suggestedTipAmount}
+            />
+
+            <SupporterWall gameId={game.id} />
+
             <div
               className={cn(
                 "flex gap-3 rounded-2xl border border-white/10 bg-zinc-900/60 p-4",
@@ -600,7 +738,8 @@ function GamePageContent() {
               </Button>
               <Button
                 variant="outline"
-                onClick={() => setFavorited((prev) => !prev)}
+                onClick={() => void toggleFavorite()}
+                disabled={favoriteSubmitting}
                 className={cn(
                   "flex-1 gap-2 border-white/10 bg-white/5 transition-all",
                   favorited
@@ -615,6 +754,11 @@ function GamePageContent() {
                   )}
                 />
                 {favorited ? tc("favorited") : tc("favorite")}
+                {favoriteCount > 0 && (
+                  <span className="ml-1 font-mono text-[11px] text-rose-200/80">
+                    {favoriteCount}
+                  </span>
+                )}
               </Button>
             </div>
           </motion.aside>
@@ -624,6 +768,7 @@ function GamePageContent() {
           <GameDetailSections
             gameId={game.id}
             description={localizedDescription(game.title, game.description)}
+            detailsHtml={game.detailsHtml}
             creator={game.creator || tc("defaultCreator")}
             playersLabel={tc("playsCount", {
               count: formatCount(game.players ?? 0),

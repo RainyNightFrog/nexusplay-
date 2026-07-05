@@ -15,10 +15,9 @@ import {
   RotateCcw,
   Sparkles,
   Sun,
-  UserRound,
   Zap,
 } from "lucide-react";
-import { Link, usePathname, useRouter } from "@/i18n/navigation";
+import { usePathname, useRouter } from "@/i18n/navigation";
 import { locales, type AppLocale } from "@/i18n/routing";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -34,7 +33,9 @@ import { useAuth } from "@/hooks/use-auth";
 import { useAppSettings } from "@/components/settings/app-settings-provider";
 import type { AppTheme } from "@/lib/app-settings";
 import {
-  AccountShell,
+  AccountSettingsPageHeader,
+} from "@/components/settings/account-settings-layout";
+import {
   accountCardClassName,
   accountFieldClassName,
   accountLabelClassName,
@@ -42,6 +43,10 @@ import {
   settingsToggleRowClassName,
 } from "@/components/settings/account-shell";
 import { cn } from "@/lib/utils";
+import { PushNotificationSettings } from "@/components/notifications/push-notification-settings";
+import { PushCategorySettings } from "@/components/notifications/push-category-settings";
+import { ForumDigestPreviewPanel } from "@/components/feeds/forum-digest-preview-panel";
+import { ForumDigestHistoryPanel } from "@/components/feeds/forum-digest-history-panel";
 
 function SettingsToggle({
   id,
@@ -77,7 +82,6 @@ function SettingsToggle({
 
 export default function SettingsPage() {
   const t = useTranslations("settings");
-  const tNav = useTranslations("nav");
   const tLang = useTranslations("language");
   const locale = useLocale() as AppLocale;
   const pathname = usePathname();
@@ -85,6 +89,18 @@ export default function SettingsPage() {
   const { profile, loading } = useAuth();
   const { settings, ready, updateSettings, resetSettings } = useAppSettings();
   const [toast, setToast] = useState<string | null>(null);
+  const [forumNotifySaving, setForumNotifySaving] = useState(false);
+  const [forumReplyInApp, setForumReplyInApp] = useState(true);
+  const [forumInAppSaving, setForumInAppSaving] = useState(false);
+  const [followNewGameNotify, setFollowNewGameNotify] = useState(true);
+  const [followNewGameInApp, setFollowNewGameInApp] = useState(true);
+  const [followGameNotifySaving, setFollowGameNotifySaving] = useState(false);
+  const [followGameInAppSaving, setFollowGameInAppSaving] = useState(false);
+  const [pushNotifyEnabled, setPushNotifyEnabled] = useState(false);
+  const [pushNotifyForum, setPushNotifyForum] = useState(true);
+  const [pushNotifyFollow, setPushNotifyFollow] = useState(true);
+  const [pushCategorySaving, setPushCategorySaving] = useState(false);
+  const [forumDigestSaving, setForumDigestSaving] = useState(false);
 
   const showToast = useCallback((message: string) => {
     setToast(message);
@@ -98,6 +114,153 @@ export default function SettingsPage() {
     }
   }, [loading, profile, router]);
 
+  useEffect(() => {
+    if (!profile) return;
+    fetch("/api/auth/notification-prefs")
+      .then((response) => response.json())
+      .then((data: {
+        forumReplyNotifyEmail?: boolean;
+        forumReplyNotifyInApp?: boolean;
+        followNewGameEmail?: boolean;
+        followNewGameInApp?: boolean;
+        pushNotifyEnabled?: boolean;
+      pushNotifyForum?: boolean;
+      pushNotifyFollow?: boolean;
+      forumEmailDigest?: boolean;
+    }) => {
+        if (typeof data.forumReplyNotifyEmail === "boolean") {
+          updateSettings({ forumReplyNotify: data.forumReplyNotifyEmail });
+        }
+        if (typeof data.forumReplyNotifyInApp === "boolean") {
+          setForumReplyInApp(data.forumReplyNotifyInApp);
+        }
+        if (typeof data.followNewGameEmail === "boolean") {
+          setFollowNewGameNotify(data.followNewGameEmail);
+        }
+        if (typeof data.followNewGameInApp === "boolean") {
+          setFollowNewGameInApp(data.followNewGameInApp);
+        }
+        if (typeof data.pushNotifyEnabled === "boolean") {
+          setPushNotifyEnabled(data.pushNotifyEnabled);
+        }
+        if (typeof data.pushNotifyForum === "boolean") {
+          setPushNotifyForum(data.pushNotifyForum);
+        }
+        if (typeof data.pushNotifyFollow === "boolean") {
+          setPushNotifyFollow(data.pushNotifyFollow);
+        }
+        if (typeof data.forumEmailDigest === "boolean") {
+          updateSettings({ forumEmailDigest: data.forumEmailDigest });
+        }
+      })
+      .catch(() => undefined);
+  }, [profile?.id, updateSettings]);
+
+  async function handleForumReplyNotifyChange(checked: boolean) {
+    updateSettings({ forumReplyNotify: checked });
+    setForumNotifySaving(true);
+    try {
+      await fetch("/api/auth/notification-prefs", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ forumReplyNotifyEmail: checked }),
+      });
+    } finally {
+      setForumNotifySaving(false);
+    }
+  }
+
+  async function handleForumReplyInAppChange(checked: boolean) {
+    setForumReplyInApp(checked);
+    setForumInAppSaving(true);
+    try {
+      await fetch("/api/auth/notification-prefs", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ forumReplyNotifyInApp: checked }),
+      });
+    } finally {
+      setForumInAppSaving(false);
+    }
+  }
+
+  async function handleFollowNewGameNotifyChange(checked: boolean) {
+    setFollowNewGameNotify(checked);
+    setFollowGameNotifySaving(true);
+    try {
+      await fetch("/api/auth/notification-prefs", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ followNewGameEmail: checked }),
+      });
+    } finally {
+      setFollowGameNotifySaving(false);
+    }
+  }
+
+  async function handleFollowNewGameInAppChange(checked: boolean) {
+    setFollowNewGameInApp(checked);
+    setFollowGameInAppSaving(true);
+    try {
+      await fetch("/api/auth/notification-prefs", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ followNewGameInApp: checked }),
+      });
+    } finally {
+      setFollowGameInAppSaving(false);
+    }
+  }
+
+  async function patchPushCategory(
+    patch: { pushNotifyForum?: boolean; pushNotifyFollow?: boolean },
+    rollback: () => void
+  ) {
+    setPushCategorySaving(true);
+    try {
+      const response = await fetch("/api/auth/notification-prefs", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      });
+      if (!response.ok) rollback();
+    } catch {
+      rollback();
+    } finally {
+      setPushCategorySaving(false);
+    }
+  }
+
+  async function handlePushNotifyForumChange(checked: boolean) {
+    const previous = pushNotifyForum;
+    setPushNotifyForum(checked);
+    await patchPushCategory({ pushNotifyForum: checked }, () =>
+      setPushNotifyForum(previous)
+    );
+  }
+
+  async function handleForumDigestChange(checked: boolean) {
+    updateSettings({ forumEmailDigest: checked });
+    setForumDigestSaving(true);
+    try {
+      await fetch("/api/auth/notification-prefs", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ forumEmailDigest: checked }),
+      });
+    } finally {
+      setForumDigestSaving(false);
+    }
+  }
+
+  async function handlePushNotifyFollowChange(checked: boolean) {
+    const previous = pushNotifyFollow;
+    setPushNotifyFollow(checked);
+    await patchPushCategory({ pushNotifyFollow: checked }, () =>
+      setPushNotifyFollow(previous)
+    );
+  }
+
   function handleReset() {
     resetSettings();
     showToast(t("resetDone"));
@@ -105,19 +268,26 @@ export default function SettingsPage() {
 
   function handleLocaleChange(nextLocale: AppLocale) {
     if (nextLocale === locale) return;
+    void fetch("/api/auth/locale", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ locale: nextLocale }),
+    });
     router.replace(pathname, { locale: nextLocale });
   }
 
   if (loading || !profile || !ready) {
     return (
-      <div className="dark flex min-h-full items-center justify-center">
+      <div className="flex min-h-[40vh] items-center justify-center">
         <Loader2 className="size-8 animate-spin text-violet-400" />
       </div>
     );
   }
 
   return (
-    <AccountShell title={t("title")} description={t("description")}>
+    <>
+      <AccountSettingsPageHeader title={t("title")} description={t("description")} />
+
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -181,7 +351,12 @@ export default function SettingsPage() {
 
             <div className={accountFieldClassName}>
               <Label className={accountLabelClassName}>{t("interfaceLanguage")}</Label>
-              <Select value={locale} onValueChange={(value) => value && handleLocaleChange(value as AppLocale)}>
+              <Select
+                value={locale}
+                onValueChange={(value) =>
+                  value && handleLocaleChange(value as AppLocale)
+                }
+              >
                 <SelectTrigger className="mx-auto w-full max-w-xs border-white/10 bg-white/5 text-zinc-100">
                   <SelectValue />
                 </SelectTrigger>
@@ -207,12 +382,20 @@ export default function SettingsPage() {
 
             <SettingsToggle
               id="forumReplyNotify"
-              label={t("forumReply")}
-              description={t("forumReplyDesc")}
+              label={t("forumReplyEmail")}
+              description={t("forumReplyEmailDesc")}
               checked={settings.forumReplyNotify}
-              onCheckedChange={(checked) =>
-                updateSettings({ forumReplyNotify: checked })
-              }
+              disabled={forumNotifySaving}
+              onCheckedChange={(checked) => void handleForumReplyNotifyChange(checked)}
+            />
+
+            <SettingsToggle
+              id="forumReplyInApp"
+              label={t("forumReplyInApp")}
+              description={t("forumReplyInAppDesc")}
+              checked={forumReplyInApp}
+              disabled={forumInAppSaving}
+              onCheckedChange={(checked) => void handleForumReplyInAppChange(checked)}
             />
 
             <SettingsToggle
@@ -220,10 +403,49 @@ export default function SettingsPage() {
               label={t("forumDigest")}
               description={t("forumDigestDesc")}
               checked={settings.forumEmailDigest}
+              disabled={forumDigestSaving}
+              onCheckedChange={(checked) => void handleForumDigestChange(checked)}
+            />
+
+            <ForumDigestPreviewPanel enabled={settings.forumEmailDigest} />
+            <ForumDigestHistoryPanel enabled={settings.forumEmailDigest} />
+
+            <SettingsToggle
+              id="followNewGameNotify"
+              label={t("followNewGameEmail")}
+              description={t("followNewGameEmailDesc")}
+              checked={followNewGameNotify}
+              disabled={followGameNotifySaving}
               onCheckedChange={(checked) =>
-                updateSettings({ forumEmailDigest: checked })
+                void handleFollowNewGameNotifyChange(checked)
               }
             />
+
+            <SettingsToggle
+              id="followNewGameInApp"
+              label={t("followNewGameInApp")}
+              description={t("followNewGameInAppDesc")}
+              checked={followNewGameInApp}
+              disabled={followGameInAppSaving}
+              onCheckedChange={(checked) =>
+                void handleFollowNewGameInAppChange(checked)
+              }
+            />
+
+            <PushNotificationSettings
+              enabled={pushNotifyEnabled}
+              onEnabledChange={setPushNotifyEnabled}
+            />
+
+            {pushNotifyEnabled ? (
+              <PushCategorySettings
+                pushNotifyForum={pushNotifyForum}
+                pushNotifyFollow={pushNotifyFollow}
+                onForumChange={(checked) => void handlePushNotifyForumChange(checked)}
+                onFollowChange={(checked) => void handlePushNotifyFollowChange(checked)}
+                disabled={pushCategorySaving}
+              />
+            ) : null}
           </section>
         </div>
 
@@ -291,14 +513,6 @@ export default function SettingsPage() {
             </Button>
           </div>
         </div>
-
-        <p className="flex items-center justify-center gap-2 text-xs text-zinc-600">
-          <UserRound className="size-3.5" />
-          {t("profileHint")}
-          <Link href="/profile" className="text-cyan-400 hover:text-cyan-300">
-            {tNav("profile")}
-          </Link>
-        </p>
       </motion.div>
 
       <AnimatePresence>
@@ -318,6 +532,6 @@ export default function SettingsPage() {
           </motion.div>
         )}
       </AnimatePresence>
-    </AccountShell>
+    </>
   );
 }

@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 type GameDetailSectionsProps = {
   gameId: number;
   description: string;
+  detailsHtml?: string;
   creator: string;
   playersLabel: string;
   forumPostCount: number;
@@ -62,6 +63,7 @@ function SectionCard({
 export function GameDetailSections({
   gameId,
   description,
+  detailsHtml,
   creator,
   playersLabel,
   forumPostCount,
@@ -155,6 +157,18 @@ export function GameDetailSections({
           <p className="mx-auto mt-4 max-w-3xl text-center text-sm leading-relaxed text-zinc-400">
             {description}
           </p>
+
+          {detailsHtml && detailsHtml.replace(/<[^>]*>/g, "").trim() && (
+            <div
+              className={cn(
+                "prose prose-invert prose-sm mx-auto mt-6 max-w-3xl text-left",
+                "rounded-2xl border border-white/8 bg-zinc-950/50 p-6",
+                "[&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-white",
+                "[&_p]:text-zinc-400 [&_a]:text-cyan-400 [&_li]:text-zinc-400"
+              )}
+              dangerouslySetInnerHTML={{ __html: detailsHtml }}
+            />
+          )}
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div className="rounded-xl border border-white/8 bg-zinc-950/40 p-4 text-center">

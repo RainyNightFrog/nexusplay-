@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { resolveUserProfile } from "@/lib/auth-profile";
 import {
+  isValidEmail,
   isValidWebsite,
+  normalizeSupportEmail,
   normalizeTwitterHandle,
   normalizeWebsite,
   PROFILE_LIMITS,
@@ -9,6 +11,17 @@ import {
 } from "@/lib/profile-settings";
 import { sanitizePlainText } from "@/lib/sanitize";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
+
+type ProfilePatchBody = {
+  display_name?: string;
+  website?: string;
+  twitter?: string;
+  playing_games?: boolean;
+  developing_games?: boolean;
+  support_email?: string;
+  profile_public?: boolean;
+  show_in_leaderboard?: boolean;
+};
 
 export async function GET() {
   try {
@@ -22,7 +35,14 @@ export async function GET() {
     }
 
     const profile = await resolveUserProfile(supabase, user);
-    return NextResponse.json({ profile, email: user.email ?? null });
+    const hasPassword =
+      user.identities?.some((identity) => identity.provider === "email") ?? false;
+
+    return NextResponse.json({
+      profile,
+      email: user.email ?? null,
+      hasPassword,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "讀取個人資料失敗";
     return NextResponse.json(
@@ -43,14 +63,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "請先登入" }, { status: 401 });
     }
 
-    const body = (await request.json()) as {
-      display_name?: string;
-      website?: string;
-      twitter?: string;
-      playing_games?: boolean;
-      developing_games?: boolean;
-    };
-
+    const body = (await request.json()) as ProfilePatchBody;
     const currentProfile = await resolveUserProfile(supabase, user);
 
     const displayName = sanitizePlainText(
@@ -65,6 +78,10 @@ export async function PATCH(request: Request) {
       body.twitter !== undefined
         ? sanitizePlainText(body.twitter, PROFILE_LIMITS.twitter)
         : (currentProfile.twitter ?? "");
+    const supportEmailRaw =
+      body.support_email !== undefined
+        ? sanitizePlainText(body.support_email, PROFILE_LIMITS.supportEmail)
+        : (currentProfile.support_email ?? "");
 
     if (!displayName) {
       return NextResponse.json({ error: "請輸入顯示名稱" }, { status: 400 });
@@ -72,9 +89,16 @@ export async function PATCH(request: Request) {
 
     const website = websiteRaw ? normalizeWebsite(websiteRaw) : "";
     const twitter = twitterRaw ? normalizeTwitterHandle(twitterRaw) : "";
+    const supportEmail = supportEmailRaw
+      ? normalizeSupportEmail(supportEmailRaw)
+      : "";
 
     if (website && !isValidWebsite(website)) {
       return NextResponse.json({ error: "個人網站網址格式不正確" }, { status: 400 });
+    }
+
+    if (supportEmail && !isValidEmail(supportEmail)) {
+      return NextResponse.json({ error: "支援信箱格式不正確" }, { status: 400 });
     }
 
     const playingGames =
@@ -85,6 +109,15 @@ export async function PATCH(request: Request) {
       body.developing_games !== undefined
         ? body.developing_games === true
         : currentProfile.developing_games;
+    const profilePublic =
+      body.profile_public !== undefined
+        ? body.profile_public !== false
+        : currentProfile.profile_public;
+    const showInLeaderboard =
+      body.show_in_leaderboard !== undefined
+        ? body.show_in_leaderboard !== false
+        : currentProfile.show_in_leaderboard;
+
     const isAdmin = user.user_metadata?.role === "admin";
     const role = isAdmin
       ? "admin"
@@ -96,6 +129,8 @@ export async function PATCH(request: Request) {
       twitter: twitter || null,
       playing_games: playingGames,
       developing_games: developingGames,
+      profile_public: profilePublic,
+      show_in_leaderboard: showInLeaderboard,
       role,
     };
 
@@ -111,6 +146,7 @@ export async function PATCH(request: Request) {
       .from("profiles")
       .update({
         display_name: displayName,
+        support_email: supportEmail || null,
         ...(isAdmin ? {} : { role: resolveRoleFromPreferences(developingGames) }),
       })
       .eq("id", user.id);
@@ -132,7 +168,15 @@ export async function PATCH(request: Request) {
     }
 
     const profile = await resolveUserProfile(supabase, updatedUser);
-    return NextResponse.json({ profile, email: updatedUser.email ?? null });
+    const hasPassword =
+      updatedUser.identities?.some((identity) => identity.provider === "email") ??
+      false;
+
+    return NextResponse.json({
+      profile,
+      email: updatedUser.email ?? null,
+      hasPassword,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "更新個人資料失敗";
     return NextResponse.json({ error: message }, { status: 500 });

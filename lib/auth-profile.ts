@@ -40,6 +40,9 @@ export function profileFromUserMetadata(user: User): UserProfile {
     twitter: readOptionalString(metadata.twitter),
     playing_games: readBoolean(metadata.playing_games, true),
     developing_games: developingGames,
+    support_email: null,
+    profile_public: readBoolean(metadata.profile_public, true),
+    show_in_leaderboard: readBoolean(metadata.show_in_leaderboard, true),
   };
 }
 
@@ -60,7 +63,7 @@ export async function resolveUserProfile(
 
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("id, display_name, avatar_url, role, created_at")
+    .select("id, display_name, avatar_url, role, created_at, support_email")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -77,6 +80,7 @@ export async function resolveUserProfile(
       is_admin: isAdmin,
       created_at: profile.created_at ?? metadataProfile.created_at,
       developing_games: developingGames,
+      support_email: readOptionalString(profile.support_email),
     };
   }
 

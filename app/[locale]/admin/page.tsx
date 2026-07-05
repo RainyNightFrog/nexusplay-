@@ -5,10 +5,13 @@ import { useCallback, useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { motion } from "framer-motion";
 import {
+  Banknote,
   CheckCircle2,
   ClipboardList,
   Loader2,
+  Megaphone,
   MessageSquare,
+  Mail,
   RefreshCw,
   ShieldAlert,
   Trash2,
@@ -16,6 +19,9 @@ import {
   XCircle,
 } from "lucide-react";
 import { AdminAnalyticsPanel } from "@/components/admin/analytics-panel";
+import { AdminFinancePanel } from "@/components/admin/finance-panel";
+import { AdminAnnouncementsPanel } from "@/components/admin/announcements-panel";
+import { AdminDigestReportPanel } from "@/components/admin/digest-report-panel";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -386,6 +392,18 @@ export default function AdminPage() {
             <TrendingUp className="size-4" />
             {t("tabAnalytics")}
           </TabsTrigger>
+          <TabsTrigger value="finance" className="gap-1.5 px-4">
+            <Banknote className="size-4" />
+            {t("tabFinance")}
+          </TabsTrigger>
+          <TabsTrigger value="announcements" className="gap-1.5 px-4">
+            <Megaphone className="size-4" />
+            {t("tabAnnouncements")}
+          </TabsTrigger>
+          <TabsTrigger value="digest" className="gap-1.5 px-4">
+            <Mail className="size-4" />
+            {t("tabDigest")}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="games">
@@ -680,6 +698,18 @@ export default function AdminPage() {
 
         <TabsContent value="analytics">
           <AdminAnalyticsPanel onError={setPageError} />
+        </TabsContent>
+
+        <TabsContent value="finance">
+          <AdminFinancePanel />
+        </TabsContent>
+
+        <TabsContent value="announcements">
+          <AdminAnnouncementsPanel />
+        </TabsContent>
+
+        <TabsContent value="digest">
+          <AdminDigestReportPanel onError={setPageError} />
         </TabsContent>
       </Tabs>
 
