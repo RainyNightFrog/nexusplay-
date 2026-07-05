@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { extractAndUploadGameBuild } from "@/lib/extract-game-zip";
 import { authorizeGameEdit } from "@/lib/game-auth";
 import { isAdminUser } from "@/lib/admin-auth";
-import { resolveUserRole } from "@/lib/auth-profile";
+import { resolveUserRole, hasCreatorDashboardAccess } from "@/lib/auth-profile";
 import {
   COVERS_BUCKET,
   extractPublicStoragePath,
@@ -134,7 +134,7 @@ export async function PATCH(
 
     const role = await resolveUserRole(authClient, user);
 
-    if (role !== "creator") {
+    if (!hasCreatorDashboardAccess(user, role)) {
       return NextResponse.json(
         { error: "需要創作者身分才能更新遊戲" },
         { status: 403 }
@@ -384,7 +384,7 @@ export async function DELETE(
 
     const role = await resolveUserRole(authClient, user);
 
-    if (role !== "creator") {
+    if (!hasCreatorDashboardAccess(user, role)) {
       return NextResponse.json(
         { error: "需要創作者身分才能刪除遊戲" },
         { status: 403 }

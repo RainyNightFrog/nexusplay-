@@ -328,7 +328,23 @@
     "passwordPlaceholder": "至少 6 個字元",
     "createAccountBtn": "建立帳號",
     "orContinueWith": "或",
-    "continueWithGoogle": "使用 Google 登入"
+    "continueWithGoogle": "使用 Google 登入",
+    "chooseRole": {
+      "badge": "登入成功",
+      "title": "選擇本次帳號身分",
+      "description": "每次登入後請選擇你要以玩家或創作者身分使用平台。之後可在個人資料再次調整。",
+      "cardTitle": "你想怎麼使用 NexusPlay？",
+      "cardDesc": "這會影響你是否能進入創作者後台上傳遊戲。",
+      "playerTitle": "玩家",
+      "playerDesc": "暢玩社群遊戲、參與討論與收藏作品。",
+      "creatorTitle": "創作者",
+      "creatorDesc": "進入創作者後台，上傳與管理你的遊戲作品。",
+      "continue": "確認並繼續",
+      "saving": "正在儲存…",
+      "footnote": "超級管理員會自動略過此步驟。",
+      "loadFailed": "讀取登入狀態失敗",
+      "saveFailed": "儲存身分失敗，請稍後再試"
+    }
   },
   "profile": {
     "title": "個人資料",

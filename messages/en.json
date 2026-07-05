@@ -328,7 +328,23 @@
     "passwordPlaceholder": "At least 6 characters",
     "createAccountBtn": "Create account",
     "orContinueWith": "or",
-    "continueWithGoogle": "Continue with Google"
+    "continueWithGoogle": "Continue with Google",
+    "chooseRole": {
+      "badge": "Signed in",
+      "title": "Choose how to use NexusPlay",
+      "description": "After each sign-in, pick whether you want to play or create on the platform. You can change this later in your profile.",
+      "cardTitle": "How will you use NexusPlay today?",
+      "cardDesc": "This controls access to the creator dashboard and uploads.",
+      "playerTitle": "Player",
+      "playerDesc": "Play community games, join discussions, and save favorites.",
+      "creatorTitle": "Creator",
+      "creatorDesc": "Open the creator dashboard to upload and manage your games.",
+      "continue": "Confirm and continue",
+      "saving": "Saving…",
+      "footnote": "Super admins skip this step automatically.",
+      "loadFailed": "Failed to read sign-in state",
+      "saveFailed": "Failed to save account intent"
+    }
   },
   "profile": {
     "title": "Profile",

@@ -120,7 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       signOut,
       refreshProfile,
-      isCreator: profile?.role === "creator",
+      isCreator: profile?.role === "creator" || profile?.is_admin === true,
       isAdmin: profile?.is_admin === true,
     }),
     [profile, loading, signOut, refreshProfile]

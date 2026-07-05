@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { resolveUserRole } from "@/lib/auth-profile";
+import { resolveUserRole, hasCreatorDashboardAccess } from "@/lib/auth-profile";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
 
@@ -19,7 +19,7 @@ export async function GET() {
 
     const role = await resolveUserRole(authClient, user);
 
-    if (role !== "creator") {
+    if (!hasCreatorDashboardAccess(user, role)) {
       return NextResponse.json(
         { error: "需要創作者身分才能管理遊戲" },
         { status: 403 }

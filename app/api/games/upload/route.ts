@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { extractAndUploadGameBuild } from "@/lib/extract-game-zip";
-import { resolveUserRole } from "@/lib/auth-profile";
+import { resolveUserRole, hasCreatorDashboardAccess } from "@/lib/auth-profile";
 import { parseMonetizationFromFormData } from "@/lib/game-publish";
 import { UPLOAD_CATEGORIES } from "@/lib/games";
 import { sanitizePlainText } from "@/lib/sanitize";
@@ -62,7 +62,7 @@ export async function POST(request: Request) {
 
     const role = await resolveUserRole(authClient, user);
 
-    if (role !== "creator") {
+    if (!hasCreatorDashboardAccess(user, role)) {
       return NextResponse.json(
         { error: "需要創作者身分才能上傳遊戲" },
         { status: 403 }

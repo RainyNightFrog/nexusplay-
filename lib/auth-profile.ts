@@ -1,6 +1,7 @@
 import type { User } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { UserProfile, UserRole } from "@/lib/auth";
+import { isAdminUser } from "@/lib/admin-auth";
 import { resolveRoleFromPreferences } from "@/lib/profile-settings";
 
 function normalizeRole(value: unknown): UserRole {
@@ -21,7 +22,7 @@ export function profileFromUserMetadata(user: User): UserProfile {
   const role = isAdmin ? "player" : normalizeRole(metadata.role);
   const developingGames = readBoolean(
     metadata.developing_games,
-    role === "creator"
+    role === "creator" || isAdmin
   );
 
   return {
@@ -92,4 +93,12 @@ export async function resolveUserRole(
 ): Promise<UserRole> {
   const profile = await resolveUserProfile(supabase, user);
   return profile.role;
+}
+
+/** 創作者後台與上傳 API：創作者或超級管理員皆可 */
+export function hasCreatorDashboardAccess(
+  user: User,
+  role: UserRole
+): boolean {
+  return isAdminUser(user) || role === "creator";
 }

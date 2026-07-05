@@ -27,6 +27,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { UserRole } from "@/lib/auth";
+import { buildChooseRolePath } from "@/lib/account-intent";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -66,6 +67,20 @@ export default function AuthPage() {
   }, [hint, t]);
 
   const featureItems = [t("feature1"), t("feature2"), t("feature3")] as const;
+
+  async function goAfterAuth() {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user?.user_metadata?.role === "admin") {
+      router.push(redirectTo);
+    } else {
+      router.push(buildChooseRolePath(redirectTo));
+    }
+    router.refresh();
+  }
 
   async function handleGoogleSignIn() {
     setLoading(true);
@@ -128,8 +143,7 @@ export default function AuthPage() {
         if (signUpError) throw signUpError;
 
         if (data.session) {
-          router.push(redirectTo);
-          router.refresh();
+          await goAfterAuth();
           return;
         }
 
@@ -145,8 +159,7 @@ export default function AuthPage() {
 
       if (signInError) throw signInError;
 
-      router.push(redirectTo);
-      router.refresh();
+      await goAfterAuth();
     } catch (submitError) {
       setError(
         submitError instanceof Error ? submitError.message : t("operationFailed")

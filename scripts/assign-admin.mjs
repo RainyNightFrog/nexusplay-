@@ -62,6 +62,7 @@ async function main() {
   const nextMetadata = {
     ...(user.user_metadata ?? {}),
     role: "admin",
+    developing_games: true,
   };
 
   const { data, error } = await admin.auth.admin.updateUserById(user.id, {
@@ -71,6 +72,25 @@ async function main() {
   if (error) {
     console.error("更新失敗：", error.message);
     process.exit(1);
+  }
+
+  const displayName =
+    (typeof nextMetadata.display_name === "string" &&
+      nextMetadata.display_name.trim()) ||
+    user.email?.split("@")[0] ||
+    "Admin";
+
+  const { error: profileError } = await admin.from("profiles").upsert(
+    {
+      id: user.id,
+      display_name: displayName,
+      role: "creator",
+    },
+    { onConflict: "id" }
+  );
+
+  if (profileError) {
+    console.warn("profiles 同步警告：", profileError.message);
   }
 
   console.log("✓ 已設定為超級管理員");

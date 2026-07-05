@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { authorizeGameEdit } from "@/lib/game-auth";
-import { resolveUserRole } from "@/lib/auth-profile";
+import { resolveUserRole, hasCreatorDashboardAccess } from "@/lib/auth-profile";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
 
@@ -16,7 +16,7 @@ async function authorizeCreatorForGame(gameId: number) {
 
   const role = await resolveUserRole(authClient, user);
 
-  if (role !== "creator") {
+  if (!hasCreatorDashboardAccess(user, role)) {
     return {
       error: NextResponse.json(
         { error: "需要創作者身分才能編輯遊戲" },

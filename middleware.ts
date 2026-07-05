@@ -1,7 +1,7 @@
 import createIntlMiddleware from "next-intl/middleware";
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { resolveUserRole } from "@/lib/auth-profile";
+import { resolveUserRole, hasCreatorDashboardAccess } from "@/lib/auth-profile";
 import { isAdminUser } from "@/lib/admin-auth";
 import { routing } from "@/i18n/routing";
 
@@ -80,7 +80,7 @@ export async function middleware(request: NextRequest) {
 
     const role = await resolveUserRole(supabase, user);
 
-    if (role !== "creator") {
+    if (!hasCreatorDashboardAccess(user, role)) {
       redirectUrl.searchParams.set("hint", "creator");
       return NextResponse.redirect(redirectUrl);
     }
@@ -95,6 +95,18 @@ export async function middleware(request: NextRequest) {
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = "/auth";
       redirectUrl.searchParams.set("redirect", pathnameWithoutLocale);
+      return NextResponse.redirect(redirectUrl);
+    }
+  }
+
+  if (pathnameWithoutLocale === "/auth/choose-role") {
+    if (!user) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/auth";
+      redirectUrl.searchParams.set(
+        "redirect",
+        request.nextUrl.searchParams.get("redirect") ?? "/"
+      );
       return NextResponse.redirect(redirectUrl);
     }
   }
