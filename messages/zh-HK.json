@@ -586,7 +586,7 @@
   },
   "admin": {
     "title": "超級管理員控制中心",
-    "description": "審批遊戲、處理玩家反饋、查看操作日誌。",
+    "description": "審批遊戲、處理玩家反饋、查看操作日誌與實時人流統計。",
     "tabGames": "遊戲審批",
     "tabFeedbacks": "玩家反饋",
     "tabLogs": "操作日誌",
@@ -625,6 +625,22 @@
     "filterApproved": "已通過",
     "filterRejected": "已拒絕",
     "filterUnread": "未讀",
-    "filterResolved": "已處理"
+    "filterResolved": "已處理",
+    "tabAnalytics": "人流統計",
+    "analyticsToday": "今天",
+    "analyticsWeek": "每週",
+    "analyticsMonth": "每月",
+    "analyticsUpdated": "已更新",
+    "analyticsPageViews": "網頁瀏覽次數",
+    "analyticsUniqueVisitors": "訪客人數（不重複）",
+    "analyticsGamePlays": "遊戲遊玩次數",
+    "analyticsUniquePlayers": "玩家人數（不重複）",
+    "analyticsTrendTitle": "人流趨勢",
+    "analyticsTrendDesc": "網頁瀏覽與遊戲遊玩走勢",
+    "analyticsGamesTitle": "遊戲遊玩排行",
+    "analyticsGamesDesc": "此時段內各遊戲的遊玩次數與不重複玩家",
+    "analyticsEmptyGames": "此時段內尚無遊戲遊玩紀錄。",
+    "analyticsPlaysCount": "{count} 次遊玩",
+    "analyticsPlayersCount": "{count} 位玩家"
   }
 }

@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { notFound } from "next/navigation";
 import { NextIntlClientProvider, hasLocale } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
+import { PageViewTracker } from "@/components/analytics/page-view-tracker";
 import { AuthProvider } from "@/components/auth/auth-provider";
 import { AppSettingsProvider } from "@/components/settings/app-settings-provider";
 import { NexusAuroraBackground } from "@/components/ui/nexus-aurora-background";
@@ -55,7 +56,10 @@ export default async function LocaleLayout({
         <div className="nexus-app-content">
           <NextIntlClientProvider messages={messages} locale={locale}>
             <AuthProvider>
-              <AppSettingsProvider>{children}</AppSettingsProvider>
+              <AppSettingsProvider>
+                <PageViewTracker />
+                {children}
+              </AppSettingsProvider>
             </AuthProvider>
           </NextIntlClientProvider>
         </div>

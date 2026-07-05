@@ -149,7 +149,7 @@ function GameForumContent() {
         </div>
       </header>
 
-      <main className="relative mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
+      <main className="relative mx-auto max-w-5xl px-4 py-6 text-center sm:px-6 sm:py-8">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -158,7 +158,7 @@ function GameForumContent() {
             "shadow-lg shadow-black/40"
           )}
         >
-          <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:p-5">
+          <div className="flex flex-col items-center gap-4 p-4 text-center sm:p-5">
             <div className="relative size-16 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-zinc-800">
               <Image
                 src={game.image}

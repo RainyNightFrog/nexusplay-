@@ -21,9 +21,9 @@ import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
+  SelectDisplayValue,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
@@ -88,7 +88,7 @@ function AuthorChip({
   const shortId = userId.replace(/-/g, "").slice(0, 6).toUpperCase();
 
   return (
-    <div className="flex items-center gap-2 text-xs text-zinc-400">
+    <div className="flex flex-col items-center gap-2 text-xs text-zinc-400">
       <span
         className={cn(
           "flex size-7 items-center justify-center rounded-full",
@@ -98,8 +98,8 @@ function AuthorChip({
       >
         {name.slice(0, 1).toUpperCase()}
       </span>
-      <div className="min-w-0 text-left">
-        <p className="truncate font-medium text-zinc-300">{name}</p>
+      <div className="min-w-0 text-center">
+        <p className="font-medium text-zinc-300">{name}</p>
         <p className="font-mono text-[10px] text-zinc-500">#{shortId}</p>
       </div>
     </div>
@@ -421,10 +421,10 @@ export function CommunityForum({
   const isSeedPost = selectedPost ? selectedPost.id < 0 : false;
 
   return (
-    <div className="p-5 sm:p-8">
-      <div className="mb-6 flex flex-col gap-4 border-b border-white/8 pb-6 sm:flex-row sm:items-center sm:justify-between">
+    <div className="p-5 text-center sm:p-8">
+      <div className="mb-6 flex flex-col items-center gap-4 border-b border-white/8 pb-6">
         <div>
-          <h3 className="flex items-center gap-2 text-xl font-bold text-white">
+          <h3 className="flex items-center justify-center gap-2 text-xl font-bold text-white">
             <MessagesSquare className="size-5 text-violet-400" />
             {isHub ? t("latest") : t("title")}
           </h3>
@@ -465,7 +465,7 @@ export function CommunityForum({
               variant="ghost"
               size="sm"
               onClick={() => setSelectedPost(null)}
-              className="gap-1.5 text-zinc-400 hover:text-violet-300"
+              className="mx-auto gap-1.5 text-zinc-400 hover:text-violet-300"
             >
               <ArrowLeft className="size-4" />
               {t("backToList")}
@@ -479,8 +479,8 @@ export function CommunityForum({
                   "border-l-violet-400"
               )}
             >
-              <div className="p-5 sm:p-6">
-                <div className="flex flex-wrap items-center gap-2">
+              <div className="p-5 text-center sm:p-6">
+                <div className="flex flex-wrap items-center justify-center gap-2">
                   <CategoryBadge category={selectedPost.category} />
                   {isHub && selectedPost.game_title && (
                     <Link
@@ -498,7 +498,7 @@ export function CommunityForum({
                 <h4 className="mt-3 text-2xl font-bold tracking-tight text-white">
                   {selectedPost.title}
                 </h4>
-                <div className="mt-4">
+                <div className="mt-4 flex justify-center">
                   <AuthorChip
                     name={selectedPost.author_name}
                     userId={selectedPost.user_id}
@@ -511,7 +511,7 @@ export function CommunityForum({
             </article>
 
             <section className="space-y-4">
-              <h5 className="flex items-center gap-2 text-sm font-semibold text-zinc-300">
+              <h5 className="flex items-center justify-center gap-2 text-sm font-semibold text-zinc-300">
                 <span className="size-1.5 rounded-full bg-violet-400" />
                 {t("comments", { count: comments.length })}
               </h5>
@@ -530,9 +530,9 @@ export function CommunityForum({
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.03 }}
-                      className="rounded-xl border border-white/8 bg-zinc-900/50 p-4"
+                      className="rounded-xl border border-white/8 bg-zinc-900/50 p-4 text-center"
                     >
-                      <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="flex flex-col items-center gap-3">
                         <AuthorChip
                           name={comment.author_name}
                           userId={comment.user_id}
@@ -577,7 +577,7 @@ export function CommunityForum({
                       disabled={isSeedPost}
                       className="min-h-24 resize-none border-white/10 bg-white/5 text-zinc-100 placeholder:text-zinc-500 focus-visible:border-violet-400/40 focus-visible:ring-violet-500/20"
                     />
-                    <div className="flex items-center justify-between gap-3">
+                    <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
                       <span className="text-xs text-zinc-600">
                         {replyContent.length}/{FORUM_LIMITS.comment}
                       </span>
@@ -627,7 +627,7 @@ export function CommunityForum({
                   "ring-1 ring-inset ring-violet-500/10"
                 )}
               >
-                <h4 className="mb-4 flex items-center gap-2 text-sm font-semibold text-white">
+                <h4 className="mb-4 flex items-center justify-center gap-2 text-sm font-semibold text-white">
                   <MessageSquarePlus className="size-4 text-violet-400" />
                   {t("createPost")}
                 </h4>
@@ -652,7 +652,10 @@ export function CommunityForum({
                           }}
                         >
                           <SelectTrigger className="w-full border-white/10 bg-white/5 text-zinc-100">
-                            <SelectValue placeholder={t("selectGame")} />
+                            <SelectDisplayValue>
+                              {games.find((game) => game.id === composeGameId)?.title ??
+                                t("selectGame")}
+                            </SelectDisplayValue>
                           </SelectTrigger>
                           <SelectContent className="border-white/10 bg-zinc-900 text-zinc-100 ring-white/10">
                             {games.map((game) => (
@@ -690,7 +693,12 @@ export function CommunityForum({
                         }
                       >
                         <SelectTrigger className="w-full border-white/10 bg-white/5 text-zinc-100">
-                          <SelectValue placeholder={t("selectCategory")} />
+                          <SelectDisplayValue>
+                            {(() => {
+                              const meta = getForumCategoryMeta(newCategory);
+                              return `${meta.emoji} ${t(`categories.${meta.value}`)}`;
+                            })()}
+                          </SelectDisplayValue>
                         </SelectTrigger>
                         <SelectContent className="border-white/10 bg-zinc-900 text-zinc-100 ring-white/10">
                           {FORUM_CATEGORIES.map((item) => (
@@ -723,7 +731,7 @@ export function CommunityForum({
                       className="min-h-28 resize-none border-white/10 bg-white/5 text-zinc-100 placeholder:text-zinc-500 focus-visible:border-violet-400/40 focus-visible:ring-violet-500/20"
                     />
                   </div>
-                  <div className="flex items-center justify-between gap-3">
+                  <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
                     <span className="text-xs text-zinc-600">
                       {newContent.length}/{FORUM_LIMITS.content}
                     </span>
@@ -750,7 +758,7 @@ export function CommunityForum({
             )}
 
             {!authLoading && !profile && (
-              <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-white/10 bg-zinc-900/30 py-8 text-center sm:flex-row sm:justify-between sm:px-6 sm:text-left">
+              <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-white/10 bg-zinc-900/30 py-8 text-center sm:px-6">
                 <div>
                   <p className="font-medium text-white">{t("loginPromptTitle")}</p>
                   <p className="mt-1 text-sm text-zinc-500">
@@ -768,7 +776,7 @@ export function CommunityForum({
             )}
 
             {isHub && games && games.length > 0 && (
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center justify-center gap-2">
                 <span className="mr-1 flex items-center gap-1.5 text-xs font-medium text-zinc-500">
                   <Gamepad2 className="size-3.5" />
                   {t("filterGame")}
@@ -805,7 +813,7 @@ export function CommunityForum({
               </div>
             )}
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center justify-center gap-2">
               <span className="mr-1 flex items-center gap-1.5 text-xs font-medium text-zinc-500">
                 <Filter className="size-3.5" />
                 {t("filter")}
@@ -859,13 +867,13 @@ export function CommunityForum({
                     onClick={() => setSelectedPost(post)}
                     className={cn(
                       "group w-full overflow-hidden rounded-xl border border-white/10",
-                      "border-l-4 bg-zinc-900/50 p-4 text-left transition-all duration-200",
+                      "border-l-4 bg-zinc-900/50 p-4 text-center transition-all duration-200",
                       "hover:border-violet-400/30 hover:bg-zinc-900/80 hover:shadow-lg hover:shadow-violet-500/5",
                       CATEGORY_ACCENT[post.category as ForumCategory] ??
                         "border-l-violet-400"
                     )}
                   >
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex flex-wrap items-center justify-center gap-2">
                       <CategoryBadge category={post.category} />
                       {isHub && post.game_title && (
                         <span className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] text-zinc-400">
@@ -889,7 +897,7 @@ export function CommunityForum({
                     <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-zinc-500">
                       {post.content}
                     </p>
-                    <div className="mt-3">
+                    <div className="mt-3 flex justify-center">
                       <AuthorChip name={post.author_name} userId={post.user_id} />
                     </div>
                   </motion.button>

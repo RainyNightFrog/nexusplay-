@@ -541,6 +541,22 @@
     "filterApproved": "Approved",
     "filterRejected": "Rejected",
     "filterUnread": "Unread",
-    "filterResolved": "Resolved"
+    "filterResolved": "Resolved",
+    "tabAnalytics": "Traffic Analytics",
+    "analyticsToday": "Today",
+    "analyticsWeek": "Weekly",
+    "analyticsMonth": "Monthly",
+    "analyticsUpdated": "Updated",
+    "analyticsPageViews": "Page Views",
+    "analyticsUniqueVisitors": "Unique Visitors",
+    "analyticsGamePlays": "Game Plays",
+    "analyticsUniquePlayers": "Unique Players",
+    "analyticsTrendTitle": "Traffic Trend",
+    "analyticsTrendDesc": "Page views and game plays over time",
+    "analyticsGamesTitle": "Games Played",
+    "analyticsGamesDesc": "Play counts and unique players per game in this period",
+    "analyticsEmptyGames": "No game plays recorded in this period.",
+    "analyticsPlaysCount": "{count} plays",
+    "analyticsPlayersCount": "{count} players"
   }
 }

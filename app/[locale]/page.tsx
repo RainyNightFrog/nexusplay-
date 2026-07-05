@@ -25,9 +25,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
+  SelectDisplayValue,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import { CreatorDashboardLink, UserNav } from "@/components/auth/user-nav";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
@@ -178,17 +178,17 @@ function FilterSortBar({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.1 }}
       className={cn(
-        "mb-8 rounded-2xl border border-white/10 bg-zinc-900/50 p-4 shadow-xl shadow-black/20 backdrop-blur-md",
+        "mb-8 rounded-2xl border border-white/10 bg-zinc-900/50 p-4 text-center shadow-xl shadow-black/20 backdrop-blur-md",
         "sm:p-5"
       )}
     >
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-center gap-2 text-sm font-medium text-zinc-400">
+      <div className="flex flex-col items-center gap-4 lg:flex-row lg:justify-center lg:gap-8">
+        <div className="flex items-center justify-center gap-2 text-sm font-medium text-zinc-400">
           <SlidersHorizontal className="size-4 text-cyan-400" />
           <span>{t("filterLabel")}</span>
         </div>
 
-        <div className="flex items-center gap-2 text-sm font-medium text-zinc-400 lg:shrink-0">
+        <div className="flex items-center justify-center gap-2 text-sm font-medium text-zinc-400">
           <ArrowUpDown className="size-4 text-violet-400" />
           <span className="hidden sm:inline">{t("sortLabel")}</span>
           <Select
@@ -202,7 +202,7 @@ function FilterSortBar({
                 "hover:bg-white/8 focus-visible:border-cyan-400/40 focus-visible:ring-cyan-500/20"
               )}
             >
-              <SelectValue placeholder={t("sortPlaceholder")} />
+              <SelectDisplayValue>{t(`sort.${sort}`)}</SelectDisplayValue>
             </SelectTrigger>
             <SelectContent className="border-white/10 bg-zinc-900 text-zinc-100 ring-white/10">
               {SORT_OPTIONS.map((option) => (
@@ -219,7 +219,7 @@ function FilterSortBar({
         </div>
       </div>
 
-      <div className="mt-4 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="mt-4 flex flex-wrap justify-center gap-2">
         {FILTER_CATEGORIES.map((tag) => {
           const isActive = category === tag;
           return (

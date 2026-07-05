@@ -21,6 +21,7 @@
     "db:seed": "node scripts/seed-platform.mjs",
     "db:assign-creator": "node scripts/assign-game-creator.mjs",
     "db:admin": "node scripts/run-admin-control-center.mjs",
+    "db:analytics": "node scripts/run-analytics-events.mjs",
     "db:assign-admin": "node scripts/assign-admin.mjs"
   },
   "dependencies": {

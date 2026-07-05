@@ -101,7 +101,7 @@ export default function CommunityPage() {
         </div>
       </header>
 
-      <main className="relative mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
+      <main className="relative mx-auto max-w-5xl px-4 py-8 text-center sm:px-6 sm:py-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -156,7 +156,7 @@ export default function CommunityPage() {
             </motion.div>
 
             <section>
-              <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-white">
+              <h2 className="mb-4 flex items-center justify-center gap-2 text-lg font-semibold text-white">
                 <Gamepad2 className="size-5 text-cyan-400" />
                 {t("browseByGame")}
               </h2>
@@ -171,9 +171,9 @@ export default function CommunityPage() {
                     <Link
                       href={`/game/${game.id}/forum`}
                       className={cn(
-                        "group flex gap-4 rounded-2xl border border-white/10 bg-zinc-900/60 p-4",
+                        "group flex flex-col items-center gap-4 rounded-2xl border border-white/10 bg-zinc-900/60 p-4 text-center",
                         "transition-all duration-200 hover:border-violet-400/30 hover:bg-zinc-900/80",
-                        "hover:shadow-lg hover:shadow-violet-500/10"
+                        "hover:shadow-lg hover:shadow-violet-500/10 sm:flex-row sm:items-center sm:justify-center"
                       )}
                     >
                       <div className="relative size-20 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-zinc-800">
@@ -187,13 +187,13 @@ export default function CommunityPage() {
                         />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h3 className="truncate text-base font-semibold text-white group-hover:text-violet-50">
+                        <h3 className="text-base font-semibold text-white group-hover:text-violet-50">
                           {game.title}
                         </h3>
                         <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-zinc-500">
                           {localizedDescription(game.title, game.description)}
                         </p>
-                        <div className="mt-3 flex items-center gap-3 text-xs">
+                        <div className="mt-3 flex flex-wrap items-center justify-center gap-3 text-xs">
                           <span className="flex items-center gap-1 text-violet-300">
                             <MessagesSquare className="size-3.5" />
                             {t("threadCount", {

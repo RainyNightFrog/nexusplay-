@@ -55,16 +55,16 @@ export function AdminShell({ title, description, children }: AdminShellProps) {
         </div>
       </header>
 
-      <main className="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10">
-        <div className="mb-8">
+      <main className="relative mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
+        <div className="mb-8 text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/20 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-200">
             <Shield className="size-3.5" />
             Super Admin
           </div>
           <h1 className="mt-4 text-2xl font-bold text-white sm:text-3xl">{title}</h1>
-          <p className="mt-2 max-w-2xl text-sm text-zinc-500">{description}</p>
+          <p className="mx-auto mt-2 max-w-2xl text-sm text-zinc-500">{description}</p>
         </div>
-        {children}
+        <div className="text-center">{children}</div>
       </main>
     </div>
   );

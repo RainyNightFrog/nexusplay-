@@ -625,6 +625,22 @@
     "filterApproved": "已通過",
     "filterRejected": "已拒絕",
     "filterUnread": "未讀",
-    "filterResolved": "已處理"
+    "filterResolved": "已處理",
+    "tabAnalytics": "人流统计",
+    "analyticsToday": "今天",
+    "analyticsWeek": "每周",
+    "analyticsMonth": "每月",
+    "analyticsUpdated": "已更新",
+    "analyticsPageViews": "网页浏览次数",
+    "analyticsUniqueVisitors": "访客人数（不重复）",
+    "analyticsGamePlays": "游戏游玩次数",
+    "analyticsUniquePlayers": "玩家人数（不重复）",
+    "analyticsTrendTitle": "人流趋势",
+    "analyticsTrendDesc": "网页浏览与游戏游玩走势",
+    "analyticsGamesTitle": "游戏游玩排行",
+    "analyticsGamesDesc": "此时段内各游戏的游玩次数与不重复玩家",
+    "analyticsEmptyGames": "此时段内尚无游戏游玩记录。",
+    "analyticsPlaysCount": "{count} 次游玩",
+    "analyticsPlayersCount": "{count} 位玩家"
   }
 }

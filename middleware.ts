@@ -3,6 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { resolveUserRole, hasCreatorDashboardAccess } from "@/lib/auth-profile";
 import { isAdminUser } from "@/lib/admin-auth";
+import { ANALYTICS_SESSION_COOKIE } from "@/lib/analytics-service";
 import { routing } from "@/i18n/routing";
 
 const intlMiddleware = createIntlMiddleware(routing);
@@ -22,6 +23,15 @@ function stripLocalePrefix(pathname: string): string {
 export async function middleware(request: NextRequest) {
   const response = intlMiddleware(request);
   const pathnameWithoutLocale = stripLocalePrefix(request.nextUrl.pathname);
+
+  if (!request.cookies.get(ANALYTICS_SESSION_COOKIE)?.value) {
+    response.cookies.set(ANALYTICS_SESSION_COOKIE, crypto.randomUUID(), {
+      httpOnly: true,
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 365,
+      path: "/",
+    });
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

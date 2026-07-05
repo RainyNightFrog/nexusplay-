@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useParams, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -57,6 +57,7 @@ function GamePageContent() {
   const td = useTranslations("dashboard");
   const tc = useTranslations("common");
   const tn = useTranslations("nav");
+  const locale = useLocale();
   const { localizedDescription, localizedTag } = useGameI18n();
   const { formatCount } = useFormatCount();
   const { translateApiError } = useApiError();
@@ -178,8 +179,11 @@ function GamePageContent() {
 
   useEffect(() => {
     if (!game?.id) return;
-    fetch(`/api/games/${game.id}/play`, { method: "POST" }).catch(() => undefined);
-  }, [game?.id]);
+    fetch(`/api/games/${game.id}/play?locale=${encodeURIComponent(locale)}`, {
+      method: "POST",
+      credentials: "same-origin",
+    }).catch(() => undefined);
+  }, [game?.id, locale]);
 
   useEffect(() => {
     if (!game?.id) return;

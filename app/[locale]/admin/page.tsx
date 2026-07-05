@@ -11,8 +11,10 @@ import {
   MessageSquare,
   RefreshCw,
   ShieldAlert,
+  TrendingUp,
   XCircle,
 } from "lucide-react";
+import { AdminAnalyticsPanel } from "@/components/admin/analytics-panel";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,7 +38,7 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
+  SelectDisplayValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
@@ -234,8 +236,21 @@ export default function AdminPage() {
     return t("statusRejected");
   };
 
+  const gameFilterLabel = (filter: GameApprovalStatus | "all") => {
+    if (filter === "pending") return t("filterPending");
+    if (filter === "approved") return t("filterApproved");
+    if (filter === "rejected") return t("filterRejected");
+    return t("filterAll");
+  };
+
   const feedbackStatusLabel = (status: FeedbackStatus) =>
     status === "unread" ? t("statusUnread") : t("statusResolved");
+
+  const feedbackFilterLabel = (filter: FeedbackStatus | "all") => {
+    if (filter === "unread") return t("filterUnread");
+    if (filter === "resolved") return t("filterResolved");
+    return t("filterAll");
+  };
 
   return (
     <AdminShell title={t("title")} description={t("description")}>
@@ -246,7 +261,7 @@ export default function AdminPage() {
       )}
       <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Card className="border-amber-400/20 bg-zinc-900/60">
-          <CardHeader className="pb-2">
+          <CardHeader className="items-center pb-2 text-center">
             <CardDescription>{t("statPending")}</CardDescription>
             <CardTitle className="text-3xl text-amber-200">
               {stats.pendingGames}
@@ -254,7 +269,7 @@ export default function AdminPage() {
           </CardHeader>
         </Card>
         <Card className="border-cyan-400/20 bg-zinc-900/60">
-          <CardHeader className="pb-2">
+          <CardHeader className="items-center pb-2 text-center">
             <CardDescription>{t("statUnread")}</CardDescription>
             <CardTitle className="text-3xl text-cyan-200">
               {stats.unreadFeedbacks}
@@ -262,15 +277,15 @@ export default function AdminPage() {
           </CardHeader>
         </Card>
         <Card className="border-violet-400/20 bg-zinc-900/60 sm:col-span-2 lg:col-span-1">
-          <CardHeader className="pb-2">
+          <CardHeader className="items-center pb-2 text-center">
             <CardDescription>{t("tabLogs")}</CardDescription>
             <CardTitle className="text-3xl text-violet-200">{logs.length}</CardTitle>
           </CardHeader>
         </Card>
       </div>
 
-      <Tabs defaultValue="games">
-        <TabsList className="mb-6 border border-white/10 bg-zinc-900/80 p-1">
+      <Tabs defaultValue="games" className="mx-auto w-full">
+        <TabsList className="mx-auto mb-6 flex w-fit border border-white/10 bg-zinc-900/80 p-1">
           <TabsTrigger value="games" className="gap-1.5 px-4">
             <ShieldAlert className="size-4" />
             {t("tabGames")}
@@ -283,20 +298,26 @@ export default function AdminPage() {
             <ClipboardList className="size-4" />
             {t("tabLogs")}
           </TabsTrigger>
+          <TabsTrigger value="analytics" className="gap-1.5 px-4">
+            <TrendingUp className="size-4" />
+            {t("tabAnalytics")}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="games">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="mb-4 flex flex-wrap items-center justify-center gap-3">
             <Select
               value={gameFilter}
               onValueChange={(value) =>
                 setGameFilter(value as GameApprovalStatus | "all")
               }
             >
-              <SelectTrigger className="w-44 border-white/10 bg-zinc-900/80">
-                <SelectValue />
+              <SelectTrigger className="w-44 border-white/10 bg-zinc-900/80 text-zinc-100">
+                <SelectDisplayValue>
+                  {gameFilterLabel(gameFilter)}
+                </SelectDisplayValue>
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="border-white/10 bg-zinc-900 text-zinc-100">
                 <SelectItem value="pending">{t("filterPending")}</SelectItem>
                 <SelectItem value="approved">{t("filterApproved")}</SelectItem>
                 <SelectItem value="rejected">{t("filterRejected")}</SelectItem>
@@ -337,8 +358,8 @@ export default function AdminPage() {
                   transition={{ delay: index * 0.04 }}
                 >
                   <Card className="overflow-hidden border-white/10 bg-zinc-900/60">
-                    <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start">
-                      <div className="relative h-24 w-full shrink-0 overflow-hidden rounded-xl sm:h-20 sm:w-32">
+                    <CardContent className="flex flex-col items-center gap-4 p-4 text-center sm:flex-row sm:items-start sm:justify-center">
+                      <div className="relative h-24 w-full max-w-xs shrink-0 overflow-hidden rounded-xl sm:h-20 sm:w-32">
                         <Image
                           src={game.cover_url}
                           alt={game.title}
@@ -347,7 +368,7 @@ export default function AdminPage() {
                         />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex flex-wrap items-center justify-center gap-2">
                           <h3 className="font-semibold text-white">{game.title}</h3>
                           <Badge
                             className={cn(
@@ -369,7 +390,7 @@ export default function AdminPage() {
                         </p>
                       </div>
                       {game.status === "pending" && (
-                        <div className="flex shrink-0 gap-2 sm:flex-col">
+                        <div className="flex shrink-0 justify-center gap-2 sm:flex-col">
                           <Button
                             size="sm"
                             disabled={actionId === `game-${game.id}`}
@@ -404,17 +425,19 @@ export default function AdminPage() {
         </TabsContent>
 
         <TabsContent value="feedbacks">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="mb-4 flex flex-wrap items-center justify-center gap-3">
             <Select
               value={feedbackFilter}
               onValueChange={(value) =>
                 setFeedbackFilter(value as FeedbackStatus | "all")
               }
             >
-              <SelectTrigger className="w-44 border-white/10 bg-zinc-900/80">
-                <SelectValue />
+              <SelectTrigger className="w-44 border-white/10 bg-zinc-900/80 text-zinc-100">
+                <SelectDisplayValue>
+                  {feedbackFilterLabel(feedbackFilter)}
+                </SelectDisplayValue>
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="border-white/10 bg-zinc-900 text-zinc-100">
                 <SelectItem value="unread">{t("filterUnread")}</SelectItem>
                 <SelectItem value="resolved">{t("filterResolved")}</SelectItem>
                 <SelectItem value="all">{t("filterAll")}</SelectItem>
@@ -451,8 +474,8 @@ export default function AdminPage() {
                   key={feedback.id}
                   className="border-white/10 bg-zinc-900/60"
                 >
-                  <CardHeader className="pb-3">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
+                  <CardHeader className="pb-3 text-center">
+                    <div className="flex flex-col items-center gap-3">
                       <div>
                         <CardTitle className="text-base text-white">
                           {feedback.subject}
@@ -472,7 +495,7 @@ export default function AdminPage() {
                       </Badge>
                     </div>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent className="space-y-4 text-center">
                     <p className="whitespace-pre-wrap text-sm text-zinc-300">
                       {feedback.message}
                     </p>
@@ -499,7 +522,7 @@ export default function AdminPage() {
         </TabsContent>
 
         <TabsContent value="logs">
-          <div className="mb-4 flex justify-end">
+          <div className="mb-4 flex justify-center">
             <Button
               variant="outline"
               size="sm"
@@ -530,7 +553,7 @@ export default function AdminPage() {
                 {logs.map((log) => (
                   <div
                     key={log.id}
-                    className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                    className="flex flex-col items-center gap-1 px-4 py-3 text-center sm:flex-row sm:justify-center sm:gap-6"
                   >
                     <div>
                       <p className="text-sm font-medium text-white">
@@ -550,6 +573,10 @@ export default function AdminPage() {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        <TabsContent value="analytics">
+          <AdminAnalyticsPanel onError={setPageError} />
         </TabsContent>
       </Tabs>
 

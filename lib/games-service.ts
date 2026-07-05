@@ -72,16 +72,20 @@ export async function getGameById(id: number): Promise<Game | null> {
 
 export async function incrementGamePlays(id: number): Promise<void> {
   const supabase = createServerSupabase();
-  const { data: current, error: readError } = await supabase
-    .from("games")
-    .select("plays_count")
-    .eq("id", id)
-    .maybeSingle();
+  const { error } = await supabase.rpc("increment_game_plays", {
+    p_game_id: id,
+  });
 
-  if (readError || !current) {
-    return;
+  if (error) {
+    const { data: current } = await supabase
+      .from("games")
+      .select("plays_count")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (!current) return;
+
+    const nextCount = (current.plays_count ?? 0) + 1;
+    await supabase.from("games").update({ plays_count: nextCount }).eq("id", id);
   }
-
-  const nextCount = (current.plays_count ?? 0) + 1;
-  await supabase.from("games").update({ plays_count: nextCount }).eq("id", id);
 }
