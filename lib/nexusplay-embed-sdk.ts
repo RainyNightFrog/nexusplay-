@@ -42,6 +42,34 @@ export function buildNexusPlayEmbedSdkScript() {
     });
   }
 
+  function mergeSaves(local,cloud){
+    if(!local&&!cloud)return null;
+    if(!local)return cloud?Object.assign({},cloud):null;
+    if(!cloud)return Object.assign({},local);
+    var result=Object.assign({},cloud);
+    Object.keys(local).forEach(function(key){
+      var lv=local[key],cv=result[key];
+      if(typeof lv==='number'&&typeof cv==='number'){result[key]=Math.max(lv,cv);return;}
+      if(lv&&cv&&typeof lv==='object'&&typeof cv==='object'&&!Array.isArray(lv)&&!Array.isArray(cv)){
+        result[key]=mergeSaves(lv,cv)||cv;return;
+      }
+      if(cv===undefined)result[key]=lv;
+    });
+    return result;
+  }
+
+  function readLocalSave(localKey){
+    if(typeof localKey==='function')return localKey();
+    if(typeof localKey!=='string')return null;
+    try{
+      var raw=localStorage.getItem(localKey);
+      if(!raw)return null;
+      var parsed=JSON.parse(raw);
+      if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))return null;
+      return parsed;
+    }catch(_e){return null;}
+  }
+
   window.NexusPlay={
     gameId:gameId,
     getUser:function(){
@@ -49,6 +77,7 @@ export function buildNexusPlayEmbedSdkScript() {
       return user?Object.assign({},user):null;
     },
     waitForAuth:waitForAuth,
+    mergeSaves:mergeSaves,
     loadSave:async function(){
       if(!gameId)throw new Error('NexusPlay: missing gameId');
       var res=await fetch('/api/games/'+gameId+'/save',{credentials:'same-origin'});
@@ -59,6 +88,16 @@ export function buildNexusPlayEmbedSdkScript() {
       }
       var data=await res.json();
       return data.save??null;
+    },
+    loadSaveMerged:async function(localKey){
+      var local=readLocalSave(localKey);
+      var cloud=null;
+      try{cloud=await window.NexusPlay.loadSave();}catch(_e){}
+      var merged=mergeSaves(local,cloud);
+      if(merged&&user){
+        try{await window.NexusPlay.saveSave(merged);}catch(_e){}
+      }
+      return merged;
     },
     saveSave:async function(payload){
       if(!gameId)throw new Error('NexusPlay: missing gameId');
@@ -75,12 +114,34 @@ export function buildNexusPlayEmbedSdkScript() {
       }
       var data=await res.json();
       return data.save??null;
+    },
+    importLegacySave:async function(code){
+      if(!gameId)throw new Error('NexusPlay: missing gameId');
+      var res=await fetch('/api/games/'+gameId+'/save/import-legacy',{
+        method:'POST',
+        credentials:'same-origin',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({code:code})
+      });
+      var data=await res.json().catch(function(){return {};});
+      if(!res.ok)throw new Error(data.error||('importLegacySave failed: '+res.status));
+      return data.save??null;
     }
   };
 
   try{
     window.parent.postMessage({type:READY_TYPE,gameId:gameId},location.origin);
   }catch(_e){}
+
+  window.addEventListener('message',function(e){
+    if(e.origin!==location.origin)return;
+    var d=e.data;
+    if(!d||d.type!=='nexusplay:resize')return;
+    document.documentElement.style.setProperty('--np-embed-width',(d.width||0)+'px');
+    document.documentElement.style.setProperty('--np-embed-height',(d.height||0)+'px');
+    document.documentElement.classList.toggle('np-embed-expanded',!!d.expanded);
+    window.dispatchEvent(new Event('resize'));
+  });
 })();
 </script>`;
 }
@@ -92,3 +153,4 @@ export type NexusPlayAuthUser = {
 
 export const NEXUSPLAY_AUTH_MESSAGE = "nexusplay:auth";
 export const NEXUSPLAY_READY_MESSAGE = "nexusplay:ready";
+export const NEXUSPLAY_RESIZE_MESSAGE = "nexusplay:resize";

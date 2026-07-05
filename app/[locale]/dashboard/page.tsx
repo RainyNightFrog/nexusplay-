@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
+import { SiteHeader } from "@/components/layout/site-header";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -239,8 +240,7 @@ export default function CreatorDashboardPage() {
 
   return (
     <div className="dark relative min-h-full text-zinc-100">
-      <header className="sticky top-0 z-40 border-b border-white/5 bg-zinc-950/70 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
+      <SiteHeader>
           <Link
             href="/"
             className={cn(
@@ -252,12 +252,12 @@ export default function CreatorDashboardPage() {
             <span className="hidden sm:inline">{tNav("backHome")}</span>
           </Link>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex min-w-0 flex-1 items-center gap-2.5">
             <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400 to-violet-600 shadow-md shadow-cyan-500/20">
               <BarChart3 className="size-4 text-white" />
             </div>
-            <div>
-              <p className="text-sm font-semibold text-white">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-white">
                 {t("creatorDashboard")}
               </p>
               <p className="hidden text-xs text-zinc-500 sm:block">
@@ -280,8 +280,7 @@ export default function CreatorDashboardPage() {
               <span className="sm:hidden">{t("uploadShort")}</span>
             </Link>
           </div>
-        </div>
-      </header>
+      </SiteHeader>
 
       <main className="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
         <motion.div

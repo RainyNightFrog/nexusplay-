@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { buttonVariants } from "@/components/ui/button";
+import { SiteHeader } from "@/components/layout/site-header";
 import { cn } from "@/lib/utils";
 
 export function CommunityRulesView() {
@@ -52,8 +53,7 @@ export function CommunityRulesView() {
 
   return (
     <div className="dark relative min-h-full text-zinc-100">
-      <header className="sticky top-0 z-40 border-b border-white/5 bg-zinc-950/75 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-5xl items-center gap-4 px-4 sm:px-6">
+      <SiteHeader>
           <Link
             href="/community"
             className={cn(
@@ -65,16 +65,15 @@ export function CommunityRulesView() {
             <span className="hidden sm:inline">{tCommunity("hub")}</span>
           </Link>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex min-w-0 flex-1 items-center gap-2.5">
             <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-600 shadow-md shadow-violet-500/20">
               <ScrollText className="size-4 text-white" />
             </div>
-            <span className="text-base font-bold tracking-tight text-white">
+            <span className="truncate text-base font-bold tracking-tight text-white">
               {t("title")}
             </span>
           </div>
-        </div>
-      </header>
+      </SiteHeader>
 
       <main className="relative mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
         <div className="grid gap-8 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-12">

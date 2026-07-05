@@ -4,13 +4,23 @@ import { Cloud, LogIn } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
-const SDK_SNIPPET = `// 玩家登入由平台處理，遊戲內無需自建登入 UI
+const BASIC_SDK_SNIPPET = `// 玩家登入由平台處理，遊戲內無需自建登入 UI
 const user = await NexusPlay.waitForAuth();
 if (user) {
   const save = await NexusPlay.loadSave();
   // 還原 save ...
 }
 await NexusPlay.saveSave({ level: 1, coins: 100 });`;
+
+const MERGE_SDK_SNIPPET = `// 訪客可玩；登入後合併本機 + 雲端並上傳
+await NexusPlay.waitForAuth();
+const save = await NexusPlay.loadSaveMerged("my-game-save");
+// 或：NexusPlay.loadSaveMerged(() => readYourOldLocalSave())`;
+
+const IMPORT_SDK_SNIPPET = `// 舊平台玩家：登入後輸入創作者提供的遷移碼
+await NexusPlay.waitForAuth();
+const save = await NexusPlay.importLegacySave(playerEnteredCode);
+// 成功後 save 已寫入 NexusPlay 雲端`;
 
 type PlatformAuthNoticeProps = {
   className?: string;
@@ -47,13 +57,31 @@ export function PlatformAuthNotice({ className }: PlatformAuthNoticeProps) {
             <li>{t("platformAuthNoticePoint1")}</li>
             <li>{t("platformAuthNoticePoint2")}</li>
             <li>{t("platformAuthNoticePoint3")}</li>
+            <li>{t("platformAuthNoticePoint4")}</li>
+            <li>{t("platformAuthNoticePoint5")}</li>
           </ul>
           <details className="group rounded-xl border border-white/10 bg-black/20">
             <summary className="cursor-pointer px-3 py-2 text-xs font-medium text-sky-300 hover:text-sky-200">
               {t("platformAuthNoticeSdkToggle")}
             </summary>
             <pre className="overflow-x-auto px-3 pb-3 text-[11px] leading-relaxed text-zinc-400">
-              <code>{SDK_SNIPPET}</code>
+              <code>{BASIC_SDK_SNIPPET}</code>
+            </pre>
+          </details>
+          <details className="group rounded-xl border border-white/10 bg-black/20">
+            <summary className="cursor-pointer px-3 py-2 text-xs font-medium text-sky-300 hover:text-sky-200">
+              {t("platformAuthNoticeMergeToggle")}
+            </summary>
+            <pre className="overflow-x-auto px-3 pb-3 text-[11px] leading-relaxed text-zinc-400">
+              <code>{MERGE_SDK_SNIPPET}</code>
+            </pre>
+          </details>
+          <details className="group rounded-xl border border-white/10 bg-black/20">
+            <summary className="cursor-pointer px-3 py-2 text-xs font-medium text-sky-300 hover:text-sky-200">
+              {t("platformAuthNoticeImportToggle")}
+            </summary>
+            <pre className="overflow-x-auto px-3 pb-3 text-[11px] leading-relaxed text-zinc-400">
+              <code>{IMPORT_SDK_SNIPPET}</code>
             </pre>
           </details>
         </div>

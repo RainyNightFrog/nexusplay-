@@ -12,6 +12,7 @@
     "db:publish": "node scripts/run-add-publish-monetization.mjs",
     "db:status": "node scripts/run-add-game-status.mjs",
     "db:game-saves": "node scripts/run-game-saves.mjs",
+    "db:legacy-imports": "node scripts/run-legacy-imports.mjs",
     "db:leaderboard": "node scripts/run-leaderboard.mjs",
     "db:game-page": "node scripts/run-game-page-content.mjs",
     "setup:google": "node scripts/setup-google-oauth.mjs",
@@ -24,6 +25,7 @@
     "db:assign-creator": "node scripts/assign-game-creator.mjs",
     "db:admin": "node scripts/run-admin-control-center.mjs",
     "db:analytics": "node scripts/run-analytics-events.mjs",
+    "db:activity-stats": "node scripts/run-user-activity-stats.mjs",
     "db:assign-admin": "node scripts/assign-admin.mjs"
   },
   "dependencies": {

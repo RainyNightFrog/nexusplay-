@@ -6,7 +6,6 @@ import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   AlertCircle,
-  Gamepad2,
   Loader2,
   Lock,
   Mail,
@@ -16,6 +15,7 @@ import {
 } from "lucide-react";
 import { Link, useRouter } from "@/i18n/navigation";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
+import { SiteHeader } from "@/components/layout/site-header";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -171,19 +171,13 @@ export default function AuthPage() {
 
   return (
     <div className="dark relative min-h-full overflow-hidden text-zinc-100">
-      <div className="relative mx-auto flex min-h-full max-w-6xl flex-col px-4 py-10 sm:px-6 lg:px-8">
-        <div className="mb-10 flex items-center justify-between">
-          <Link href="/" className="inline-flex w-fit items-center gap-2.5">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400 to-violet-600 shadow-lg shadow-cyan-500/25">
-              <Gamepad2 className="size-5 text-white" />
-            </div>
-            <span className="bg-gradient-to-r from-white via-cyan-100 to-violet-200 bg-clip-text text-xl font-bold tracking-tight text-transparent">
-              NexusPlay
-            </span>
-          </Link>
+      <SiteHeader>
+        <div className="ml-auto">
           <LanguageSwitcher />
         </div>
+      </SiteHeader>
 
+      <div className="relative mx-auto flex min-h-full max-w-6xl flex-col px-4 py-10 sm:px-6 lg:px-8">
         <div className="grid flex-1 items-center gap-10 lg:grid-cols-[1.1fr_420px]">
           <motion.div
             initial={{ opacity: 0, x: -24 }}

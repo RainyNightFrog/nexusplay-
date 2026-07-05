@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { NavActions } from "@/components/layout/nav-actions";
+import { SiteHeader } from "@/components/layout/site-header";
 import { CommunityForum } from "@/components/game/community-forum";
 import { FEATURED_GAMES } from "@/lib/platform-catalog";
 import { isSupabaseImage, type Game } from "@/lib/games";
@@ -73,8 +74,7 @@ export default function CommunityPage() {
 
   return (
     <div className="dark relative min-h-full text-zinc-100">
-      <header className="sticky top-0 z-40 border-b border-white/5 bg-zinc-950/70 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-5xl items-center gap-4 px-4 sm:px-6">
+      <SiteHeader>
           <Link
             href="/"
             className={cn(
@@ -86,11 +86,11 @@ export default function CommunityPage() {
             <span className="hidden sm:inline">{tNav("home")}</span>
           </Link>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex min-w-0 flex-1 items-center gap-2.5">
             <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-600 shadow-md shadow-violet-500/20">
               <MessagesSquare className="size-4 text-white" />
             </div>
-            <span className="bg-gradient-to-r from-white via-violet-100 to-fuchsia-200 bg-clip-text text-base font-bold tracking-tight text-transparent">
+            <span className="truncate bg-gradient-to-r from-white via-violet-100 to-fuchsia-200 bg-clip-text text-base font-bold tracking-tight text-transparent">
               {t("hub")}
             </span>
           </div>
@@ -98,8 +98,7 @@ export default function CommunityPage() {
           <div className="ml-auto">
             <NavActions />
           </div>
-        </div>
-      </header>
+      </SiteHeader>
 
       <main className="relative mx-auto max-w-5xl px-4 py-8 text-center sm:px-6 sm:py-10">
         <motion.div

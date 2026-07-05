@@ -24,6 +24,8 @@ import {
 import { GameEmbedBridge } from "@/components/game/game-embed-bridge";
 import { GameDetailSections } from "@/components/game/game-detail-sections";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
+import { SiteHeader } from "@/components/layout/site-header";
+import { LeaderboardNavButton } from "@/components/LeaderboardModal";
 import { Link, useRouter } from "@/i18n/navigation";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { isDirectlyPlayable } from "@/lib/games-data";
@@ -33,6 +35,7 @@ import { TAG_COLORS, type Game } from "@/lib/games";
 import { useGameI18n } from "@/hooks/use-game-i18n";
 import { useFormatCount } from "@/hooks/use-format-count";
 import { useApiError } from "@/hooks/use-api-error";
+import { useEscapeKey, useScrollLock } from "@/hooks/use-scroll-lock";
 import { cn } from "@/lib/utils";
 
 function GamePageFallback() {
@@ -81,12 +84,30 @@ function GamePageContent() {
   const [showFullscreen, setShowFullscreen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const fullscreenIframeRef = useRef<HTMLIFrameElement>(null);
 
   const showToast = useCallback((message: string) => {
     setToast(message);
     window.setTimeout(() => setToast(null), 2500);
   }, []);
+
+  const closeFullscreen = useCallback(() => setShowFullscreen(false), []);
+  const closeEmbed = useCallback(() => setShowEmbed(false), []);
+
+  useScrollLock(showFullscreen || showEmbed);
+  useEscapeKey(showFullscreen, closeFullscreen);
+  useEscapeKey(showEmbed, closeEmbed);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (showFullscreen || showEmbed) {
+      root.dataset.gameModalOpen = "true";
+    } else {
+      delete root.dataset.gameModalOpen;
+    }
+    return () => {
+      delete root.dataset.gameModalOpen;
+    };
+  }, [showFullscreen, showEmbed]);
 
   useEffect(() => {
     let cancelled = false;
@@ -294,8 +315,7 @@ function GamePageContent() {
 
   return (
     <div className="dark relative min-h-full text-zinc-100">
-      <header className="sticky top-0 z-40 border-b border-white/5 bg-zinc-950/70 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
+      <SiteHeader>
           <Link
             href="/"
             className={cn(
@@ -307,20 +327,12 @@ function GamePageContent() {
             <span className="hidden sm:inline">{tn("backHome")}</span>
           </Link>
 
-          <Link href="/" className="flex shrink-0 items-center gap-2.5">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400 to-violet-600 shadow-md shadow-cyan-500/20">
-              <Gamepad2 className="size-4 text-white" />
-            </div>
-            <span className="hidden bg-gradient-to-r from-white via-cyan-100 to-violet-200 bg-clip-text text-base font-bold tracking-tight text-transparent sm:block">
-              NexusPlay
-            </span>
-          </Link>
-
-          <h1 className="ml-2 truncate text-sm font-medium text-zinc-300 sm:text-base">
+          <h1 className="min-w-0 flex-1 truncate text-sm font-medium text-zinc-300 sm:text-base">
             {game.title}
           </h1>
 
           <div className="ml-auto flex items-center gap-2">
+            <LeaderboardNavButton />
             <LanguageSwitcher />
             <Link
               href={`/game/${game.id}/forum`}
@@ -338,8 +350,7 @@ function GamePageContent() {
               )}
             </Link>
           </div>
-        </div>
-      </header>
+      </SiteHeader>
 
       {isDraftPreview && (
         <div className="border-b border-amber-400/20 bg-amber-500/10 px-4 py-2.5 text-center text-sm text-amber-200">
@@ -350,18 +361,55 @@ function GamePageContent() {
       <main className="relative mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
         <div className="grid gap-6 lg:grid-cols-[1fr_360px] lg:gap-8 xl:grid-cols-[1fr_400px]">
           <motion.section
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             transition={{ duration: 0.4 }}
             className="min-w-0"
           >
             <div
               className={cn(
-                "overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/60",
-                "shadow-2xl shadow-black/50 ring-1 ring-white/5"
+                showFullscreen && iframeSrc
+                  ? "fixed inset-3 z-[61] flex flex-col overflow-hidden overscroll-contain sm:inset-4 md:inset-6"
+                  : "overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/60 shadow-2xl shadow-black/50 ring-1 ring-white/5",
+                showFullscreen &&
+                  iframeSrc &&
+                  "rounded-2xl border border-white/10 bg-zinc-950 shadow-2xl shadow-black/60"
               )}
+              onClick={(event) => {
+                if (showFullscreen) event.stopPropagation();
+              }}
+              onWheel={(event) => {
+                if (showFullscreen) event.stopPropagation();
+              }}
             >
-              <div className="relative h-[min(78vh,820px)] min-h-[560px] w-full bg-black">
+              {showFullscreen && iframeSrc && (
+                <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-white">
+                      {game.title}
+                    </p>
+                    <p className="text-xs text-zinc-500">{tc("fullscreenHint")}</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={closeFullscreen}
+                    className="shrink-0 text-zinc-400 hover:text-white"
+                    aria-label={tc("fullscreenHint")}
+                  >
+                    <X className="size-4" />
+                  </Button>
+                </div>
+              )}
+
+              <div
+                className={cn(
+                  "relative w-full bg-black",
+                  showFullscreen && iframeSrc
+                    ? "min-h-0 flex-1"
+                    : "h-[min(78vh,820px)] min-h-[560px]"
+                )}
+              >
                 {iframeSrc ? (
                   <>
                     <iframe
@@ -373,7 +421,11 @@ function GamePageContent() {
                       allowFullScreen
                       referrerPolicy="no-referrer"
                     />
-                    <GameEmbedBridge iframeRef={iframeRef} gameId={gameId} />
+                    <GameEmbedBridge
+                      iframeRef={iframeRef}
+                      gameId={gameId}
+                      expanded={showFullscreen}
+                    />
                   </>
                 ) : (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-6 text-center">
@@ -396,43 +448,53 @@ function GamePageContent() {
                   </div>
                 )}
               </div>
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/5 px-4 py-3">
-                <p className="text-xs text-zinc-500">
-                  {playable ? t("startPlayHint") : t("reuploadHint")}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleShare}
-                    className="gap-1.5 border-white/10 bg-white/5 text-zinc-300 hover:border-cyan-400/30 hover:text-white"
-                  >
-                    <Share2 className="size-3.5" />
-                    {tc("share")}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowEmbed(true)}
-                    disabled={!iframeSrc}
-                    className="gap-1.5 border-white/10 bg-white/5 text-zinc-300 hover:border-violet-400/30 hover:text-white disabled:opacity-40"
-                  >
-                    <Code2 className="size-3.5" />
-                    {tc("embed")}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowFullscreen(true)}
-                    disabled={!iframeSrc}
-                    className="gap-1.5 border-white/10 bg-white/5 text-zinc-300 hover:border-amber-400/30 hover:text-white disabled:opacity-40"
-                  >
-                    <Maximize2 className="size-3.5" />
-                    {tc("expandGame")}
-                  </Button>
+
+              {!showFullscreen && (
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/5 px-4 py-3">
+                  <p className="text-xs text-zinc-500">
+                    {playable ? t("startPlayHint") : t("reuploadHint")}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleShare}
+                      className="gap-1.5 border-white/10 bg-white/5 text-zinc-300 hover:border-cyan-400/30 hover:text-white"
+                    >
+                      <Share2 className="size-3.5" />
+                      {tc("share")}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowEmbed(true)}
+                      disabled={!iframeSrc}
+                      className="gap-1.5 border-white/10 bg-white/5 text-zinc-300 hover:border-violet-400/30 hover:text-white disabled:opacity-40"
+                    >
+                      <Code2 className="size-3.5" />
+                      {tc("embed")}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowFullscreen(true)}
+                      disabled={!iframeSrc}
+                      className="gap-1.5 border-white/10 bg-white/5 text-zinc-300 hover:border-amber-400/30 hover:text-white disabled:opacity-40"
+                    >
+                      <Maximize2 className="size-3.5" />
+                      {tc("expandGame")}
+                    </Button>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
+
+            {showFullscreen && iframeSrc && (
+              <div
+                className="h-[min(78vh,820px)] min-h-[560px]"
+                aria-hidden
+              />
+            )}
           </motion.section>
 
           <motion.aside
@@ -575,58 +637,15 @@ function GamePageContent() {
 
       <AnimatePresence>
         {showFullscreen && iframeSrc && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md"
-              onClick={() => setShowFullscreen(false)}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.96 }}
-              className={cn(
-                "fixed inset-3 z-50 flex flex-col overflow-hidden sm:inset-4 md:inset-6",
-                "rounded-2xl border border-white/10 bg-zinc-950 shadow-2xl shadow-black/60"
-              )}
-              onClick={(event) => event.stopPropagation()}
-            >
-              <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-white">
-                    {game.title}
-                  </p>
-                  <p className="text-xs text-zinc-500">{tc("fullscreenHint")}</p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => setShowFullscreen(false)}
-                  className="shrink-0 text-zinc-400 hover:text-white"
-                  aria-label={tc("fullscreenHint")}
-                >
-                  <X className="size-4" />
-                </Button>
-              </div>
-              <div className="relative min-h-0 flex-1 bg-black">
-                <iframe
-                  ref={fullscreenIframeRef}
-                  src={iframeSrc}
-                  title={`${game.title} · ${tc("expandGameTitle")}`}
-                  className="absolute inset-0 size-full border-0"
-                  sandbox={IFRAME_SANDBOX}
-                  allowFullScreen
-                  referrerPolicy="no-referrer"
-                />
-                <GameEmbedBridge
-                  iframeRef={fullscreenIframeRef}
-                  gameId={gameId}
-                />
-              </div>
-            </motion.div>
-          </>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] touch-none overscroll-none bg-black/90 backdrop-blur-md"
+            onClick={closeFullscreen}
+            onWheel={(event) => event.preventDefault()}
+            onTouchMove={(event) => event.preventDefault()}
+          />
         )}
       </AnimatePresence>
 
@@ -637,17 +656,20 @@ function GamePageContent() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm"
-              onClick={() => setShowEmbed(false)}
+              className="fixed inset-0 z-[60] touch-none overscroll-none bg-black/70 backdrop-blur-sm"
+              onClick={closeEmbed}
+              onWheel={(event) => event.preventDefault()}
+              onTouchMove={(event) => event.preventDefault()}
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className={cn(
-                "fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2",
-                "rounded-2xl border border-white/10 bg-zinc-900 p-5 shadow-2xl shadow-black/60"
+                "fixed left-1/2 top-1/2 z-[61] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2",
+                "overscroll-contain rounded-2xl border border-white/10 bg-zinc-900 p-5 shadow-2xl shadow-black/60"
               )}
+              onWheel={(event) => event.stopPropagation()}
             >
               <div className="mb-4 flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -657,7 +679,7 @@ function GamePageContent() {
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  onClick={() => setShowEmbed(false)}
+                  onClick={closeEmbed}
                   className="text-zinc-400 hover:text-white"
                 >
                   <X className="size-4" />

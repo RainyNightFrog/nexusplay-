@@ -26,12 +26,14 @@ import {
   X,
 } from "lucide-react";
 import { Link, getPathname } from "@/i18n/navigation";
+import { SiteHeader } from "@/components/layout/site-header";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   PublishMonetizationFields,
   type PublishMonetizationValues,
 } from "@/components/dashboard/publish-monetization-fields";
 import { PlatformAuthNotice } from "@/components/dashboard/platform-auth-notice";
+import { LegacyImportPanel } from "@/components/dashboard/legacy-import-panel";
 import {
   DevlogPublishFields,
   GalleryUploadFields,
@@ -506,26 +508,27 @@ export default function EditGamePage() {
 
   return (
     <div className="dark relative min-h-full text-zinc-100">
-      <header className="sticky top-0 z-40 border-b border-white/5 bg-zinc-950/70 backdrop-blur-xl">
-        <div className="relative mx-auto flex h-16 max-w-3xl items-center justify-center px-4 sm:px-6">
+      <SiteHeader>
           <Link
             href="/dashboard"
             className={cn(
               buttonVariants({ variant: "ghost", size: "sm" }),
-              "absolute left-4 gap-1.5 text-zinc-400 hover:text-cyan-300 sm:left-6"
+              "gap-1.5 text-zinc-400 hover:text-cyan-300"
             )}
           >
             <ArrowLeft className="size-4" />
             <span className="hidden sm:inline">{tCommon("backDashboard")}</span>
           </Link>
-          <div className="flex items-center justify-center gap-2.5">
+
+          <div className="flex min-w-0 flex-1 items-center gap-2.5">
             <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400 to-violet-600">
               <Pencil className="size-4 text-white" />
             </div>
-            <span className="text-sm font-semibold text-white">{t("editGame")}</span>
+            <span className="truncate text-sm font-semibold text-white">
+              {t("editGame")}
+            </span>
           </div>
-        </div>
-      </header>
+      </SiteHeader>
 
       <main className="relative mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
         <motion.div
@@ -724,6 +727,7 @@ export default function EditGamePage() {
             />
 
             <PlatformAuthNotice />
+            {!Number.isNaN(gameId) && <LegacyImportPanel gameId={String(gameId)} />}
 
             <div className="flex flex-col gap-3 border-t border-white/5 pt-6 sm:flex-row">
               <motion.div

@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { Gamepad2, Loader2, Rocket, Sparkles, Wand2 } from "lucide-react";
 import { useRouter } from "@/i18n/navigation";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
+import { SiteHeader } from "@/components/layout/site-header";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -115,9 +116,11 @@ export default function ChooseRolePage() {
 
   return (
     <div className="dark relative min-h-full overflow-hidden text-zinc-100">
-      <div className="absolute top-4 right-4 z-10">
-        <LanguageSwitcher />
-      </div>
+      <SiteHeader>
+        <div className="ml-auto">
+          <LanguageSwitcher />
+        </div>
+      </SiteHeader>
 
       <div className="relative mx-auto flex min-h-full max-w-lg flex-col justify-center px-4 py-12">
         <motion.div

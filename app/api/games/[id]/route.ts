@@ -11,6 +11,7 @@ import {
   removeStoragePaths,
   uploadBuffer,
 } from "@/lib/game-storage";
+import { deleteGameAndAssets } from "@/lib/game-delete-server";
 import { UPLOAD_CATEGORIES } from "@/lib/games";
 import { mapRecordToGame } from "@/lib/games-data";
 import { canViewGame, parseMonetizationFromFormData } from "@/lib/game-publish";
@@ -438,36 +439,12 @@ export async function DELETE(
     }
 
     const record = authResult.record;
-    const isOrphan = authResult.isOrphan;
 
-    let deleteQuery = supabase.from("games").delete().eq("id", numericId);
-
-    if (isOrphan) {
-      deleteQuery = deleteQuery.is("creator_id", null);
-    } else {
-      deleteQuery = deleteQuery.eq("creator_id", user.id);
-    }
-
-    const { error: deleteError } = await deleteQuery;
-
-    if (deleteError) {
-      throw new Error(`刪除遊戲失敗：${deleteError.message}`);
-    }
-
-    const coverPath = extractPublicStoragePath(record.cover_url, COVERS_BUCKET);
-    if (coverPath) {
-      await removeStoragePaths(supabase, COVERS_BUCKET, [coverPath]);
-    }
-
-    const gameUrl = record.game_url;
-    if (gameUrl) {
-      const zipPath = extractPublicStoragePath(gameUrl, FILES_BUCKET);
-      if (zipPath?.toLowerCase().endsWith(".zip")) {
-        await removeStoragePaths(supabase, FILES_BUCKET, [zipPath]);
-      } else {
-        await removeBuildFolder(supabase, gameUrl);
-      }
-    }
+    await deleteGameAndAssets(supabase, record, {
+      mode: "creator",
+      userId: user.id,
+      isOrphan: authResult.isOrphan,
+    });
 
     return NextResponse.json({ ok: true, id: numericId });
   } catch (error) {

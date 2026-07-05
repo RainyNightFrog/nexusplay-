@@ -1,9 +1,10 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { ArrowLeft, Gamepad2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
+import { SiteHeader } from "@/components/layout/site-header";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -27,29 +28,22 @@ export function AccountShell({
 
   return (
     <div className="dark relative min-h-full text-zinc-100">
-      <header className="sticky top-0 z-40 border-b border-white/5 bg-zinc-950/70 backdrop-blur-xl">
-        <div className="relative mx-auto flex h-16 max-w-3xl items-center justify-center px-4 sm:px-6">
-          <Link
-            href={backHref}
-            className={cn(
-              buttonVariants({ variant: "ghost", size: "sm" }),
-              "absolute left-4 gap-1.5 text-zinc-400 hover:text-cyan-300 sm:left-6"
-            )}
-          >
-            <ArrowLeft className="size-4" />
-            <span className="hidden sm:inline">{resolvedBackLabel}</span>
-          </Link>
-          <Link href="/" className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400 to-violet-600">
-              <Gamepad2 className="size-4 text-white" />
-            </div>
-            <span className="text-sm font-semibold text-white">NexusPlay</span>
-          </Link>
-          <div className="absolute right-4 sm:right-6">
-            <LanguageSwitcher />
-          </div>
+      <SiteHeader maxWidth="7xl">
+        <Link
+          href={backHref}
+          className={cn(
+            buttonVariants({ variant: "ghost", size: "sm" }),
+            "gap-1.5 text-zinc-400 hover:text-cyan-300"
+          )}
+        >
+          <ArrowLeft className="size-4" />
+          <span className="hidden sm:inline">{resolvedBackLabel}</span>
+        </Link>
+
+        <div className="ml-auto">
+          <LanguageSwitcher />
         </div>
-      </header>
+      </SiteHeader>
 
       <main className="relative mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
         <div className="mb-8 text-center">

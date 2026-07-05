@@ -17,7 +17,9 @@ import { Link } from "@/i18n/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import { CommunityForum } from "@/components/game/community-forum";
 import { UserNav } from "@/components/auth/user-nav";
+import { LeaderboardNavButton } from "@/components/LeaderboardModal";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
+import { SiteHeader } from "@/components/layout/site-header";
 import { isSupabaseImage, type Game } from "@/lib/games";
 import { useGameI18n } from "@/hooks/use-game-i18n";
 import { cn } from "@/lib/utils";
@@ -106,8 +108,7 @@ function GameForumContent() {
 
   return (
     <div className="dark relative min-h-full text-zinc-100">
-      <header className="sticky top-0 z-40 border-b border-white/5 bg-zinc-950/70 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-5xl items-center gap-3 px-4 sm:px-6">
+      <SiteHeader>
           <Link
             href="/community"
             className={cn(
@@ -145,9 +146,9 @@ function GameForumContent() {
           </Link>
 
           <LanguageSwitcher />
+          <LeaderboardNavButton />
           <UserNav />
-        </div>
-      </header>
+      </SiteHeader>
 
       <main className="relative mx-auto max-w-5xl px-4 py-6 text-center sm:px-6 sm:py-8">
         <motion.div

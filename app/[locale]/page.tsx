@@ -30,9 +30,11 @@ import {
   SelectTrigger,
 } from "@/components/ui/select";
 import { CreatorDashboardLink, UserNav } from "@/components/auth/user-nav";
+import { LeaderboardNavButton } from "@/components/LeaderboardModal";
+import { LanguageSwitcher } from "@/components/layout/language-switcher";
+import { SiteHeader } from "@/components/layout/site-header";
 import { getCreatorDashboardHref } from "@/lib/creator-nav";
 import { useAuth } from "@/hooks/use-auth";
-import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { FeaturedGames } from "@/components/home/featured-games";
 import {
   FILTER_CATEGORIES,
@@ -301,54 +303,38 @@ export default function Home() {
   return (
     <div className="dark relative min-h-full text-zinc-100">
       {/* Navbar */}
-      <header className="sticky top-0 z-50 border-b border-white/5 bg-zinc-950/70 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
-          <MotionLink
-            href="/"
-            className="flex shrink-0 items-center gap-2.5"
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <div className="relative flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400 to-violet-600 shadow-lg shadow-cyan-500/25">
-              <Gamepad2 className="size-5 text-white" />
-              <div className="absolute inset-0 rounded-xl bg-white/20 opacity-0 transition-opacity hover:opacity-100" />
-            </div>
-            <span className="hidden bg-gradient-to-r from-white via-cyan-100 to-violet-200 bg-clip-text text-lg font-bold tracking-tight text-transparent sm:block">
-              NexusPlay
-            </span>
-          </MotionLink>
-
-          <div className="relative mx-auto hidden max-w-md flex-1 md:block">
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
-            <input
-              type="search"
-              placeholder={tNav("searchPlaceholder")}
-              className={cn(
-                "h-10 w-full rounded-xl border border-white/10 bg-white/5 pl-10 pr-4 text-sm",
-                "text-zinc-100 placeholder:text-zinc-500 backdrop-blur-md",
-                "outline-none transition-all duration-200",
-                "focus:border-cyan-400/40 focus:bg-white/8 focus:ring-2 focus:ring-cyan-500/20"
-              )}
-            />
-          </div>
-
-          <div className="ml-auto flex items-center gap-2 sm:gap-3">
-            <Link
-              href="/community"
-              className={cn(
-                buttonVariants({ variant: "outline", size: "sm" }),
-                "hidden gap-1.5 border-violet-400/20 bg-violet-500/10 text-violet-200 hover:border-violet-400/30 hover:bg-violet-500/15 sm:inline-flex"
-              )}
-            >
-              <MessagesSquare className="size-3.5" />
-              {tNav("community")}
-            </Link>
-            <LanguageSwitcher />
-            <CreatorDashboardLink />
-            <UserNav />
-          </div>
+      <SiteHeader zIndex="50">
+        <div className="relative mx-auto hidden max-w-md flex-1 md:block">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
+          <input
+            type="search"
+            placeholder={tNav("searchPlaceholder")}
+            className={cn(
+              "h-10 w-full rounded-xl border border-white/10 bg-white/5 pl-10 pr-4 text-sm",
+              "text-zinc-100 placeholder:text-zinc-500 backdrop-blur-md",
+              "outline-none transition-all duration-200",
+              "focus:border-cyan-400/40 focus:bg-white/8 focus:ring-2 focus:ring-cyan-500/20"
+            )}
+          />
         </div>
-      </header>
+
+        <div className="ml-auto flex items-center gap-2 sm:gap-3">
+          <Link
+            href="/community"
+            className={cn(
+              buttonVariants({ variant: "outline", size: "sm" }),
+              "hidden gap-1.5 border-violet-400/20 bg-violet-500/10 text-violet-200 hover:border-violet-400/30 hover:bg-violet-500/15 sm:inline-flex"
+            )}
+          >
+            <MessagesSquare className="size-3.5" />
+            {tNav("community")}
+          </Link>
+          <LanguageSwitcher />
+          <LeaderboardNavButton />
+          <CreatorDashboardLink />
+          <UserNav />
+        </div>
+      </SiteHeader>
 
       <main className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Hero Section */}

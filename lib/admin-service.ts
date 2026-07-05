@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { deleteGameAndAssets } from "@/lib/game-delete-server";
 import { createServerSupabase } from "@/lib/supabase-server";
 
 export type GameApprovalStatus = "pending" | "approved" | "rejected";
@@ -191,5 +192,37 @@ export async function getAdminStats() {
   return {
     pendingGames: pendingGames.count ?? 0,
     unreadFeedbacks: unreadFeedbacks.count ?? 0,
+  };
+}
+
+export async function deleteGameAsAdmin(
+  gameId: number,
+  violationReason?: string | null
+) {
+  const supabase = createServerSupabase();
+  const { data, error } = await supabase
+    .from("games")
+    .select("id, title, cover_url, game_url, creator_id")
+    .eq("id", gameId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`讀取遊戲失敗：${error.message}`);
+  }
+
+  if (!data) {
+    throw new Error("找不到此遊戲");
+  }
+
+  await deleteGameAndAssets(supabase, data, { mode: "admin" });
+
+  const reason = violationReason?.trim();
+  const logDetails = reason
+    ? `違規刪除遊戲 #${gameId}「${data.title}」：${reason}`
+    : `違規刪除遊戲 #${gameId}「${data.title}」`;
+
+  return {
+    game: data as AdminGameRecord,
+    logDetails,
   };
 }

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { NextIntlClientProvider, hasLocale } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { PageViewTracker } from "@/components/analytics/page-view-tracker";
+import { ActivityPulseTracker } from "@/components/activity/activity-pulse-tracker";
 import { AuthProvider } from "@/components/auth/auth-provider";
 import { AppSettingsProvider } from "@/components/settings/app-settings-provider";
 import { NexusAuroraBackground } from "@/components/ui/nexus-aurora-background";
@@ -58,6 +59,7 @@ export default async function LocaleLayout({
             <AuthProvider>
               <AppSettingsProvider>
                 <PageViewTracker />
+                <ActivityPulseTracker />
                 {children}
               </AppSettingsProvider>
             </AuthProvider>

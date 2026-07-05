@@ -6,6 +6,24 @@
   var AUTH_TYPE = "nexusplay:auth";
   var READY_TYPE = "nexusplay:ready";
 
+  var SCROLLBAR_CSS =
+    "*{scrollbar-width:thin;scrollbar-color:rgba(34,211,238,.55) rgba(255,255,255,.06)}" +
+    "*::-webkit-scrollbar{width:8px;height:8px}" +
+    "*::-webkit-scrollbar-track{margin:2px;background:rgba(255,255,255,.06);border-radius:999px}" +
+    "*::-webkit-scrollbar-thumb{border:2px solid transparent;border-radius:999px;" +
+    "background:linear-gradient(180deg,rgba(34,211,238,.85) 0%,rgba(139,92,246,.85) 100%);" +
+    "background-clip:padding-box;box-shadow:0 0 8px rgba(34,211,238,.45),inset 0 0 2px rgba(255,255,255,.25)}" +
+    "*::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,rgba(34,211,238,1) 0%,rgba(167,139,250,1) 100%);" +
+    "box-shadow:0 0 12px rgba(34,211,238,.6),0 0 8px rgba(139,92,246,.35)}" +
+    "*::-webkit-scrollbar-corner{background:transparent}";
+
+  if (!document.getElementById("nexusplay-scrollbar")) {
+    var scrollbarStyle = document.createElement("style");
+    scrollbarStyle.id = "nexusplay-scrollbar";
+    scrollbarStyle.textContent = SCROLLBAR_CSS;
+    (document.head || document.documentElement).appendChild(scrollbarStyle);
+  }
+
   var SLUG_MAP = {
     "cyber-fortune-preview.html": "cyber-fortune",
     "core-defense-preview.html": "core-defense",
@@ -54,6 +72,16 @@
     resolveAuth();
   });
 
+  window.addEventListener("message", function (e) {
+    if (e.origin !== location.origin) return;
+    var d = e.data;
+    if (!d || d.type !== "nexusplay:resize") return;
+    document.documentElement.style.setProperty("--np-embed-width", (d.width || 0) + "px");
+    document.documentElement.style.setProperty("--np-embed-height", (d.height || 0) + "px");
+    document.documentElement.classList.toggle("np-embed-expanded", !!d.expanded);
+    window.dispatchEvent(new Event("resize"));
+  });
+
   function waitForAuth(ms) {
     ms = ms || 6000;
     return new Promise(function (resolve, reject) {
@@ -88,6 +116,9 @@
   }
 
   function mergeProgress(local, cloud) {
+    if (window.NexusPlay && window.NexusPlay.mergeSaves) {
+      return window.NexusPlay.mergeSaves(local, cloud);
+    }
     if (!local && !cloud) return null;
     if (!local) return cloud;
     if (!cloud) return local;

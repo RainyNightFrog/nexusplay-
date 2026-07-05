@@ -11,6 +11,7 @@ import {
   MessageSquare,
   RefreshCw,
   ShieldAlert,
+  Trash2,
   TrendingUp,
   XCircle,
 } from "lucide-react";
@@ -50,6 +51,17 @@ import type {
   GameApprovalStatus,
 } from "@/lib/admin-service";
 import { cn } from "@/lib/utils";
+
+const DELETE_VIOLATION_PRESETS = [
+  "copyright",
+  "inappropriate",
+  "security",
+  "spam",
+  "misleading",
+  "other",
+] as const;
+
+type DeleteViolationPreset = (typeof DELETE_VIOLATION_PRESETS)[number];
 
 type AdminStats = {
   pendingGames: number;
@@ -109,6 +121,47 @@ export default function AdminPage() {
     null
   );
   const [rejectReason, setRejectReason] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<AdminGameRecord | null>(
+    null
+  );
+  const [deletePreset, setDeletePreset] = useState<DeleteViolationPreset | null>(
+    null
+  );
+  const [deleteReason, setDeleteReason] = useState("");
+  const [deleting, setDeleting] = useState(false);
+
+  function resetDeleteDialog() {
+    setDeleteTarget(null);
+    setDeletePreset(null);
+    setDeleteReason("");
+  }
+
+  function buildDeleteReason(): string {
+    if (!deletePreset) {
+      return deleteReason.trim();
+    }
+
+    const presetLabel = t(`deleteViolationPreset_${deletePreset}`);
+    const detail = deleteReason.trim();
+
+    if (deletePreset === "other") {
+      return detail;
+    }
+
+    return detail ? `${presetLabel}：${detail}` : presetLabel;
+  }
+
+  function isDeleteReasonValid(): boolean {
+    if (!deletePreset) {
+      return deleteReason.trim().length > 0;
+    }
+
+    if (deletePreset === "other") {
+      return deleteReason.trim().length > 0;
+    }
+
+    return true;
+  }
 
   const loadGames = useCallback(async () => {
     setLoadingGames(true);
@@ -208,6 +261,37 @@ export default function AdminPage() {
     } catch (error) {
       setPageError(error instanceof Error ? error.message : t("actionFailed"));
     } finally {
+      setActionId(null);
+    }
+  }
+
+  async function handleGameDelete() {
+    if (!deleteTarget) return;
+
+    const reason = buildDeleteReason();
+    if (!reason) {
+      setPageError(t("deleteViolationRequired"));
+      return;
+    }
+
+    setDeleting(true);
+    setActionId(`delete-${deleteTarget.id}`);
+    try {
+      const response = await fetch(`/api/admin/games/${deleteTarget.id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ reason }),
+      });
+      const data = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(data.error ?? t("actionFailed"));
+      resetDeleteDialog();
+      await Promise.all([loadGames(), loadLogs()]);
+      setPageError(null);
+    } catch (error) {
+      setPageError(error instanceof Error ? error.message : t("actionFailed"));
+    } finally {
+      setDeleting(false);
       setActionId(null);
     }
   }
@@ -389,33 +473,52 @@ export default function AdminPage() {
                           {t("gameCreated")} · {formatDate(game.created_at, locale)}
                         </p>
                       </div>
-                      {game.status === "pending" && (
-                        <div className="flex shrink-0 justify-center gap-2 sm:flex-col">
-                          <Button
-                            size="sm"
-                            disabled={actionId === `game-${game.id}`}
-                            onClick={() => void handleGameAction(game, "approved")}
-                            className="bg-emerald-600 hover:bg-emerald-500"
-                          >
-                            {actionId === `game-${game.id}` ? (
-                              <Loader2 className="size-4 animate-spin" />
-                            ) : (
-                              <CheckCircle2 className="size-4" />
-                            )}
-                            {t("approve")}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={actionId === `game-${game.id}`}
-                            onClick={() => setRejectTarget(game)}
-                            className="border-rose-400/30 text-rose-300 hover:bg-rose-500/10"
-                          >
-                            <XCircle className="size-4" />
-                            {t("reject")}
-                          </Button>
-                        </div>
-                      )}
+                      <div className="flex shrink-0 flex-wrap justify-center gap-2 sm:flex-col">
+                        {game.status === "pending" && (
+                          <>
+                            <Button
+                              size="sm"
+                              disabled={actionId === `game-${game.id}`}
+                              onClick={() => void handleGameAction(game, "approved")}
+                              className="bg-emerald-600 hover:bg-emerald-500"
+                            >
+                              {actionId === `game-${game.id}` ? (
+                                <Loader2 className="size-4 animate-spin" />
+                              ) : (
+                                <CheckCircle2 className="size-4" />
+                              )}
+                              {t("approve")}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={actionId === `game-${game.id}`}
+                              onClick={() => setRejectTarget(game)}
+                              className="border-rose-400/30 text-rose-300 hover:bg-rose-500/10"
+                            >
+                              <XCircle className="size-4" />
+                              {t("reject")}
+                            </Button>
+                          </>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={
+                            actionId === `delete-${game.id}` ||
+                            actionId === `game-${game.id}`
+                          }
+                          onClick={() => {
+                            setDeletePreset(null);
+                            setDeleteReason("");
+                            setDeleteTarget(game);
+                          }}
+                          className="border-rose-400/25 bg-rose-500/5 text-rose-300 hover:border-rose-400/40 hover:bg-rose-500/10"
+                        >
+                          <Trash2 className="size-4" />
+                          {t("deleteGame")}
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 </motion.div>
@@ -626,6 +729,107 @@ export default function AdminPage() {
               className="bg-rose-600 hover:bg-rose-500"
             >
               {t("rejectConfirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open && !deleting) {
+            resetDeleteDialog();
+          }
+        }}
+      >
+        <DialogContent
+          showCloseButton={!deleting}
+          className="border-rose-400/25 bg-zinc-950/95 text-zinc-100 shadow-2xl shadow-rose-500/15 backdrop-blur-xl sm:max-w-lg"
+        >
+          <DialogHeader className="space-y-2 text-center">
+            <DialogTitle className="flex items-center justify-center gap-2 text-lg text-rose-200">
+              <Trash2 className="size-5 text-rose-400" />
+              {t("deleteGameTitle")}
+            </DialogTitle>
+            <DialogDescription className="text-center leading-relaxed text-zinc-400">
+              {deleteTarget
+                ? t("deleteGameDesc", { title: deleteTarget.title })
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="rounded-xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-center text-sm text-rose-200/90">
+            {t("deleteGameWarning")}
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-center text-sm font-medium text-zinc-300">
+              {t("deleteViolationPresetLabel")}
+            </p>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {DELETE_VIOLATION_PRESETS.map((preset) => {
+                const selected = deletePreset === preset;
+                return (
+                  <button
+                    key={preset}
+                    type="button"
+                    disabled={deleting}
+                    onClick={() => setDeletePreset(preset)}
+                    className={cn(
+                      "rounded-xl border px-3 py-2.5 text-center text-sm transition-all",
+                      selected
+                        ? "border-rose-400/50 bg-rose-500/20 text-rose-100 shadow-md shadow-rose-500/10"
+                        : "border-white/10 bg-white/5 text-zinc-300 hover:border-rose-400/30 hover:bg-rose-500/10 hover:text-rose-100"
+                    )}
+                  >
+                    {t(`deleteViolationPreset_${preset}`)}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-center text-sm font-medium text-zinc-300">
+              {deletePreset === "other"
+                ? t("deleteViolationDetailRequired")
+                : t("deleteViolationDetail")}
+            </p>
+            <Textarea
+              value={deleteReason}
+              onChange={(event) => setDeleteReason(event.target.value)}
+              placeholder={
+                deletePreset === "other"
+                  ? t("deleteViolationReason")
+                  : t("deleteViolationDetailPlaceholder")
+              }
+              disabled={deleting}
+              className="min-h-24 border-white/10 bg-white/5 text-center sm:text-left"
+            />
+          </div>
+
+          <DialogFooter className="border-t border-white/10 bg-transparent sm:justify-center">
+            <Button
+              variant="outline"
+              disabled={deleting}
+              onClick={resetDeleteDialog}
+              className="border-white/10 bg-white/5 text-zinc-200 hover:bg-white/10"
+            >
+              {t("cancel")}
+            </Button>
+            <Button
+              disabled={deleting || !deleteTarget || !isDeleteReasonValid()}
+              onClick={() => void handleGameDelete()}
+              className="border-0 bg-gradient-to-r from-rose-600 to-red-600 text-white shadow-lg shadow-rose-500/25 hover:from-rose-500 hover:to-red-500"
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  {t("deletingGame")}
+                </>
+              ) : (
+                t("deleteConfirm")
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
