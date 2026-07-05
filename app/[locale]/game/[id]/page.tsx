@@ -312,26 +312,16 @@ function GamePageContent() {
                 "shadow-2xl shadow-black/50 ring-1 ring-white/5"
               )}
             >
-              <div className="relative aspect-video w-full bg-black">
+              <div className="relative h-[min(78vh,820px)] min-h-[560px] w-full bg-black">
                 {trustedEmbedUrl ? (
-                  <>
-                    <iframe
-                      src={trustedEmbedUrl}
-                      title={game.title}
-                      className="absolute inset-0 size-full"
-                      sandbox={IFRAME_SANDBOX}
-                      allowFullScreen
-                      referrerPolicy="no-referrer"
-                    />
-                    {playable && (
-                      <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-zinc-950/90 via-zinc-950/40 to-transparent px-4 pb-4 pt-10">
-                        <span className="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-500/15 px-4 py-1.5 text-sm font-medium text-cyan-200 shadow-[0_0_20px_rgba(34,211,238,0.25)]">
-                          <Gamepad2 className="size-4" />
-                          {t("startPlay")}
-                        </span>
-                      </div>
-                    )}
-                  </>
+                  <iframe
+                    src={trustedEmbedUrl}
+                    title={game.title}
+                    className="absolute inset-0 size-full border-0"
+                    sandbox={IFRAME_SANDBOX}
+                    allowFullScreen
+                    referrerPolicy="no-referrer"
+                  />
                 ) : (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-6 text-center">
                     <Upload className="size-10 text-zinc-600" />

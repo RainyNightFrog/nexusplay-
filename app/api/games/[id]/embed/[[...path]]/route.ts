@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { isAdminUser } from "@/lib/admin-auth";
 import { extractBuildPrefixFromPlayUrl } from "@/lib/game-storage";
 import { guessContentType } from "@/lib/game-mime";
+import { patchHtmlForPlatformEmbed } from "@/lib/embed-html-patch";
 import { canViewGame } from "@/lib/game-publish";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
@@ -88,6 +89,20 @@ export async function GET(
 
     const body = await upstream.arrayBuffer();
     const contentType = guessContentType(assetPath);
+
+    if (assetPath.toLowerCase().endsWith(".html")) {
+      const html = patchHtmlForPlatformEmbed(
+        new TextDecoder("utf-8").decode(body)
+      );
+      return new NextResponse(html, {
+        status: 200,
+        headers: {
+          "Content-Type": contentType,
+          "Cache-Control": "public, max-age=300",
+          "X-Content-Type-Options": "nosniff",
+        },
+      });
+    }
 
     return new NextResponse(body, {
       status: 200,
