@@ -18,7 +18,6 @@ import { buttonVariants } from "@/components/ui/button";
 import { CommunityForum } from "@/components/game/community-forum";
 import { RssFeedLink } from "@/components/feeds/rss-feed-link";
 import { FeedJsonLink } from "@/components/feeds/feed-json-link";
-import { UserNav } from "@/components/auth/user-nav";
 import { LeaderboardNavButton } from "@/components/LeaderboardModal";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { SiteHeader } from "@/components/layout/site-header";
@@ -149,7 +148,6 @@ function GameForumContent() {
 
           <LanguageSwitcher />
           <LeaderboardNavButton />
-          <UserNav />
       </SiteHeader>
 
       <main className="relative mx-auto max-w-5xl px-4 py-6 text-center sm:px-6 sm:py-8">

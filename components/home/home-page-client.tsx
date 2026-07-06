@@ -28,7 +28,7 @@ import {
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select";
-import { CreatorDashboardLink, UserNav } from "@/components/auth/user-nav";
+import { CreatorDashboardLink } from "@/components/auth/user-nav";
 import { LeaderboardNavButton } from "@/components/LeaderboardModal";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { SiteHeader } from "@/components/layout/site-header";
@@ -396,7 +396,6 @@ export function HomePageClient() {
           <LanguageSwitcher />
           <LeaderboardNavButton />
           <CreatorDashboardLink />
-          <UserNav />
         </div>
       </SiteHeader>
 
