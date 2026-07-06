@@ -1,10 +1,14 @@
 "use client";
 
-import { useTranslations } from "next-intl";
-import { CATALOG_SLUG_BY_TITLE, translateCategoryTag } from "@/lib/game-i18n";
+import { useMessages, useTranslations } from "next-intl";
+import {
+  CATALOG_SLUG_BY_TITLE,
+  translateCategoryTagFromMessages,
+  type HomeCategoryMessages,
+} from "@/lib/game-i18n";
 
 export function useGameI18n() {
-  const tHome = useTranslations("home");
+  const messages = useMessages() as HomeCategoryMessages;
   const tCatalog = useTranslations("catalog");
 
   function localizedBadge(title: string, fallback?: string) {
@@ -20,7 +24,7 @@ export function useGameI18n() {
   }
 
   function localizedTag(tag: string) {
-    return translateCategoryTag(tHome, tag);
+    return translateCategoryTagFromMessages(messages, tag);
   }
 
   return { localizedBadge, localizedDescription, localizedTag };

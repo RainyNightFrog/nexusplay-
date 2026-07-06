@@ -90,3 +90,25 @@ export function normalizePublishStatus(
 ): GamePublishStatus {
   return value === "public" ? "public" : "draft";
 }
+
+/** 僅在首次公開或遭拒後重新提交時才需重新審批；一般更新保留原審批狀態 */
+export function resolveApprovalStatusAfterCreatorUpdate(
+  record: Pick<GameRecord, "publish_status" | "status">,
+  nextPublishStatus: GamePublishStatus
+): GameRecord["status"] | undefined {
+  if (nextPublishStatus !== "public") {
+    return undefined;
+  }
+
+  const currentApproval = record.status ?? "approved";
+
+  if (record.publish_status !== "public") {
+    return "pending";
+  }
+
+  if (currentApproval === "rejected") {
+    return "pending";
+  }
+
+  return undefined;
+}

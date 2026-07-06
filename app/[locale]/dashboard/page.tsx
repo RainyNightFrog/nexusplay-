@@ -654,6 +654,9 @@ export default function CreatorDashboardPage() {
                     const statusKey =
                       game.publish_status === "public" ? "public" : "draft";
                     const status = STATUS_META[statusKey];
+                    const isPendingReview =
+                      game.publish_status === "public" &&
+                      (game.status ?? "approved") === "pending";
                     const isSelected = analyticsScope === game.id;
 
                     return (
@@ -689,6 +692,11 @@ export default function CreatorDashboardPage() {
                               >
                                 {status.label}
                               </span>
+                              {isPendingReview && (
+                                <span className="rounded-md bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-300 ring-1 ring-inset ring-amber-400/25">
+                                  {t("statusReview")}
+                                </span>
+                              )}
                             </div>
                             <p className="mt-1 text-sm text-zinc-500">
                               {t("uploadedAt", {

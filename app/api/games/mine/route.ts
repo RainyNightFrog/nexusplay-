@@ -4,7 +4,7 @@ import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
 
 const GAME_FIELDS =
-  "id, title, description, category, cover_url, game_url, creator_id, created_at, plays_count, rating_avg, publish_status, tips_enabled, suggested_tip_amount";
+  "id, title, description, category, cover_url, game_url, creator_id, created_at, plays_count, rating_avg, publish_status, status, tips_enabled, suggested_tip_amount";
 
 export async function GET() {
   try {

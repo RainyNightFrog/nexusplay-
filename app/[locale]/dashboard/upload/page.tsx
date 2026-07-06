@@ -2,6 +2,7 @@
 
 import {
   useCallback,
+  useEffect,
   useRef,
   useState,
   type ChangeEvent,
@@ -44,6 +45,11 @@ import {
 } from "@/lib/publish-form-validation";
 import { scrollToFirstValidationField } from "@/lib/scroll-to-validation-field";
 import { useApiError } from "@/hooks/use-api-error";
+import {
+  clearPersistedGameUploadDraft,
+  restoreGameUploadDraft,
+  useGameFormDraft,
+} from "@/hooks/use-game-form-draft";
 import type { GameGenre } from "@/lib/game-metadata";
 import type { GamePublishMetadata } from "@/lib/game-metadata";
 import {
@@ -266,6 +272,25 @@ export default function UploadPage() {
     Partial<Record<PublishValidationField, boolean>>
   >({});
   const [validationMessages, setValidationMessages] = useState<string[]>([]);
+  const [draftReady, setDraftReady] = useState(false);
+
+  useEffect(() => {
+    const draft = restoreGameUploadDraft();
+    if (draft) {
+      setForm(draft.form);
+      setMetadata(draft.metadata);
+      setMonetization(draft.monetization);
+    }
+    setDraftReady(true);
+  }, []);
+
+  useGameFormDraft({
+    mode: "upload",
+    ready: draftReady,
+    form,
+    metadata,
+    monetization,
+  });
 
   const showToast = (
     type: "success" | "error",
@@ -384,6 +409,8 @@ export default function UploadPage() {
 
       console.log("[NexusPlay] 遊戲上傳成功:", game);
 
+      clearPersistedGameUploadDraft();
+
       const isDraft = monetization.publishStatus === "draft";
 
       if (isDraft) {
@@ -401,13 +428,6 @@ export default function UploadPage() {
         t("publicLiveSuccessDesc", { title: game.title, id: game.id })
       );
 
-      setForm({ title: "", description: "", genre: "" });
-      setMetadata(DEFAULT_GAME_PUBLISH_METADATA);
-      setMonetization({
-        publishStatus: DEFAULT_PUBLISH_STATUS,
-        tipsEnabled: false,
-        suggestedTipAmount: "",
-      });
       handleCoverClear();
       setGameZip(null);
 

@@ -115,7 +115,9 @@ function GameCard({
           </h3>
 
           <div className="flex flex-wrap justify-center gap-1.5">
-            {game.tags.map((tag) => (
+            {game.tags
+              .filter((tag) => tag.trim())
+              .map((tag) => (
               <span
                 key={tag}
                 className={cn(
@@ -214,6 +216,7 @@ function FilterSortBar({
   onSortChange: (sort: SortOption) => void;
 }) {
   const t = useTranslations("home");
+  const { localizedTag } = useGameI18n();
 
   return (
     <motion.div
@@ -290,7 +293,7 @@ function FilterSortBar({
                     : "border-white/10 bg-white/5 text-zinc-300 hover:border-white/20 hover:bg-white/10 hover:text-white"
                 )}
               >
-                {t(`categories.${tag}`)}
+                {localizedTag(tag)}
               </Badge>
             </motion.button>
           );
@@ -303,6 +306,7 @@ function FilterSortBar({
 export function HomePageClient() {
   const t = useTranslations("home");
   const tNav = useTranslations("nav");
+  const { localizedTag } = useGameI18n();
   const { profile, isCreator } = useAuth();
   const uploadHref = getCreatorDashboardHref(profile, isCreator, "/dashboard/upload");
   const {
@@ -359,7 +363,7 @@ export function HomePageClient() {
   }, [category, sort, loadGames]);
 
   const activeSortLabel = t(`sort.${sort}`);
-  const categoryLabel = (value: FilterCategory) => t(`categories.${value}`);
+  const categoryLabel = (value: FilterCategory) => localizedTag(value);
 
   return (
     <div className="dark relative min-h-full text-zinc-100">

@@ -60,6 +60,11 @@ import {
 } from "@/lib/game-metadata";
 import { useApiError } from "@/hooks/use-api-error";
 import {
+  clearPersistedGameEditDraft,
+  restoreGameEditDraft,
+  useGameFormDraft,
+} from "@/hooks/use-game-form-draft";
+import {
   formatMaxSize,
   MAX_COVER_BYTES,
   MAX_DESCRIPTION_LENGTH,
@@ -299,6 +304,7 @@ export default function EditGamePage() {
     Partial<Record<PublishValidationField, boolean>>
   >({});
   const [validationMessages, setValidationMessages] = useState<string[]>([]);
+  const [draftReady, setDraftReady] = useState(false);
 
   const showToast = (
     type: "success" | "error",
@@ -317,6 +323,7 @@ export default function EditGamePage() {
     }
 
     let cancelled = false;
+    setDraftReady(false);
 
     fetchManageGame(gameId)
       .then(({ game, isOrphan: orphan }) => {
@@ -343,6 +350,24 @@ export default function EditGamePage() {
             ? game.platform_fee_percent
             : null
         );
+
+        const draft = restoreGameEditDraft(gameId);
+        if (draft) {
+          setForm(draft.form);
+          setMetadata(draft.metadata);
+          setMonetization(draft.monetization);
+          if (draft.existingGalleryUrls) {
+            setExistingGalleryUrls(draft.existingGalleryUrls);
+          }
+          if (draft.devlogTitle) {
+            setDevlogTitle(draft.devlogTitle);
+          }
+          if (draft.devlogContent) {
+            setDevlogContent(draft.devlogContent);
+          }
+        }
+
+        setDraftReady(true);
       })
       .catch((error) => {
         if (cancelled) return;
@@ -358,6 +383,18 @@ export default function EditGamePage() {
       cancelled = true;
     };
   }, [gameId, t]);
+
+  useGameFormDraft({
+    mode: "edit",
+    gameId,
+    ready: draftReady && !Number.isNaN(gameId),
+    form,
+    metadata,
+    monetization,
+    existingGalleryUrls,
+    devlogTitle,
+    devlogContent,
+  });
 
   const handleCoverSelect = useCallback(
     (file: File) => {
@@ -499,6 +536,8 @@ export default function EditGamePage() {
         setExistingCoverUrl(game.cover_url);
         handleCoverClear();
       }
+
+      clearPersistedGameEditDraft(gameId);
 
       if (isDraftSave) {
         const previewPath = getPathname({

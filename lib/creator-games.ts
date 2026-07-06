@@ -11,6 +11,7 @@ export type CreatorGameRecord = {
   rating_avg: number;
   isUnclaimed?: boolean;
   publish_status: "draft" | "public";
+  status?: "pending" | "approved" | "rejected";
   tips_enabled: boolean;
   suggested_tip_amount: number | null;
 };

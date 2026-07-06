@@ -13,10 +13,18 @@ import type { Game } from "@/lib/games";
 
 function resolveTags(record: GameRecord, category: string): string[] {
   const metadata = metadataFromGameRecord(record);
+  const primary = category.trim();
+
   if (metadata.tags.length > 0) {
-    return [category, ...metadata.tags.filter((tag) => tag !== category)];
+    const extraTags = metadata.tags
+      .map((tag) => tag.trim())
+      .filter(Boolean)
+      .filter((tag) => tag !== primary);
+
+    return primary ? [primary, ...extraTags] : extraTags;
   }
-  return [category];
+
+  return primary ? [primary] : [];
 }
 
 function resolveCoverUrl(coverUrl: string) {

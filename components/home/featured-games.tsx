@@ -175,7 +175,9 @@ export function FeaturedGames({
                   </div>
 
                   <div className="flex flex-wrap justify-center gap-1.5">
-                    {game.tags.map((tag) => (
+                    {game.tags
+                      .filter((tag) => tag.trim())
+                      .map((tag) => (
                       <span
                         key={tag}
                         className={cn(

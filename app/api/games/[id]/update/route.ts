@@ -11,7 +11,7 @@ import {
   uploadBuffer,
 } from "@/lib/game-storage";
 import { deleteGameAndAssets } from "@/lib/game-delete-server";
-import { parseMonetizationFromFormData } from "@/lib/game-publish";
+import { parseMonetizationFromFormData, resolveApprovalStatusAfterCreatorUpdate } from "@/lib/game-publish";
 import { triggerNewGameFollowerNotify } from "@/lib/creator-follow-notify";
 import { isGamePubliclyLive } from "@/lib/game-live-service";
 import { GAME_GENRES } from "@/lib/game-metadata";
@@ -38,7 +38,7 @@ import {
 } from "@/lib/game-page-upload";
 import { isZipBuffer, isZipFile } from "@/lib/zip-file-validation";
 
-/** 創作者可更新的欄位；公開發布時重置審批狀態為 pending */
+/** 創作者可更新的欄位；僅首次公開或遭拒後重新提交時重置審批狀態 */
 function buildCreatorUpdatePayload(
   input: {
     title: string;
@@ -53,7 +53,12 @@ function buildCreatorUpdatePayload(
     devlogEntries: unknown;
     metadataPayload: Record<string, unknown>;
   },
-  options: { userId: string; isOrphan: boolean }
+  options: {
+    userId: string;
+    isOrphan: boolean;
+    previousPublishStatus: "draft" | "public";
+    previousApprovalStatus?: "pending" | "approved" | "rejected" | null;
+  }
 ) {
   const payload: Record<string, unknown> = {
     title: input.title,
@@ -73,8 +78,16 @@ function buildCreatorUpdatePayload(
     payload.creator_id = options.userId;
   }
 
-  if (input.publishStatus === "public") {
-    payload.status = "pending";
+  const nextApprovalStatus = resolveApprovalStatusAfterCreatorUpdate(
+    {
+      publish_status: options.previousPublishStatus,
+      status: options.previousApprovalStatus ?? "approved",
+    },
+    input.publishStatus
+  );
+
+  if (nextApprovalStatus) {
+    payload.status = nextApprovalStatus;
   }
 
   return payload;
@@ -309,7 +322,7 @@ export async function PATCH(
           devlogEntries,
           metadataPayload,
         },
-        { userId: user.id, isOrphan }
+        { userId: user.id, isOrphan, previousPublishStatus: record.publish_status, previousApprovalStatus: record.status }
       );
 
       let updateQuery = dbClient
