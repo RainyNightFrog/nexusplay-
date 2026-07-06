@@ -10,7 +10,6 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { AuthChangeEvent } from "@supabase/supabase-js";
 import type { UserProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/client";
 
@@ -25,16 +24,6 @@ type AuthContextValue = {
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
-
-function shouldRefreshSilently(
-  event: AuthChangeEvent,
-  hasResolvedOnce: boolean
-): boolean {
-  if (event === "TOKEN_REFRESHED") return true;
-  if (event === "INITIAL_SESSION" && hasResolvedOnce) return true;
-  if (event === "USER_UPDATED" && hasResolvedOnce) return true;
-  return false;
-}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -91,10 +80,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "INITIAL_SESSION") return;
+      if (event === "SIGNED_OUT") {
+        setProfile(null);
+        hasResolvedOnce.current = true;
+        setLoading(false);
+        return;
+      }
 
       void loadProfile({
-        silent: shouldRefreshSilently(event, hasResolvedOnce.current),
+        silent:
+          event === "TOKEN_REFRESHED" ||
+          (hasResolvedOnce.current && event !== "SIGNED_IN"),
       });
     });
 

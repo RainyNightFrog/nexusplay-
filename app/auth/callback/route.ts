@@ -1,28 +1,42 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { buildChooseRolePath, shouldSkipAccountIntent } from "@/lib/account-intent";
-import { createAuthServerClient } from "@/lib/supabase/server-auth";
+import {
+  createAuthCallbackClient,
+  resolveAuthRedirectBase,
+} from "@/lib/supabase/route-auth";
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
   const redirectTo = searchParams.get("redirect") ?? "/";
+  const safeRedirect = redirectTo.startsWith("/") ? redirectTo : "/";
+  const base = resolveAuthRedirectBase(request, origin);
 
-  if (code) {
-    const supabase = await createAuthServerClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+  const redirectToAuthError = () =>
+    NextResponse.redirect(`${base}/auth?error=callback`);
 
-    if (!error) {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (user && shouldSkipAccountIntent(user)) {
-        return NextResponse.redirect(`${origin}${redirectTo}`);
-      }
-
-      return NextResponse.redirect(`${origin}${buildChooseRolePath(redirectTo)}`);
-    }
+  if (!code) {
+    return redirectToAuthError();
   }
 
-  return NextResponse.redirect(`${origin}/auth?error=callback`);
+  const { supabase, applyCookies } = createAuthCallbackClient(request);
+  const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+  if (error) {
+    console.error("[auth/callback] exchangeCodeForSession:", error.message);
+    return redirectToAuthError();
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const path =
+    user && shouldSkipAccountIntent(user)
+      ? safeRedirect
+      : buildChooseRolePath(safeRedirect);
+
+  const response = NextResponse.redirect(`${base}${path}`);
+  applyCookies(response);
+  return response;
 }
