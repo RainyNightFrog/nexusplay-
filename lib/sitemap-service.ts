@@ -9,17 +9,17 @@ export async function listPublicSitemapGames(): Promise<SitemapGameEntry[]> {
   const supabase = createServerSupabase();
   const { data, error } = await supabase
     .from("games")
-    .select("id, updated_at")
+    .select("id, created_at")
     .eq("publish_status", "public")
     .eq("status", "approved")
-    .order("updated_at", { ascending: false })
+    .order("created_at", { ascending: false })
     .limit(500);
 
   if (error) throw new Error(error.message);
 
   return (data ?? []).map((row) => ({
     id: row.id as number,
-    updatedAt: (row.updated_at as string | null) ?? null,
+    updatedAt: (row.created_at as string | null) ?? null,
   }));
 }
 

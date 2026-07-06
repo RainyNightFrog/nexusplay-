@@ -32,8 +32,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return buildGamePageMetadata({
       game,
       locale,
-      titleTemplate: t("gameTitle"),
-      descriptionTemplate: t("gameDescription"),
+      titleTemplate: t.raw("gameTitle"),
+      descriptionTemplate: t.raw("gameDescription"),
       feedAlternates: gameFeedAlternates(game.id),
     });
   } catch {

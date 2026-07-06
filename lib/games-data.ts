@@ -7,7 +7,7 @@ import {
   resolveGalleryUrls,
 } from "@/lib/game-page-content";
 import { metadataFromGameRecord } from "@/lib/game-metadata";
-import { getSiteUrl } from "@/lib/site-url";
+import { normalizeAppAssetUrl } from "@/lib/site-url";
 import type { GameRecord } from "@/lib/supabase";
 import type { Game } from "@/lib/games";
 
@@ -20,12 +20,7 @@ function resolveTags(record: GameRecord, category: string): string[] {
 }
 
 function resolveCoverUrl(coverUrl: string) {
-  if (!coverUrl) return coverUrl;
-  if (coverUrl.startsWith("http://") || coverUrl.startsWith("https://")) {
-    return coverUrl;
-  }
-  const siteUrl = getSiteUrl();
-  return `${siteUrl}${coverUrl.startsWith("/") ? coverUrl : `/${coverUrl}`}`;
+  return normalizeAppAssetUrl(coverUrl);
 }
 
 export function mapRecordToGame(record: GameRecord): Game {

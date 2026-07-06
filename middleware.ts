@@ -22,6 +22,16 @@ function stripLocalePrefix(pathname: string): string {
 }
 
 export async function middleware(request: NextRequest) {
+  if (
+    request.nextUrl.pathname === "/zh-TW" ||
+    request.nextUrl.pathname.startsWith("/zh-TW/")
+  ) {
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.pathname =
+      redirectUrl.pathname.replace(/^\/zh-TW(?=\/|$)/, "") || "/";
+    return NextResponse.redirect(redirectUrl);
+  }
+
   const oauthCode = request.nextUrl.searchParams.get("code");
   const pathnameWithoutLocale = stripLocalePrefix(request.nextUrl.pathname);
 

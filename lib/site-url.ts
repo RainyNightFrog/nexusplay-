@@ -10,3 +10,21 @@ export function getSiteUrl() {
 
   return "http://localhost:3000";
 }
+
+/** Keep /covers/* etc. relative so next/image works on localhost and production. */
+export function normalizeAppAssetUrl(url: string) {
+  if (!url) return url;
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    return url;
+  }
+  return url.startsWith("/") ? url : `/${url}`;
+}
+
+export function toAbsoluteAssetUrl(url: string) {
+  if (!url) return url;
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    return url;
+  }
+  const siteUrl = getSiteUrl();
+  return `${siteUrl}${url.startsWith("/") ? url : `/${url}`}`;
+}
