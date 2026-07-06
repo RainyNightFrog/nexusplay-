@@ -14,6 +14,7 @@ import {
   Mail,
   RefreshCw,
   ShieldAlert,
+  Rocket,
   Trash2,
   TrendingUp,
   XCircle,
@@ -22,6 +23,7 @@ import { AdminAnalyticsPanel } from "@/components/admin/analytics-panel";
 import { AdminFinancePanel } from "@/components/admin/finance-panel";
 import { AdminAnnouncementsPanel } from "@/components/admin/announcements-panel";
 import { AdminDigestReportPanel } from "@/components/admin/digest-report-panel";
+import { AdminLaunchChecklistPanel } from "@/components/admin/launch-checklist-panel";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -406,6 +408,10 @@ export default function AdminPage() {
             <Megaphone className="size-4" />
             {t("tabAnnouncements")}
           </TabsTrigger>
+          <TabsTrigger value="launch" className="gap-1.5 px-4">
+            <Rocket className="size-4" />
+            {t("tabLaunch")}
+          </TabsTrigger>
           <TabsTrigger value="digest" className="gap-1.5 px-4">
             <Mail className="size-4" />
             {t("tabDigest")}
@@ -712,6 +718,10 @@ export default function AdminPage() {
 
         <TabsContent value="announcements">
           <AdminAnnouncementsPanel />
+        </TabsContent>
+
+        <TabsContent value="launch">
+          <AdminLaunchChecklistPanel onError={setPageError} />
         </TabsContent>
 
         <TabsContent value="digest">
