@@ -7,6 +7,7 @@ import { Link } from "@/i18n/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TipsFeeDisclosure } from "@/components/dashboard/tips-fee-disclosure";
 import { PlatformFeeLockBadge } from "@/components/dashboard/platform-fee-lock-badge";
+import { RequiredFieldLabel } from "@/components/dashboard/required-field-label";
 import type { GamePublishStatus } from "@/lib/game-publish";
 import { cn } from "@/lib/utils";
 

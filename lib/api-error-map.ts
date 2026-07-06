@@ -60,7 +60,6 @@ export const API_ERROR_KEY_BY_MESSAGE: Record<string, string> = {
   "fetch failed": "networkError",
   "NetworkError": "networkError",
   "Load failed": "analyticsLoadFailed",
-  "讀取創作者遊戲失敗": "loadCreatorGamesFailed",
   "讀取未綁定遊戲失敗": "loadCreatorGamesFailed",
   "LEGACY_IMPORTS_TABLE_MISSING": "legacyImportsTableMissing",
   "讀取遷移碼失敗": "legacyImportLoadFailed",
