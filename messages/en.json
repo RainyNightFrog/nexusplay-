@@ -131,6 +131,7 @@
     "tabPlayTime": "⏳ Play Time",
     "tabDonated": "💰 Top Supporters",
     "empty": "No rankings yet — be the first on the board!",
+    "fetchError": "Could not load leaderboards. Make sure the dev server is running, or ask an admin to run the database setup.",
     "loading": "Syncing live stats…",
     "refresh": "Refresh",
     "lastUpdated": "Updated at {time}",

@@ -788,27 +788,27 @@ export default function CreatorDashboardPage() {
           showCloseButton={!deleting}
           className="border-rose-400/25 bg-zinc-950/95 text-zinc-100 shadow-2xl shadow-rose-500/15 backdrop-blur-xl sm:max-w-md"
         >
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-lg text-rose-200">
+          <DialogHeader className="items-center space-y-2 text-center">
+            <DialogTitle className="flex w-full items-center justify-center gap-2 text-lg text-rose-200">
               <Trash2 className="size-5 text-rose-400" />
               {t("deleteGameTitle")}
             </DialogTitle>
-            <DialogDescription className="text-left leading-relaxed text-zinc-400">
+            <DialogDescription className="text-center leading-relaxed text-zinc-400">
               {deleteTarget
                 ? t("deleteGameDesc", { title: deleteTarget.title })
                 : ""}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="rounded-xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200/90">
+          <div className="rounded-xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-center text-sm text-rose-200/90">
             {t("deleteGameWarning")}
           </div>
 
           {deleteError && (
-            <p className="text-sm text-rose-300">{deleteError}</p>
+            <p className="text-center text-sm text-rose-300">{deleteError}</p>
           )}
 
-          <DialogFooter className="border-t border-white/10 bg-transparent sm:justify-end">
+          <DialogFooter className="border-t border-white/10 bg-transparent sm:justify-center">
             <Button
               type="button"
               variant="outline"

@@ -199,15 +199,26 @@ function LeaderboardList({
   tab,
   locale,
   loading,
+  fetchError,
   animateKey,
 }: {
   entries: PlatformLeaderboardEntry[];
   tab: LeaderboardTab;
   locale: string;
   loading: boolean;
+  fetchError: boolean;
   animateKey: string;
 }) {
   const t = useTranslations("leaderboard");
+
+  if (fetchError && entries.length === 0) {
+    return (
+      <div className="flex min-h-48 flex-col items-center justify-center gap-2 px-4 text-center">
+        <Trophy className="size-8 text-zinc-600" />
+        <p className="text-sm text-rose-300">{t("fetchError")}</p>
+      </div>
+    );
+  }
 
   if (loading && entries.length === 0) {
     return (
@@ -249,6 +260,7 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
   const [activeTab, setActiveTab] = useState<LeaderboardTab>("online");
   const [data, setData] = useState<PlatformLeaderboardsResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [animateKey, setAnimateKey] = useState("initial");
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -268,9 +280,11 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
 
       const payload = (await response.json()) as PlatformLeaderboardsResponse;
       setData(payload);
+      setFetchError(false);
       setLastUpdated(new Date());
       setAnimateKey(payload.fetchedAt);
     } catch {
+      setFetchError(true);
       if (!silent) setData(null);
     } finally {
       if (!silent) setLoading(false);
@@ -414,6 +428,7 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
                     tab="online"
                     locale={locale}
                     loading={loading}
+                    fetchError={fetchError}
                     animateKey={animateKey}
                   />
                 </TabsContent>
@@ -423,6 +438,7 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
                     tab="playTime"
                     locale={locale}
                     loading={loading}
+                    fetchError={fetchError}
                     animateKey={animateKey}
                   />
                 </TabsContent>
@@ -432,6 +448,7 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
                     tab="donated"
                     locale={locale}
                     loading={loading}
+                    fetchError={fetchError}
                     animateKey={animateKey}
                   />
                 </TabsContent>

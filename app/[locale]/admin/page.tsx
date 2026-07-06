@@ -798,8 +798,8 @@ export default function AdminPage() {
           showCloseButton={!deleting}
           className="border-rose-400/25 bg-zinc-950/95 text-zinc-100 shadow-2xl shadow-rose-500/15 backdrop-blur-xl sm:max-w-lg"
         >
-          <DialogHeader className="space-y-2 text-center">
-            <DialogTitle className="flex items-center justify-center gap-2 text-lg text-rose-200">
+          <DialogHeader className="items-center space-y-2 text-center">
+            <DialogTitle className="flex w-full items-center justify-center gap-2 text-lg text-rose-200">
               <Trash2 className="size-5 text-rose-400" />
               {t("deleteGameTitle")}
             </DialogTitle>

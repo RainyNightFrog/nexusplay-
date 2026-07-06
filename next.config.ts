@@ -11,6 +11,9 @@ const supabaseHostname = process.env.NEXT_PUBLIC_SUPABASE_URL
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["web-push", "isomorphic-dompurify", "jsdom"],
+  experimental: {
+    webpackMemoryOptimizations: true,
+  },
   turbopack: {
     root: projectRoot,
   },

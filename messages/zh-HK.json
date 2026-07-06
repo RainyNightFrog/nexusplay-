@@ -131,6 +131,7 @@
     "tabPlayTime": "⏳ 遊戲時長榜",
     "tabDonated": "💰 貢獻大佬榜",
     "empty": "暫無排行數據，快來搶佔榜首！",
+    "fetchError": "無法載入排行榜，請確認開發伺服器已啟動，或聯絡管理員執行資料庫設定。",
     "loading": "同步競技數據中…",
     "refresh": "刷新",
     "lastUpdated": "更新於 {time}",

@@ -14,6 +14,15 @@ type ProfileRow = {
 
 const LEADERBOARD_LIMIT = 10;
 
+async function ensureActivityStatsBackfill(
+  supabase: SupabaseClient
+): Promise<void> {
+  const { error } = await supabase.rpc("backfill_user_activity_stats");
+  if (error) {
+    throw new Error(`補建排行榜資料失敗：${error.message}`);
+  }
+}
+
 async function fetchTopByColumn(
   supabase: SupabaseClient,
   column: "total_online_time" | "total_play_time" | "total_donated"
@@ -24,6 +33,7 @@ async function fetchTopByColumn(
       "user_id, total_online_time, total_play_time, total_donated, last_active_at"
     )
     .order(column, { ascending: false })
+    .order("last_active_at", { ascending: false })
     .limit(LEADERBOARD_LIMIT);
 
   if (error) {
@@ -86,6 +96,8 @@ export async function getPlatformLeaderboards(
   supabase: SupabaseClient,
   currentUserId?: string | null
 ): Promise<PlatformLeaderboardsResponse> {
+  await ensureActivityStatsBackfill(supabase);
+
   const [onlineRows, playRows, donatedRows] = await Promise.all([
     fetchTopByColumn(supabase, "total_online_time"),
     fetchTopByColumn(supabase, "total_play_time"),

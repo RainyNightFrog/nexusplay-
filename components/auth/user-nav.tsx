@@ -88,10 +88,10 @@ export function UserNav() {
         <div
           className={cn(
             "absolute right-0 top-11 z-50 min-w-52 overflow-hidden rounded-xl",
-            "border border-white/10 bg-zinc-900/95 p-1 shadow-2xl shadow-black/50 backdrop-blur-xl"
+            "border border-white/10 bg-zinc-900/95 p-1 text-center shadow-2xl shadow-black/50 backdrop-blur-xl"
           )}
         >
-          <div className="border-b border-white/5 px-3 py-2.5">
+          <div className="border-b border-white/5 px-3 py-2.5 text-center">
             <p className="truncate text-sm font-medium text-white">
               {profile.display_name}
             </p>
@@ -108,7 +108,7 @@ export function UserNav() {
             <Link
               href="/admin"
               onClick={() => setOpen(false)}
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white"
+              className="flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white"
             >
               <Shield className="size-4 text-amber-400" />
               {t("adminCenter")}
@@ -119,7 +119,7 @@ export function UserNav() {
             <Link
               href="/dashboard"
               onClick={() => setOpen(false)}
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white"
+              className="flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white"
             >
               <Palette className="size-4 text-violet-400" />
               {t("creatorDashboard")}
@@ -129,7 +129,7 @@ export function UserNav() {
           <Link
             href="/profile"
             onClick={() => setOpen(false)}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white"
+            className="flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white"
           >
             <UserRound className="size-4 text-cyan-400" />
             {t("profile")}
@@ -138,7 +138,7 @@ export function UserNav() {
           <Link
             href="/settings/favorites"
             onClick={() => setOpen(false)}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white"
+            className="flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white"
           >
             <Heart className="size-4 text-rose-400" />
             {t("favorites")}
@@ -147,7 +147,7 @@ export function UserNav() {
           <Link
             href="/notifications"
             onClick={() => setOpen(false)}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white"
+            className="flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white"
           >
             <Bell className="size-4 text-amber-400" />
             {t("notifications")}
@@ -156,7 +156,7 @@ export function UserNav() {
           <Link
             href="/settings"
             onClick={() => setOpen(false)}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white"
+            className="flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white"
           >
             <Settings className="size-4 text-violet-400" />
             {t("settings")}
@@ -168,7 +168,7 @@ export function UserNav() {
               setOpen(false);
               signOut();
             }}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-rose-300"
+            className="flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-rose-300"
           >
             <LogOut className="size-4" />
             {t("signOut")}

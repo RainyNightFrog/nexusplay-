@@ -29,6 +29,23 @@ insert into public.user_activity_stats (user_id)
 select id from public.profiles
 on conflict (user_id) do nothing;
 
+-- 可重複呼叫：為尚未有統計列的玩家補建（API 自我修復用）
+create or replace function public.backfill_user_activity_stats()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.user_activity_stats (user_id)
+  select id from public.profiles
+  on conflict (user_id) do nothing;
+end;
+$$;
+
+revoke all on function public.backfill_user_activity_stats() from public;
+grant execute on function public.backfill_user_activity_stats() to anon, authenticated, service_role;
+
 -- 新註冊玩家自動建立統計列
 create or replace function public.handle_new_user_activity_stats()
 returns trigger

@@ -36,25 +36,17 @@ export function isUserOnline(lastActiveAt: string, now = Date.now()): boolean {
 }
 
 export function formatDurationSeconds(seconds: number, locale: string): string {
-  const safe = Math.max(0, Math.floor(seconds));
-  const hours = Math.floor(safe / 3600);
-  const minutes = Math.floor((safe % 3600) / 60);
+  const hours = Math.max(0, Math.floor(seconds / 3600));
 
   if (locale.startsWith("zh")) {
-    if (hours > 0) return `${hours} 小時 ${minutes} 分`;
-    if (minutes > 0) return `${minutes} 分鐘`;
-    return `${safe} 秒`;
+    return `${hours} 小時`;
   }
 
   if (locale === "ja") {
-    if (hours > 0) return `${hours}時間${minutes}分`;
-    if (minutes > 0) return `${minutes}分`;
-    return `${safe}秒`;
+    return `${hours}時間`;
   }
 
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  if (minutes > 0) return `${minutes}m`;
-  return `${safe}s`;
+  return hours === 1 ? "1 hr" : `${hours} hrs`;
 }
 
 export function formatDonationAmount(amount: number, locale: string): string {
