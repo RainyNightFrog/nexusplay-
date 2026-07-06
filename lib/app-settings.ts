@@ -1,11 +1,8 @@
-export type AppTheme = "dark" | "light" | "system";
 export type AppLanguage = "zh-Hant" | "en";
 
 export type AppSettings = {
-  theme: AppTheme;
   language: AppLanguage;
   reduceMotion: boolean;
-  compactLayout: boolean;
   forumEmailDigest: boolean;
   forumReplyNotify: boolean;
   gameAutoplay: boolean;
@@ -15,10 +12,8 @@ export type AppSettings = {
 export const APP_SETTINGS_STORAGE_KEY = "nexusplay-app-settings";
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
-  theme: "dark",
   language: "zh-Hant",
   reduceMotion: false,
-  compactLayout: false,
   forumEmailDigest: true,
   forumReplyNotify: true,
   gameAutoplay: false,
@@ -29,8 +24,13 @@ export function parseAppSettings(raw: string | null): AppSettings {
   if (!raw) return { ...DEFAULT_APP_SETTINGS };
 
   try {
-    const parsed = JSON.parse(raw) as Partial<AppSettings>;
-    return { ...DEFAULT_APP_SETTINGS, ...parsed };
+    const parsed = JSON.parse(raw) as Partial<AppSettings> & {
+      theme?: unknown;
+      compactLayout?: unknown;
+    };
+    const { theme: _ignoredTheme, compactLayout: _ignoredCompactLayout, ...rest } =
+      parsed;
+    return { ...DEFAULT_APP_SETTINGS, ...rest };
   } catch {
     return { ...DEFAULT_APP_SETTINGS };
   }
@@ -41,15 +41,8 @@ export function applyAppSettings(settings: AppSettings) {
 
   const root = document.documentElement;
   root.dataset.reduceMotion = settings.reduceMotion ? "true" : "false";
-  root.dataset.compactLayout = settings.compactLayout ? "true" : "false";
   root.lang = settings.language;
-
-  const prefersDark =
-    settings.theme === "dark" ||
-    (settings.theme === "system" &&
-      window.matchMedia("(prefers-color-scheme: dark)").matches);
-
-  root.classList.toggle("dark", prefersDark);
-  root.classList.toggle("light", !prefersDark);
-  root.dataset.theme = settings.theme;
+  root.classList.add("dark");
+  root.classList.remove("light");
+  root.dataset.theme = "dark";
 }

@@ -17,6 +17,8 @@ import {
   accountFieldClassName,
   accountInputClassName,
   accountLabelClassName,
+  accountSectionCompactClassName,
+  accountSectionIntroClassName,
   accountSectionTitleClassName,
 } from "@/components/settings/account-shell";
 import { Button } from "@/components/ui/button";
@@ -126,12 +128,12 @@ export default function DataSettingsPage() {
 
       <div className="space-y-6">
         <div className={accountCardClassName}>
-          <section className="space-y-4 text-left">
+          <section className={accountSectionCompactClassName}>
             <h2 className={accountSectionTitleClassName}>
               <Download className="size-4 text-cyan-400" />
               {t("exportSection")}
             </h2>
-            <p className="text-xs leading-relaxed text-zinc-500">{t("exportDesc")}</p>
+            <p className={accountSectionIntroClassName}>{t("exportDesc")}</p>
             <Button
               type="button"
               variant="outline"
@@ -155,14 +157,14 @@ export default function DataSettingsPage() {
             "border-rose-400/20 bg-rose-500/[0.03]"
           )}
         >
-          <section className="space-y-4 text-left">
+          <section className={accountSectionCompactClassName}>
             <h2 className={accountSectionTitleClassName}>
               <Trash2 className="size-4 text-rose-400" />
               {t("deleteSection")}
             </h2>
-            <p className="text-xs leading-relaxed text-zinc-500">{t("deleteDesc")}</p>
+            <p className={accountSectionIntroClassName}>{t("deleteDesc")}</p>
 
-            <div className="flex items-start gap-2 rounded-xl border border-amber-400/20 bg-amber-500/5 p-3">
+            <div className="flex items-start gap-2 rounded-xl border border-amber-400/20 bg-amber-500/5 p-3 text-left">
               <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-400" />
               <p className="text-xs leading-relaxed text-amber-200/90">
                 {t("deleteWarning")}
@@ -178,11 +180,11 @@ export default function DataSettingsPage() {
                 value={confirmation}
                 onChange={(event) => setConfirmation(event.target.value)}
                 placeholder="DELETE"
-                className={cn(accountInputClassName, "text-left font-mono")}
+                className={cn(accountInputClassName, "font-mono")}
               />
             </div>
 
-            {error && <p className="text-sm text-rose-400">{error}</p>}
+            {error && <p className="text-center text-sm text-rose-400">{error}</p>}
 
             <Button
               type="button"

@@ -17,7 +17,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import type { UserRole } from "@/lib/auth";
-import { readAccountIntentFromMetadata } from "@/lib/account-intent";
+import {
+  readAccountIntentFromMetadata,
+  shouldSkipAccountIntent,
+} from "@/lib/account-intent";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -48,7 +51,7 @@ export default function ChooseRolePage() {
         return;
       }
 
-      if (user.user_metadata?.role === "admin") {
+      if (shouldSkipAccountIntent(user)) {
         router.replace(redirectTo);
         return;
       }

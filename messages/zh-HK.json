@@ -607,8 +607,8 @@
     "continueWithGoogle": "使用 Google 登入",
     "chooseRole": {
       "badge": "登入成功",
-      "title": "選擇本次帳號身分",
-      "description": "每次登入後請選擇你要以玩家或創作者身分使用平台。之後可在個人資料再次調整。",
+      "title": "選擇帳號身分",
+      "description": "首次使用請選擇玩家或創作者身分，之後登入會直接進入平台。也可在個人資料隨時調整。",
       "cardTitle": "你想怎麼使用 NexusPlay？",
       "cardDesc": "這會影響你是否能進入創作者後台上傳遊戲。",
       "playerTitle": "玩家",

@@ -17,6 +17,10 @@ import {
 } from "lucide-react";
 import { Link, usePathname } from "@/i18n/navigation";
 import { useAuth } from "@/hooks/use-auth";
+import {
+  accountNavGroupLabelClassName,
+  accountNavLinkClassName,
+} from "@/components/settings/account-shell";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
@@ -64,11 +68,12 @@ export function AccountSettingsNav() {
   const items = NAV_ITEMS.filter((item) => !item.creatorOnly || isCreator);
 
   return (
-    <nav className="space-y-1">
+    <nav className="space-y-1 text-center">
       <Link
         href="/profile"
         className={cn(
-          "mb-3 flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-colors",
+          accountNavLinkClassName,
+          "mb-3",
           pathname === "/profile"
             ? "bg-violet-500/15 text-violet-200"
             : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
@@ -78,9 +83,7 @@ export function AccountSettingsNav() {
         {t("navProfile")}
       </Link>
 
-      <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-600">
-        {t("navGroupAccount")}
-      </p>
+      <p className={accountNavGroupLabelClassName}>{t("navGroupAccount")}</p>
 
       {items.map(({ href, labelKey, icon: Icon, exact }) => {
         const active = exact ? pathname === href : pathname.startsWith(href);
@@ -90,7 +93,7 @@ export function AccountSettingsNav() {
             key={href}
             href={href}
             className={cn(
-              "flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-colors",
+              accountNavLinkClassName,
               active
                 ? "bg-cyan-500/15 text-cyan-200"
                 : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"

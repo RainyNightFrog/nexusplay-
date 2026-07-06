@@ -4,7 +4,7 @@
  * allow-top-navigation-by-user-activation to prevent hijacking the parent page.
  */
 export const IFRAME_SANDBOX =
-  "allow-scripts allow-same-origin allow-popups allow-forms";
+  "allow-scripts allow-same-origin allow-popups allow-forms allow-modals";
 
 export function buildEmbedCode(
   embedUrl: string,

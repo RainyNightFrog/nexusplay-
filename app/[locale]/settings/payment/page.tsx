@@ -9,7 +9,11 @@ import { Link } from "@/i18n/navigation";
 import { AccountSettingsPageHeader } from "@/components/settings/account-settings-layout";
 import {
   accountCardClassName,
+  accountSectionCompactClassName,
+  accountSectionIntroClassName,
   accountSectionTitleClassName,
+  settingsListRowClassName,
+  settingsSectionHeaderRowClassName,
 } from "@/components/settings/account-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -158,8 +162,8 @@ export default function PaymentSettingsPage() {
 
       <div className="space-y-6">
         {!paymentsLive && (
-          <div className="flex items-start gap-3 rounded-2xl border border-amber-400/25 bg-amber-500/5 p-4">
-            <Sparkles className="mt-0.5 size-5 shrink-0 text-amber-400" />
+          <div className="flex flex-col items-center gap-3 rounded-2xl border border-amber-400/25 bg-amber-500/5 p-4 text-center">
+            <Sparkles className="size-5 shrink-0 text-amber-400" />
             <div>
               <p className="text-sm font-medium text-amber-100">
                 {t("paymentPreviewBanner")}
@@ -172,20 +176,20 @@ export default function PaymentSettingsPage() {
         )}
 
         <div className={accountCardClassName}>
-          <section className="space-y-4 text-left">
-            <div className="flex flex-wrap items-center justify-between gap-2">
+          <section className={accountSectionCompactClassName}>
+            <div className={settingsSectionHeaderRowClassName}>
               <h2 className={accountSectionTitleClassName}>
                 <CreditCard className="size-4 text-cyan-400" />
                 {t("paymentCardsSection")}
               </h2>
               {!paymentsLive && (
-                <Badge className="border-0 bg-zinc-700/50 text-zinc-300">
+                <Badge className="shrink-0 border-0 bg-zinc-700/50 text-zinc-300">
                   {t("paymentComingSoon")}
                 </Badge>
               )}
             </div>
 
-            <p className="text-xs leading-relaxed text-zinc-500">
+            <p className={accountSectionIntroClassName}>
               {t("paymentCardsDesc")}
             </p>
 
@@ -198,7 +202,7 @@ export default function PaymentSettingsPage() {
                 {cards.map((card) => (
                   <li
                     key={card.id}
-                    className="flex items-center justify-between rounded-xl border border-white/8 bg-zinc-950/40 px-4 py-3 text-sm"
+                    className={cn(settingsListRowClassName, "text-sm")}
                   >
                     <span className="capitalize text-zinc-200">
                       {card.brand} ···· {card.last4}
@@ -233,7 +237,7 @@ export default function PaymentSettingsPage() {
             )}
 
             {setupError && (
-              <p className="text-sm text-rose-400">{setupError}</p>
+              <p className="text-center text-sm text-rose-400">{setupError}</p>
             )}
 
             {setupSecret && setupPublishableKey ? (
@@ -269,12 +273,12 @@ export default function PaymentSettingsPage() {
         </div>
 
         <div className={accountCardClassName}>
-          <section className="space-y-4 text-left">
+          <section className={accountSectionCompactClassName}>
             <h2 className={accountSectionTitleClassName}>
               <Heart className="size-4 text-fuchsia-400" />
               {t("paymentTipsSection")}
             </h2>
-            <p className="text-xs leading-relaxed text-zinc-500">
+            <p className={accountSectionIntroClassName}>
               {t("paymentTipsDesc")}
             </p>
 
@@ -291,7 +295,7 @@ export default function PaymentSettingsPage() {
                 {tips.map((tip) => (
                   <li
                     key={tip.id}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/8 bg-zinc-950/40 px-4 py-3"
+                    className={settingsListRowClassName}
                   >
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-zinc-100">

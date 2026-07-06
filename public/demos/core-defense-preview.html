@@ -163,6 +163,46 @@
       background: #0a0e14;
     }
     .hint { flex-shrink: 0; font-size: 0.72rem; color: #6e7681; margin-top: 0.45rem; text-align: center; letter-spacing: 0.03em; }
+    .tactical-bar {
+      flex-shrink: 0; display: flex; gap: 0.35rem; flex-wrap: wrap; justify-content: center;
+      margin-bottom: 0.35rem; width: 100%;
+      padding: 0.35rem; background: rgba(0,0,0,0.5); border: 1px solid rgba(74,144,217,0.2); border-radius: 8px;
+    }
+    .skill-btn { padding: 0.38rem 0.7rem; font-size: 0.7rem; position: relative; }
+    .skill-btn .cd {
+      position: absolute; inset: 0; background: rgba(0,0,0,0.65);
+      display: none; align-items: center; justify-content: center;
+      font-size: 0.65rem; color: #6eb5ff; border-radius: 5px;
+    }
+    .skill-btn.on-cd .cd { display: flex; }
+    .skill-btn.ready { border-color: rgba(250,204,21,0.55); color: #fde047; }
+    .threat-bar {
+      flex-shrink: 0; font-size: 0.68rem; color: #6e7681; text-align: center; margin-bottom: 0.3rem; letter-spacing: 0.12em;
+    }
+    .threat-bar b { color: #ff8c5a; }
+    .kill-feed {
+      position: absolute; top: 0.35rem; right: 0.35rem; z-index: 12;
+      width: 140px; pointer-events: none; text-align: right;
+    }
+    .kill-feed div {
+      font-size: 0.62rem; color: #adbac7; margin-bottom: 0.2rem;
+      animation: feedIn 0.3s ease;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    }
+    @keyframes feedIn { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: none; } }
+    .phase-banner {
+      position: absolute; top: 0; left: 0; right: 0; z-index: 14;
+      text-align: center; padding: 0.42rem 0.55rem;
+      background: linear-gradient(180deg, rgba(0,0,0,0.88), rgba(0,0,0,0.55));
+      border-bottom: 1px solid rgba(110,181,255,0.28);
+      font-size: 0.78rem; line-height: 1.45; pointer-events: none;
+      color: #6eb5ff; letter-spacing: 0.04em;
+    }
+    .phase-banner.deploy { color: #86efac; border-color: rgba(134,239,172,0.28); }
+    .phase-banner.ready { color: #6eb5ff; }
+    .phase-banner.auto { color: #fde047; }
+    .phase-banner.hidden { display: none; }
+    .phase-banner sub { display: block; font-size: 0.68rem; color: #8b949e; margin-top: 0.15rem; }
     .wave-banner {
       position: absolute;
       inset: 0;
@@ -249,7 +289,10 @@
 
   <div id="help" class="screen">
     <div class="panel">
-      <h1>遊戲說明</h1>
+      <div class="help-screen-header">
+        <h1>遊戲說明</h1>
+        <button type="button" class="help-close-btn" id="btnHelpClose">✕ 關閉</button>
+      </div>
       <div class="help-box">
         <h3>🎯 遊戲目標</h3>
         <p>在工業基地中央有一座<strong>核心裂變爐</strong>。異星機械會從地圖邊緣湧入，沿直線衝向核心。建造砲塔、消滅敵人、保護核心直到所有波次結束。</p>
@@ -268,11 +311,17 @@
         <ul>
           <li><strong>機槍塔（50）：</strong> 射速快、前期清場</li>
           <li><strong>雷射塔（120）：</strong> 持續光束、高單體傷害</li>
-          <li><strong>迫擊塔（200）：</strong> 範圍爆炸、對付密集敵群</li>
-          <li><strong>狙擊塔（180）：</strong> 超遠射程、高爆發</li>
-          <li><strong>電磁塔（250）：</strong> 連鎖電擊、多目標</li>
           <li><strong>冰凍塔（150）：</strong> 減速敵人、控場</li>
+          <li><strong>狙擊塔（180）：</strong> 超遠射程、高爆發</li>
+          <li><strong>迫擊塔（200）：</strong> 範圍爆炸、對付密集敵群</li>
+          <li><strong>電磁塔（250）：</strong> 連鎖電擊、多目標</li>
           <li><strong>導彈塔（320）：</strong> 追蹤導彈、範圍傷害</li>
+        </ul>
+        <h3>⚙️ 戰術技能</h3>
+        <ul>
+          <li><strong>核心裂變（200 礦）：</strong> 脈衝傷害全場敵軍 40% 血量</li>
+          <li><strong>砲塔超載（150 礦）：</strong> 8 秒內全砲塔射速 ×2</li>
+          <li><strong>空投補給：</strong> 每 3 波可獲得 +90 礦石</li>
         </ul>
         <h3>⚙️ 操作</h3>
         <ul>
@@ -281,7 +330,7 @@
           <li><strong>自動下一波：</strong> 波次清空後自動接續</li>
         </ul>
       </div>
-      <div class="btn-row"><button class="primary" id="btnHelpBack">返回</button></div>
+      <div class="btn-row"><button class="primary" id="btnHelpBack">返回主選單</button></div>
     </div>
   </div>
 
@@ -301,23 +350,33 @@
       <div class="toolbar tower-bar">
         <button class="tool-btn active" data-tower="gun" title="機槍塔">🔫50</button>
         <button class="tool-btn" data-tower="laser" title="雷射塔">⚡120</button>
-        <button class="tool-btn" data-tower="mortar" title="迫擊塔">💥200</button>
-        <button class="tool-btn" data-tower="sniper" title="狙擊塔">🎯180</button>
-        <button class="tool-btn" data-tower="tesla" title="電磁塔">⚙250</button>
         <button class="tool-btn" data-tower="frost" title="冰凍塔">❄150</button>
+        <button class="tool-btn" data-tower="sniper" title="狙擊塔">🎯180</button>
+        <button class="tool-btn" data-tower="mortar" title="迫擊塔">💥200</button>
+        <button class="tool-btn" data-tower="tesla" title="電磁塔">⚙250</button>
         <button class="tool-btn" data-tower="rocket" title="導彈塔">🚀320</button>
+      </div>
+      <div class="threat-bar" id="threatBar">威脅等級 <b id="threatLevel">★☆☆</b> · 編隊突襲模式</div>
+      <div class="tactical-bar">
+        <button class="tool-btn skill-btn" id="skillFission" title="核心裂變脈衝">☢ 裂變 <span class="cd" id="cdFission"></span></button>
+        <button class="tool-btn skill-btn" id="skillOverdrive" title="砲塔超載">⚡ 超載 <span class="cd" id="cdOverdrive"></span></button>
+        <button class="tool-btn skill-btn" id="skillAirdrop" title="空投補給">📦 空投 <span class="cd" id="cdAirdrop"></span></button>
       </div>
       <div class="toolbar action-bar">
         <button class="tool-btn start-btn" id="btnStartBattle">▶ 開始</button>
         <button class="tool-btn wave-btn" id="btnNextWave" disabled>▶ 下一波</button>
         <button class="tool-btn auto-btn" id="btnAutoWave">🔄 自動 OFF</button>
+        <button class="tool-btn" id="btnGameHelp">❓ 說明</button>
         <button class="tool-btn" id="btnPause">⏸ 暫停</button>
-        <button class="tool-btn" id="btnQuit">退出</button>
+        <button class="tool-btn" id="btnQuit">🏠 主選單</button>
+        <button class="tool-btn" id="btnLeaveGame">← 離開</button>
       </div>
       <div class="canvas-wrap">
+        <div class="phase-banner deploy" id="phaseBanner">部署砲塔後，點上方「▶ 開始」進入戰鬥</div>
+        <div class="kill-feed" id="killFeed"></div>
         <canvas id="canvas" width="640" height="480"></canvas>
       </div>
-      <p class="hint">部署砲塔 → 點「開始」→ 手動或自動下一波 · 擊殺連鎖提升 MULTI</p>
+      <p class="hint">部署砲塔 → 點「開始」立即開打 → 或開啟「自動下一波」</p>
     </div>
   </div>
 
@@ -378,6 +437,9 @@
     let animId = null, lastTime = 0, spawnQueue = [], spawnTimer = 0;
     let mouseX = 0, mouseY = 0, hoverCell = null, shake = 0, corePulse = 0;
     let bestWave = 0, bestKills = 0, bestGrade = '—';
+    let helpFromGame = false;
+    let killFeed = [], conveyorPhase = 0, overdriveTimer = 0;
+    let skillCd = { fission: 0, overdrive: 0 }, airdropWave = 0, spawnBurst = null;
 
     const $ = (id) => document.getElementById(id);
     const screens = { menu: $('menu'), help: $('help'), game: $('gameScreen'), leaderboard: $('leaderboard') };
@@ -404,16 +466,48 @@
       });
     });
 
+    function closeHelp() {
+      if (helpFromGame) {
+        helpFromGame = false;
+        paused = false;
+        $('btnPause').textContent = '⏸ 暫停';
+        showScreen('game');
+        return;
+      }
+      showScreen('menu');
+    }
+
     $('btnStart').onclick = startGame;
-    $('btnHelp').onclick = () => showScreen('help');
-    $('btnHelpBack').onclick = () => showScreen('menu');
+    $('btnHelp').onclick = () => { helpFromGame = false; showScreen('help'); };
+    $('btnHelpBack').onclick = closeHelp;
+    $('btnHelpClose').onclick = closeHelp;
     $('btnLeaderboard').onclick = () => openLeaderboard();
     $('btnLbBack').onclick = () => showScreen('menu');
     $('btnStartBattle').onclick = beginBattle;
     $('btnNextWave').onclick = startNextWave;
     $('btnAutoWave').onclick = toggleAutoWave;
     $('btnPause').onclick = togglePause;
-    $('btnQuit').onclick = quitGame;
+    $('btnGameHelp').onclick = () => {
+      helpFromGame = true;
+      if (!paused) {
+        paused = true;
+        $('btnPause').textContent = '▶ 繼續';
+      }
+      showScreen('help');
+    };
+    $('btnQuit').onclick = () => {
+      if (animId) cancelAnimationFrame(animId);
+      gameStarted = false;
+      waveActive = false;
+      showScreen('menu');
+    };
+    $('btnLeaveGame').onclick = () => {
+      if (animId) cancelAnimationFrame(animId);
+      PlatformBridge.leaveToPlatform();
+    };
+    $('skillFission').onclick = useSkillFission;
+    $('skillOverdrive').onclick = useSkillOverdrive;
+    $('skillAirdrop').onclick = useSkillAirdrop;
     $('btnRetry').onclick = () => { $('overlay').classList.remove('show'); startGame(); };
     $('btnMenu').onclick = () => { $('overlay').classList.remove('show'); quitGame(); };
 
@@ -482,6 +576,9 @@
       gameStarted = false; autoWave = false; autoWaveTimer = 0;
       coreHp = config.coreHp; CORE.hp = coreHp; CORE.maxHp = config.coreHp;
       killStreak = 0; multi = 1; spawnQueue = []; spawnTimer = 0; shake = 0;
+      killFeed = []; conveyorPhase = 0; overdriveTimer = 0;
+      skillCd = { fission: 0, overdrive: 0 }; airdropWave = 0; spawnBurst = null;
+      $('killFeed').innerHTML = '';
       $('hudMaxWave').textContent = config.waves;
       updateWaveButtons();
       updateHud();
@@ -499,27 +596,112 @@
       showScreen('menu');
     }
 
+    function updatePhaseBanner(main, sub, tone) {
+      const el = $('phaseBanner');
+      if (!main) {
+        el.className = 'phase-banner hidden';
+        el.innerHTML = '';
+        return;
+      }
+      el.className = 'phase-banner ' + (tone || 'ready');
+      el.innerHTML = main + (sub ? '<sub>' + sub + '</sub>' : '');
+    }
+
     function updateWaveButtons() {
-      $('btnStartBattle').disabled = gameStarted;
-      $('btnStartBattle').textContent = gameStarted ? '✓ 已開始' : '▶ 開始';
+      $('btnStartBattle').disabled = false;
+      $('btnStartBattle').textContent = gameStarted
+        ? (wave === 0 && !waveActive ? '▶ 開始敵襲' : '✓ 已開始')
+        : '▶ 開始';
       $('btnNextWave').disabled = !gameStarted || waveActive || wave >= config.waves;
       $('btnAutoWave').textContent = autoWave ? '🔄 自動 ON' : '🔄 自動 OFF';
       $('btnAutoWave').classList.toggle('on', autoWave);
+      if (!gameStarted) {
+        updatePhaseBanner('部署砲塔後，點上方「▶ 開始」進入戰鬥', '可先建造防線，再開始敵襲', 'deploy');
+      } else if (wave === 0 && !waveActive) {
+        updatePhaseBanner('準備完成 — 點「▶ 開始敵襲」或「下一波」', autoWave ? '自動下一波已開啟，稍後自動開打' : null, autoWave ? 'auto' : 'ready');
+      } else if (waveActive) {
+        updatePhaseBanner('WAVE ' + wave + ' 激戰中', null, 'ready');
+      } else if (wave > 0 && wave < config.waves) {
+        updatePhaseBanner('第 ' + wave + ' 波已清空', autoWave ? '自動下一波倒數中…' : '點「下一波」繼續', autoWave ? 'auto' : 'ready');
+      } else {
+        updatePhaseBanner(null);
+      }
+    }
+
+    function pushFeed(text, color) {
+      killFeed.unshift({ text, color: color || '#adbac7', life: 2800 });
+      if (killFeed.length > 5) killFeed.pop();
+      const el = $('killFeed');
+      el.innerHTML = killFeed.map(f =>
+        `<div style="color:${f.color}">${f.text}</div>`
+      ).join('');
+    }
+
+    function updateThreat() {
+      const stars = wave <= 2 ? '★☆☆' : wave <= 5 ? '★★☆' : wave <= 8 ? '★★★' : '★★★★';
+      $('threatLevel').textContent = stars;
+    }
+
+    function useSkillFission() {
+      if (!gameStarted || ore < 200 || skillCd.fission > 0) return;
+      ore -= 200; skillCd.fission = 18000;
+      const coreX = CORE.c * CELL + CELL/2, coreY = CORE.r * CELL + CELL/2;
+      enemies.forEach(e => damageEnemy(e, e.maxHp * 0.4, true));
+      shake = 22;
+      addExplosion(coreX, coreY, '#ff6b2b', 90);
+      pushFeed('☢ 核心裂變脈衝', '#ff8c5a');
+      floatTexts.push({ x: coreX, y: coreY - 40, text: 'FISSION!', color: '#ffd700', life: 1000 });
+      updateHud();
+    }
+
+    function useSkillOverdrive() {
+      if (!gameStarted || ore < 150 || skillCd.overdrive > 0 || overdriveTimer > 0) return;
+      ore -= 150; skillCd.overdrive = 12000; overdriveTimer = 8000;
+      pushFeed('⚡ 砲塔超載啟動', '#6eb5ff');
+      floatTexts.push({ x: canvas.width/2, y: 50, text: 'OVERDRIVE ×2', color: '#fde047', life: 1200 });
+      updateHud();
+    }
+
+    function useSkillAirdrop() {
+      if (!gameStarted || wave - airdropWave < 3) return;
+      airdropWave = wave;
+      ore += 90;
+      pushFeed('📦 空投 +90 礦', '#ffd700');
+      addParticles(CORE.c * CELL + CELL/2, CORE.r * CELL, '#ffd700', 12);
+      updateHud();
+    }
+
+    function updateSkillsHud() {
+      ['fission', 'overdrive'].forEach(k => {
+        const btn = k === 'fission' ? $('skillFission') : $('skillOverdrive');
+        const cdEl = k === 'fission' ? $('cdFission') : $('cdOverdrive');
+        const cd = skillCd[k];
+        btn.classList.toggle('on-cd', cd > 0);
+        cdEl.textContent = cd > 0 ? Math.ceil(cd / 1000) + 's' : '';
+      });
+      $('skillAirdrop').classList.toggle('ready', gameStarted && wave - airdropWave >= 3);
     }
 
     function beginBattle() {
-      if (gameStarted) return;
-      gameStarted = true;
+      if (!gameStarted) {
+        gameStarted = true;
+        pushFeed('⚔ 防線啟動 — 編隊模式', '#86efac');
+        floatTexts.push({ x: canvas.width / 2, y: 48, text: '⚔ 戰鬥開始！', color: '#86efac', life: 1200 });
+      }
+      if (waveActive || wave >= config.waves) {
+        updateWaveButtons();
+        return;
+      }
+      startNextWave();
       updateWaveButtons();
-      floatTexts.push({ x: canvas.width / 2, y: canvas.height / 2, text: '⚔ 戰鬥開始！', color: '#86efac', life: 1200 });
-      if (autoWave) startNextWave();
     }
 
     function toggleAutoWave() {
       autoWave = !autoWave;
       updateWaveButtons();
       if (autoWave && gameStarted && !waveActive && wave < config.waves) {
-        autoWaveTimer = 800;
+        autoWaveTimer = wave === 0 ? 400 : 800;
+        if (wave === 0) startNextWave();
       }
     }
 
@@ -622,21 +804,25 @@
         });
       });
       spawnTimer = 0;
+      spawnBurst = { remaining: types.length, burstSize: Math.min(6, 2 + Math.floor(wave / 2)), interval: 280 };
       updateWaveButtons();
+      updateThreat();
       updateHud();
+      pushFeed('WAVE ' + wave + ' — ' + waveSubtitle(wave), '#6eb5ff');
     }
 
-    function spawnEnemy() {
+    function spawnEnemy(offset) {
       if (!spawnQueue.length) return;
       const data = spawnQueue.shift();
       const edge = Math.floor(Math.random() * 4);
-      let x, y;
-      if (edge === 0) { x = Math.random() * COLS * CELL; y = -15; }
-      else if (edge === 1) { x = COLS * CELL + 15; y = Math.random() * ROWS * CELL; }
-      else if (edge === 2) { x = Math.random() * COLS * CELL; y = ROWS * CELL + 15; }
-      else { x = -15; y = Math.random() * ROWS * CELL; }
-      enemies.push({ x, y, ...data, dead: false, hitFlash: 0 });
-      addParticles(x, y, data.color, 6);
+      let x, y, ox = 0, oy = 0;
+      if (offset) { ox = (Math.random() - 0.5) * 36; oy = (Math.random() - 0.5) * 36; }
+      if (edge === 0) { x = Math.random() * COLS * CELL + ox; y = -15 + oy; }
+      else if (edge === 1) { x = COLS * CELL + 15 + ox; y = Math.random() * ROWS * CELL + oy; }
+      else if (edge === 2) { x = Math.random() * COLS * CELL + ox; y = ROWS * CELL + 15 + oy; }
+      else { x = -15 + ox; y = Math.random() * ROWS * CELL + oy; }
+      enemies.push({ x, y, ...data, dead: false, hitFlash: 0, wing: Math.random() * Math.PI * 2 });
+      if (!offset) addParticles(x, y, data.color, 6);
     }
 
     function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
@@ -651,17 +837,29 @@
 
     function update(dt) {
       corePulse += dt * 0.003;
+      conveyorPhase += dt * 0.004;
       if (shake > 0) shake = Math.max(0, shake - dt * 0.05);
+      if (skillCd.fission > 0) skillCd.fission = Math.max(0, skillCd.fission - dt);
+      if (skillCd.overdrive > 0) skillCd.overdrive = Math.max(0, skillCd.overdrive - dt);
+      if (overdriveTimer > 0) overdriveTimer = Math.max(0, overdriveTimer - dt);
+      killFeed.forEach(f => f.life -= dt);
+      killFeed = killFeed.filter(f => f.life > 0);
+      updateSkillsHud();
 
       if (waveActive && spawnQueue.length) {
         spawnTimer += dt;
-        const interval = wave >= 6 ? 420 : 500;
-        if (spawnTimer >= interval) { spawnTimer = 0; spawnEnemy(); }
+        const burst = spawnBurst || { interval: 500, burstSize: 1 };
+        if (spawnTimer >= burst.interval) {
+          spawnTimer = 0;
+          const n = Math.min(burst.burstSize, spawnQueue.length);
+          for (let i = 0; i < n; i++) spawnEnemy(i > 0);
+        }
       }
 
-      if (autoWave && gameStarted && !waveActive && wave > 0 && wave < config.waves) {
+      if (autoWave && gameStarted && !waveActive && wave < config.waves) {
         autoWaveTimer += dt;
-        if (autoWaveTimer >= 2500) {
+        const delay = wave === 0 ? 600 : 2500;
+        if (autoWaveTimer >= delay) {
           autoWaveTimer = 0;
           startNextWave();
         }
@@ -700,14 +898,15 @@
         if (target) {
           t.angle = Math.atan2(target.y - t.y, target.x - t.x);
           t.lastShot += dt;
+          const rateMul = overdriveTimer > 0 ? 0.5 : 1;
           if (t.beam) {
             beams.push({ x1: t.x, y1: t.y, x2: target.x, y2: target.y, color: t.color, life: 60 });
-            if (t.lastShot >= t.rate) {
+            if (t.lastShot >= t.rate * rateMul) {
               t.lastShot = 0;
               damageEnemy(target, t.damage * multi);
               if (t.slow) applySlow(target, t.slow);
             }
-          } else if (t.lastShot >= t.rate) {
+          } else if (t.lastShot >= t.rate * rateMul) {
             t.lastShot = 0;
             t.recoil = t.chain ? 3 : 6;
             if (t.chain) {
@@ -816,19 +1015,22 @@
       }
     }
 
-    function damageEnemy(e, dmg) {
+    function damageEnemy(e, dmg, pulseOnly) {
       const reduced = dmg * (1 - (e.armor || 0));
       e.hp -= reduced;
       e.hitFlash = 100;
       if (e.hp <= 0 && !e.dead) {
         e.dead = true;
         if (e.split > 0) spawnMiniScouts(e.x, e.y, e.split);
-        kills++;
-        killStreak++;
-        if (killStreak >= 5) multi = Math.min(2.5, 1 + killStreak * 0.05);
-        const reward = Math.floor(e.reward * multi);
-        ore += reward;
-        orePopups.push({ x: e.x, y: e.y, text: `+${reward}`, life: 700 });
+        if (!pulseOnly) {
+          kills++;
+          killStreak++;
+          if (killStreak >= 5) multi = Math.min(2.5, 1 + killStreak * 0.05);
+          const reward = Math.floor(e.reward * multi);
+          ore += reward;
+          orePopups.push({ x: e.x, y: e.y, text: `+${reward}`, life: 700 });
+          if (e.type === 'titan' || e.type === 'elite') pushFeed('💥 擊毀 ' + e.type.toUpperCase(), e.color);
+        }
         addExplosion(e.x, e.y, e.color, e.radius * 2);
         updateHud();
       }
@@ -875,42 +1077,47 @@
     function drawEnemy(e) {
       ctx.save();
       ctx.translate(e.x, e.y);
-      if (e.slowTimer > 0) {
-        ctx.shadowColor = '#67e8f9';
-        ctx.shadowBlur = 10;
-      }
+      e.wing = (e.wing || 0) + 0.08;
+      if (e.slowTimer > 0) { ctx.shadowColor = '#67e8f9'; ctx.shadowBlur = 10; }
       if (e.hitFlash > 0) { ctx.globalAlpha = 0.5 + Math.sin(e.hitFlash * 0.2) * 0.5; }
       ctx.fillStyle = e.color;
       ctx.strokeStyle = e.accent;
-      ctx.lineWidth = 2;
-      if (e.shape === 'triangle') {
+      ctx.lineWidth = 1.5;
+      if (e.shape === 'triangle' || e.shape === 'phantom') {
         ctx.beginPath();
         ctx.moveTo(0, -e.radius);
-        ctx.lineTo(e.radius * 0.9, e.radius * 0.7);
-        ctx.lineTo(-e.radius * 0.9, e.radius * 0.7);
+        ctx.lineTo(e.radius * 0.85, e.radius * 0.55);
+        ctx.lineTo(0, e.radius * 0.25);
+        ctx.lineTo(-e.radius * 0.85, e.radius * 0.55);
         ctx.closePath(); ctx.fill(); ctx.stroke();
-      } else if (e.shape === 'circle') {
-        ctx.beginPath(); ctx.arc(0, 0, e.radius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      } else if (e.shape === 'diamond') {
+        ctx.strokeStyle = e.accent;
+        ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(0, -e.radius); ctx.lineTo(e.radius, 0);
-        ctx.lineTo(0, e.radius); ctx.lineTo(-e.radius, 0);
-        ctx.closePath(); ctx.fill(); ctx.stroke();
-      } else if (e.shape === 'square' || e.shape === 'titan') {
-        const s = e.shape === 'titan' ? e.radius * 1.15 : e.radius;
-        ctx.fillRect(-s, -s, s * 2, s * 2);
-        ctx.strokeRect(-s + 1, -s + 1, s * 2 - 2, s * 2 - 2);
+        ctx.moveTo(-e.radius * 0.7, Math.sin(e.wing) * 3);
+        ctx.lineTo(-e.radius * 1.2, Math.sin(e.wing) * 6);
+        ctx.moveTo(e.radius * 0.7, -Math.sin(e.wing) * 3);
+        ctx.lineTo(e.radius * 1.2, -Math.sin(e.wing) * 6);
+        ctx.stroke();
+      } else if (e.shape === 'circle' || e.shape === 'swarm') {
+        ctx.beginPath(); ctx.arc(0, 0, e.radius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = e.accent;
+        ctx.beginPath(); ctx.arc(0, 0, e.radius * 0.35, 0, Math.PI * 2); ctx.fill();
+      } else if (e.shape === 'square' || e.shape === 'titan' || e.shape === 'heavy') {
+        const s = e.shape === 'titan' ? e.radius * 1.2 : e.radius;
+        ctx.fillRect(-s, -s * 0.8, s * 2, s * 1.6);
+        ctx.strokeRect(-s + 1, -s * 0.8 + 1, s * 2 - 2, s * 1.6 - 2);
+        ctx.fillStyle = '#334455';
+        ctx.fillRect(-s * 0.5, -s * 0.3, s, s * 0.5);
         if (e.shape === 'titan') {
           ctx.fillStyle = '#ff4444';
-          ctx.font = 'bold 8px sans-serif';
+          ctx.font = 'bold 9px sans-serif';
           ctx.textAlign = 'center';
-          ctx.fillText('T', 0, 3);
+          ctx.fillText('BOSS', 0, 4);
         }
       } else if (e.shape === 'shield') {
         ctx.beginPath(); ctx.arc(0, 0, e.radius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-        ctx.strokeStyle = '#88bbff';
-        ctx.lineWidth = 3;
-        ctx.beginPath(); ctx.arc(0, 0, e.radius + 3, 0, Math.PI * 2); ctx.stroke();
+        ctx.strokeStyle = '#88bbff'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(0, 0, e.radius + 4, 0, Math.PI * 2); ctx.stroke();
       } else if (e.shape === 'brood') {
         ctx.beginPath();
         for (let i = 0; i < 6; i++) {
@@ -919,8 +1126,6 @@
           i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
         }
         ctx.closePath(); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = '#aaffaa';
-        ctx.beginPath(); ctx.arc(0, 0, 3, 0, Math.PI * 2); ctx.fill();
       } else {
         ctx.beginPath();
         for (let i = 0; i < 6; i++) {
@@ -929,25 +1134,23 @@
           i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
         }
         ctx.closePath(); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = e.accent;
-        ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI*2); ctx.fill();
       }
       const hpPct = e.hp / e.maxHp;
-      const barW = e.shape === 'titan' ? 34 : 28;
+      const barW = e.shape === 'titan' ? 36 : 28;
       ctx.shadowBlur = 0;
-      ctx.fillStyle = 'rgba(0,0,0,0.6)';
-      ctx.fillRect(-barW/2, -e.radius - 10, barW, 5);
+      ctx.fillStyle = 'rgba(0,0,0,0.65)';
+      ctx.fillRect(-barW/2, -e.radius - 12, barW, 5);
       ctx.fillStyle = hpPct > 0.5 ? '#4ade80' : hpPct > 0.25 ? '#fbbf24' : '#f87171';
-      ctx.fillRect(-barW/2, -e.radius - 10, barW * hpPct, 5);
+      ctx.fillRect(-barW/2, -e.radius - 12, barW * hpPct, 5);
       ctx.restore();
     }
 
     function drawTower(t) {
       const px = t.c * CELL, py = t.r * CELL;
-      ctx.fillStyle = 'rgba(20,28,40,0.92)';
+      ctx.fillStyle = 'rgba(14,20,30,0.95)';
       ctx.fillRect(px + 2, py + 2, CELL - 4, CELL - 4);
       const grd = ctx.createLinearGradient(px, py, px + CELL, py + CELL);
-      grd.addColorStop(0, t.color + '33');
+      grd.addColorStop(0, t.color + '44');
       grd.addColorStop(1, 'transparent');
       ctx.fillStyle = grd;
       ctx.fillRect(px + 2, py + 2, CELL - 4, CELL - 4);
@@ -958,10 +1161,51 @@
       ctx.save();
       ctx.translate(t.x, t.y);
       ctx.rotate(t.angle);
-      ctx.fillStyle = t.color;
-      ctx.fillRect(recoilOff - 4, -5, 18, 10);
-      ctx.fillRect(recoilOff + 10, -3, 8, 6);
+      if (t.beam) {
+        ctx.fillStyle = '#2a3544';
+        ctx.fillRect(-8, -8, 16, 16);
+        ctx.fillStyle = t.color;
+        ctx.beginPath(); ctx.arc(0, 0, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillRect(recoilOff + 4, -2, 14, 4);
+      } else if (t.aoe) {
+        ctx.fillStyle = '#3a2a22';
+        ctx.fillRect(-10, -9, 20, 18);
+        ctx.fillStyle = t.color;
+        ctx.fillRect(recoilOff - 2, -6, 22, 5);
+        ctx.fillRect(recoilOff - 2, 1, 22, 5);
+      } else {
+        ctx.fillStyle = '#2a3544';
+        ctx.beginPath(); ctx.moveTo(-6, -7); ctx.lineTo(8, 0); ctx.lineTo(-6, 7); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = t.color;
+        ctx.fillRect(recoilOff - 2, -4, 20, 8);
+        ctx.fillRect(recoilOff + 14, -2, 10, 4);
+      }
+      if (overdriveTimer > 0) {
+        ctx.strokeStyle = 'rgba(253,224,71,0.6)';
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(0, 0, 14, 0, Math.PI * 2); ctx.stroke();
+      }
       ctx.restore();
+    }
+
+    function drawConveyors() {
+      const paths = [
+        [[0, CORE.r * CELL + CELL/2], [CORE.c * CELL, CORE.r * CELL + CELL/2]],
+        [[COLS * CELL, CORE.r * CELL + CELL/2], [CORE.c * CELL + CELL, CORE.r * CELL + CELL/2]],
+        [[CORE.c * CELL + CELL/2, 0], [CORE.c * CELL + CELL/2, CORE.r * CELL]],
+        [[CORE.c * CELL + CELL/2, ROWS * CELL], [CORE.c * CELL + CELL/2, CORE.r * CELL + CELL]],
+      ];
+      paths.forEach(([from, to]) => {
+        ctx.strokeStyle = 'rgba(255,140,50,0.18)';
+        ctx.lineWidth = 6;
+        ctx.beginPath(); ctx.moveTo(from[0], from[1]); ctx.lineTo(to[0], to[1]); ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,180,80,0.35)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([8, 10]);
+        ctx.lineDashOffset = -conveyorPhase * 20;
+        ctx.beginPath(); ctx.moveTo(from[0], from[1]); ctx.lineTo(to[0], to[1]); ctx.stroke();
+        ctx.setLineDash([]);
+      });
     }
 
     function draw() {
@@ -973,8 +1217,16 @@
       ctx.fillStyle = '#0a0e14';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+      for (let c = 0; c < COLS; c++) {
+        for (let r = 0; r < ROWS; r++) {
+          ctx.fillStyle = (c + r) % 2 === 0 ? 'rgba(16,22,32,0.9)' : 'rgba(12,17,26,0.9)';
+          ctx.fillRect(c * CELL, r * CELL, CELL, CELL);
+        }
+      }
+      drawConveyors();
+
       for (let c = 0; c <= COLS; c++) {
-        ctx.strokeStyle = 'rgba(255,140,50,0.06)';
+        ctx.strokeStyle = 'rgba(255,140,50,0.08)';
         ctx.beginPath(); ctx.moveTo(c*CELL, 0); ctx.lineTo(c*CELL, ROWS*CELL); ctx.stroke();
       }
       for (let r = 0; r <= ROWS; r++) {
@@ -983,8 +1235,11 @@
 
       const cx = CORE.c * CELL, cy = CORE.r * CELL;
       const pulse = 0.5 + Math.sin(corePulse) * 0.2;
-      const coreGrd = ctx.createRadialGradient(cx+CELL/2, cy+CELL/2, 5, cx+CELL/2, cy+CELL/2, CELL*2);
-      coreGrd.addColorStop(0, `rgba(255,140,50,${0.3 + pulse*0.15})`);
+      ctx.fillStyle = 'rgba(30,35,45,0.85)';
+      ctx.fillRect(cx - CELL + 2, cy - CELL + 2, CELL*3 - 4, CELL*3 - 4);
+      const coreGrd = ctx.createRadialGradient(cx+CELL/2, cy+CELL/2, 5, cx+CELL/2, cy+CELL/2, CELL*2.2);
+      coreGrd.addColorStop(0, `rgba(255,140,50,${0.45 + pulse*0.2})`);
+      coreGrd.addColorStop(0.5, `rgba(255,80,30,${0.2 + pulse*0.1})`);
       coreGrd.addColorStop(1, 'transparent');
       ctx.fillStyle = coreGrd;
       ctx.fillRect(cx - CELL, cy - CELL, CELL*3, CELL*3);
@@ -992,22 +1247,26 @@
       ctx.strokeStyle = '#ff6b2b';
       ctx.lineWidth = 2;
       ctx.strokeRect(cx - CELL + 3, cy - CELL + 3, CELL*3 - 6, CELL*3 - 6);
+      ctx.fillStyle = '#1a1410';
+      ctx.beginPath();
+      ctx.arc(cx + CELL/2, cy + CELL/2, 18 + pulse*4, 0, Math.PI*2);
+      ctx.fill();
       ctx.fillStyle = '#ff8c5a';
       ctx.shadowColor = '#ff6b2b';
-      ctx.shadowBlur = 15 + pulse * 10;
+      ctx.shadowBlur = 18 + pulse * 12;
       ctx.beginPath();
-      ctx.arc(cx + CELL/2, cy + CELL/2, 16 + pulse*5, 0, Math.PI*2);
+      ctx.arc(cx + CELL/2, cy + CELL/2, 12 + pulse*3, 0, Math.PI*2);
       ctx.fill();
       ctx.shadowBlur = 0;
-      ctx.strokeStyle = `rgba(255,200,100,${0.4 + pulse*0.3})`;
+      ctx.strokeStyle = `rgba(255,200,100,${0.5 + pulse*0.3})`;
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.arc(cx + CELL/2, cy + CELL/2, 22 + pulse*8, 0, Math.PI*2);
+      ctx.arc(cx + CELL/2, cy + CELL/2, 24 + pulse*10, 0, Math.PI*2);
       ctx.stroke();
       ctx.fillStyle = '#fff';
-      ctx.font = 'bold 11px sans-serif';
+      ctx.font = 'bold 10px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('CORE', cx + CELL/2, cy + CELL/2 + 4);
+      ctx.fillText('FISSION', cx + CELL/2, cy + CELL/2 + 3);
 
       towers.forEach(drawTower);
 
@@ -1086,37 +1345,13 @@
         ctx.globalAlpha = 1;
       });
 
-      if (!gameStarted) {
-        ctx.fillStyle = 'rgba(0,0,0,0.55)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#86efac';
-        ctx.font = 'bold 20px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('部署砲塔，點擊「開始」', canvas.width/2, canvas.height * 0.28);
-        ctx.fillStyle = '#ffb380';
-        ctx.font = '13px sans-serif';
-        ctx.fillText('可開啟「自動下一波」連續迎戰', canvas.width/2, canvas.height * 0.28 + 26);
-      } else if (wave === 0 && !waveActive) {
+      if (paused && !$('overlay').classList.contains('show')) {
         ctx.fillStyle = 'rgba(0,0,0,0.45)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#6eb5ff';
-        ctx.font = 'bold 18px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('準備完成 · 點擊「下一波」', canvas.width/2, canvas.height/2);
-        if (autoWave) {
-          ctx.fillStyle = '#fde047';
-          ctx.font = '12px sans-serif';
-          ctx.fillText('自動下一波已開啟', canvas.width/2, canvas.height/2 + 22);
-        }
-      }
-
-      if (paused && !$('overlay').classList.contains('show')) {
-        ctx.fillStyle = 'rgba(0,0,0,0.5)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = '#fff';
-        ctx.font = 'bold 28px sans-serif';
+        ctx.font = 'bold 22px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('⏸ PAUSED', canvas.width/2, canvas.height/2);
+        ctx.fillText('⏸ PAUSED', canvas.width/2, canvas.height * 0.22);
       }
 
       ctx.restore();

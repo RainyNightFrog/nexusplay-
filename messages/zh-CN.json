@@ -516,8 +516,8 @@
     "continueWithGoogle": "使用 Google 登录",
     "chooseRole": {
       "badge": "登录成功",
-      "title": "选择本次账号身份",
-      "description": "每次登录后请选择你要以玩家或创作者身份使用平台。之后可在个人资料再次调整。",
+      "title": "选择账号身份",
+      "description": "首次使用请选择玩家或创作者身份，之后登录会直接进入平台。也可在个人资料随时调整。",
       "cardTitle": "你想怎么使用 NexusPlay？",
       "cardDesc": "这会影响你是否能进入创作者后台上游戏。",
       "playerTitle": "玩家",

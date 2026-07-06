@@ -50,8 +50,8 @@ export function ForumDigestHistoryPanel({ enabled }: ForumDigestHistoryPanelProp
   if (!enabled) return null;
 
   return (
-    <div className="ml-1 border-l border-white/10 pl-4">
-      <p className="mb-2 text-xs font-medium text-zinc-500">{t("forumDigestHistoryTitle")}</p>
+    <div className="space-y-2 text-center">
+      <p className="text-xs font-medium text-zinc-500">{t("forumDigestHistoryTitle")}</p>
 
       {loading ? (
         <div className="flex items-center gap-2 text-xs text-zinc-500">

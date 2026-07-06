@@ -12,6 +12,9 @@ import {
   accountFieldClassName,
   accountInputClassName,
   accountLabelClassName,
+  accountSectionClassName,
+  accountSectionCompactClassName,
+  accountSectionIntroClassName,
   accountSectionTitleClassName,
   settingsToggleRowClassName,
 } from "@/components/settings/account-shell";
@@ -221,12 +224,12 @@ export default function CreatorSettingsPage() {
 
       <div className="space-y-6">
         <div className={accountCardClassName}>
-          <section className="space-y-5 text-left">
+          <section className={accountSectionClassName}>
             <h2 className={accountSectionTitleClassName}>
               <Mail className="size-4 text-cyan-400" />
               {t("supportEmailSection")}
             </h2>
-            <p className="text-xs leading-relaxed text-zinc-500">
+            <p className={accountSectionIntroClassName}>
               {t("supportEmailDesc")}
             </p>
 
@@ -241,12 +244,12 @@ export default function CreatorSettingsPage() {
                 placeholder={t("supportEmailPlaceholder")}
                 value={supportEmail}
                 onChange={(event) => setSupportEmail(event.target.value)}
-                className={cn(accountInputClassName, "text-left")}
+                className={accountInputClassName}
               />
             </div>
 
             {accountEmail && (
-              <div className="rounded-xl border border-white/8 bg-white/[0.02] p-3 text-left">
+              <div className="rounded-xl border border-white/8 bg-white/[0.02] p-3 text-center">
                 <p className="text-xs text-zinc-500">{t("useExistingEmail")}</p>
                 <button
                   type="button"
@@ -277,12 +280,12 @@ export default function CreatorSettingsPage() {
         </div>
 
         <div className={accountCardClassName}>
-          <section className="space-y-4 text-left">
+          <section className={accountSectionCompactClassName}>
             <h2 className={accountSectionTitleClassName}>
               <Bell className="size-4 text-amber-400" />
               {t("tipNotifySection")}
             </h2>
-            <p className="text-xs leading-relaxed text-zinc-500">
+            <p className={accountSectionIntroClassName}>
               {t("tipNotifyDesc")}
             </p>
             <label htmlFor="tip-notify-email" className={settingsToggleRowClassName}>
@@ -346,7 +349,7 @@ export default function CreatorSettingsPage() {
         </div>
 
         <div className={accountCardClassName}>
-          <section className="space-y-3 text-left">
+          <section className="space-y-3 text-center">
             <h2 className={accountSectionTitleClassName}>
               <Coins className="size-4 text-emerald-400" />
               {t("platformFeeSection")}
@@ -354,7 +357,7 @@ export default function CreatorSettingsPage() {
             <p className="text-sm text-zinc-300">
               {t("platformFeeCurrent", { percent: PLANNED_PLATFORM_FEE_PERCENT })}
             </p>
-            <p className="text-xs leading-relaxed text-zinc-500">
+            <p className={accountSectionIntroClassName}>
               {t("platformFeePolicy", {
                 futurePercent: PLANNED_FUTURE_PLATFORM_FEE_PERCENT,
                 days: FEE_CHANGE_NOTICE_DAYS,
@@ -367,7 +370,7 @@ export default function CreatorSettingsPage() {
               </Link>
             </p>
 
-            <div className="space-y-3 border-t border-white/8 pt-4">
+            <div className="space-y-3 border-t border-white/8 pt-4 text-center">
               <p className="text-xs font-medium text-zinc-400">
                 {t("platformFeeLockedGamesTitle")}
               </p>
@@ -384,17 +387,16 @@ export default function CreatorSettingsPage() {
                   .filter((game) => game.tips_enabled)
                   .map((game) => (
                     <div key={game.id} className="space-y-2">
-                      <div className="flex items-center justify-between gap-3">
-                        <Link
-                          href={`/dashboard/edit/${game.id}`}
-                          className="truncate text-sm text-zinc-200 hover:text-white"
-                        >
-                          {game.title}
-                        </Link>
-                      </div>
+                      <Link
+                        href={`/dashboard/edit/${game.id}`}
+                        className="block truncate text-sm text-zinc-200 hover:text-white"
+                      >
+                        {game.title}
+                      </Link>
                       <PlatformFeeLockBadge
                         lockedPercent={game.platform_fee_percent}
                         tipsEnabled={game.tips_enabled}
+                        className="text-left"
                       />
                     </div>
                   ))

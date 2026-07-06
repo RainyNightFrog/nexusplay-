@@ -4,6 +4,7 @@
  */
 (function () {
   var AUTH_TYPE = "nexusplay:auth";
+  var LEAVE_TYPE = "nexusplay:leave";
   var READY_TYPE = "nexusplay:ready";
 
   var SCROLLBAR_CSS =
@@ -79,6 +80,11 @@
     document.documentElement.style.setProperty("--np-embed-width", (d.width || 0) + "px");
     document.documentElement.style.setProperty("--np-embed-height", (d.height || 0) + "px");
     document.documentElement.classList.toggle("np-embed-expanded", !!d.expanded);
+    document.documentElement.classList.toggle("np-embed-mode", (d.width || 0) > 0);
+    document.documentElement.classList.toggle(
+      "np-embed-compact",
+      (d.height || 0) > 0 && (d.height || 0) < 700
+    );
     window.dispatchEvent(new Event("resize"));
   });
 
@@ -270,7 +276,39 @@
       ".np-lb-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}" +
       ".np-lb-score{font-weight:700;font-variant-numeric:tabular-nums}" +
       ".np-lb-grade{font-size:.75rem;opacity:.85;min-width:1.2rem;text-align:center}" +
-      ".np-lb-empty{color:#888;font-size:.85rem;padding:1.5rem 0;text-align:center}";
+      ".np-lb-empty{color:#888;font-size:.85rem;padding:1.5rem 0;text-align:center}" +
+      "html.np-embed-mode,html.np-embed-mode body{height:100%!important;max-height:100%!important;overflow:hidden!important}" +
+      "html.np-embed-mode .screen.active{height:100%;max-height:100%;min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}" +
+      "html.np-embed-mode #game.active,html.np-embed-mode #gameScreen.active{justify-content:flex-start;padding:.25rem .35rem .4rem}" +
+      "html.np-embed-mode .game-shell,html.np-embed-mode .game-wrap{max-height:none;width:100%;overflow:visible}" +
+      "html.np-embed-mode html.in-game #gameScreen.active{overflow:hidden;display:flex;flex-direction:column}" +
+      "html.np-embed-mode html.in-game .game-wrap{flex:1;min-height:0;overflow:hidden}" +
+      "html.np-embed-compact .game-toolbar{margin-bottom:.25rem}" +
+      "html.np-embed-compact .tool-btn{padding:.28rem .5rem;font-size:.66rem}" +
+      "html.np-embed-compact .battle-top{margin-bottom:.3rem}" +
+      "html.np-embed-compact .fighter{padding:.28rem .38rem}" +
+      "html.np-embed-compact .hud{gap:.25rem;margin-bottom:.3rem}" +
+      "html.np-embed-compact .hud-block{padding:.32rem .38rem}" +
+      "html.np-embed-compact .hud-block b{font-size:.95rem}" +
+      "html.np-embed-compact .progress-wrap,html.np-embed-compact .timer-wrap{margin-bottom:.28rem}" +
+      "html.np-embed-compact .battle-arena{padding:.45rem .35rem .4rem}" +
+      "html.np-embed-compact .lane-col{min-height:100px;padding:.28rem .18rem}" +
+      "html.np-embed-compact .battle-card{width:42px;height:58px}" +
+      "html.np-embed-compact .battle-card .card-val{font-size:1.25rem}" +
+      "html.np-embed-compact .hand-row{min-height:100px;margin-bottom:.35rem}" +
+      "html.np-embed-compact .hand-wrap .battle-card{width:64px;height:88px}" +
+      "html.np-embed-compact .hand-wrap .battle-card .card-val{font-size:1.65rem}" +
+      "html.np-embed-compact .battle-actions{margin-bottom:.3rem}" +
+      "html.np-embed-compact .battle-actions button{padding:.42rem .7rem;font-size:.72rem}" +
+      "html.np-embed-compact .top-bar{font-size:.66rem;padding:.32rem .4rem;gap:.22rem;margin-bottom:.28rem}" +
+      "html.np-embed-compact .top-stat b{font-size:.92rem}" +
+      "html.np-embed-compact .tower-bar,html.np-embed-compact .tactical-bar,html.np-embed-compact .action-bar{margin-bottom:.25rem}" +
+      "html.np-embed-compact .threat-bar{margin-bottom:.22rem;font-size:.62rem}" +
+      "html.np-embed-compact .hint{display:none}" +
+      ".help-screen-header{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:.75rem}" +
+      ".help-screen-header h1{margin:0!important;flex:1;text-align:left!important;font-size:1.1rem!important}" +
+      ".help-close-btn{cursor:pointer;border:1px solid rgba(255,120,90,.5);background:rgba(255,80,60,.12);color:#ffb380;padding:.45rem .9rem;font-size:.78rem;font-weight:700;flex-shrink:0;border-radius:6px}" +
+      ".help-close-btn:hover{background:rgba(255,80,60,.22);box-shadow:0 0 12px rgba(255,107,43,.2)}";
     document.head.appendChild(style);
   }
 
@@ -284,6 +322,9 @@
     betterGrade: betterGrade,
     init: async function () {
       injectStyles();
+      if (window.parent !== window) {
+        document.documentElement.classList.add("np-embed-mode");
+      }
       gameId = detectGameId();
       this.gameId = gameId;
       await waitForAuth();
@@ -378,11 +419,16 @@
     leaveToPlatform: function () {
       try {
         if (window.parent !== window) {
-          window.parent.history.back();
+          window.parent.postMessage({ type: LEAVE_TYPE }, location.origin);
           return;
         }
       } catch (_e) {}
-      if (window.history.length > 1) window.history.back();
+      if (window.history.length > 1) {
+        window.history.back();
+        return;
+      }
+      var localeMatch = location.pathname.match(/^\/([a-z]{2}(-[A-Z]{2})?)\//);
+      window.location.href = localeMatch ? "/" + localeMatch[1] : "/";
     },
     setSaveHint: function (el, synced, userLoggedIn) {
       if (!el) return;

@@ -11,6 +11,7 @@ import {
   accountFieldClassName,
   accountInputClassName,
   accountLabelClassName,
+  accountSectionClassName,
   accountSectionTitleClassName,
 } from "@/components/settings/account-shell";
 import { Button } from "@/components/ui/button";
@@ -130,14 +131,14 @@ export default function SecuritySettingsPage() {
       />
 
       <div className={accountCardClassName}>
-        <section className="space-y-5 text-left">
+        <section className={accountSectionClassName}>
           <h2 className={accountSectionTitleClassName}>
             <KeyRound className="size-4 text-amber-400" />
             {t("passwordSection")}
           </h2>
 
           {!hasPassword ? (
-            <div className="rounded-xl border border-amber-400/20 bg-amber-500/5 p-4 text-sm text-zinc-300">
+            <div className="rounded-xl border border-amber-400/20 bg-amber-500/5 p-4 text-center text-sm text-zinc-300">
               <p>{t("oauthPasswordHint")}</p>
               <Button
                 type="button"
@@ -166,7 +167,7 @@ export default function SecuritySettingsPage() {
                   autoComplete="current-password"
                   value={currentPassword}
                   onChange={(event) => setCurrentPassword(event.target.value)}
-                  className={cn(accountInputClassName, "text-left")}
+                  className={accountInputClassName}
                   required
                 />
               </div>
@@ -181,7 +182,7 @@ export default function SecuritySettingsPage() {
                   autoComplete="new-password"
                   value={newPassword}
                   onChange={(event) => setNewPassword(event.target.value)}
-                  className={cn(accountInputClassName, "text-left")}
+                  className={accountInputClassName}
                   minLength={8}
                   required
                 />
@@ -197,7 +198,7 @@ export default function SecuritySettingsPage() {
                   autoComplete="new-password"
                   value={confirmPassword}
                   onChange={(event) => setConfirmPassword(event.target.value)}
-                  className={cn(accountInputClassName, "text-left")}
+                  className={accountInputClassName}
                   minLength={8}
                   required
                 />
@@ -223,7 +224,7 @@ export default function SecuritySettingsPage() {
           )}
 
           {hasPassword && (
-            <div className="border-t border-white/5 pt-4">
+            <div className="border-t border-white/5 pt-4 text-center">
               <p className="text-xs text-zinc-500">{t("forgotPasswordHint")}</p>
               <Button
                 type="button"

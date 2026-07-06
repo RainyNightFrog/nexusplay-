@@ -332,6 +332,7 @@ function GamePageContent() {
 
   const viewportWidth = game?.viewportWidth ?? 960;
   const viewportHeight = game?.viewportHeight ?? 600;
+  const playerMaxWidth = Math.min(viewportWidth, 1024);
   const showCreatorFullscreen = game?.fullscreenButton ?? true;
 
   const handleShare = async () => {
@@ -450,7 +451,7 @@ function GamePageContent() {
       )}
 
       <main className="relative mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-        <div className="grid gap-6 lg:grid-cols-[1fr_360px] lg:gap-8 xl:grid-cols-[1fr_400px]">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
           <motion.section
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -498,14 +499,14 @@ function GamePageContent() {
                   "relative w-full bg-black",
                   showFullscreen && iframeSrc
                     ? "min-h-0 flex-1"
-                    : "mx-auto max-h-[78vh]"
+                    : "mx-auto max-h-[80vh]"
                 )}
                 style={
                   showFullscreen || !iframeSrc
                     ? undefined
                     : {
                         aspectRatio: `${viewportWidth} / ${viewportHeight}`,
-                        width: `min(100%, ${viewportWidth}px)`,
+                        width: `min(100%, ${playerMaxWidth}px)`,
                       }
                 }
               >
@@ -607,10 +608,10 @@ function GamePageContent() {
 
             {showFullscreen && iframeSrc && (
               <div
-                className="mx-auto max-h-[78vh] w-full"
+                className="mx-auto w-full max-h-[80vh]"
                 style={{
                   aspectRatio: `${viewportWidth} / ${viewportHeight}`,
-                  width: `min(100%, ${viewportWidth}px)`,
+                  width: `min(100%, ${playerMaxWidth}px)`,
                 }}
                 aria-hidden
               />

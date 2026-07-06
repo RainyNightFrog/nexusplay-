@@ -1,6 +1,7 @@
 import createIntlMiddleware from "next-intl/middleware";
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { shouldSkipAccountIntent } from "@/lib/account-intent";
 import { resolveUserRole, hasCreatorDashboardAccess } from "@/lib/auth-profile";
 import { isAdminUser } from "@/lib/admin-auth";
 import { ANALYTICS_SESSION_COOKIE } from "@/lib/analytics-service";
@@ -110,13 +111,22 @@ export async function middleware(request: NextRequest) {
   }
 
   if (pathnameWithoutLocale === "/auth/choose-role") {
+    const redirectTarget =
+      request.nextUrl.searchParams.get("redirect") ?? "/";
+
     if (!user) {
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = "/auth";
-      redirectUrl.searchParams.set(
-        "redirect",
-        request.nextUrl.searchParams.get("redirect") ?? "/"
-      );
+      redirectUrl.searchParams.set("redirect", redirectTarget);
+      return NextResponse.redirect(redirectUrl);
+    }
+
+    if (shouldSkipAccountIntent(user)) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = redirectTarget.startsWith("/")
+        ? redirectTarget
+        : "/";
+      redirectUrl.search = "";
       return NextResponse.redirect(redirectUrl);
     }
   }

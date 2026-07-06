@@ -20,7 +20,12 @@ import { Link, useRouter } from "@/i18n/navigation";
 import { AccountSettingsPageHeader } from "@/components/settings/account-settings-layout";
 import {
   accountCardClassName,
+  accountSectionClassName,
+  accountSectionCompactClassName,
+  accountSectionIntroClassName,
   accountSectionTitleClassName,
+  settingsListRowClassName,
+  settingsSectionHeaderRowClassName,
 } from "@/components/settings/account-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -255,8 +260,8 @@ function PayoutSettingsContent() {
 
       <div className="space-y-6">
         {isPreview && (
-          <div className="flex items-start gap-3 rounded-2xl border border-amber-400/25 bg-amber-500/5 p-4">
-            <Sparkles className="mt-0.5 size-5 shrink-0 text-amber-400" />
+          <div className="flex flex-col items-center gap-3 rounded-2xl border border-amber-400/25 bg-amber-500/5 p-4 text-center">
+            <Sparkles className="size-5 shrink-0 text-amber-400" />
             <div>
               <p className="text-sm font-medium text-amber-100">
                 {t("payoutPreviewBanner")}
@@ -269,8 +274,8 @@ function PayoutSettingsContent() {
         )}
 
         <div className={accountCardClassName}>
-          <section className="space-y-5 text-left">
-            <div className="flex flex-wrap items-center justify-between gap-3">
+          <section className={accountSectionClassName}>
+            <div className={settingsSectionHeaderRowClassName}>
               <h2 className={accountSectionTitleClassName}>
                 <Wallet className="size-4 text-emerald-400" />
                 {t("payoutBalanceSection")}
@@ -301,7 +306,7 @@ function PayoutSettingsContent() {
                   )}
                 </div>
 
-                <ul className="space-y-2 text-xs text-zinc-500">
+                <ul className="space-y-2 text-left text-xs text-zinc-500">
                   <li className="flex items-start gap-2">
                     <Check className="mt-0.5 size-3.5 shrink-0 text-cyan-400" />
                     {t("payoutFlowStep1")}
@@ -344,16 +349,13 @@ function PayoutSettingsContent() {
 
         {history.length > 0 && (
           <div className={accountCardClassName}>
-            <section className="space-y-3 text-left">
+            <section className="space-y-3 text-center">
               <h2 className={accountSectionTitleClassName}>
                 {t("payoutHistoryTitle")}
               </h2>
               <ul className="space-y-2">
                 {history.map((item) => (
-                  <li
-                    key={item.id}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-white/8 bg-white/[0.03] px-4 py-3 text-sm"
-                  >
+                  <li key={item.id} className={settingsListRowClassName}>
                     <div>
                       <p className="font-medium text-white">
                         ${item.amount_usd.toFixed(2)}
@@ -373,12 +375,12 @@ function PayoutSettingsContent() {
         )}
 
         <div className={accountCardClassName}>
-          <section className="space-y-4 text-left">
+          <section className={accountSectionCompactClassName}>
             <h2 className={accountSectionTitleClassName}>
               <Banknote className="size-4 text-violet-400" />
               {t("payoutStripeSection")}
             </h2>
-            <p className="text-xs leading-relaxed text-zinc-500">
+            <p className={accountSectionIntroClassName}>
               {t("payoutStripeDesc")}
             </p>
 
@@ -410,7 +412,7 @@ function PayoutSettingsContent() {
               </div>
             )}
 
-            {error && <p className="text-sm text-rose-400">{error}</p>}
+            {error && <p className="text-center text-sm text-rose-400">{error}</p>}
 
             <p className="text-[11px] text-zinc-600">
               {t("payoutTaxNote")}{" "}

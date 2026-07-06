@@ -57,7 +57,7 @@ export function AccountSettingsPageHeader({
   description: string;
 }) {
   return (
-    <div className="mb-6">
+    <div className="mb-6 text-center">
       <h1 className="text-2xl font-bold text-white sm:text-3xl">{title}</h1>
       <p className="mt-2 text-sm text-zinc-500">{description}</p>
     </div>

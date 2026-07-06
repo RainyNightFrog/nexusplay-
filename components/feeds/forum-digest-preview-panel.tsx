@@ -42,7 +42,7 @@ export function ForumDigestPreviewPanel({ enabled }: ForumDigestPreviewPanelProp
   if (!enabled) return null;
 
   return (
-    <div className="ml-1 space-y-3 border-l border-white/10 pl-4">
+    <div className="space-y-3 text-center">
       <Button
         type="button"
         variant="outline"

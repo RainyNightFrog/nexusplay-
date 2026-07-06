@@ -8,6 +8,7 @@ import { useRouter } from "@/i18n/navigation";
 import { AccountSettingsPageHeader } from "@/components/settings/account-settings-layout";
 import {
   accountCardClassName,
+  accountSectionCompactClassName,
   accountSectionTitleClassName,
   settingsToggleRowClassName,
 } from "@/components/settings/account-shell";
@@ -91,7 +92,7 @@ export default function PrivacySettingsPage() {
       />
 
       <div className={accountCardClassName}>
-        <section className="space-y-4 text-left">
+        <section className={accountSectionCompactClassName}>
           <h2 className={accountSectionTitleClassName}>
             <Eye className="size-4 text-cyan-400" />
             {t("privacySection")}

@@ -13,7 +13,10 @@ import {
   accountFieldClassName,
   accountInputClassName,
   accountLabelClassName,
+  accountSectionCompactClassName,
+  accountSectionIntroClassName,
   accountSectionTitleClassName,
+  settingsSectionHeaderRowClassName,
 } from "@/components/settings/account-shell";
 
 type TotpFactor = {
@@ -155,15 +158,15 @@ export function TwoFactorPanel({ className }: { className?: string }) {
   }
 
   return (
-    <section className={cn("space-y-4 text-left", className)}>
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <section className={cn(accountSectionCompactClassName, className)}>
+      <div className={settingsSectionHeaderRowClassName}>
         <h2 className={accountSectionTitleClassName}>
           <ShieldCheck className="size-4 text-cyan-400" />
           {t("twoFactorTitle")}
         </h2>
         <Badge
           className={cn(
-            "border-0",
+            "shrink-0 border-0",
             verifiedFactor
               ? "bg-emerald-500/15 text-emerald-200"
               : "bg-zinc-700/50 text-zinc-300"
@@ -173,9 +176,9 @@ export function TwoFactorPanel({ className }: { className?: string }) {
         </Badge>
       </div>
 
-      <p className="text-xs leading-relaxed text-zinc-500">{t("twoFactorDesc")}</p>
+      <p className={accountSectionIntroClassName}>{t("twoFactorDesc")}</p>
 
-      {error && <p className="text-sm text-rose-400">{error}</p>}
+      {error && <p className="text-center text-sm text-rose-400">{error}</p>}
 
       {verifiedFactor ? (
         <div className="space-y-3">
@@ -217,10 +220,10 @@ export function TwoFactorPanel({ className }: { className?: string }) {
               value={verifyCode}
               onChange={(event) => setVerifyCode(event.target.value)}
               placeholder="000000"
-              className={cn(accountInputClassName, "text-left tracking-widest")}
+              className={cn(accountInputClassName, "tracking-widest")}
             />
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap justify-center gap-2">
             <Button
               type="button"
               disabled={busy || verifyCode.trim().length < 6}

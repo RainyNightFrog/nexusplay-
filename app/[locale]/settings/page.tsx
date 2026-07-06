@@ -9,12 +9,8 @@ import {
   Gamepad2,
   Globe,
   Loader2,
-  Monitor,
-  Moon,
-  Palette,
   RotateCcw,
   Sparkles,
-  Sun,
   Zap,
 } from "lucide-react";
 import { usePathname, useRouter } from "@/i18n/navigation";
@@ -25,13 +21,12 @@ import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
+  SelectDisplayValue,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "@/hooks/use-auth";
 import { useAppSettings } from "@/components/settings/app-settings-provider";
-import type { AppTheme } from "@/lib/app-settings";
 import {
   AccountSettingsPageHeader,
 } from "@/components/settings/account-settings-layout";
@@ -39,7 +34,10 @@ import {
   accountCardClassName,
   accountFieldClassName,
   accountLabelClassName,
+  accountSectionCompactClassName,
+  accountSectionClassName,
   accountSectionTitleClassName,
+  accountSelectTriggerClassName,
   settingsToggleRowClassName,
 } from "@/components/settings/account-shell";
 import { cn } from "@/lib/utils";
@@ -295,55 +293,7 @@ export default function SettingsPage() {
         className="space-y-6"
       >
         <div className={accountCardClassName}>
-          <section className="space-y-5">
-            <h2 className={accountSectionTitleClassName}>
-              <Palette className="size-4 text-violet-400" />
-              {t("appearance")}
-            </h2>
-
-            <div className={accountFieldClassName}>
-              <Label className={accountLabelClassName}>{t("theme")}</Label>
-              <Select
-                value={settings.theme}
-                onValueChange={(value) => {
-                  if (value) updateSettings({ theme: value as AppTheme });
-                }}
-              >
-                <SelectTrigger className="mx-auto w-full max-w-xs border-white/10 bg-white/5 text-zinc-100">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="border-white/10 bg-zinc-900 text-zinc-100">
-                  <SelectItem value="dark">
-                    <span className="flex items-center gap-2">
-                      <Moon className="size-3.5" /> {t("themeDark")}
-                    </span>
-                  </SelectItem>
-                  <SelectItem value="light">
-                    <span className="flex items-center gap-2">
-                      <Sun className="size-3.5" /> {t("themeLight")}
-                    </span>
-                  </SelectItem>
-                  <SelectItem value="system">
-                    <span className="flex items-center gap-2">
-                      <Monitor className="size-3.5" /> {t("themeSystem")}
-                    </span>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <SettingsToggle
-              id="compactLayout"
-              label={t("compactLayout")}
-              description={t("compactLayoutDesc")}
-              checked={settings.compactLayout}
-              onCheckedChange={(checked) => updateSettings({ compactLayout: checked })}
-            />
-          </section>
-        </div>
-
-        <div className={accountCardClassName}>
-          <section className="space-y-5">
+          <section className={accountSectionClassName}>
             <h2 className={accountSectionTitleClassName}>
               <Globe className="size-4 text-cyan-400" />
               {t("languageSection")}
@@ -357,8 +307,8 @@ export default function SettingsPage() {
                   value && handleLocaleChange(value as AppLocale)
                 }
               >
-                <SelectTrigger className="mx-auto w-full max-w-xs border-white/10 bg-white/5 text-zinc-100">
-                  <SelectValue />
+                <SelectTrigger className={accountSelectTriggerClassName}>
+                  <SelectDisplayValue>{tLang(locale)}</SelectDisplayValue>
                 </SelectTrigger>
                 <SelectContent className="nexus-lang-scroll max-h-[min(18rem,var(--available-height))] border-white/10 bg-zinc-900 text-zinc-100">
                   {locales.map((code) => (
@@ -374,7 +324,7 @@ export default function SettingsPage() {
         </div>
 
         <div className={accountCardClassName}>
-          <section className="space-y-4">
+          <section className={accountSectionCompactClassName}>
             <h2 className={accountSectionTitleClassName}>
               <Bell className="size-4 text-amber-400" />
               {t("notifications")}
@@ -450,7 +400,7 @@ export default function SettingsPage() {
         </div>
 
         <div className={accountCardClassName}>
-          <section className="space-y-4">
+          <section className={accountSectionCompactClassName}>
             <h2 className={accountSectionTitleClassName}>
               <Gamepad2 className="size-4 text-emerald-400" />
               {t("gameExperience")}
@@ -477,7 +427,7 @@ export default function SettingsPage() {
         </div>
 
         <div className={accountCardClassName}>
-          <section className="space-y-4">
+          <section className={accountSectionCompactClassName}>
             <h2 className={accountSectionTitleClassName}>
               <Zap className="size-4 text-sky-400" />
               {t("accessibility")}
@@ -494,7 +444,7 @@ export default function SettingsPage() {
         </div>
 
         <div className={cn(accountCardClassName, "border-dashed")}>
-          <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
+          <div className="flex flex-col gap-4 text-left sm:flex-row sm:items-center sm:justify-between">
             <div className="text-center sm:text-left">
               <p className="flex items-center justify-center gap-2 text-sm font-medium text-white sm:justify-start">
                 <Sparkles className="size-4 text-violet-400" />

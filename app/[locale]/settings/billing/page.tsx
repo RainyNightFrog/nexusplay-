@@ -11,6 +11,8 @@ import {
   accountFieldClassName,
   accountInputClassName,
   accountLabelClassName,
+  accountSectionClassName,
+  accountSectionIntroClassName,
   accountSectionTitleClassName,
 } from "@/components/settings/account-shell";
 import { Button } from "@/components/ui/button";
@@ -119,12 +121,12 @@ export default function BillingSettingsPage() {
       />
 
       <div className={accountCardClassName}>
-        <section className="space-y-5 text-left">
+        <section className={accountSectionClassName}>
           <h2 className={accountSectionTitleClassName}>
             <MapPin className="size-4 text-cyan-400" />
             {t("billingSection")}
           </h2>
-          <p className="text-xs leading-relaxed text-zinc-500">
+          <p className={accountSectionIntroClassName}>
             {t("billingSectionDesc")}
           </p>
 
@@ -137,7 +139,7 @@ export default function BillingSettingsPage() {
               value={billing.billing_name ?? ""}
               onChange={(event) => updateField("billing_name", event.target.value)}
               placeholder={t("billingNamePlaceholder")}
-              className={cn(accountInputClassName, "text-left")}
+              className={accountInputClassName}
             />
           </div>
 
@@ -150,7 +152,7 @@ export default function BillingSettingsPage() {
               value={billing.billing_line1 ?? ""}
               onChange={(event) => updateField("billing_line1", event.target.value)}
               placeholder={t("billingLine1Placeholder")}
-              className={cn(accountInputClassName, "text-left")}
+              className={accountInputClassName}
             />
           </div>
 
@@ -163,7 +165,7 @@ export default function BillingSettingsPage() {
               value={billing.billing_line2 ?? ""}
               onChange={(event) => updateField("billing_line2", event.target.value)}
               placeholder={t("billingLine2Placeholder")}
-              className={cn(accountInputClassName, "text-left")}
+              className={accountInputClassName}
             />
           </div>
 
@@ -176,7 +178,7 @@ export default function BillingSettingsPage() {
                 id="billing-city"
                 value={billing.billing_city ?? ""}
                 onChange={(event) => updateField("billing_city", event.target.value)}
-                className={cn(accountInputClassName, "text-left")}
+                className={accountInputClassName}
               />
             </div>
             <div className={accountFieldClassName}>
@@ -189,7 +191,7 @@ export default function BillingSettingsPage() {
                 onChange={(event) =>
                   updateField("billing_region", event.target.value)
                 }
-                className={cn(accountInputClassName, "text-left")}
+                className={accountInputClassName}
               />
             </div>
           </div>
@@ -205,7 +207,7 @@ export default function BillingSettingsPage() {
                 onChange={(event) =>
                   updateField("billing_postal", event.target.value)
                 }
-                className={cn(accountInputClassName, "text-left")}
+                className={accountInputClassName}
               />
             </div>
             <div className={accountFieldClassName}>
@@ -219,7 +221,7 @@ export default function BillingSettingsPage() {
                   updateField("billing_country", event.target.value)
                 }
                 placeholder="HK"
-                className={cn(accountInputClassName, "text-left")}
+                className={accountInputClassName}
               />
             </div>
           </div>

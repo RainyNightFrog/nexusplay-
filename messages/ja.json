@@ -516,8 +516,8 @@
     "continueWithGoogle": "Continue with Google",
     "chooseRole": {
       "badge": "Signed in",
-      "title": "Choose how to use NexusPlay",
-      "description": "After each sign-in, pick whether you want to play or create on the platform. You can change this later in your profile.",
+      "title": "Choose your account type",
+      "description": "Choose player or creator on your first visit. Later sign-ins go straight in. You can change this anytime in your profile.",
       "cardTitle": "How will you use NexusPlay today?",
       "cardDesc": "This controls access to the creator dashboard and uploads.",
       "playerTitle": "Player",

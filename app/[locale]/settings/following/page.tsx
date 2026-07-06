@@ -6,10 +6,9 @@ import { useTranslations } from "next-intl";
 import { Loader2, UserRound, UserX } from "lucide-react";
 import { Link, useRouter } from "@/i18n/navigation";
 import { AccountSettingsPageHeader } from "@/components/settings/account-settings-layout";
-import { accountCardClassName } from "@/components/settings/account-shell";
+import { accountCardClassName, settingsListRowClassName } from "@/components/settings/account-shell";
 import { Button } from "@/components/ui/button";
 import type { FollowedCreator } from "@/lib/creator-follows-service";
-import { cn } from "@/lib/utils";
 
 export default function FollowingSettingsPage() {
   const t = useTranslations("accountSettings");
@@ -73,10 +72,7 @@ export default function FollowingSettingsPage() {
             {creators.map((creator) => (
               <li
                 key={creator.id}
-                className={cn(
-                  "flex items-center justify-between gap-3 rounded-xl border border-white/8",
-                  "bg-zinc-950/40 px-4 py-3"
-                )}
+                className={settingsListRowClassName}
               >
                 <Link
                   href={`/creator/${creator.id}`}

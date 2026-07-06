@@ -23,6 +23,8 @@ export type PlatformGameMeta = {
   featuredBadge?: string;
   featuredAccent: "cyan" | "amber" | "violet";
   demoUrl: string;
+  viewportWidth?: number;
+  viewportHeight?: number;
 };
 
 export type SeedForumPost = {
@@ -52,7 +54,7 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
       "踏入虛空深淵，以神秘虛擬卡牌編織命運。在霓虹與虛無交織的抽卡宇宙中，收集稀有卡牌、構築核心卡組，挑戰無盡深淵。",
     coverPath:
       "https://icydkixwynxizrgfzelq.supabase.co/storage/v1/object/public/game-covers/d37f574e-1360-4c41-800c-6aa6fadf98cb-774ed615-911f-46c1-ac3d-1015fac6ef7754745745.jfif",
-    playsCount: 86_420,
+    playsCount: 106_420,
     likesCount: 7_200,
     sharesCount: 1_680,
     ratingAvg: 4.82,
@@ -77,9 +79,12 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
     featuredBadge: "硬核工業科幻",
     featuredAccent: "amber",
     demoUrl: "/demos/core-defense-preview.html",
+    viewportWidth: 960,
+    viewportHeight: 700,
     galleryImages: [
       "/covers/core-defense-cover.png",
-      "/covers/core-defense-cover.png",
+      "/covers/core-defense-screenshot-1.png",
+      "/covers/core-defense-screenshot-2.png",
     ],
     devlogs: [
       {
@@ -111,9 +116,12 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
     featuredBadge: "賽博博弈旗艦",
     featuredAccent: "cyan",
     demoUrl: "/demos/cyber-fortune-preview.html",
+    viewportWidth: 960,
+    viewportHeight: 760,
     galleryImages: [
       "/covers/cyber-fortune-cover.png",
-      "/covers/cyber-fortune-cover.png",
+      "/covers/cyber-fortune-screenshot-1.png",
+      "/covers/cyber-fortune-screenshot-2.png",
     ],
     devlogs: [
       {

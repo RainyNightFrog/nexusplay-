@@ -5,10 +5,12 @@ import type { RefObject } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import {
   NEXUSPLAY_AUTH_MESSAGE,
+  NEXUSPLAY_LEAVE_MESSAGE,
   NEXUSPLAY_READY_MESSAGE,
   NEXUSPLAY_RESIZE_MESSAGE,
   type NexusPlayAuthUser,
 } from "@/lib/nexusplay-embed-sdk";
+import { useRouter } from "@/i18n/navigation";
 
 type GameEmbedBridgeProps = {
   iframeRef: RefObject<HTMLIFrameElement | null>;
@@ -32,6 +34,7 @@ export function GameEmbedBridge({
   expanded = false,
 }: GameEmbedBridgeProps) {
   const { profile, loading } = useAuth();
+  const router = useRouter();
 
   const postAuth = useCallback(() => {
     const iframe = iframeRef.current;
@@ -66,6 +69,14 @@ export function GameEmbedBridge({
     function onMessage(event: MessageEvent) {
       if (event.origin !== window.location.origin) return;
       const data = event.data as { type?: string; gameId?: number };
+      if (data?.type === NEXUSPLAY_LEAVE_MESSAGE) {
+        if (window.history.length > 1) {
+          router.back();
+        } else {
+          router.push("/");
+        }
+        return;
+      }
       if (data?.type !== NEXUSPLAY_READY_MESSAGE) return;
       if (String(data.gameId ?? "") !== gameId) return;
       postAuth();
@@ -74,7 +85,7 @@ export function GameEmbedBridge({
 
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [gameId, postAuth, postResize]);
+  }, [gameId, postAuth, postResize, router]);
 
   useEffect(() => {
     if (!loading) {

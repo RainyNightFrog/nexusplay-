@@ -154,3 +154,4 @@ export type NexusPlayAuthUser = {
 export const NEXUSPLAY_AUTH_MESSAGE = "nexusplay:auth";
 export const NEXUSPLAY_READY_MESSAGE = "nexusplay:ready";
 export const NEXUSPLAY_RESIZE_MESSAGE = "nexusplay:resize";
+export const NEXUSPLAY_LEAVE_MESSAGE = "nexusplay:leave";

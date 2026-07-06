@@ -27,7 +27,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { UserRole } from "@/lib/auth";
-import { buildChooseRolePath } from "@/lib/account-intent";
+import { buildChooseRolePath, shouldSkipAccountIntent } from "@/lib/account-intent";
 import { MfaChallengePanel } from "@/components/auth/mfa-challenge-panel";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -76,7 +76,7 @@ export default function AuthPage() {
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (user?.user_metadata?.role === "admin") {
+    if (user && shouldSkipAccountIntent(user)) {
       router.push(redirectTo);
     } else {
       router.push(buildChooseRolePath(redirectTo));
@@ -137,6 +137,8 @@ export default function AuthPage() {
             data: {
               display_name: displayName.trim(),
               role,
+              developing_games: role === "creator",
+              account_intent_at: new Date().toISOString(),
             },
             emailRedirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirectTo)}`,
           },

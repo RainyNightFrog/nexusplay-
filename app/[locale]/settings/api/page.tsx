@@ -18,7 +18,11 @@ import {
   accountFieldClassName,
   accountInputClassName,
   accountLabelClassName,
+  accountSectionCompactClassName,
+  accountSectionIntroClassName,
   accountSectionTitleClassName,
+  settingsInlineActionRowClassName,
+  settingsListRowClassName,
 } from "@/components/settings/account-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -160,12 +164,12 @@ export default function ApiKeysSettingsPage() {
 
       <div className="space-y-6">
         <div className={accountCardClassName}>
-          <section className="space-y-4 text-left">
+          <section className={accountSectionCompactClassName}>
             <h2 className={accountSectionTitleClassName}>
               <KeyRound className="size-4 text-amber-400" />
               {t("apiKeysSection")}
             </h2>
-            <p className="text-xs leading-relaxed text-zinc-500">
+            <p className={accountSectionIntroClassName}>
               {t("apiKeysSectionDesc")}
             </p>
 
@@ -173,13 +177,13 @@ export default function ApiKeysSettingsPage() {
               <Label htmlFor="api-key-name" className={accountLabelClassName}>
                 {t("apiKeysNameLabel")}
               </Label>
-              <div className="flex flex-col gap-3 sm:flex-row">
+              <div className={settingsInlineActionRowClassName}>
                 <Input
                   id="api-key-name"
                   value={name}
                   onChange={(event) => setName(event.target.value)}
                   placeholder={t("apiKeysNamePlaceholder")}
-                  className={cn(accountInputClassName, "text-left sm:flex-1")}
+                  className={cn(accountInputClassName, "sm:flex-1")}
                 />
                 <Button
                   type="button"
@@ -221,7 +225,7 @@ export default function ApiKeysSettingsPage() {
               </div>
             )}
 
-            {error && <p className="text-sm text-rose-400">{error}</p>}
+            {error && <p className="text-center text-sm text-rose-400">{error}</p>}
 
             {fetching ? (
               <div className="flex justify-center py-8">
@@ -236,7 +240,7 @@ export default function ApiKeysSettingsPage() {
                 {keys.map((key) => (
                   <div
                     key={key.id}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/8 bg-white/[0.03] px-4 py-3"
+                    className={settingsListRowClassName}
                   >
                     <div>
                       <p className="text-sm font-medium text-white">{key.name}</p>
@@ -268,14 +272,14 @@ export default function ApiKeysSettingsPage() {
         </div>
 
         <div className={accountCardClassName}>
-          <section className="space-y-3 text-left">
+          <section className="space-y-3 text-center">
             <h2 className={accountSectionTitleClassName}>
               {t("apiKeysEndpointsTitle")}
             </h2>
-            <p className="text-xs leading-relaxed text-zinc-500">
+            <p className={accountSectionIntroClassName}>
               {t("apiKeysEndpointsDesc")}
             </p>
-            <ul className="space-y-2 font-mono text-xs text-zinc-400">
+            <ul className="space-y-2 text-left font-mono text-xs text-zinc-400">
               <li className="rounded-lg border border-white/8 bg-black/20 px-3 py-2">
                 GET /api/v1/creator/games
               </li>
@@ -304,7 +308,7 @@ export default function ApiKeysSettingsPage() {
           </section>
         </div>
 
-        <p className="text-xs leading-relaxed text-zinc-600">
+        <p className="text-center text-xs leading-relaxed text-zinc-600">
           {t("apiKeysUsageHint")}
         </p>
       </div>
