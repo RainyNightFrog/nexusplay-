@@ -70,6 +70,8 @@ function main() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
   const projectRef = extractProjectRef(supabaseUrl);
   const googleRedirectUri = `https://${projectRef}.supabase.co/auth/v1/callback`;
+  const productionSite = "https://nexusplay-five.vercel.app";
+  const productionCallback = `${productionSite}/auth/callback`;
   const localCallback = "http://localhost:3000/auth/callback";
 
   const googleConsentUrl =
@@ -112,8 +114,9 @@ function main() {
   console.log("  Authentication → Sign In / Providers → Google → Enable");
   console.log("");
   console.log("── Supabase URL Configuration（順便確認）──");
-  console.log(`  Site URL：http://localhost:3000`);
-  console.log(`  Redirect URLs：${localCallback}`);
+  console.log(`  Site URL：${productionSite}`);
+  console.log(`  Redirect URLs：${productionCallback}`);
+  console.log(`                ${localCallback}`);
   console.log("");
   console.log("── 完成後測試 ──");
   console.log("  npm run dev  →  打開 http://localhost:3000/auth");

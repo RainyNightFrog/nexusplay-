@@ -7,6 +7,7 @@ import {
   resolveGalleryUrls,
 } from "@/lib/game-page-content";
 import { metadataFromGameRecord } from "@/lib/game-metadata";
+import { getSiteUrl } from "@/lib/site-url";
 import type { GameRecord } from "@/lib/supabase";
 import type { Game } from "@/lib/games";
 
@@ -23,11 +24,8 @@ function resolveCoverUrl(coverUrl: string) {
   if (coverUrl.startsWith("http://") || coverUrl.startsWith("https://")) {
     return coverUrl;
   }
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
-  if (siteUrl) {
-    return `${siteUrl}${coverUrl.startsWith("/") ? coverUrl : `/${coverUrl}`}`;
-  }
-  return coverUrl;
+  const siteUrl = getSiteUrl();
+  return `${siteUrl}${coverUrl.startsWith("/") ? coverUrl : `/${coverUrl}`}`;
 }
 
 export function mapRecordToGame(record: GameRecord): Game {

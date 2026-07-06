@@ -141,7 +141,7 @@ export async function updateGame(
     input.publishVersion ? "正在發布新版本..." : "正在儲存變更..."
   );
 
-  const response = await fetch(`/api/games/${gameId}`, {
+  const response = await fetch(`/api/games/${gameId}/update`, {
     method: "PATCH",
     credentials: "same-origin",
     body: formData,

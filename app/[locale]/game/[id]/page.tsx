@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { useLocale, useTranslations } from "next-intl";
 import { useParams, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -22,9 +23,7 @@ import {
   X,
 } from "lucide-react";
 import { GameEmbedBridge } from "@/components/game/game-embed-bridge";
-import { TipSupportPanel } from "@/components/game/tip-support-panel";
 import { SupporterWall } from "@/components/game/supporter-wall";
-import { GameDetailSections } from "@/components/game/game-detail-sections";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { SiteHeader } from "@/components/layout/site-header";
 import { LeaderboardNavButton } from "@/components/LeaderboardModal";
@@ -32,7 +31,7 @@ import { Link, useRouter } from "@/i18n/navigation";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { isDirectlyPlayable } from "@/lib/games-data";
 import { buildEmbedCode, IFRAME_SANDBOX } from "@/lib/iframe-sandbox";
-import { isSafeEmbedUrl } from "@/lib/sanitize";
+import { isSafeEmbedUrl } from "@/lib/embed-url";
 import { TAG_COLORS, type Game } from "@/lib/games";
 import { useGameI18n } from "@/hooks/use-game-i18n";
 import { useAuth } from "@/hooks/use-auth";
@@ -41,6 +40,22 @@ import { useApiError } from "@/hooks/use-api-error";
 import { useEscapeKey, useScrollLock } from "@/hooks/use-scroll-lock";
 import { cn } from "@/lib/utils";
 import { trackGaEvent } from "@/components/analytics/google-analytics";
+
+const TipSupportPanel = dynamic(
+  () =>
+    import("@/components/game/tip-support-panel").then(
+      (module) => module.TipSupportPanel
+    ),
+  { ssr: false }
+);
+
+const GameDetailSections = dynamic(
+  () =>
+    import("@/components/game/game-detail-sections").then(
+      (module) => module.GameDetailSections
+    ),
+  { ssr: false }
+);
 
 function GamePageFallback() {
   const tc = useTranslations("common");

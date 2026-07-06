@@ -50,7 +50,8 @@
     "db:admin": "node scripts/run-admin-control-center.mjs",
     "db:analytics": "node scripts/run-analytics-events.mjs",
     "db:activity-stats": "node scripts/run-user-activity-stats.mjs",
-    "db:assign-admin": "node scripts/assign-admin.mjs"
+    "db:assign-admin": "node scripts/assign-admin.mjs",
+    "setup:production-auth": "node scripts/configure-production-auth.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

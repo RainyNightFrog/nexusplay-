@@ -13,8 +13,24 @@ import { stdin as input, stdout as output } from "node:process";
 
 const PROJECT_REF = "icydkixwynxizrgfzelq";
 const GOOGLE_REDIRECT_URI = `https://${PROJECT_REF}.supabase.co/auth/v1/callback`;
-const LOCAL_CALLBACK = "http://localhost:3000/auth/callback";
-const SITE_URL = "http://localhost:3000";
+const PRODUCTION_SITE_URL = "https://nexusplay-five.vercel.app";
+const LOCAL_SITE_URL = "http://localhost:3000";
+
+function getAuthRedirectAllowList(siteUrl = PRODUCTION_SITE_URL) {
+  return [
+    `${siteUrl.replace(/\/$/, "")}/auth/callback`,
+    `${LOCAL_SITE_URL}/auth/callback`,
+  ];
+}
+
+function mergeAuthRedirectAllowList(existing, siteUrl = PRODUCTION_SITE_URL) {
+  const values = new Set(getAuthRedirectAllowList(siteUrl));
+  for (const value of String(existing ?? "").split(/[\n,]/)) {
+    const trimmed = value.trim();
+    if (trimmed) values.add(trimmed);
+  }
+  return [...values].join("\n");
+}
 
 function loadEnvLocal() {
   const envPath = resolve(process.cwd(), ".env.local");
@@ -132,12 +148,17 @@ async function main() {
 
     console.log("\n正在設定 Supabase…");
 
+    const current = await fetch(
+      `https://api.supabase.com/v1/projects/${PROJECT_REF}/config/auth`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    ).then((r) => r.json());
+
     await patchSupabaseAuth(accessToken, {
       external_google_enabled: true,
       external_google_client_id: clientId,
       external_google_secret: clientSecret,
-      site_url: SITE_URL,
-      uri_allow_list: LOCAL_CALLBACK,
+      site_url: PRODUCTION_SITE_URL,
+      uri_allow_list: mergeAuthRedirectAllowList(current.uri_allow_list),
     });
 
     upsertEnvLocal("SUPABASE_ACCESS_TOKEN", accessToken);
@@ -146,8 +167,9 @@ async function main() {
 
     console.log("");
     console.log("✓ Supabase Google Provider 已啟用");
-    console.log("✓ Site URL → http://localhost:3000");
-    console.log("✓ Redirect URLs → http://localhost:3000/auth/callback");
+    console.log(`✓ Site URL → ${PRODUCTION_SITE_URL}`);
+    console.log(`✓ Redirect URLs → ${getAuthRedirectAllowList().join(", ")}`);
+    console.log(`✓ 本機開發仍可使用 ${LOCAL_SITE_URL}`);
     console.log("✓ 憑證已寫入 .env.local（請勿提交 git）");
     console.log("");
     console.log("下一步：npm run dev → http://localhost:3000/auth → 使用 Google 登入");

@@ -1,5 +1,5 @@
 export async function deleteGame(gameId: number): Promise<void> {
-  const response = await fetch(`/api/games/${gameId}`, {
+  const response = await fetch(`/api/games/${gameId}/update`, {
     method: "DELETE",
     credentials: "same-origin",
   });

@@ -1,4 +1,5 @@
 import { getPlatformGameMeta } from "@/lib/platform-catalog";
+import { getSiteUrl } from "@/lib/site-url";
 import type { GameRecord } from "@/lib/supabase";
 
 export type GameDevlogEntry = {
@@ -37,11 +38,8 @@ function resolveAssetUrl(url: string) {
   if (url.startsWith("http://") || url.startsWith("https://")) {
     return url;
   }
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
-  if (siteUrl) {
-    return `${siteUrl}${url.startsWith("/") ? url : `/${url}`}`;
-  }
-  return url;
+  const siteUrl = getSiteUrl();
+  return `${siteUrl}${url.startsWith("/") ? url : `/${url}`}`;
 }
 
 export function parseStringArray(value: unknown): string[] {

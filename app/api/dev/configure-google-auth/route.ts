@@ -1,13 +1,17 @@
 import { NextResponse } from "next/server";
+import {
+  LOCAL_SITE_URL,
+  PRODUCTION_SITE_URL,
+  mergeAuthRedirectAllowList,
+} from "@/lib/auth-redirect-urls";
 
 const PROJECT_REF = "icydkixwynxizrgfzelq";
-const SITE_URL = "http://localhost:3000";
-const LOCAL_CALLBACK = "http://localhost:3000/auth/callback";
 
 function isSetupAllowed() {
   return (
     process.env.NODE_ENV === "development" ||
-    process.env.ENABLE_OAUTH_SETUP === "true"
+    process.env.ENABLE_OAUTH_SETUP === "true" ||
+    process.env.VERCEL_ENV === "preview"
   );
 }
 
@@ -21,17 +25,63 @@ export async function POST(request: Request) {
       accessToken?: string;
       clientId?: string;
       clientSecret?: string;
+      siteUrl?: string;
+      patchUrlsOnly?: boolean;
     };
 
     const accessToken = body.accessToken?.trim();
     const clientId = body.clientId?.trim();
     const clientSecret = body.clientSecret?.trim();
+    const siteUrl = body.siteUrl?.trim() || PRODUCTION_SITE_URL;
+    const patchUrlsOnly = body.patchUrlsOnly === true;
 
-    if (!accessToken || !clientId || !clientSecret) {
+    if (!accessToken) {
       return NextResponse.json(
-        { error: "請填寫 Supabase Access Token、Google Client ID 與 Client Secret" },
+        { error: "請填寫 Supabase Access Token" },
         { status: 400 }
       );
+    }
+
+    if (!patchUrlsOnly && (!clientId || !clientSecret)) {
+      return NextResponse.json(
+        { error: "請填寫 Google Client ID 與 Client Secret" },
+        { status: 400 }
+      );
+    }
+
+    const currentConfigResponse = await fetch(
+      `https://api.supabase.com/v1/projects/${PROJECT_REF}/config/auth`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    const currentConfigText = await currentConfigResponse.text();
+    const currentConfig = JSON.parse(currentConfigText) as {
+      message?: string;
+      uri_allow_list?: string;
+    };
+
+    if (!currentConfigResponse.ok) {
+      return NextResponse.json(
+        {
+          error:
+            currentConfig.message ??
+            `Supabase API 失敗 (${currentConfigResponse.status})`,
+        },
+        { status: 502 }
+      );
+    }
+
+    const patchBody: Record<string, unknown> = {
+      site_url: siteUrl,
+      uri_allow_list: mergeAuthRedirectAllowList(
+        currentConfig.uri_allow_list,
+        siteUrl
+      ),
+    };
+
+    if (!patchUrlsOnly) {
+      patchBody.external_google_enabled = true;
+      patchBody.external_google_client_id = clientId;
+      patchBody.external_google_secret = clientSecret;
     }
 
     const response = await fetch(
@@ -42,13 +92,7 @@ export async function POST(request: Request) {
           Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          external_google_enabled: true,
-          external_google_client_id: clientId,
-          external_google_secret: clientSecret,
-          site_url: SITE_URL,
-          uri_allow_list: LOCAL_CALLBACK,
-        }),
+        body: JSON.stringify(patchBody),
       }
     );
 
@@ -74,8 +118,9 @@ export async function POST(request: Request) {
     return NextResponse.json({
       ok: true,
       redirectUri: `https://${PROJECT_REF}.supabase.co/auth/v1/callback`,
-      siteUrl: SITE_URL,
-      callbackUrl: LOCAL_CALLBACK,
+      siteUrl,
+      redirectUrls: patchBody.uri_allow_list,
+      localSiteUrl: LOCAL_SITE_URL,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "設定失敗";

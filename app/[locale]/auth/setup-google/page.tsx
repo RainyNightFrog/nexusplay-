@@ -25,6 +25,7 @@ export default function SetupGooglePage() {
   const [accessToken, setAccessToken] = useState("");
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
+  const [patchUrlsOnly, setPatchUrlsOnly] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -39,7 +40,13 @@ export default function SetupGooglePage() {
       const response = await fetch("/api/dev/configure-google-auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accessToken, clientId, clientSecret }),
+        body: JSON.stringify({
+          accessToken,
+          clientId,
+          clientSecret,
+          patchUrlsOnly,
+          siteUrl: "https://nexusplay-five.vercel.app",
+        }),
       });
 
       const payload = (await response.json()) as { ok?: boolean; error?: string };
@@ -164,7 +171,8 @@ export default function SetupGooglePage() {
               onChange={(e) => setClientId(e.target.value)}
               placeholder="123456789-abc.apps.googleusercontent.com"
               className="border-white/10 bg-white/5"
-              required
+              required={!patchUrlsOnly}
+              disabled={patchUrlsOnly}
             />
           </div>
           <div className="space-y-2">
@@ -176,9 +184,19 @@ export default function SetupGooglePage() {
               onChange={(e) => setClientSecret(e.target.value)}
               placeholder="GOCSPX-..."
               className="border-white/10 bg-white/5"
-              required
+              required={!patchUrlsOnly}
+              disabled={patchUrlsOnly}
             />
           </div>
+
+          <label className="flex items-center gap-2 text-sm text-zinc-300">
+            <input
+              type="checkbox"
+              checked={patchUrlsOnly}
+              onChange={(event) => setPatchUrlsOnly(event.target.checked)}
+            />
+            僅更新正式站 Auth URL（修復登入導向 localhost 問題）
+          </label>
 
           {error && (
             <p className="rounded-lg border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">

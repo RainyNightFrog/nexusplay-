@@ -1,0 +1,51 @@
+---
+description: 每次完成程式修改後自動 commit 並 push 到 Git
+alwaysApply: true
+---
+
+# 自動 Git 推送
+
+完成任何**實作、修復、重構**類任務且工作區有變更時，**必須**在回覆使用者前自動提交並推送到遠端，無需再問「要不要 commit」。
+
+## 何時執行
+
+- 已修改或新增專案檔案（含設定、腳本、文件若為任務一部分）
+- 任務可視為一個完整單元（一輪對話內的實作結束）
+
+## 何時不執行
+
+- 僅回答問題、code review、規劃，**沒有**改檔
+- 使用者明確說「先不要 push」「不要提交」「只改本地」
+- 沒有任何可提交的變更
+- 變更含 `.env.local`、金鑰、token 等敏感檔（勿提交；改提交 `.env.example` 等安全範本）
+
+## 流程（每次提交前）
+
+並行執行：
+
+1. `git status`
+2. `git diff`（含 staged / unstaged）
+3. `git log -5 --oneline`（沿用既有 commit 風格）
+
+然後：
+
+1. `git add` 相關檔案（排除敏感檔）
+2. 撰寫 1–2 句、說明 **why** 的 commit message（繁中或英文皆可，與近期 log 一致）
+3. `git commit`
+4. `git push -u origin HEAD`（若尚未設定 upstream）或 `git push`
+5. `git status` 確認成功
+
+## 安全限制
+
+- **禁止** `git push --force` 到 `main` / `master`
+- **禁止** `git config` 變更
+- **禁止** `--no-verify`、hard reset 等破壞性指令（除非使用者明確要求）
+- 若 push 失敗（權限、衝突、CI），在回覆中說明原因與建議下一步，不要略過不提
+
+## 回覆使用者
+
+推送成功後，簡短附上：
+
+- branch 名稱
+- commit message
+- remote URL（若方便）

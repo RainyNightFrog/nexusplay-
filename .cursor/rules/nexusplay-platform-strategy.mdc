@@ -1,0 +1,14 @@
+---
+description: NexusPlay platform fee, monetization, and roadmap decisions
+alwaysApply: true
+---
+
+# NexusPlay Platform Strategy
+
+- **Platform fee**: Start at **0%** (`PLANNED_PLATFORM_FEE_PERCENT` in `lib/tip-fee-policy.ts`). Grow platform first; future reference rate is 5% with 30-day notice.
+- **Grandfather**: Lock fee in `games.platform_fee_percent` when tips are first enabled. Games locked at 0% stay at 0% after site-wide increases.
+- **Payments model**: Marketplace only (Stripe Connect). No itch.io-style creator-chosen revenue slider.
+- **Tips**: Preview only until Stripe Connect; mock revenue in dashboard.
+- **Account settings**: Use `/settings/*` sidebar (security, privacy, creator, data). Full roadmap in `docs/platform-roadmap-itch-reference.md`.
+- **HK operator**: Legal/compliance before live payouts; use Stripe Connect for tax/KYC.
+- Git：完成實作後依 `auto-git-push` 規則自動 commit 並 push。

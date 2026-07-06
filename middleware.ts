@@ -22,8 +22,20 @@ function stripLocalePrefix(pathname: string): string {
 }
 
 export async function middleware(request: NextRequest) {
-  const response = intlMiddleware(request);
+  const oauthCode = request.nextUrl.searchParams.get("code");
   const pathnameWithoutLocale = stripLocalePrefix(request.nextUrl.pathname);
+
+  if (
+    oauthCode &&
+    pathnameWithoutLocale !== "/auth/callback" &&
+    !pathnameWithoutLocale.startsWith("/api/")
+  ) {
+    const callbackUrl = request.nextUrl.clone();
+    callbackUrl.pathname = "/auth/callback";
+    return NextResponse.redirect(callbackUrl);
+  }
+
+  const response = intlMiddleware(request);
 
   if (!request.cookies.get(ANALYTICS_SESSION_COOKIE)?.value) {
     response.cookies.set(ANALYTICS_SESSION_COOKIE, crypto.randomUUID(), {
