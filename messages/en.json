@@ -552,7 +552,7 @@
     "coverImage": "Cover image",
     "gameZip": "Web game zip file",
     "coverHint": "Supports .png, .jpg, max {size}",
-    "zipHint": "Supports .zip (with index.html), max {size}",
+    "zipHint": "Supports .zip with index.html at the root. On production, keep each upload under ~{productionSize} (upload zip and cover separately).",
     "publishGame": "Publish game",
     "saveDraft": "Save draft & test",
     "savingDraft": "Saving draft…",

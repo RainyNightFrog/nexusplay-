@@ -309,7 +309,7 @@
     "coverImage": "Ảnh bìa",
     "gameZip": "Tệp zip game web",
     "coverHint": "Hỗ trợ .png, .jpg, tối đa {size}",
-    "zipHint": "Hỗ trợ .zip (có index.html), tối đa {size}",
+    "zipHint": "Hỗ trợ .zip (index.html ở thư mục gốc). Trên production, mỗi lần ~{productionSize} (tải zip và ảnh bìa riêng)",
     "publishGame": "Xuất bản game",
     "saveChanges": "Lưu thay đổi",
     "submitReviewNote": "Sau khi gửi, game vào quy trình duyệt. Kết quả sẽ gửi đến tài khoản creator.",

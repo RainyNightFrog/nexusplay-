@@ -552,7 +552,7 @@
     "coverImage": "遊戲封面圖",
     "gameZip": "網頁遊戲壓縮檔",
     "coverHint": "支援 .png、.jpg，最大 {size}",
-    "zipHint": "支援 .zip，根目錄需含 index.html（或 index.htm），最大 {size}",
+    "zipHint": "支援 .zip，根目錄需含 index.html（或 index.htm）。正式站單次上傳約 {productionSize}（zip 與封面請分次上傳，勿一次全傳）",
     "publishGame": "發布遊戲",
     "saveDraft": "儲存草稿並前往測試",
     "savingDraft": "正在儲存草稿…",

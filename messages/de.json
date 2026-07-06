@@ -309,7 +309,7 @@
     "coverImage": "Cover-Bild",
     "gameZip": "Web-Spiel-Zip-Datei",
     "coverHint": "Unterstützt .png, .jpg, max. {size}",
-    "zipHint": "Unterstützt .zip (mit index.html), max. {size}",
+    "zipHint": "Unterstützt .zip (index.html im Stamm). In Produktion ~{productionSize} pro Upload (Zip und Cover getrennt hochladen)",
     "publishGame": "Spiel veröffentlichen",
     "saveChanges": "Änderungen speichern",
     "submitReviewNote": "Nach Einreichung durchläuft dein Spiel den Prüfprozess. Ergebnisse werden an dein Creator-Konto gesendet.",

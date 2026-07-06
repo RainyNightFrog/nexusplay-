@@ -309,7 +309,7 @@
     "coverImage": "Imagem de capa",
     "gameZip": "Arquivo zip do jogo web",
     "coverHint": "Suporta .png, .jpg, máx. {size}",
-    "zipHint": "Suporta .zip (com index.html), máx. {size}",
+    "zipHint": "Suporta .zip (index.html na raiz). Em produção, ~{productionSize} por envio (envie zip e capa separadamente)",
     "publishGame": "Publicar jogo",
     "saveChanges": "Salvar alterações",
     "submitReviewNote": "Após o envio, seu jogo entra em revisão. Os resultados serão enviados à sua conta de criador.",

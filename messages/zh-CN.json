@@ -415,7 +415,7 @@
     "coverImage": "游戏封面图",
     "gameZip": "网页游戏压缩包",
     "coverHint": "支持 .png、.jpg，最大 {size}",
-    "zipHint": "支持 .zip（含 index.html），最大 {size}",
+    "zipHint": "支持 .zip，根目录需含 index.html（或 index.htm）。正式站单次上传约 {productionSize}（zip 与封面请分次上传，勿一次全传）",
     "publishGame": "发布游戏",
     "saveDraft": "保存草稿并前往测试",
     "savingDraft": "正在保存草稿…",

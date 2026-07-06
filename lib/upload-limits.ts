@@ -1,6 +1,9 @@
 export const MAX_COVER_BYTES = 5 * 1024 * 1024; // 5 MB
 export const MAX_ZIP_BYTES = 50 * 1024 * 1024; // 50 MB（Supabase Free 方案上限）
 
+/** Vercel 正式站單次請求上限約 4.5 MB；留安全邊界供表單欄位與 multipart 開銷。 */
+export const PRODUCTION_UPLOAD_BYTES = 4 * 1024 * 1024; // 4 MB
+
 /** Zip bomb / DoS guards applied during server-side extraction */
 export const MAX_ZIP_ENTRIES = 500;
 export const MAX_UNCOMPRESSED_TOTAL_BYTES = 200 * 1024 * 1024; // 200 MB

@@ -309,7 +309,7 @@
     "coverImage": "รูปปก",
     "gameZip": "ไฟล์ zip เกมเว็บ",
     "coverHint": "รองรับ .png, .jpg สูงสุด {size}",
-    "zipHint": "รองรับ .zip (มี index.html) สูงสุด {size}",
+    "zipHint": "รองรับ .zip (index.html ที่ root) บน production ส่งครั้งละ ~{productionSize} (แยก zip กับปก)",
     "publishGame": "เผยแพร่เกม",
     "saveChanges": "บันทึกการเปลี่ยนแปลง",
     "submitReviewNote": "หลังส่ง เกมจะเข้ากระบวนการตรวจสอบ ผลลัพธ์จะส่งไปยังบัญชีครีเอเตอร์ของคุณ",

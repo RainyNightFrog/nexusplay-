@@ -52,6 +52,7 @@ import {
   MAX_DESCRIPTION_LENGTH,
   MAX_TITLE_LENGTH,
   MAX_ZIP_BYTES,
+  PRODUCTION_UPLOAD_BYTES,
 } from "@/lib/upload-limits";
 import { isZipFileAsync, validateGameZipFile, ZIP_FILE_ACCEPT } from "@/lib/zip-file-validation";
 import { cn } from "@/lib/utils";
@@ -237,6 +238,7 @@ export default function UploadPage() {
   const locale = useLocale();
   const coverMaxSize = formatMaxSize(MAX_COVER_BYTES);
   const zipMaxSize = formatMaxSize(MAX_ZIP_BYTES);
+  const zipProductionSize = formatMaxSize(PRODUCTION_UPLOAD_BYTES);
   const [form, setForm] = useState<FormState>({
     title: "",
     description: "",
@@ -588,7 +590,7 @@ export default function UploadPage() {
               <div id="field-game-zip">
               <DropZone
                 label={t("gameZip")}
-                hint={t("zipHint", { size: zipMaxSize })}
+                hint={t("zipHint", { productionSize: zipProductionSize })}
                 dragDropText={tCommon("dragDrop")}
                 previewAlt={tCommon("coverPreview")}
                 accept={ZIP_FILE_ACCEPT}

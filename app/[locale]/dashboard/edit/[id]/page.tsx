@@ -65,6 +65,7 @@ import {
   MAX_DESCRIPTION_LENGTH,
   MAX_TITLE_LENGTH,
   MAX_ZIP_BYTES,
+  PRODUCTION_UPLOAD_BYTES,
 } from "@/lib/upload-limits";
 import { isZipFileAsync, validateGameZipFile, ZIP_FILE_ACCEPT } from "@/lib/zip-file-validation";
 import { cn } from "@/lib/utils";
@@ -254,6 +255,7 @@ export default function EditGamePage() {
   const { translateApiError } = useApiError();
   const coverMaxSize = formatMaxSize(MAX_COVER_BYTES);
   const zipMaxSize = formatMaxSize(MAX_ZIP_BYTES);
+  const zipProductionSize = formatMaxSize(PRODUCTION_UPLOAD_BYTES);
   const locale = useLocale();
   const params = useParams();
   const gameId = Number.parseInt(String(params.id), 10);
@@ -717,7 +719,7 @@ export default function EditGamePage() {
               <div id="field-game-zip">
               <DropZone
                 label={t("versionUpdate")}
-                hint={t("zipHint", { size: zipMaxSize })}
+                hint={t("zipHint", { productionSize: zipProductionSize })}
                 dragDropText={tCommon("dragDrop")}
                 previewAlt={tCommon("coverPreview")}
                 currentCoverAlt={tCommon("currentCover")}

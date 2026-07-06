@@ -309,7 +309,7 @@
     "coverImage": "ゲームカバー画像",
     "gameZip": "ウェブゲーム zip ファイル",
     "coverHint": ".png、.jpg 対応、最大 {size}",
-    "zipHint": ".zip 対応（index.html 含む）、最大 {size}",
+    "zipHint": ".zip 対応（index.html をルートに配置）。本番は1回あたり約 {productionSize} まで（zip とカバーは分けてアップロード）",
     "publishGame": "ゲームを公開",
     "saveChanges": "変更を保存",
     "submitReviewNote": "送信後、審査プロセスに入ります。結果はクリエイターアカウントに通知されます",
