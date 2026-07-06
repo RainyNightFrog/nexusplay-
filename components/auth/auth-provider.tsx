@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import type { UserProfile } from "@/lib/auth";
+import { profileFromUserMetadata } from "@/lib/profile-from-metadata";
 import { createClient } from "@/lib/supabase/client";
 
 type AuthContextValue = {
@@ -52,14 +53,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const response = await fetch("/api/auth/profile");
+      const response = await fetch("/api/auth/profile", {
+        credentials: "same-origin",
+      });
       if (generation !== loadGeneration.current) return;
 
       if (response.ok) {
-        const data = (await response.json()) as { profile?: UserProfile };
-        setProfile(data.profile ?? null);
+        const data = (await response.json()) as { profile?: UserProfile | null };
+        setProfile(data.profile ?? profileFromUserMetadata(user));
       } else {
-        setProfile(null);
+        setProfile(profileFromUserMetadata(user));
       }
     } catch {
       if (generation === loadGeneration.current) {

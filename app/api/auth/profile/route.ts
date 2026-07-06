@@ -9,7 +9,6 @@ import {
   PROFILE_LIMITS,
   resolveRoleFromPreferences,
 } from "@/lib/profile-settings";
-import { sanitizePlainText } from "@/lib/sanitize";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 
 type ProfilePatchBody = {
@@ -54,6 +53,7 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
   try {
+    const { sanitizePlainText } = await import("@/lib/sanitize-plain");
     const supabase = await createAuthServerClient();
     const {
       data: { user },

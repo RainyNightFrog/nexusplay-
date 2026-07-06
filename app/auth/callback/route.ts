@@ -24,7 +24,10 @@ export async function GET(request: NextRequest) {
 
   if (error) {
     console.error("[auth/callback] exchangeCodeForSession:", error.message);
-    return redirectToAuthError();
+    const failUrl = new URL(`${base}/auth`, request.url);
+    failUrl.searchParams.set("error", "callback");
+    failUrl.searchParams.set("reason", error.message.slice(0, 180));
+    return NextResponse.redirect(failUrl);
   }
 
   const {

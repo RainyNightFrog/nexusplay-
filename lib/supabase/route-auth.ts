@@ -1,5 +1,5 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
-import type { NextRequest } from "next/server";
+import type { NextRequest, NextResponse } from "next/server";
 
 type PendingCookie = {
   name: string;
@@ -23,7 +23,7 @@ export function resolveAuthRedirectBase(request: NextRequest, origin: string) {
 }
 
 export function createAuthCallbackClient(request: NextRequest) {
-  let pendingCookies: PendingCookie[] = [];
+  const cookieJar = new Map<string, PendingCookie>();
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -34,7 +34,9 @@ export function createAuthCallbackClient(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          pendingCookies = cookiesToSet;
+          for (const cookie of cookiesToSet) {
+            cookieJar.set(cookie.name, cookie);
+          }
         },
       },
     }
@@ -42,17 +44,9 @@ export function createAuthCallbackClient(request: NextRequest) {
 
   return {
     supabase,
-    applyCookies(response: Response) {
-      if (!("cookies" in response)) return;
-
-      const nextResponse = response as Response & {
-        cookies: {
-          set: (name: string, value: string, options?: CookieOptions) => void;
-        };
-      };
-
-      pendingCookies.forEach(({ name, value, options }) => {
-        nextResponse.cookies.set(name, value, options);
+    applyCookies(response: NextResponse) {
+      cookieJar.forEach(({ name, value, options }) => {
+        response.cookies.set(name, value, options);
       });
     },
   };
