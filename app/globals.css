@@ -485,3 +485,36 @@
     scroll-behavior: smooth;
   }
 }
+
+.tiptap p.is-editor-empty:first-child::before {
+  color: rgb(82 82 91);
+  content: attr(data-placeholder);
+  display: block;
+  text-align: center;
+  height: 0;
+  pointer-events: none;
+}
+
+.game-details-content {
+  text-align: center;
+}
+
+.game-details-content :is(h1, h2, h3, h4, p, blockquote) {
+  text-align: center;
+}
+
+.game-details-content :is(ul, ol) {
+  display: inline-block;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: left;
+}
+
+.game-details-content :is(pre, pre code) {
+  text-align: left;
+}
+
+.game-details-content hr {
+  margin-left: auto;
+  margin-right: auto;
+}

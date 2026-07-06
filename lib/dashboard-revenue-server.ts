@@ -38,7 +38,8 @@ async function fetchCreatorTips(
     .order("created_at", { ascending: false });
 
   if (error) {
-    throw new Error(error.message);
+    console.error("[dashboard/revenue] tips query:", error.message);
+    throw new Error("讀取收益資料失敗");
   }
 
   if (!tips || tips.length === 0) return [];

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -10,6 +11,7 @@ import {
   type AiContentType,
 } from "@/lib/game-metadata";
 import { cn } from "@/lib/utils";
+import { RequiredFieldLabel } from "@/components/dashboard/required-field-label";
 
 export type AiDisclosureValues = {
   aiDisclosed: boolean | null;
@@ -20,6 +22,11 @@ type AiDisclosureFieldsProps = {
   values: AiDisclosureValues;
   onChange: (values: AiDisclosureValues) => void;
   disabled?: boolean;
+  requiredForPublic?: boolean;
+  fieldErrors?: {
+    aiDisclosure?: boolean;
+    aiContentTypes?: boolean;
+  };
 };
 
 function RadioOption({
@@ -63,7 +70,11 @@ export function AiDisclosureFields({
   values,
   onChange,
   disabled,
+  requiredForPublic,
+  fieldErrors,
 }: AiDisclosureFieldsProps) {
+  const t = useTranslations("dashboard");
+
   const toggleContentType = (type: AiContentType) => {
     const next = values.aiContentTypes.includes(type)
       ? values.aiContentTypes.filter((item) => item !== type)
@@ -76,19 +87,26 @@ export function AiDisclosureFields({
       <div className="space-y-1 text-center">
         <div className="flex flex-wrap items-center justify-center gap-2">
           <p className="text-sm font-medium text-zinc-200">
-            AI 生成內容誠實宣告
+            <RequiredFieldLabel required={requiredForPublic}>
+              AI 生成內容誠實宣告
+            </RequiredFieldLabel>
           </p>
           <Badge className="gap-1 border-0 bg-gradient-to-r from-cyan-500/20 to-violet-500/20 text-cyan-200">
             <Sparkles className="size-3" />
             新的
           </Badge>
         </div>
-        <p className="text-xs text-zinc-500">
+        <p className="text-center text-xs text-zinc-500">
           此專案是否包含 AI 生成內容（美術、程式碼或語音）？即使經過人工編輯也請如實申報。
         </p>
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div
+        className={cn(
+          "grid gap-2 sm:grid-cols-2",
+          fieldErrors?.aiDisclosure && "rounded-xl ring-2 ring-rose-400/40 p-1"
+        )}
+      >
         <RadioOption
           selected={values.aiDisclosed === true}
           label="是 — 本專案包含生成式 AI 的輸出結果"
@@ -107,6 +125,12 @@ export function AiDisclosureFields({
         />
       </div>
 
+      {fieldErrors?.aiDisclosure && (
+        <p className="text-center text-xs text-rose-300" role="alert">
+          {t("alertAiDisclosure")}
+        </p>
+      )}
+
       <AnimatePresence>
         {values.aiDisclosed === true && (
           <motion.div
@@ -115,10 +139,20 @@ export function AiDisclosureFields({
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
           >
-            <div className="space-y-3 rounded-2xl border border-violet-400/20 bg-violet-500/5 p-4">
+            <div
+              className={cn(
+                "space-y-3 rounded-2xl border border-violet-400/20 bg-violet-500/5 p-4",
+                fieldErrors?.aiContentTypes && "ring-2 ring-rose-400/40"
+              )}
+            >
               <p className="text-center text-xs font-medium text-violet-200">
                 使用的是哪種 AI 生成內容？（必填，可多選）
               </p>
+              {fieldErrors?.aiContentTypes && (
+                <p className="text-center text-xs text-rose-300" role="alert">
+                  {t("alertAiContentTypes")}
+                </p>
+              )}
               <div className="grid gap-2 sm:grid-cols-2">
                 {AI_CONTENT_TYPES.map((type) => (
                   <label

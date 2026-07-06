@@ -3,7 +3,7 @@
 import { useRef, useState, type ChangeEvent } from "react";
 import Image from "next/image";
 import { ImageIcon, X } from "lucide-react";
-import { MAX_GALLERY_IMAGES } from "@/lib/game-page-content";
+import { MAX_GALLERY_IMAGES, isValidGalleryImage } from "@/lib/game-page-content";
 import { MAX_COVER_BYTES, formatMaxSize } from "@/lib/upload-limits";
 import { cn } from "@/lib/utils";
 
@@ -35,24 +35,55 @@ export function GalleryUploadFields({
   disabled,
 }: GalleryUploadFieldsProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [selectionError, setSelectionError] = useState<string | null>(null);
   const totalCount = existingUrls.length + newFiles.length;
   const canAddMore = totalCount < MAX_GALLERY_IMAGES;
+  const maxSizeLabel = formatMaxSize(MAX_COVER_BYTES);
 
   const handleSelect = (event: ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(event.target.files ?? []);
     event.target.value = "";
     if (!selected.length) return;
 
-    const valid = selected.filter((file) => {
-      const okType = ["image/png", "image/jpeg", "image/jpg", "image/webp"].includes(
-        file.type
-      );
-      const okSize = file.size <= MAX_COVER_BYTES;
-      return okType && okSize;
-    });
+    const accepted: File[] = [];
+    let rejectedType = 0;
+    let rejectedSize = 0;
+
+    for (const file of selected) {
+      if (!isValidGalleryImage(file)) {
+        rejectedType += 1;
+        continue;
+      }
+      if (file.size > MAX_COVER_BYTES) {
+        rejectedSize += 1;
+        continue;
+      }
+      accepted.push(file);
+    }
 
     const remaining = MAX_GALLERY_IMAGES - totalCount;
-    onFilesAdd(valid.slice(0, remaining));
+    const toAdd = accepted.slice(0, remaining);
+    const rejectedLimit = accepted.length - toAdd.length;
+
+    if (toAdd.length > 0) {
+      onFilesAdd(toAdd);
+    }
+
+    const messages: string[] = [];
+    if (rejectedType > 0) {
+      messages.push(`${rejectedType} 張格式不支援（僅 PNG / JPG / WebP）`);
+    }
+    if (rejectedSize > 0) {
+      messages.push(`${rejectedSize} 張超過 ${maxSizeLabel}`);
+    }
+    if (rejectedLimit > 0) {
+      messages.push(`已達上限 ${MAX_GALLERY_IMAGES} 張，多出的圖片未加入`);
+    }
+    if (toAdd.length === 0 && messages.length === 0) {
+      messages.push("沒有可加入的圖片");
+    }
+
+    setSelectionError(messages.length > 0 ? messages.join("；") : null);
   };
 
   return (
@@ -63,7 +94,14 @@ export function GalleryUploadFields({
           <span className="text-zinc-500">{optionalLabel}</span>
         </p>
         <p className="mt-1 text-xs text-zinc-500">{hint}</p>
+        <p className="mt-1 text-xs text-zinc-600">
+          單張最大 {maxSizeLabel} · 選好後請按「儲存變更」才會正式上傳
+        </p>
       </div>
+
+      {selectionError && (
+        <p className="text-center text-xs text-amber-300">{selectionError}</p>
+      )}
 
       {(existingUrls.length > 0 || newFiles.length > 0) && (
         <div className="flex flex-wrap justify-center gap-3">

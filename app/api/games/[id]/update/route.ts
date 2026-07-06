@@ -36,6 +36,7 @@ import {
   resolveDevlogUpdate,
   resolveGalleryUpdate,
 } from "@/lib/game-page-upload";
+import { isZipBuffer, isZipFile } from "@/lib/zip-file-validation";
 
 /** 創作者可更新的欄位；公開發布時重置審批狀態為 pending */
 function buildCreatorUpdatePayload(
@@ -143,21 +144,37 @@ export async function PATCH(
     const coverFile = formData.get("cover");
     const gameZipFile = formData.get("gameZip");
 
+    const monetization = parseMonetizationFromFormData(formData);
+    if (!monetization.ok) {
+      return NextResponse.json({ error: monetization.error }, { status: 400 });
+    }
+
+    const isPublic = monetization.data.publish_status === "public";
+
     if (!title) {
       return NextResponse.json({ error: "請輸入遊戲名稱" }, { status: 400 });
     }
-    if (!description) {
-      return NextResponse.json({ error: "請輸入遊戲簡介" }, { status: 400 });
-    }
-    if (!category) {
-      return NextResponse.json({ error: "請選擇遊戲分類" }, { status: 400 });
-    }
-    if (!(GAME_GENRES as readonly string[]).includes(category)) {
+
+    if (isPublic) {
+      if (!description) {
+        return NextResponse.json({ error: "請輸入遊戲簡介" }, { status: 400 });
+      }
+      if (!category) {
+        return NextResponse.json({ error: "請選擇遊戲分類" }, { status: 400 });
+      }
+      if (!(GAME_GENRES as readonly string[]).includes(category)) {
+        return NextResponse.json({ error: "無效的遊戲分類" }, { status: 400 });
+      }
+    } else if (category && !(GAME_GENRES as readonly string[]).includes(category)) {
       return NextResponse.json({ error: "無效的遊戲分類" }, { status: 400 });
     }
 
     const hasCover = coverFile instanceof File && coverFile.size > 0;
     const hasZip = gameZipFile instanceof File && gameZipFile.size > 0;
+
+    if (isPublic && !hasCover && !record.cover_url) {
+      return NextResponse.json({ error: "請上傳遊戲封面圖" }, { status: 400 });
+    }
 
     if (publishVersion && !hasZip) {
       return NextResponse.json(
@@ -185,7 +202,7 @@ export async function PATCH(
     }
 
     if (hasZip) {
-      if (!gameZipFile.name.toLowerCase().endsWith(".zip")) {
+      if (!isZipFile(gameZipFile)) {
         return NextResponse.json(
           { error: "遊戲檔案僅支援 .zip 壓縮檔" },
           { status: 400 }
@@ -199,11 +216,6 @@ export async function PATCH(
           { status: 400 }
         );
       }
-    }
-
-    const monetization = parseMonetizationFromFormData(formData);
-    if (!monetization.ok) {
-      return NextResponse.json({ error: monetization.error }, { status: 400 });
     }
 
     const metadataResult = parsePublishMetadataFromFormData(formData);
@@ -249,6 +261,12 @@ export async function PATCH(
 
       if (hasZip) {
         const zipBuffer = await gameZipFile.arrayBuffer();
+        if (!isZipBuffer(zipBuffer)) {
+          return NextResponse.json(
+            { error: "遊戲檔案僅支援 .zip 壓縮檔" },
+            { status: 400 }
+          );
+        }
         const buildUpload = await extractAndUploadGameBuild(supabase, zipBuffer);
         newBuildPaths = buildUpload.uploadedPaths;
         newGameUrl = buildUpload.playUrl;

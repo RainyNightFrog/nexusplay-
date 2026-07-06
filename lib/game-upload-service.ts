@@ -1,7 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { extractAndUploadGameBuild } from "@/lib/extract-game-zip";
-import { parseMonetizationFromFormData } from "@/lib/game-publish";
+import { parseMonetizationFromFormData, parsePublishStatus } from "@/lib/game-publish";
 import { GAME_GENRES } from "@/lib/game-metadata";
+import {
+  createDraftPlaceholderCoverBuffer,
+  DRAFT_DEFAULT_GENRE,
+  DRAFT_PLACEHOLDER_DESCRIPTION,
+} from "@/lib/draft-placeholder-cover";
 import {
   buildMetadataDbPayload,
   parsePublishMetadataFromFormData,
@@ -19,6 +24,7 @@ import {
   MAX_ZIP_BYTES,
 } from "@/lib/upload-limits";
 import { resolvePlatformFeePercentForSave } from "@/lib/tip-fee-policy";
+import { isZipBuffer, isZipFile } from "@/lib/zip-file-validation";
 
 const COVERS_BUCKET = "game-covers";
 const FILES_BUCKET = "game-files";
@@ -109,43 +115,59 @@ export async function uploadCreatorGameFromFormData(params: {
   );
   const coverFile = formData.get("cover");
   const gameZipFile = formData.get("gameZip");
+  const publishStatus = parsePublishStatus(formData.get("publishStatus"));
+  const isPublic = publishStatus === "public";
 
   if (!title) {
     return { ok: false, status: 400, error: "請輸入遊戲名稱" };
-  }
-  if (!description) {
-    return { ok: false, status: 400, error: "請輸入遊戲簡介" };
-  }
-  if (!category) {
-    return { ok: false, status: 400, error: "請選擇遊戲分類" };
-  }
-  if (!(GAME_GENRES as readonly string[]).includes(category)) {
-    return { ok: false, status: 400, error: "無效的遊戲分類" };
-  }
-  if (!(coverFile instanceof File)) {
-    return { ok: false, status: 400, error: "請上傳遊戲封面圖" };
   }
   if (!(gameZipFile instanceof File)) {
     return { ok: false, status: 400, error: "請上傳遊戲壓縮檔" };
   }
 
-  const validCoverTypes = ["image/png", "image/jpeg", "image/jpg"];
-  if (!validCoverTypes.includes(coverFile.type)) {
-    return {
-      ok: false,
-      status: 400,
-      error: "封面圖僅支援 .png、.jpg 格式",
-    };
+  const finalDescription =
+    description || (isPublic ? "" : DRAFT_PLACEHOLDER_DESCRIPTION);
+  const finalCategory =
+    category && (GAME_GENRES as readonly string[]).includes(category)
+      ? category
+      : isPublic
+        ? ""
+        : DRAFT_DEFAULT_GENRE;
+
+  if (isPublic) {
+    if (!finalDescription) {
+      return { ok: false, status: 400, error: "請輸入遊戲簡介" };
+    }
+    if (!finalCategory) {
+      return { ok: false, status: 400, error: "請選擇遊戲分類" };
+    }
+    if (!(coverFile instanceof File)) {
+      return { ok: false, status: 400, error: "請上傳遊戲封面圖" };
+    }
   }
-  if (!gameZipFile.name.toLowerCase().endsWith(".zip")) {
+
+  const hasCoverFile = coverFile instanceof File && coverFile.size > 0;
+
+  if (hasCoverFile) {
+    const validCoverTypes = ["image/png", "image/jpeg", "image/jpg"];
+    if (!validCoverTypes.includes(coverFile.type)) {
+      return {
+        ok: false,
+        status: 400,
+        error: "封面圖僅支援 .png、.jpg 格式",
+      };
+    }
+    if (coverFile.size > MAX_COVER_BYTES) {
+      return {
+        ok: false,
+        status: 400,
+        error: `封面圖不可超過 ${formatMaxSize(MAX_COVER_BYTES)}（目前 ${formatMaxSize(coverFile.size)}）`,
+      };
+    }
+  }
+
+  if (!isZipFile(gameZipFile)) {
     return { ok: false, status: 400, error: "遊戲檔案僅支援 .zip 壓縮檔" };
-  }
-  if (coverFile.size > MAX_COVER_BYTES) {
-    return {
-      ok: false,
-      status: 400,
-      error: `封面圖不可超過 ${formatMaxSize(MAX_COVER_BYTES)}（目前 ${formatMaxSize(coverFile.size)}）`,
-    };
   }
   if (gameZipFile.size > MAX_ZIP_BYTES) {
     return {
@@ -178,17 +200,22 @@ export async function uploadCreatorGameFromFormData(params: {
   let buildPaths: string[] = [];
 
   try {
-    const coverBuffer = await coverFile.arrayBuffer();
+    const coverBuffer = hasCoverFile
+      ? await coverFile.arrayBuffer()
+      : createDraftPlaceholderCoverBuffer();
     const coverUpload = await uploadBuffer(
       supabase,
       COVERS_BUCKET,
-      coverFile.name,
+      hasCoverFile ? coverFile.name : "draft-placeholder.png",
       coverBuffer,
-      coverFile.type || "image/jpeg"
+      hasCoverFile ? coverFile.type || "image/jpeg" : "image/png"
     );
     coverPath = coverUpload.path;
 
     const zipBuffer = await gameZipFile.arrayBuffer();
+    if (!isZipBuffer(zipBuffer)) {
+      return { ok: false, status: 400, error: "遊戲檔案僅支援 .zip 壓縮檔" };
+    }
     const buildUpload = await extractAndUploadGameBuild(supabase, zipBuffer);
     buildPaths = buildUpload.uploadedPaths;
 
@@ -207,8 +234,8 @@ export async function uploadCreatorGameFromFormData(params: {
       .from("games")
       .insert({
         title,
-        description,
-        category,
+        description: finalDescription,
+        category: finalCategory,
         cover_url: coverUpload.publicUrl,
         game_url: buildUpload.playUrl,
         creator_id: params.creatorId,

@@ -51,7 +51,8 @@ async function fetchCreatorAnalyticsEvents(
     .order("created_at", { ascending: false });
 
   if (error) {
-    throw new Error(error.message);
+    console.error("[dashboard/analytics] events query:", error.message);
+    throw new Error("讀取分析資料失敗");
   }
 
   return (data ?? []) as AnalyticsEventRow[];

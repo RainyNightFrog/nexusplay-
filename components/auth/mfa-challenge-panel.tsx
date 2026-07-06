@@ -61,9 +61,9 @@ export function MfaChallengePanel({
         <ShieldCheck className="size-4" />
         {t("mfaChallengeTitle")}
       </div>
-      <p className="text-xs text-zinc-400">{t("mfaChallengeDesc")}</p>
+      <p className="text-center text-xs text-zinc-400">{t("mfaChallengeDesc")}</p>
       <div>
-        <Label htmlFor="mfa-login-code" className="text-zinc-300">
+        <Label htmlFor="mfa-login-code" className="block text-center text-zinc-300">
           {t("mfaCodeLabel")}
         </Label>
         <Input
@@ -75,7 +75,7 @@ export function MfaChallengePanel({
           className="mt-1.5 border-white/10 bg-white/5 tracking-widest"
         />
       </div>
-      {error && <p className="text-sm text-rose-400">{error}</p>}
+      {error && <p className="text-center text-sm text-rose-400">{error}</p>}
       <div className="flex flex-wrap gap-2">
         <Button type="submit" disabled={submitting || code.trim().length < 6}>
           {submitting ? <Loader2 className="size-4 animate-spin" /> : null}

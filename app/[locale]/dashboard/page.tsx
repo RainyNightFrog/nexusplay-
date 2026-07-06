@@ -35,9 +35,9 @@ import {
 import {
   Select,
   SelectContent,
+  SelectDisplayValue,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import {
   Dialog,
@@ -66,6 +66,7 @@ import {
 import { deleteGame } from "@/lib/delete-game";
 import { useFormatCount } from "@/hooks/use-format-count";
 import { useApiError } from "@/hooks/use-api-error";
+import { resolveUserFacingError } from "@/lib/user-facing-error";
 import { cn } from "@/lib/utils";
 
 const TrendChart = dynamic(
@@ -141,6 +142,15 @@ export default function CreatorDashboardPage() {
   const { formatCount } = useFormatCount();
   const { translateApiError } = useApiError();
 
+  const resolveDashboardError = useCallback(
+    (error: unknown, fallbackKey: "analyticsLoadFailed" | "revenueLoadFailed" | "readFailed") =>
+      resolveUserFacingError(error, {
+        translate: translateApiError,
+        fallback: t(fallbackKey),
+      }),
+    [t, translateApiError]
+  );
+
   const [games, setGames] = useState<CreatorGameRecord[]>([]);
   const [gamesLoading, setGamesLoading] = useState(true);
   const [gamesError, setGamesError] = useState<string | null>(null);
@@ -172,13 +182,11 @@ export default function CreatorDashboardPage() {
       const nextGames = await fetchCreatorGames();
       setGames(nextGames);
     } catch (error) {
-      setGamesError(
-        error instanceof Error ? error.message : t("readFailed")
-      );
+      setGamesError(resolveDashboardError(error, "readFailed"));
     } finally {
       setGamesLoading(false);
     }
-  }, [t]);
+  }, [resolveDashboardError]);
 
   useEffect(() => {
     void loadGames();
@@ -206,9 +214,7 @@ export default function CreatorDashboardPage() {
       })
       .catch((error) => {
         if (!cancelled) {
-          setRevenueError(
-            error instanceof Error ? error.message : t("revenueLoadFailed")
-          );
+          setRevenueError(resolveDashboardError(error, "revenueLoadFailed"));
         }
       })
       .finally(() => {
@@ -218,7 +224,7 @@ export default function CreatorDashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [analyticsScope, gamesLoading, games.length, t]);
+  }, [analyticsScope, gamesLoading, games.length, resolveDashboardError]);
 
   useEffect(() => {
     if (gamesLoading) return;
@@ -236,9 +242,7 @@ export default function CreatorDashboardPage() {
       })
       .catch((error) => {
         if (!cancelled) {
-          setAnalyticsError(
-            error instanceof Error ? error.message : t("analyticsLoadFailed")
-          );
+          setAnalyticsError(resolveDashboardError(error, "analyticsLoadFailed"));
         }
       })
       .finally(() => {
@@ -248,7 +252,7 @@ export default function CreatorDashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [analyticsScope, highlightTimeRange, gamesLoading, games.length, t]);
+  }, [analyticsScope, highlightTimeRange, gamesLoading, games.length, resolveDashboardError]);
 
   const selectedGame = useMemo(
     () =>
@@ -278,9 +282,11 @@ export default function CreatorDashboardPage() {
       setDeleteTarget(null);
       await loadGames();
     } catch (error) {
-      const raw = error instanceof Error ? error.message : null;
       setDeleteError(
-        translateApiError(raw) ?? raw ?? t("deleteGameFailed")
+        resolveUserFacingError(error, {
+          translate: translateApiError,
+          fallback: t("deleteGameFailed"),
+        })
       );
     } finally {
       setDeleting(false);
@@ -302,6 +308,13 @@ export default function CreatorDashboardPage() {
     analyticsScope === ALL_GAMES_SCOPE
       ? ALL_GAMES_SCOPE
       : String(analyticsScope);
+
+  const scopeSelectLabel =
+    analyticsScope === ALL_GAMES_SCOPE
+      ? t("allGamesTotal")
+      : selectedGame?.title ?? t("selectGame");
+
+  const highlightSelectLabel = t(HIGHLIGHT_TIME_LABEL_KEYS[highlightTimeRange]);
 
   return (
     <div className="dark relative min-h-full text-zinc-100">
@@ -354,24 +367,26 @@ export default function CreatorDashboardPage() {
           transition={{ duration: 0.5 }}
           className="mb-8"
         >
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-500/10 px-4 py-1.5 text-xs font-medium text-cyan-300">
-            <Sparkles className="size-3.5" />
-            {t("analyticsLiveBadge")}
+          <div className="mb-3 flex justify-center">
+            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-500/10 px-4 py-1.5 text-xs font-medium text-cyan-300">
+              <Sparkles className="size-3.5" />
+              {t("analyticsLiveBadge")}
+            </div>
           </div>
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
+          <div className="flex flex-col items-center gap-4 text-center">
+            <div className="w-full">
               <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
                 {selectedGame
                   ? t("analyticsForGame", { title: selectedGame.title })
                   : t("welcomeBack")}
               </h1>
-              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-400 sm:text-base">
+              <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-zinc-400 sm:text-base">
                 {selectedGame ? t("welcomeDescGameLive") : t("welcomeDescLive")}
               </p>
             </div>
 
-            <div className="w-full max-w-sm shrink-0">
-              <label className="mb-2 block text-xs font-medium text-zinc-500">
+            <div className="w-full max-w-sm">
+              <label className="mb-2 block text-center text-xs font-medium text-zinc-500">
                 {t("selectGame")}
               </label>
               <Select
@@ -386,8 +401,8 @@ export default function CreatorDashboardPage() {
                 }}
                 disabled={gamesLoading}
               >
-                <SelectTrigger className="w-full border-white/10 bg-zinc-900/80 text-zinc-100">
-                  <SelectValue placeholder={t("selectGame")} />
+                <SelectTrigger className="w-full justify-center border-white/10 bg-zinc-900/80 text-center text-zinc-100 *:data-[slot=select-value]:justify-center">
+                  <SelectDisplayValue>{scopeSelectLabel}</SelectDisplayValue>
                 </SelectTrigger>
                 <SelectContent className="border-white/10 bg-zinc-900 text-zinc-100">
                   <SelectItem value={ALL_GAMES_SCOPE}>
@@ -418,7 +433,7 @@ export default function CreatorDashboardPage() {
           </Card>
         ) : analytics ? (
           <>
-        <p className="mb-4 text-xs leading-relaxed text-zinc-500">
+        <p className="mb-4 text-center text-xs leading-relaxed text-zinc-500">
           {t("analyticsLiveDataNote")}
         </p>
 
@@ -526,7 +541,10 @@ export default function CreatorDashboardPage() {
                       })
                     : t("highlightsDesc", { period: highlightPeriodLabel })}
                 </CardDescription>
-                <div className="mt-4 flex justify-center">
+                <div className="mt-4 flex flex-col items-center">
+                  <label className="mb-2 block text-center text-xs font-medium text-zinc-500">
+                    {t("highlightsTimeLabel")}
+                  </label>
                   <Select
                     value={highlightTimeRange}
                     onValueChange={(value) =>
@@ -535,9 +553,9 @@ export default function CreatorDashboardPage() {
                   >
                     <SelectTrigger
                       aria-label={t("highlightsTimeLabel")}
-                      className="w-[180px] border-white/10 bg-white/5 text-white"
+                      className="w-[180px] justify-center border-white/10 bg-white/5 text-center text-white *:data-[slot=select-value]:justify-center"
                     >
-                      <SelectValue placeholder={t("highlightsTimeLabel")} />
+                      <SelectDisplayValue>{highlightSelectLabel}</SelectDisplayValue>
                     </SelectTrigger>
                     <SelectContent>
                       {HIGHLIGHT_TIME_RANGES.map((range) => (

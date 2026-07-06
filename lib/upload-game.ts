@@ -6,7 +6,7 @@ export type UploadGameInput = {
   title: string;
   description: string;
   category: string;
-  coverFile: File;
+  coverFile: File | null;
   gameZipFile: File;
   publishStatus: GamePublishStatus;
   tipsEnabled: boolean;
@@ -40,7 +40,9 @@ export async function uploadGame(
   formData.append("title", input.title);
   formData.append("description", input.description);
   formData.append("category", input.category);
-  formData.append("cover", input.coverFile);
+  if (input.coverFile) {
+    formData.append("cover", input.coverFile);
+  }
   formData.append("gameZip", input.gameZipFile);
   formData.append("publishStatus", input.publishStatus);
   formData.append("tipsEnabled", String(input.tipsEnabled));

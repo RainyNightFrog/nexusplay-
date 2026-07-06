@@ -22,6 +22,20 @@ export function useApiError() {
       if (message.includes("遊戲 zip 不可超過")) return t("zipTooLargeGeneric");
       if (message.includes("無法連線 Supabase")) return t("supabaseConnection");
       if (message.includes("檔案超過 Supabase 大小上限")) return t("supabaseFileTooLarge");
+      if (/failed to load analytics/i.test(message)) return t("analyticsLoadFailed");
+      if (/failed to load revenue/i.test(message)) return t("revenueLoadFailed");
+      if (/failed to fetch|networkerror|fetch failed/i.test(message)) {
+        return t("networkError");
+      }
+      if (
+        /relation .+ does not exist|could not find the table|schema cache|permission denied for table|pgrst\d+/i.test(
+          message
+        )
+      ) {
+        return message.includes("game_legacy_imports")
+          ? t("legacyImportsTableMissing")
+          : t("databaseUnavailable");
+      }
 
       return null;
     },

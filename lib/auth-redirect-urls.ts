@@ -6,19 +6,41 @@ export function getAuthCallbackUrl(origin: string) {
 }
 
 export function getAuthRedirectAllowList(siteUrl = PRODUCTION_SITE_URL) {
-  const productionCallback = getAuthCallbackUrl(siteUrl);
-  const localCallback = getAuthCallbackUrl(LOCAL_SITE_URL);
-  return [productionCallback, localCallback];
+  const productionBase = siteUrl.replace(/\/$/, "");
+  const localBase = LOCAL_SITE_URL.replace(/\/$/, "");
+  return [
+    getAuthCallbackUrl(siteUrl),
+    `${productionBase}/**`,
+    getAuthCallbackUrl(LOCAL_SITE_URL),
+    `${localBase}/**`,
+  ];
+}
+
+/** Split glued entries like `.../callbackhttp://localhost...` into separate URLs. */
+export function expandRedirectAllowListEntry(value: string): string[] {
+  const trimmed = value.trim();
+  if (!trimmed) return [];
+  return trimmed
+    .split(/(?<=\/auth\/callback)(?=https?:\/\/)/i)
+    .map((part) => part.trim())
+    .filter(Boolean);
 }
 
 export function mergeAuthRedirectAllowList(
   existing: string | null | undefined,
   siteUrl = PRODUCTION_SITE_URL
 ) {
-  const values = new Set(getAuthRedirectAllowList(siteUrl));
-  for (const value of String(existing ?? "").split(/[\n,]/)) {
-    const trimmed = value.trim();
-    if (trimmed) values.add(trimmed);
+  const values = new Set<string>();
+
+  for (const entry of String(existing ?? "").split(/[\n,]/)) {
+    for (const url of expandRedirectAllowListEntry(entry)) {
+      values.add(url);
+    }
   }
+
+  for (const url of getAuthRedirectAllowList(siteUrl)) {
+    values.add(url);
+  }
+
   return [...values].join("\n");
 }

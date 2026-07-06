@@ -161,7 +161,7 @@ export function GameDetailSections({
           {detailsHtml && detailsHtml.replace(/<[^>]*>/g, "").trim() && (
             <div
               className={cn(
-                "prose prose-invert prose-sm mx-auto mt-6 max-w-3xl text-left",
+                "game-details-content prose prose-invert prose-sm mx-auto mt-6 max-w-3xl",
                 "rounded-2xl border border-white/8 bg-zinc-950/50 p-6",
                 "[&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-white",
                 "[&_p]:text-zinc-400 [&_a]:text-cyan-400 [&_li]:text-zinc-400"

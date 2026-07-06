@@ -121,17 +121,15 @@ export function RevenuePanel({
   if (loading && !data) {
     return (
       <section className="mb-8 space-y-6">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">
-              <Coins className="size-3.5" />
-              {t("revenueLiveBadge")}
-            </div>
-            <h2 className="text-2xl font-bold tracking-tight text-white">
-              {t("revenueSectionTitle")}
-            </h2>
-            <p className="mt-1 text-sm text-zinc-400">{t("revenueSectionDesc")}</p>
+        <div className="text-center">
+          <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">
+            <Coins className="size-3.5" />
+            {t("revenueLiveBadge")}
           </div>
+          <h2 className="text-2xl font-bold tracking-tight text-white">
+            {t("revenueSectionTitle")}
+          </h2>
+          <p className="mt-1 text-sm text-zinc-400">{t("revenueSectionDesc")}</p>
         </div>
         <Card className="border-white/10 bg-zinc-900/60 py-0">
           <CardContent className="flex h-48 items-center justify-center">
@@ -145,12 +143,10 @@ export function RevenuePanel({
   if (error) {
     return (
       <section className="mb-8 space-y-6">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight text-white">
-              {t("revenueSectionTitle")}
-            </h2>
-          </div>
+        <div className="text-center">
+          <h2 className="text-2xl font-bold tracking-tight text-white">
+            {t("revenueSectionTitle")}
+          </h2>
         </div>
         <Card className="border-red-400/20 bg-red-500/5 py-0">
           <CardContent className="px-6 py-8 text-center text-sm text-red-300">
@@ -165,24 +161,22 @@ export function RevenuePanel({
 
   return (
     <section className="mb-8 space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">
-              <Coins className="size-3.5" />
-              {t("revenueLiveBadge")}
-            </div>
-            {unreadTipCount > 0 && (
-              <Badge className="border-0 bg-fuchsia-500/20 text-fuchsia-200">
-                {t("unreadTipsBadge", { count: unreadTipCount })}
-              </Badge>
-            )}
+      <div className="text-center">
+        <div className="mb-2 flex flex-wrap items-center justify-center gap-2">
+          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">
+            <Coins className="size-3.5" />
+            {t("revenueLiveBadge")}
           </div>
-          <h2 className="text-2xl font-bold tracking-tight text-white">
-            {t("revenueSectionTitle")}
-          </h2>
-          <p className="mt-1 text-sm text-zinc-400">{t("revenueSectionDesc")}</p>
+          {unreadTipCount > 0 && (
+            <Badge className="border-0 bg-fuchsia-500/20 text-fuchsia-200">
+              {t("unreadTipsBadge", { count: unreadTipCount })}
+            </Badge>
+          )}
         </div>
+        <h2 className="text-2xl font-bold tracking-tight text-white">
+          {t("revenueSectionTitle")}
+        </h2>
+        <p className="mt-1 text-sm text-zinc-400">{t("revenueSectionDesc")}</p>
       </div>
 
       {!data.tipsEnabled ? (
@@ -212,13 +206,13 @@ export function RevenuePanel({
         </Card>
       ) : (
         <>
-          <TipsFeeDisclosure variant="compact" className="mb-2" />
+          <TipsFeeDisclosure variant="compact" className="mb-2 text-center" />
 
-          <p className="text-xs leading-relaxed text-zinc-500">
+          <p className="text-center text-xs leading-relaxed text-zinc-500">
             {t("revenueLiveDataNote")}
           </p>
           {data.previewTipCount > 0 && (
-            <p className="text-xs leading-relaxed text-amber-400/80">
+            <p className="text-center text-xs leading-relaxed text-amber-400/80">
               {t("revenuePreviewTipsNote", { count: data.previewTipCount })}
             </p>
           )}
@@ -241,27 +235,23 @@ export function RevenuePanel({
                       accent
                     )}
                   >
-                    <CardContent className="p-5">
-                      <div className="flex items-start justify-between gap-3">
-                        <p className="text-sm text-zinc-300">{t(stat.key)}</p>
-                        <div
-                          className={cn(
-                            "flex size-10 items-center justify-center rounded-xl",
-                            iconBg
-                          )}
-                        >
-                          <Icon className="size-5" />
-                        </div>
+                    <CardContent className="p-5 text-center">
+                      <div
+                        className={cn(
+                          "mx-auto flex size-10 items-center justify-center rounded-xl",
+                          iconBg
+                        )}
+                      >
+                        <Icon className="size-5" />
                       </div>
-                      <div className="mt-5 flex items-end justify-between gap-3">
-                        <p className="text-3xl font-bold tracking-tight text-white">
-                          {stat.value}
-                        </p>
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-300">
-                          <TrendingUp className="size-3.5" />
-                          {stat.change}
-                        </span>
-                      </div>
+                      <p className="mt-3 text-sm text-zinc-300">{t(stat.key)}</p>
+                      <p className="mt-2 text-3xl font-bold tracking-tight text-white">
+                        {stat.value}
+                      </p>
+                      <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-300">
+                        <TrendingUp className="size-3.5" />
+                        {stat.change}
+                      </span>
                     </CardContent>
                   </Card>
                 </motion.div>
@@ -271,8 +261,8 @@ export function RevenuePanel({
 
           <div className="grid gap-6 xl:grid-cols-[1.55fr_0.85fr]">
             <Card className="overflow-hidden border-white/10 bg-zinc-900/60 py-0 shadow-xl shadow-black/40 backdrop-blur-sm">
-              <CardHeader className="border-b border-white/5 px-6 pt-6 pb-4">
-                <CardTitle className="flex items-center gap-2 text-xl text-white">
+              <CardHeader className="border-b border-white/5 px-6 pt-6 pb-4 text-center">
+                <CardTitle className="flex items-center justify-center gap-2 text-xl text-white">
                   <Wallet className="size-5 text-emerald-400" />
                   {t("revenueChartTitle")}
                 </CardTitle>
@@ -286,7 +276,7 @@ export function RevenuePanel({
             </Card>
 
             <Card className="border-white/10 bg-zinc-900/60 py-0 shadow-xl shadow-black/40 backdrop-blur-sm">
-              <CardHeader className="border-b border-white/5 px-6 pt-6 pb-4">
+              <CardHeader className="border-b border-white/5 px-6 pt-6 pb-4 text-center">
                 <CardTitle className="text-lg text-white">
                   {t("revenueRecentTitle")}
                 </CardTitle>
@@ -337,7 +327,7 @@ export function RevenuePanel({
 
           {showBreakdown && data.breakdown.some((row) => row.totalAmount > 0) && (
             <Card className="overflow-hidden border-white/10 bg-zinc-900/60 py-0 shadow-xl shadow-black/40 backdrop-blur-sm">
-              <CardHeader className="border-b border-white/5 px-6 pt-6 pb-4">
+              <CardHeader className="border-b border-white/5 px-6 pt-6 pb-4 text-center">
                 <CardTitle className="text-lg text-white">
                   {t("revenueBreakdownTitle")}
                 </CardTitle>
@@ -346,7 +336,7 @@ export function RevenuePanel({
                 </CardDescription>
               </CardHeader>
               <CardContent className="overflow-x-auto p-0">
-                <table className="w-full min-w-[640px] text-left text-sm">
+                <table className="w-full min-w-[640px] text-center text-sm">
                   <thead>
                     <tr className="border-b border-white/5 text-xs uppercase tracking-wider text-zinc-500">
                       <th className="px-6 py-3 font-medium">
@@ -361,7 +351,7 @@ export function RevenuePanel({
                       <th className="px-4 py-3 font-medium">
                         {t("revenueBreakdownShare")}
                       </th>
-                      <th className="px-6 py-3 text-right font-medium">
+                      <th className="px-6 py-3 font-medium">
                         {t("revenueBreakdownAmount")}
                       </th>
                     </tr>
@@ -386,7 +376,7 @@ export function RevenuePanel({
                           <td className="px-4 py-4 text-zinc-400">
                             {row.sharePercent.toFixed(1)}%
                           </td>
-                          <td className="px-6 py-4 text-right font-semibold text-emerald-300">
+                          <td className="px-6 py-4 font-semibold text-emerald-300">
                             {formatRevenueMoney(row.totalAmount)}
                           </td>
                         </tr>

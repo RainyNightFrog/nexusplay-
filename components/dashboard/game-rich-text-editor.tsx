@@ -1,18 +1,30 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+import Underline from "@tiptap/extension-underline";
+import Link from "@tiptap/extension-link";
+import Placeholder from "@tiptap/extension-placeholder";
 import {
   Bold,
+  Code,
   Heading2,
+  Heading3,
   Italic,
+  Link2,
   List,
   ListOrdered,
+  Minus,
   Quote,
+  Redo2,
   Strikethrough,
+  Underline as UnderlineIcon,
+  Undo2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { GameDetailsEmojiPicker } from "@/components/dashboard/game-details-emoji-picker";
+import { MAX_DETAILS_HTML_LENGTH } from "@/lib/game-metadata";
 import { cn } from "@/lib/utils";
 
 type GameRichTextEditorProps = {
@@ -42,6 +54,7 @@ function ToolbarButton({
       size="icon-sm"
       disabled={disabled}
       aria-label={label}
+      onMouseDown={(event) => event.preventDefault()}
       onClick={onClick}
       className={cn(
         "size-8 text-zinc-400 hover:text-white",
@@ -53,6 +66,10 @@ function ToolbarButton({
   );
 }
 
+function ToolbarDivider() {
+  return <span className="mx-0.5 h-5 w-px bg-white/10" aria-hidden="true" />;
+}
+
 export function GameRichTextEditor({
   value,
   onChange,
@@ -60,14 +77,32 @@ export function GameRichTextEditor({
   placeholder = "撰寫遊戲攻略、故事背景、改版日誌…",
 }: GameRichTextEditorProps) {
   const editor = useEditor({
-    extensions: [StarterKit],
+    extensions: [
+      StarterKit.configure({
+        heading: { levels: [2, 3] },
+      }),
+      Underline,
+      Link.configure({
+        openOnClick: false,
+        autolink: true,
+        defaultProtocol: "https",
+        HTMLAttributes: {
+          target: "_blank",
+          rel: "noopener noreferrer",
+        },
+      }),
+      Placeholder.configure({
+        placeholder,
+        emptyEditorClass: "is-editor-empty",
+      }),
+    ],
     content: value || "",
     editable: !disabled,
     immediatelyRender: false,
     editorProps: {
       attributes: {
         class:
-          "prose prose-invert prose-sm max-w-none min-h-[180px] px-4 py-3 text-zinc-100 focus:outline-none [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-white [&_p]:text-zinc-300 [&_a]:text-cyan-400",
+          "game-details-content prose prose-invert prose-sm max-w-none min-h-[220px] px-4 py-3 text-zinc-100 focus:outline-none [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-white [&_h3]:text-base [&_h3]:font-semibold [&_h3]:text-white [&_p]:text-zinc-300 [&_a]:text-cyan-400 [&_a]:underline [&_code]:rounded [&_code]:bg-white/10 [&_code]:px-1 [&_code]:py-0.5 [&_pre]:rounded-xl [&_pre]:bg-black/40 [&_pre]:p-3 [&_blockquote]:border-l-cyan-400/50 [&_blockquote]:text-zinc-400",
       },
     },
     onUpdate: ({ editor: currentEditor }) => {
@@ -88,12 +123,43 @@ export function GameRichTextEditor({
     }
   }, [editor, value]);
 
+  const stats = useMemo(() => {
+    const textLength = editor?.getText().length ?? 0;
+    const htmlLength = value.length;
+    return { textLength, htmlLength };
+  }, [editor, value]);
+
+  const setLink = () => {
+    if (!editor) return;
+
+    const previousUrl = editor.getAttributes("link").href as string | undefined;
+    const url = window.prompt("輸入連結網址", previousUrl ?? "https://");
+
+    if (url === null) return;
+
+    if (url.trim() === "") {
+      editor.chain().focus().extendMarkRange("link").unsetLink().run();
+      return;
+    }
+
+    editor
+      .chain()
+      .focus()
+      .extendMarkRange("link")
+      .setLink({ href: url.trim() })
+      .run();
+  };
+
+  const insertEmoji = (emoji: string) => {
+    editor?.chain().focus().insertContent(emoji).run();
+  };
+
   return (
     <div className="space-y-2">
       <div className="space-y-1 text-center">
-        <p className="text-sm font-medium text-zinc-200">遊戲詳細介紹</p>
+        <p className="text-sm font-medium text-zinc-200">關於這款遊戲</p>
         <p className="text-xs text-zinc-500">
-          支援富文本格式：標題、清單、引用等
+          支援富文本、連結、程式碼區塊與表情符號
         </p>
       </div>
 
@@ -105,6 +171,23 @@ export function GameRichTextEditor({
         )}
       >
         <div className="flex flex-wrap items-center justify-center gap-0.5 border-b border-white/8 bg-zinc-950/80 px-2 py-1.5">
+          <ToolbarButton
+            label="復原"
+            disabled={disabled || !editor || !editor.can().undo()}
+            onClick={() => editor?.chain().focus().undo().run()}
+          >
+            <Undo2 className="size-3.5" />
+          </ToolbarButton>
+          <ToolbarButton
+            label="重做"
+            disabled={disabled || !editor || !editor.can().redo()}
+            onClick={() => editor?.chain().focus().redo().run()}
+          >
+            <Redo2 className="size-3.5" />
+          </ToolbarButton>
+
+          <ToolbarDivider />
+
           <ToolbarButton
             label="粗體"
             disabled={disabled || !editor}
@@ -122,6 +205,14 @@ export function GameRichTextEditor({
             <Italic className="size-3.5" />
           </ToolbarButton>
           <ToolbarButton
+            label="底線"
+            disabled={disabled || !editor}
+            active={editor?.isActive("underline")}
+            onClick={() => editor?.chain().focus().toggleUnderline().run()}
+          >
+            <UnderlineIcon className="size-3.5" />
+          </ToolbarButton>
+          <ToolbarButton
             label="刪除線"
             disabled={disabled || !editor}
             active={editor?.isActive("strike")}
@@ -130,7 +221,18 @@ export function GameRichTextEditor({
             <Strikethrough className="size-3.5" />
           </ToolbarButton>
           <ToolbarButton
-            label="標題"
+            label="行內程式碼"
+            disabled={disabled || !editor}
+            active={editor?.isActive("code")}
+            onClick={() => editor?.chain().focus().toggleCode().run()}
+          >
+            <Code className="size-3.5" />
+          </ToolbarButton>
+
+          <ToolbarDivider />
+
+          <ToolbarButton
+            label="大標題"
             disabled={disabled || !editor}
             active={editor?.isActive("heading", { level: 2 })}
             onClick={() =>
@@ -138,6 +240,16 @@ export function GameRichTextEditor({
             }
           >
             <Heading2 className="size-3.5" />
+          </ToolbarButton>
+          <ToolbarButton
+            label="小標題"
+            disabled={disabled || !editor}
+            active={editor?.isActive("heading", { level: 3 })}
+            onClick={() =>
+              editor?.chain().focus().toggleHeading({ level: 3 }).run()
+            }
+          >
+            <Heading3 className="size-3.5" />
           </ToolbarButton>
           <ToolbarButton
             label="項目清單"
@@ -163,15 +275,38 @@ export function GameRichTextEditor({
           >
             <Quote className="size-3.5" />
           </ToolbarButton>
+          <ToolbarButton
+            label="分隔線"
+            disabled={disabled || !editor}
+            onClick={() => editor?.chain().focus().setHorizontalRule().run()}
+          >
+            <Minus className="size-3.5" />
+          </ToolbarButton>
+
+          <ToolbarDivider />
+
+          <ToolbarButton
+            label="插入連結"
+            disabled={disabled || !editor}
+            active={editor?.isActive("link")}
+            onClick={setLink}
+          >
+            <Link2 className="size-3.5" />
+          </ToolbarButton>
+          <GameDetailsEmojiPicker
+            disabled={disabled || !editor}
+            onPick={insertEmoji}
+          />
         </div>
 
-        <div className="relative">
-          {!value && !editor?.getText().trim() && (
-            <p className="pointer-events-none absolute inset-x-4 top-3 text-sm text-zinc-600">
-              {placeholder}
-            </p>
-          )}
-          <EditorContent editor={editor} />
+        <EditorContent editor={editor} />
+
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/8 bg-zinc-950/60 px-3 py-2 text-[11px] text-zinc-500">
+          <span>字數 {stats.textLength}</span>
+          <span>
+            HTML {stats.htmlLength.toLocaleString()} /{" "}
+            {MAX_DETAILS_HTML_LENGTH.toLocaleString()}
+          </span>
         </div>
       </div>
     </div>

@@ -33,6 +33,8 @@ import {
   type PublishMonetizationValues,
 } from "@/components/dashboard/publish-monetization-fields";
 import { PlatformAuthNotice } from "@/components/dashboard/platform-auth-notice";
+import { PublishRequiredHint } from "@/components/dashboard/publish-required-hint";
+import { RequiredFieldLabel } from "@/components/dashboard/required-field-label";
 import { PartnerAccessPanel } from "@/components/dashboard/partner-access-panel";
 import { LegacyImportPanel } from "@/components/dashboard/legacy-import-panel";
 import {
@@ -47,6 +49,11 @@ import { fetchManageGame, updateGame } from "@/lib/update-game";
 import { parseStringArray } from "@/lib/game-page-content";
 import { DEFAULT_PUBLISH_STATUS, normalizePublishStatus } from "@/lib/game-publish";
 import {
+  getPublishValidationIssues,
+  type PublishValidationField,
+} from "@/lib/publish-form-validation";
+import { scrollToFirstValidationField } from "@/lib/scroll-to-validation-field";
+import {
   metadataFromGameRecord,
   type GameGenre,
   type GamePublishMetadata,
@@ -59,6 +66,7 @@ import {
   MAX_TITLE_LENGTH,
   MAX_ZIP_BYTES,
 } from "@/lib/upload-limits";
+import { isZipFileAsync, validateGameZipFile, ZIP_FILE_ACCEPT } from "@/lib/zip-file-validation";
 import { cn } from "@/lib/utils";
 
 type FormState = {
@@ -285,6 +293,10 @@ export default function EditGamePage() {
     title: string;
     message: string;
   } | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<
+    Partial<Record<PublishValidationField, boolean>>
+  >({});
+  const [validationMessages, setValidationMessages] = useState<string[]>([]);
 
   const showToast = (
     type: "success" | "error",
@@ -377,8 +389,9 @@ export default function EditGamePage() {
     setCoverPreview(null);
   };
 
-  const handleZipSelect = (file: File) => {
-    if (!file.name.toLowerCase().endsWith(".zip")) {
+  const handleZipSelect = async (file: File) => {
+    const valid = await isZipFileAsync(file);
+    if (!valid) {
       showToast("error", tErrors("invalidFormat"), tErrors("zipFormat"));
       return;
     }
@@ -393,38 +406,49 @@ export default function EditGamePage() {
       );
       return;
     }
+
+    const structure = await validateGameZipFile(file);
+    if (!structure.ok) {
+      showToast("error", tErrors("invalidFormat"), structure.error);
+      return;
+    }
+
     setGameZip(file);
   };
 
   const submitUpdate = async (publishVersion: boolean) => {
-    if (!form.title.trim()) {
-      alert(t("alertTitle"));
+    const issues = getPublishValidationIssues({
+      mode: "edit",
+      publishStatus: monetization.publishStatus,
+      publishVersion,
+      title: form.title,
+      description: form.description,
+      genre: form.genre,
+      hasCover: Boolean(coverFile || existingCoverUrl),
+      hasGameZip: Boolean(gameZip),
+      aiDisclosed: metadata.aiDisclosed,
+      aiContentTypes: metadata.aiContentTypes,
+      tipsEnabled: monetization.tipsEnabled,
+      suggestedTipAmount: monetization.suggestedTipAmount,
+    });
+
+    if (issues.length > 0) {
+      const nextErrors = Object.fromEntries(
+        issues.map((issue) => [issue.field, true])
+      ) as Partial<Record<PublishValidationField, boolean>>;
+      setFieldErrors(nextErrors);
+      setValidationMessages(issues.map((issue) => t(issue.messageKey)));
+      scrollToFirstValidationField(issues[0].field);
+      showToast(
+        "error",
+        t("validationSummary"),
+        issues.map((issue) => t(issue.messageKey)).join("、")
+      );
       return;
     }
-    if (!form.description.trim()) {
-      alert(t("alertDesc"));
-      return;
-    }
-    if (!form.genre) {
-      alert(t("alertCategory"));
-      return;
-    }
-    if (metadata.aiDisclosed === null) {
-      alert("請選擇此專案是否包含 AI 生成內容");
-      return;
-    }
-    if (metadata.aiDisclosed === true && metadata.aiContentTypes.length === 0) {
-      alert("選擇「包含 AI 生成內容」時，請至少勾選一項 AI 內容類型");
-      return;
-    }
-    if (publishVersion && !gameZip) {
-      showToast("error", t("missingZip"), t("missingZipDesc"));
-      return;
-    }
-    if (monetization.tipsEnabled && !monetization.suggestedTipAmount.trim()) {
-      alert(t("alertSuggestedTip"));
-      return;
-    }
+
+    setFieldErrors({});
+    setValidationMessages([]);
 
     setIsSubmitting(true);
     const isDraftSave = monetization.publishStatus === "draft";
@@ -534,6 +558,7 @@ export default function EditGamePage() {
 
   const coverDisplayUrl = coverPreview ?? existingCoverUrl;
   const isDraftEdit = monetization.publishStatus === "draft";
+  const isPublicEdit = !isDraftEdit;
 
   return (
     <div className="dark relative min-h-full text-zinc-100">
@@ -591,13 +616,13 @@ export default function EditGamePage() {
             )}
           >
             <section className="space-y-5">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-cyan-400">
+              <h2 className="text-center text-sm font-semibold uppercase tracking-wider text-cyan-400">
                 {t("basicInfo")}
               </h2>
 
               <div className="space-y-2">
-                <label htmlFor="title" className="block text-sm font-medium text-zinc-200">
-                  {t("gameTitle")}
+                <label htmlFor="title" className="block text-center text-sm font-medium text-zinc-200">
+                  <RequiredFieldLabel required>{t("gameTitle")}</RequiredFieldLabel>
                 </label>
                 <input
                   id="title"
@@ -608,7 +633,11 @@ export default function EditGamePage() {
                     setForm((prev) => ({ ...prev, title: event.target.value }))
                   }
                   placeholder={t("gameTitlePlaceholder")}
-                  className={cn(inputClassName, "h-11")}
+                  className={cn(
+                    inputClassName,
+                    "h-11",
+                    fieldErrors.title && "border-rose-400/50 ring-2 ring-rose-400/20"
+                  )}
                   disabled={isSubmitting}
                 />
               </div>
@@ -616,9 +645,11 @@ export default function EditGamePage() {
               <div className="space-y-2">
                 <label
                   htmlFor="description"
-                  className="block text-sm font-medium text-zinc-200"
+                  className="block text-center text-sm font-medium text-zinc-200"
                 >
-                  {t("gameDesc")}
+                  <RequiredFieldLabel required={isPublicEdit} optional={isDraftEdit}>
+                    {t("gameDesc")}
+                  </RequiredFieldLabel>
                 </label>
                 <textarea
                   id="description"
@@ -632,7 +663,12 @@ export default function EditGamePage() {
                   }
                   placeholder={t("gameDescPlaceholder")}
                   rows={4}
-                  className={cn(inputClassName, "resize-none py-3 leading-relaxed")}
+                  className={cn(
+                    inputClassName,
+                    "resize-none py-3 leading-relaxed",
+                    fieldErrors.description &&
+                      "border-rose-400/50 ring-2 ring-rose-400/20"
+                  )}
                   disabled={isSubmitting}
                 />
               </div>
@@ -646,13 +682,20 @@ export default function EditGamePage() {
               }
               onMetadataChange={setMetadata}
               disabled={isSubmitting}
+              isPublicPublish={isPublicEdit}
+              fieldErrors={{
+                genre: fieldErrors.genre,
+                aiDisclosure: fieldErrors.aiDisclosure,
+                aiContentTypes: fieldErrors.aiContentTypes,
+              }}
             />
 
             <section className="space-y-5">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-violet-400">
+              <h2 className="text-center text-sm font-semibold uppercase tracking-wider text-violet-400">
                 {t("fileUpdate")}
               </h2>
 
+              <div id="field-cover">
               <DropZone
                 label={t("coverImage")}
                 hint={t("coverHint", { size: coverMaxSize })}
@@ -669,7 +712,9 @@ export default function EditGamePage() {
                 onClear={handleCoverClear}
                 optional
               />
+              </div>
 
+              <div id="field-game-zip">
               <DropZone
                 label={t("versionUpdate")}
                 hint={t("zipHint", { size: zipMaxSize })}
@@ -678,13 +723,14 @@ export default function EditGamePage() {
                 currentCoverAlt={tCommon("currentCover")}
                 changeCoverHint={tCommon("changeCoverHint")}
                 optionalLabel={tCommon("optional")}
-                accept=".zip,application/zip"
+                accept={ZIP_FILE_ACCEPT}
                 file={gameZip}
                 icon={FileArchive}
                 onFileSelect={handleZipSelect}
                 onClear={() => setGameZip(null)}
                 optional
               />
+              </div>
 
               <GalleryUploadFields
                 label={t("screenshotGallery")}
@@ -738,6 +784,15 @@ export default function EditGamePage() {
               disabled={isSubmitting}
               lockedPlatformFeePercent={lockedPlatformFeePercent}
             />
+
+            <PublishRequiredHint publishStatus={monetization.publishStatus} />
+
+            {validationMessages.length > 0 && (
+              <div className="rounded-xl border border-rose-400/25 bg-rose-500/10 px-4 py-3 text-center text-xs text-rose-200">
+                <p className="font-medium">{t("validationSummary")}</p>
+                <p className="mt-1 text-rose-200/90">{validationMessages.join("、")}</p>
+              </div>
+            )}
 
             {monetization.publishStatus === "draft" && !Number.isNaN(gameId) && (
               <PartnerAccessPanel gameId={gameId} />

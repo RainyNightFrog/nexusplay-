@@ -16,6 +16,8 @@ export type GamePublishMetadataFieldsProps = {
   onGenreChange: (genre: GameGenre) => void;
   onMetadataChange: (metadata: GamePublishMetadata) => void;
   disabled?: boolean;
+  isPublicPublish?: boolean;
+  fieldErrors?: Partial<Record<"genre" | "aiDisclosure" | "aiContentTypes", boolean>>;
 };
 
 export function GamePublishMetadataFields({
@@ -24,11 +26,13 @@ export function GamePublishMetadataFields({
   onGenreChange,
   onMetadataChange,
   disabled,
+  isPublicPublish = true,
+  fieldErrors,
 }: GamePublishMetadataFieldsProps) {
   return (
     <div className="space-y-8">
-      <section className="space-y-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-cyan-400">
+      <section id="field-genre" className="space-y-4 scroll-mt-24">
+        <h2 className="text-center text-sm font-semibold uppercase tracking-wider text-cyan-400">
           分類與標籤
         </h2>
         <GenreTagPicker
@@ -37,11 +41,13 @@ export function GamePublishMetadataFields({
           onGenreChange={onGenreChange}
           onTagsChange={(tags) => onMetadataChange({ ...metadata, tags })}
           disabled={disabled}
+          genreRequired={isPublicPublish}
+          genreError={fieldErrors?.genre}
         />
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-violet-400">
+        <h2 className="text-center text-sm font-semibold uppercase tracking-wider text-violet-400">
           嵌入選項
         </h2>
         <ViewportSettingsFields
@@ -57,8 +63,8 @@ export function GamePublishMetadataFields({
         />
       </section>
 
-      <section className="space-y-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-fuchsia-400">
+      <section id="field-ai-disclosure" className="space-y-4 scroll-mt-24">
+        <h2 className="text-center text-sm font-semibold uppercase tracking-wider text-fuchsia-400">
           AI 內容申報
         </h2>
         <AiDisclosureFields
@@ -68,12 +74,17 @@ export function GamePublishMetadataFields({
           }}
           onChange={(ai) => onMetadataChange({ ...metadata, ...ai })}
           disabled={disabled}
+          requiredForPublic={isPublicPublish}
+          fieldErrors={{
+            aiDisclosure: fieldErrors?.aiDisclosure,
+            aiContentTypes: fieldErrors?.aiContentTypes,
+          }}
         />
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-emerald-400">
-          詳細介紹
+        <h2 className="text-center text-sm font-semibold uppercase tracking-wider text-emerald-400">
+          關於這款遊戲
         </h2>
         <GameRichTextEditor
           value={metadata.detailsHtml}

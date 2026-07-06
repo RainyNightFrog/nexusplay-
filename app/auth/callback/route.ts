@@ -4,11 +4,16 @@ import {
   createAuthCallbackClient,
   resolveAuthRedirectBase,
 } from "@/lib/supabase/route-auth";
+import {
+  clearAuthRedirectCookie,
+  readAuthRedirectFromRequest,
+} from "@/lib/auth-redirect-cookie";
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const redirectTo = searchParams.get("redirect") ?? "/";
+  const redirectTo =
+    searchParams.get("redirect") ?? readAuthRedirectFromRequest(request);
   const safeRedirect = redirectTo.startsWith("/") ? redirectTo : "/";
   const base = resolveAuthRedirectBase(request, origin);
 
@@ -41,5 +46,6 @@ export async function GET(request: NextRequest) {
 
   const response = NextResponse.redirect(`${base}${path}`);
   applyCookies(response);
+  clearAuthRedirectCookie(response);
   return response;
 }

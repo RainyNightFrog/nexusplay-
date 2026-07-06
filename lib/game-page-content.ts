@@ -26,6 +26,7 @@ export type SeedGameComment = {
 };
 
 const VALID_IMAGE_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+const VALID_IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".webp"];
 
 export const MAX_GALLERY_IMAGES = 8;
 export const MAX_DEVLOG_IMAGES = 4;
@@ -142,7 +143,9 @@ export function mergeGalleryUrls(
 }
 
 export function isValidGalleryImage(file: File) {
-  return VALID_IMAGE_TYPES.includes(file.type);
+  if (VALID_IMAGE_TYPES.includes(file.type)) return true;
+  const name = file.name.toLowerCase();
+  return VALID_IMAGE_EXTENSIONS.some((ext) => name.endsWith(ext));
 }
 
 export function collectGalleryFiles(formData: FormData) {

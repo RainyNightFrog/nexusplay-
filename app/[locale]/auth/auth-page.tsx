@@ -30,6 +30,8 @@ import type { UserRole } from "@/lib/auth";
 import { buildChooseRolePath, shouldSkipAccountIntent } from "@/lib/account-intent";
 import { MfaChallengePanel } from "@/components/auth/mfa-challenge-panel";
 import { createClient } from "@/lib/supabase/client";
+import { setAuthRedirectCookie } from "@/lib/auth-redirect-cookie";
+import { getAuthCallbackUrl } from "@/lib/auth-redirect-urls";
 import { cn } from "@/lib/utils";
 
 type AuthMode = "login" | "register";
@@ -48,6 +50,7 @@ export default function AuthPage() {
   const redirectTo = searchParams.get("redirect") ?? "/";
   const hint = searchParams.get("hint");
   const callbackError = searchParams.get("error");
+  const callbackReason = searchParams.get("reason");
 
   const [mode, setMode] = useState<AuthMode>("login");
   const [displayName, setDisplayName] = useState("");
@@ -56,9 +59,15 @@ export default function AuthPage() {
   const [role, setRole] = useState<UserRole>("player");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(
-    callbackError ? t("callbackFailed") : null
-  );
+  const [error, setError] = useState<string | null>(() => {
+    if (!callbackError) return null;
+    if (callbackError === "callback") {
+      return callbackReason
+        ? `${t("callbackFailed")}（${callbackReason}）`
+        : t("callbackFailed");
+    }
+    return t("callbackFailed");
+  });
   const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
 
   const hintMessage = useMemo(() => {
@@ -92,10 +101,11 @@ export default function AuthPage() {
     const supabase = createClient();
 
     try {
+      setAuthRedirectCookie(redirectTo);
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirectTo)}`,
+          redirectTo: getAuthCallbackUrl(window.location.origin),
         },
       });
 
@@ -130,6 +140,8 @@ export default function AuthPage() {
           throw new Error(t("displayNameRequired"));
         }
 
+        setAuthRedirectCookie(redirectTo);
+
         const { data, error: signUpError } = await supabase.auth.signUp({
           email: email.trim(),
           password,
@@ -140,7 +152,7 @@ export default function AuthPage() {
               developing_games: role === "creator",
               account_intent_at: new Date().toISOString(),
             },
-            emailRedirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirectTo)}`,
+            emailRedirectTo: `${getAuthCallbackUrl(window.location.origin)}?redirect=${encodeURIComponent(redirectTo)}`,
           },
         });
 
@@ -205,7 +217,7 @@ export default function AuthPage() {
             initial={{ opacity: 0, x: -24 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
-            className="hidden lg:block"
+            className="hidden text-center lg:block"
           >
             <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-500/10 px-4 py-1.5 text-xs font-medium text-cyan-300">
               <Sparkles className="size-3.5" />
@@ -220,11 +232,11 @@ export default function AuthPage() {
                 {t("hero2")}
               </span>
             </h1>
-            <p className="mt-5 max-w-lg text-base leading-relaxed text-zinc-400">
+            <p className="mx-auto mt-5 max-w-lg text-base leading-relaxed text-zinc-400">
               {t("heroDesc")}
             </p>
 
-            <div className="mt-8 grid max-w-md gap-3">
+            <div className="mx-auto mt-8 grid max-w-md gap-3">
               {featureItems.map((item) => (
                 <div
                   key={item}
@@ -243,6 +255,24 @@ export default function AuthPage() {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="relative mx-auto w-full max-w-md"
           >
+            <div className="mb-6 text-center lg:hidden">
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-500/10 px-4 py-1.5 text-xs font-medium text-cyan-300">
+                <Sparkles className="size-3.5" />
+                {t("badge")}
+              </div>
+              <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+                <span className="bg-gradient-to-br from-white via-zinc-100 to-zinc-400 bg-clip-text text-transparent">
+                  {t("hero1")}
+                </span>{" "}
+                <span className="bg-gradient-to-r from-cyan-400 via-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
+                  {t("hero2")}
+                </span>
+              </h1>
+              <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-zinc-400">
+                {t("heroDesc")}
+              </p>
+            </div>
+
             <div className="absolute -inset-1 rounded-[28px] bg-gradient-to-r from-cyan-400 via-violet-500 to-fuchsia-500 opacity-40 blur-xl" />
 
             <Card className="relative overflow-hidden rounded-[24px] border-white/10 bg-zinc-900/80 py-0 shadow-2xl shadow-black/50 backdrop-blur-xl">
@@ -271,7 +301,7 @@ export default function AuthPage() {
                   ))}
                 </div>
 
-                <div>
+                <div className="text-center">
                   <CardTitle className="text-2xl text-white">
                     {mode === "login" ? t("welcomeBack") : t("createAccount")}
                   </CardTitle>
@@ -291,7 +321,7 @@ export default function AuthPage() {
                       </div>
                     )}
                     {message && (
-                      <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-3 py-2.5 text-sm text-cyan-100">
+                      <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-3 py-2.5 text-center text-sm text-cyan-100">
                         {message}
                       </div>
                     )}
@@ -325,7 +355,7 @@ export default function AuthPage() {
                         className="space-y-4 overflow-hidden"
                       >
                         <div className="space-y-2">
-                          <Label htmlFor="displayName" className="text-zinc-300">
+                          <Label htmlFor="displayName" className="block text-center text-zinc-300">
                             {t("displayName")}
                           </Label>
                           <div className="relative">
@@ -343,7 +373,7 @@ export default function AuthPage() {
                         </div>
 
                         <div className="space-y-2">
-                          <Label className="text-zinc-300">{t("accountRole")}</Label>
+                          <Label className="block text-center text-zinc-300">{t("accountRole")}</Label>
                           <div className="grid grid-cols-2 gap-2">
                             {(
                               [
@@ -372,7 +402,7 @@ export default function AuthPage() {
                   </AnimatePresence>
 
                   <div className="space-y-2">
-                    <Label htmlFor="email" className="text-zinc-300">
+                    <Label htmlFor="email" className="block text-center text-zinc-300">
                       Email
                     </Label>
                     <div className="relative">
@@ -391,7 +421,7 @@ export default function AuthPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="password" className="text-zinc-300">
+                    <Label htmlFor="password" className="block text-center text-zinc-300">
                       {t("password")}
                     </Label>
                     <div className="relative">

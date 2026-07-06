@@ -33,12 +33,18 @@ export function TipsFeeDisclosure({
   return (
     <div
       className={cn(
-        "rounded-2xl border border-cyan-400/15 bg-cyan-500/[0.04] p-4 text-left",
+        "rounded-2xl border border-cyan-400/15 bg-cyan-500/[0.04] p-4",
         "shadow-[0_0_24px_rgba(34,211,238,0.06)]",
         className
       )}
     >
-      <div className="flex flex-wrap items-center gap-2">
+      <div
+        className={cn(
+          "flex flex-wrap items-center gap-2",
+          (variant === "compact" || className?.includes("text-center")) &&
+            "justify-center"
+        )}
+      >
         <Info className="size-4 shrink-0 text-cyan-400" />
         <p className="text-sm font-medium text-cyan-100">
           {t("tipsFeeDisclosureTitle")}
@@ -61,7 +67,7 @@ export function TipsFeeDisclosure({
         {t("tipsFeeDisclosureIntro")}
       </p>
 
-      <div className="mt-4 space-y-3">
+      <div className="mt-4 space-y-3 text-left">
         <FeeBlock
           title={t("tipsFeePerTransactionTitle")}
           description={t("tipsFeePerTransactionDesc")}

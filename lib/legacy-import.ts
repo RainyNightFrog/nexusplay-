@@ -70,7 +70,11 @@ export async function listLegacyImports(
     .limit(100);
 
   if (error) {
-    throw new Error(`讀取遷移碼失敗：${error.message}`);
+    console.error("[legacy-import] list query:", error.message);
+    if (/game_legacy_imports|relation.*does not exist|schema cache/i.test(error.message)) {
+      throw new Error("LEGACY_IMPORTS_TABLE_MISSING");
+    }
+    throw new Error("讀取遷移碼失敗");
   }
 
   return (data ?? []).map((row) => ({
@@ -114,7 +118,11 @@ export async function createLegacyImports(
 
       if (error) {
         if (error.code === "23505") continue;
-        throw new Error(`建立遷移碼失敗：${error.message}`);
+        console.error("[legacy-import] insert:", error.message);
+        if (/game_legacy_imports|relation.*does not exist|schema cache/i.test(error.message)) {
+          throw new Error("LEGACY_IMPORTS_TABLE_MISSING");
+        }
+        throw new Error("建立遷移碼失敗");
       }
 
       if (data) {

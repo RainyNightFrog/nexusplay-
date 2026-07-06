@@ -196,7 +196,7 @@ export default function ChooseRolePage() {
               </div>
 
               {error && (
-                <p className="rounded-lg border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">
+                <p className="rounded-lg border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-center text-sm text-rose-200">
                   {error}
                 </p>
               )}

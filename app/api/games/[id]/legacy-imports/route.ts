@@ -63,8 +63,13 @@ export async function GET(
     const entries = await listLegacyImports(authResult.supabase, gameId);
     return NextResponse.json({ entries });
   } catch (error) {
+    const raw = error instanceof Error ? error.message : "";
     const message =
-      error instanceof Error ? error.message : "讀取遷移碼列表失敗";
+      raw === "LEGACY_IMPORTS_TABLE_MISSING"
+        ? "LEGACY_IMPORTS_TABLE_MISSING"
+        : raw && !/[a-zA-Z]/.test(raw)
+          ? raw
+          : "讀取遷移碼列表失敗";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -112,8 +117,13 @@ export async function POST(
 
     return NextResponse.json({ codes: created });
   } catch (error) {
+    const raw = error instanceof Error ? error.message : "";
     const message =
-      error instanceof Error ? error.message : "建立遷移碼失敗";
+      raw === "LEGACY_IMPORTS_TABLE_MISSING"
+        ? "LEGACY_IMPORTS_TABLE_MISSING"
+        : raw && !/[a-zA-Z]/.test(raw)
+          ? raw
+          : "建立遷移碼失敗";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

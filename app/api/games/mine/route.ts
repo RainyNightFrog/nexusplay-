@@ -43,10 +43,12 @@ export async function GET() {
       ]);
 
     if (ownedError) {
-      throw new Error(`讀取創作者遊戲失敗：${ownedError.message}`);
+      console.error("[games/mine] owned query:", ownedError.message);
+      throw new Error("讀取創作者遊戲失敗");
     }
     if (unclaimedError) {
-      throw new Error(`讀取未綁定遊戲失敗：${unclaimedError.message}`);
+      console.error("[games/mine] unclaimed query:", unclaimedError.message);
+      throw new Error("讀取創作者遊戲失敗");
     }
 
     const ownedGames = (owned ?? []).map((game) => ({

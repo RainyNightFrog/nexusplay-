@@ -32,16 +32,19 @@ export function PlatformAuthNotice({ className }: PlatformAuthNoticeProps) {
   return (
     <section
       className={cn(
-        "rounded-2xl border border-sky-400/20 bg-sky-500/[0.06] p-4 text-left sm:p-5",
+        "rounded-2xl border border-sky-400/20 bg-sky-500/[0.06] p-4 sm:p-5",
         className
       )}
     >
-      <div className="flex items-start gap-3">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-sky-400/25 bg-sky-500/10 text-sky-300">
-          <Cloud className="size-5" />
+      <div className="mx-auto max-w-2xl space-y-3 text-center">
+        <div className="flex justify-center">
+          <div className="flex size-10 items-center justify-center rounded-xl border border-sky-400/25 bg-sky-500/10 text-sky-300">
+            <Cloud className="size-5" />
+          </div>
         </div>
-        <div className="min-w-0 flex-1 space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
+
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center justify-center gap-2">
             <h3 className="text-sm font-semibold text-white">
               {t("platformAuthNoticeTitle")}
             </h3>
@@ -53,38 +56,40 @@ export function PlatformAuthNotice({ className }: PlatformAuthNoticeProps) {
           <p className="text-xs leading-relaxed text-zinc-400">
             {t("platformAuthNoticeDesc")}
           </p>
-          <ul className="list-inside list-disc space-y-1 text-xs leading-relaxed text-zinc-500">
-            <li>{t("platformAuthNoticePoint1")}</li>
-            <li>{t("platformAuthNoticePoint2")}</li>
-            <li>{t("platformAuthNoticePoint3")}</li>
-            <li>{t("platformAuthNoticePoint4")}</li>
-            <li>{t("platformAuthNoticePoint5")}</li>
-          </ul>
-          <details className="group rounded-xl border border-white/10 bg-black/20">
-            <summary className="cursor-pointer px-3 py-2 text-xs font-medium text-sky-300 hover:text-sky-200">
-              {t("platformAuthNoticeSdkToggle")}
-            </summary>
-            <pre className="overflow-x-auto px-3 pb-3 text-[11px] leading-relaxed text-zinc-400">
-              <code>{BASIC_SDK_SNIPPET}</code>
-            </pre>
-          </details>
-          <details className="group rounded-xl border border-white/10 bg-black/20">
-            <summary className="cursor-pointer px-3 py-2 text-xs font-medium text-sky-300 hover:text-sky-200">
-              {t("platformAuthNoticeMergeToggle")}
-            </summary>
-            <pre className="overflow-x-auto px-3 pb-3 text-[11px] leading-relaxed text-zinc-400">
-              <code>{MERGE_SDK_SNIPPET}</code>
-            </pre>
-          </details>
-          <details className="group rounded-xl border border-white/10 bg-black/20">
-            <summary className="cursor-pointer px-3 py-2 text-xs font-medium text-sky-300 hover:text-sky-200">
-              {t("platformAuthNoticeImportToggle")}
-            </summary>
-            <pre className="overflow-x-auto px-3 pb-3 text-[11px] leading-relaxed text-zinc-400">
-              <code>{IMPORT_SDK_SNIPPET}</code>
-            </pre>
-          </details>
         </div>
+
+        <ul className="mx-auto max-w-xl space-y-1.5 text-xs leading-relaxed text-zinc-500">
+          <li>{t("platformAuthNoticePoint1")}</li>
+          <li>{t("platformAuthNoticePoint2")}</li>
+          <li>{t("platformAuthNoticePoint3")}</li>
+          <li>{t("platformAuthNoticePoint4")}</li>
+          <li>{t("platformAuthNoticePoint5")}</li>
+        </ul>
+
+        <details className="group rounded-xl border border-white/10 bg-black/20 text-left">
+          <summary className="cursor-pointer px-3 py-2 text-center text-xs font-medium text-sky-300 hover:text-sky-200">
+            {t("platformAuthNoticeSdkToggle")}
+          </summary>
+          <pre className="overflow-x-auto px-3 pb-3 text-[11px] leading-relaxed text-zinc-400">
+            <code>{BASIC_SDK_SNIPPET}</code>
+          </pre>
+        </details>
+        <details className="group rounded-xl border border-white/10 bg-black/20 text-left">
+          <summary className="cursor-pointer px-3 py-2 text-center text-xs font-medium text-sky-300 hover:text-sky-200">
+            {t("platformAuthNoticeMergeToggle")}
+          </summary>
+          <pre className="overflow-x-auto px-3 pb-3 text-[11px] leading-relaxed text-zinc-400">
+            <code>{MERGE_SDK_SNIPPET}</code>
+          </pre>
+        </details>
+        <details className="group rounded-xl border border-white/10 bg-black/20 text-left">
+          <summary className="cursor-pointer px-3 py-2 text-center text-xs font-medium text-sky-300 hover:text-sky-200">
+            {t("platformAuthNoticeImportToggle")}
+          </summary>
+          <pre className="overflow-x-auto px-3 pb-3 text-[11px] leading-relaxed text-zinc-400">
+            <code>{IMPORT_SDK_SNIPPET}</code>
+          </pre>
+        </details>
       </div>
     </section>
   );

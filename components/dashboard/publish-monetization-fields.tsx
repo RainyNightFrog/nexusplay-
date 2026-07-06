@@ -55,7 +55,7 @@ export function PublishMonetizationFields({
 
   return (
     <section className="space-y-6">
-      <div className="space-y-2">
+      <div className="space-y-2 text-center">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-fuchsia-400">
           {t("publishMonetizationSection")}
         </h2>
@@ -65,7 +65,7 @@ export function PublishMonetizationFields({
       </div>
 
       <div className="space-y-3">
-        <p className="text-sm font-medium text-zinc-200">
+        <p className="text-center text-sm font-medium text-zinc-200">
           {t("publishStatusLabel")}
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -190,9 +190,11 @@ export function PublishMonetizationFields({
                 <div className="space-y-2">
                 <label
                   htmlFor="suggested-tip-amount"
-                  className="block text-sm font-medium text-zinc-200"
+                  className="block text-center text-sm font-medium text-zinc-200"
                 >
-                  {t("suggestedTipAmountLabel")}
+                  <RequiredFieldLabel required>
+                    {t("suggestedTipAmountLabel")}
+                  </RequiredFieldLabel>
                 </label>
                 <div className="relative">
                   <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-fuchsia-300/80">
@@ -214,7 +216,7 @@ export function PublishMonetizationFields({
                     disabled={disabled}
                   />
                 </div>
-                <p className="text-xs text-zinc-500">{t("suggestedTipAmountHint")}</p>
+                <p className="text-center text-xs text-zinc-500">{t("suggestedTipAmountHint")}</p>
                 </div>
 
                 <TipsFeeDisclosure

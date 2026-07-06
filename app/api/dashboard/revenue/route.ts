@@ -31,7 +31,8 @@ export async function GET(request: Request) {
       .order("created_at", { ascending: false });
 
     if (error) {
-      throw new Error(error.message);
+      console.error("[dashboard/revenue] games query:", error.message);
+      throw new Error("讀取收益資料失敗");
     }
 
     const scope = new URL(request.url).searchParams.get("scope");
