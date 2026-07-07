@@ -2,6 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import Image from "next/image";
+import { GameCoverImage } from "@/components/ui/game-cover-image";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
@@ -212,7 +213,7 @@ function SearchPageContent() {
                           className="group block overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/60 shadow-lg transition hover:border-cyan-400/30"
                         >
                           <div className="relative aspect-[16/10] overflow-hidden">
-                            <Image
+                            <GameCoverImage
                               src={game.image}
                               alt={game.title}
                               fill

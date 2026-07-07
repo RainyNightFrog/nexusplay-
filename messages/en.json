@@ -1487,5 +1487,28 @@
     "privacyP2": "Billing addresses are used for receipts and compliance; payment card data is processed by Stripe and full card numbers are not stored on our servers.",
     "privacyP3": "You can export personal data or delete your account under Data & account. Exports include tip receipts and transaction history.",
     "privacyP4": "We may use cookies and analytics to improve the service; if Google Analytics is enabled, you can limit tracking in your browser settings."
+  },
+  "chat": {
+    "title": "Live Chat",
+    "subtitle": "Chat with players and creators in real time",
+    "open": "Open chat",
+    "close": "Close chat",
+    "minimize": "Minimize",
+    "expand": "Expand",
+    "channelWorld": "World",
+    "channelCreator": "Creators",
+    "placeholder": "Type a message",
+    "send": "Send",
+    "sendHint": "No spam · Recall your own messages within 2 minutes",
+    "recall": "Recall",
+    "recalled": "This message was recalled",
+    "you": "You",
+    "creatorBadge": "Creator",
+    "empty": "No messages yet — say hello!",
+    "loading": "Loading…",
+    "retentionHint": "Chat history is kept for 7 days",
+    "loginRequired": "Sign in to chat",
+    "creatorReadOnly": "Only creators can post here; you can still read messages",
+    "emojiPicker": "Insert emoji"
   }
 }

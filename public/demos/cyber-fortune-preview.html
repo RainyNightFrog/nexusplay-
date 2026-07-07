@@ -1123,12 +1123,12 @@
     $('btnLbBack').onclick = () => showScreen('menu');
     $('btnRetry').onclick = () => runCountdown(startGame);
     $('btnMenu').onclick = () => quitToMenu(false);
-    $('btnLeaveMenu').onclick = () => leavePlatform(false);
-    $('btnResultLeave').onclick = () => leavePlatform(false);
+    $('btnLeaveMenu').onclick = () => leavePlatform();
+    $('btnResultLeave').onclick = () => leavePlatform();
     $('btnPause').onclick = () => togglePause(!paused);
     $('btnResume').onclick = () => togglePause(false);
     $('btnPauseMenu').onclick = () => { togglePause(false); quitToMenu(true); };
-    $('btnPauseLeave').onclick = () => { togglePause(false); leavePlatform(true); };
+    $('btnPauseLeave').onclick = () => { togglePause(false); leavePlatform(); };
     $('btnGameHelp').onclick = () => {
       helpFromGame = true;
       if (!paused) { paused = true; stopTimer(); }
@@ -1137,7 +1137,12 @@
       showScreen('help');
     };
     $('btnQuitGame').onclick = () => quitToMenu(false);
-    $('btnLeave').onclick = () => leavePlatform(false);
+    DemoEnhance.setupLeaveGuard({
+      getActive: () => gameActive,
+      button: $('btnLeave'),
+      beforeLeave: () => { if (paused) togglePause(false); },
+      stopGame: resetSession,
+    });
 
     function stopTimer() {
       clearInterval(timerId);
@@ -1180,6 +1185,7 @@
       stopTimer();
       paused = false;
       gameActive = false;
+      PlatformBridge.setGameSessionActive(false);
       locked = true;
       $('pauseOverlay').classList.remove('show');
       $('btnPause').textContent = '⏸ 暫停';
@@ -1188,15 +1194,14 @@
 
     function quitToMenu(confirmFirst) {
       if (!gameActive) { showScreen('menu'); return; }
-      if (confirmFirst && !confirm('確定要返回主選單？目前進度將不會保存。')) return;
+      if (confirmFirst && !confirm('確定要返回主選單？目前進度可能尚未保存。')) return;
       resetSession();
       showScreen('menu');
     }
 
-    function leavePlatform(confirmFirst) {
-      if (confirmFirst && gameActive && !confirm('確定要離開遊戲？')) return;
+    function leavePlatform() {
+      if (!PlatformBridge.leaveToPlatform({ confirm: true })) return;
       resetSession();
-      PlatformBridge.leaveToPlatform();
     }
 
     function applyProgress(p) {
@@ -1255,6 +1260,7 @@
       resetSession();
       showScreen('game');
       gameActive = true;
+      PlatformBridge.setGameSessionActive(true);
       const overlay = $('countdown'), numEl = $('countdownNum');
       const seq = ['3','2','1','GO!'];
       let i = 0;

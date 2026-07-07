@@ -20,6 +20,8 @@ export type PlatformGameMeta = {
   sharesCount: number;
   ratingAvg: number;
   featured: boolean;
+  /** 顯示於首頁「平台明星遊戲」區塊（三大台柱） */
+  platformStar?: boolean;
   featuredBadge?: string;
   featuredAccent: "cyan" | "amber" | "violet";
   demoUrl: string;
@@ -59,6 +61,7 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
     sharesCount: 1_680,
     ratingAvg: 4.82,
     featured: true,
+    platformStar: true,
     featuredBadge: "平台旗艦",
     featuredAccent: "violet",
     demoUrl: "/demos/void-gacha-preview.html",
@@ -76,6 +79,7 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
     sharesCount: 2_100,
     ratingAvg: 4.91,
     featured: true,
+    platformStar: true,
     featuredBadge: "硬核工業科幻",
     featuredAccent: "amber",
     demoUrl: "/demos/core-defense-preview.html",
@@ -113,6 +117,7 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
     sharesCount: 1_400,
     ratingAvg: 4.76,
     featured: true,
+    platformStar: true,
     featuredBadge: "賽博博弈旗艦",
     featuredAccent: "cyan",
     demoUrl: "/demos/cyber-fortune-preview.html",
@@ -131,13 +136,141 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
       },
     ],
   },
+  {
+    slug: "neon-abyss-runner",
+    title: "Neon Abyss: Void Runner",
+    creator: "NexusPlay Studio",
+    categories: ["動作", "平台跳躍"],
+    description:
+      "在霓虹深淵中疾馳穿越三線虛空航道！閃避脈衝雷射與浮游地雷，蓄力虛空衝刺突破死局，收集能量核心疊加連擊倍率。每五波深淵領主降臨——唯有最頂尖的駕駛員能衝破虛無，刷新排行榜傳說。",
+    coverPath: "/covers/neon-abyss-runner-cover.png",
+    playsCount: 72_800,
+    likesCount: 6_100,
+    sharesCount: 1_520,
+    ratingAvg: 4.88,
+    featured: false,
+    featuredAccent: "cyan",
+    demoUrl: "/demos/neon-abyss-runner-preview.html",
+    viewportWidth: 960,
+    viewportHeight: 600,
+    devlogs: [
+      {
+        title: "深淵領主系統上線",
+        content: "每 5 波出現獨特 BOSS 攻擊模式：三重雷射、屏障牆、深淵風暴。",
+        createdAtOffsetDays: 3,
+      },
+    ],
+  },
+  {
+    slug: "signal-breach",
+    title: "Signal Breach: ICE Protocol",
+    creator: "GhostNet Labs",
+    categories: ["益智", "解謎"],
+    description:
+      "潛入企業主機的 8×8 訊號節點網路，在 ICE 安全程式巡邏的夾縊中，規劃滲透路徑直達資料核心。十二層防火牆關卡、倒數計時與連鎖破解加成——一場考驗邏輯與膽識的賽博駭客攻防戰。",
+    coverPath: "/covers/signal-breach-cover.png",
+    playsCount: 58_400,
+    likesCount: 4_900,
+    sharesCount: 1_180,
+    ratingAvg: 4.84,
+    featured: false,
+    featuredAccent: "cyan",
+    demoUrl: "/demos/signal-breach-preview.html",
+    viewportWidth: 960,
+    viewportHeight: 680,
+    devlogs: [
+      {
+        title: "ICE 巡邏 AI 2.0",
+        content: "ICE 節點新增預測路徑與封鎖節點互動，難度曲線全面重製。",
+        createdAtOffsetDays: 5,
+      },
+    ],
+  },
+  {
+    slug: "void-relay",
+    title: "Void Relay: Card Descent",
+    creator: "NexusPlay Studio",
+    categories: ["卡牌對戰", "益智"],
+    description:
+      "墜入虛空深淵的 Roguelike 卡牌征途！20 種虛空卡牌、敵人意圖預判、每層三選一強化卡組。第五層深淵領主守關，一路廝殺至第十五層深淵之底——每次下墜都是全新命運。",
+    coverPath: "/covers/void-relay-cover.png",
+    playsCount: 81_200,
+    likesCount: 7_400,
+    sharesCount: 1_890,
+    ratingAvg: 4.91,
+    featured: false,
+    featuredAccent: "violet",
+    demoUrl: "/demos/void-relay-preview.html",
+    viewportWidth: 960,
+    viewportHeight: 720,
+    devlogs: [
+      {
+        title: "深淵領主三部曲",
+        content: "先驅者、泰坦、虛空女王三大 BOSS 各有獨特技能與階段轉換。",
+        createdAtOffsetDays: 4,
+      },
+    ],
+  },
+  {
+    slug: "pulse-protocol",
+    title: "Pulse Protocol: Neon Beat",
+    creator: "SynthWave Arcade",
+    categories: ["音樂節奏", "休閒"],
+    description:
+      "四軌霓虹節拍戰場！在脈衝協議的賽博律動中精準敲擊 Perfect / Great 判定，疊加連擊倍率衝入 Fever 狂熱模式。三首原創電子曲目 × 三種難度——指尖與心跳同步的極限挑戰。",
+    coverPath: "/covers/pulse-protocol-cover.png",
+    playsCount: 66_500,
+    likesCount: 5_800,
+    sharesCount: 1_340,
+    ratingAvg: 4.79,
+    featured: false,
+    featuredAccent: "violet",
+    demoUrl: "/demos/pulse-protocol-preview.html",
+    viewportWidth: 960,
+    viewportHeight: 640,
+    devlogs: [
+      {
+        title: "Fever 狂熱模式",
+        content: "50 連擊觸發金色 Fever，分數雙倍並解鎖特殊視覺效果。",
+        createdAtOffsetDays: 2,
+      },
+    ],
+  },
+  {
+    slug: "orbital-salvage",
+    title: "軌道回收：環形防線",
+    creator: "Orbital Dynamics",
+    categories: ["塔防", "策略"],
+    description:
+      "在環形軌道上部署脈衝、電磁、新星、冰霜與回收五系砲塔，攔截沿螺旋軌道殺向核心反應爐的敵潮。20 波攻防、環形升級槽位、BOSS 每五波來襲——工業科幻塔防的全新維度。",
+    coverPath: "/covers/orbital-salvage-cover.png",
+    playsCount: 54_300,
+    likesCount: 4_600,
+    sharesCount: 1_050,
+    ratingAvg: 4.86,
+    featured: false,
+    featuredAccent: "amber",
+    demoUrl: "/demos/orbital-salvage-preview.html",
+    viewportWidth: 960,
+    viewportHeight: 700,
+    devlogs: [
+      {
+        title: "環形軌道系統",
+        content: "三層環形槽位、五種砲塔與 Lv.3 升級系統正式上線。",
+        createdAtOffsetDays: 7,
+      },
+    ],
+  },
 ];
 
 export const PLATFORM_GAME_BY_TITLE = new Map(
   PLATFORM_GAMES.map((game) => [game.title, game])
 );
 
-export const FEATURED_GAMES = PLATFORM_GAMES.filter((game) => game.featured);
+export const PLATFORM_STAR_GAMES = PLATFORM_GAMES.filter((game) => game.platformStar);
+
+/** @deprecated 使用 PLATFORM_STAR_GAMES */
+export const FEATURED_GAMES = PLATFORM_STAR_GAMES;
 
 export const FORUM_SEED_POSTS: Record<string, SeedForumPost[]> = {
   [VOID_GACHA_TITLE]: [
@@ -272,6 +405,104 @@ export const FORUM_SEED_POSTS: Record<string, SeedForumPost[]> = {
         "尖峰時段（晚上 9-11 點）配對有時要等 2-3 分鐘，不知道是不是伺服器負載問題？\n\n有人有同樣狀況嗎？",
     },
   ],
+  "Neon Abyss: Void Runner": [
+    {
+      title: "深淵第 15 波 BOSS 怎麼躲三重雷射？",
+      category: "guide",
+      authorName: "疾馳駕駛員",
+      createdAtOffsetDays: 2,
+      content:
+        "卡在深淵難度第 15 波 BOSS 的三重雷射很久了，中間那條路幾乎必中。\n\n大家是用衝刺硬穿還是等間隙？有沒有穩定的走位節奏？",
+      comments: [
+        {
+          authorName: "虛空車神",
+          content: "BOSS 雷射有 1.2 秒預警，先切到安全線再衝刺穿第二發，第三發往反方向閃。",
+          offsetHours: 4,
+        },
+      ],
+    },
+    {
+      title: "連擊倍率疊到 ×5 的爽感無敵",
+      category: "feedback",
+      authorName: "霓虹獵人",
+      createdAtOffsetDays: 1,
+      content: "能量核心連吃 + 不撞障礙，倍率衝上 ×5 分數直接翻三倍，太上癮了！",
+    },
+  ],
+  "Signal Breach: ICE Protocol": [
+    {
+      title: "第 9 關 ICE 巡邏路線攻略",
+      category: "guide",
+      authorName: "幽靈協議",
+      createdAtOffsetDays: 3,
+      content:
+        "第 9 關有 4 隻 ICE 交叉巡邏，建議先誘導左上那隻再從右下角繞路進核心。\n\n附上我的步數：最少 18 步可過。",
+    },
+    {
+      title: "駭客風 UI 細節滿分",
+      category: "feedback",
+      authorName: "節點行者",
+      createdAtOffsetDays: 1,
+      content: "節點脈衝動畫和路徑粒子軌跡質感超好，破解成功那一下的閃光太療癒。",
+    },
+  ],
+  "Void Relay: Card Descent": [
+    {
+      title: "虛空女王 BOSS 卡組推薦",
+      category: "guide",
+      authorName: "深淵卡師",
+      createdAtOffsetDays: 2,
+      content:
+        "打到第 15 層虛空女王，她每回合雙攻 + 上毒。\n\n推薦帶 2 張護盾 + 虛空爆發 + 荊棘反傷，撐過前三回合就能反打。",
+      comments: [
+        {
+          authorName: "卡牌編年史",
+          content: "記得留能量給淨化卡，女王第三階段會疊 3 層虛空腐蝕。",
+          offsetHours: 6,
+        },
+      ],
+    },
+    {
+      title: "Roguelike 卡牌深度超出預期",
+      category: "feedback",
+      authorName: "深淵旅人",
+      createdAtOffsetDays: 1,
+      content: "20 種卡 + 敵人意圖預判，每局路線都不同，已經刷了 30 局還想再來。",
+    },
+  ],
+  "Pulse Protocol: Neon Beat": [
+    {
+      title: "量子崩壞 狂熱難度全 Perfect 可能嗎？",
+      category: "general",
+      authorName: "節拍狂人",
+      createdAtOffsetDays: 2,
+      content: "狂熱難度 160 BPM 的密集段落太瘋了，目前最高 94% 準確率，有人全 Perfect 過嗎？",
+    },
+    {
+      title: "Fever 模式視覺效果炸裂",
+      category: "feedback",
+      authorName: "霓虹鼓手",
+      createdAtOffsetDays: 1,
+      content: "50 連擊進 Fever 整個畫面變金色，分數狂飆，設計太懂節奏遊戲玩家了。",
+    },
+  ],
+  "軌道回收：環形防線": [
+    {
+      title: "第 20 波 BOSS 環形佈局分享",
+      category: "guide",
+      authorName: "軌道工程師",
+      createdAtOffsetDays: 4,
+      content:
+        "最外圈 3 電磁 + 2 新星 AOE，中圈 4 脈衝速射，內圈 2 冰霜減速。\n\nBOSS 進內圈前用新星清小怪，核心 HP 能穩在 60% 以上。",
+    },
+    {
+      title: "回收砲塔經濟流超穩",
+      category: "guide",
+      authorName: "資源管理員",
+      createdAtOffsetDays: 2,
+      content: "前期多放回收砲塔攢廢料，第 8 波一次升滿三個電磁，後面輕鬆很多。",
+    },
+  ],
 };
 
 export const SEED_GAME_COMMENTS: Record<string, SeedGameComment[]> = {
@@ -298,6 +529,41 @@ export const SEED_GAME_COMMENTS: Record<string, SeedGameComment[]> = {
     {
       authorName: "虛空旅人",
       content: "抽卡動畫和霓虹 UI 質感一流，已加入收藏。",
+      offsetHours: 4,
+    },
+  ],
+  "Neon Abyss: Void Runner": [
+    {
+      authorName: "跑酷新手",
+      content: "三線切換手感很順，衝刺冷卻抓好了能玩很久！",
+      offsetHours: 2,
+    },
+  ],
+  "Signal Breach: ICE Protocol": [
+    {
+      authorName: "邏輯駭客",
+      content: "12 關難度曲線設計得很好，第 6 關開始真的燒腦。",
+      offsetHours: 3,
+    },
+  ],
+  "Void Relay: Card Descent": [
+    {
+      authorName: "卡牌愛好者",
+      content: "敵人意圖預判系統很讚，有種在玩 Slay the Spire 的感覺。",
+      offsetHours: 5,
+    },
+  ],
+  "Pulse Protocol: Neon Beat": [
+    {
+      authorName: "節奏玩家",
+      content: "四軌判定手感紮實，Fever 模式超有成就感！",
+      offsetHours: 2,
+    },
+  ],
+  "軌道回收：環形防線": [
+    {
+      authorName: "塔防老手",
+      content: "環形地圖比傳統方格塔防更有策略深度，推薦！",
       offsetHours: 4,
     },
   ],

@@ -1488,5 +1488,28 @@
     "disclaimerP1": "NexusPlay 不對用戶上傳的遊戲內容、創作者聲明或玩家間互動承擔全部責任。遊戲由創作者提供，平台僅提供托管與展示。",
     "disclaimerP2": "平台依「現狀」提供服務，不保證不間斷或無錯誤運作。因網路、第三方服務或不可抗力導致的損失，在法律允許範圍內我們不負賠償責任。",
     "disclaimerP3": "打賞收益、稅務申報與當地法規遵循（含消費者保護、反洗錢等）由創作者與付款玩家自行了解；必要時請諮詢專業顧問。"
+  },
+  "chat": {
+    "title": "即時聊天",
+    "subtitle": "與玩家和創作者即時交流",
+    "open": "開啟聊天",
+    "close": "關閉聊天",
+    "minimize": "最小化",
+    "expand": "展開",
+    "channelWorld": "世界頻道",
+    "channelCreator": "創作者頻道",
+    "placeholder": "輸入訊息",
+    "send": "發送",
+    "sendHint": "請勿刷屏 · 2 分鐘內可回收自己的訊息",
+    "recall": "回收",
+    "recalled": "此訊息已回收",
+    "you": "你",
+    "creatorBadge": "創作者",
+    "empty": "尚無訊息，來打個招呼吧！",
+    "loading": "載入中…",
+    "retentionHint": "聊天記錄保留 7 天",
+    "loginRequired": "登入後即可聊天",
+    "creatorReadOnly": "僅創作者可在此頻道發言，你仍可瀏覽訊息",
+    "emojiPicker": "插入表情"
   }
 }

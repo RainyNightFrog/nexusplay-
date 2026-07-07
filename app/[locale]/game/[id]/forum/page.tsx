@@ -2,6 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import Image from "next/image";
+import { GameCoverImage } from "@/components/ui/game-cover-image";
 import { useTranslations } from "next-intl";
 import { useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -161,7 +162,7 @@ function GameForumContent() {
         >
           <div className="flex flex-col items-center gap-4 p-4 text-center sm:p-5">
             <div className="relative size-16 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-zinc-800">
-              <Image
+              <GameCoverImage
                 src={game.image}
                 alt={game.title}
                 fill

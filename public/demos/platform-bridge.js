@@ -28,6 +28,11 @@
   var SLUG_MAP = {
     "cyber-fortune-preview.html": "cyber-fortune",
     "core-defense-preview.html": "core-defense",
+    "signal-breach-preview.html": "signal-breach",
+    "neon-abyss-runner-preview.html": "neon-abyss-runner",
+    "void-relay-preview.html": "void-relay",
+    "pulse-protocol-preview.html": "pulse-protocol",
+    "orbital-salvage-preview.html": "orbital-salvage",
   };
 
   var GRADE_RANK = { S: 5, A: 4, B: 3, C: 2, D: 1, "\u2014": 0 };
@@ -52,6 +57,9 @@
   var user = null;
   var authSettled = false;
   var authWaiters = [];
+  var gameSessionActive = false;
+  var LEAVE_CONFIRM_MESSAGE =
+    "\u904a\u6232\u9032\u884c\u4e2d\uff0c\u78ba\u5b9a\u8981\u96e2\u958b\u55ce\uff1f\u76ee\u524d\u9032\u5ea6\u53ef\u80fd\u5c1a\u672a\u4fdd\u5b58\u3002";
 
   function localKey(suffix) {
     return "nexusplay:" + slug + ":" + suffix;
@@ -416,19 +424,35 @@
         })
         .join("");
     },
-    leaveToPlatform: function () {
+    setGameSessionActive: function (active) {
+      gameSessionActive = !!active;
+    },
+    isGameSessionActive: function () {
+      return gameSessionActive;
+    },
+    getLeaveConfirmMessage: function () {
+      return LEAVE_CONFIRM_MESSAGE;
+    },
+    leaveToPlatform: function (options) {
+      options = options || {};
+      if (options.confirm !== false && gameSessionActive && !options.force) {
+        var msg = options.message || LEAVE_CONFIRM_MESSAGE;
+        if (!window.confirm(msg)) return false;
+      }
+      gameSessionActive = false;
       try {
         if (window.parent !== window) {
           window.parent.postMessage({ type: LEAVE_TYPE }, location.origin);
-          return;
+          return true;
         }
       } catch (_e) {}
       if (window.history.length > 1) {
         window.history.back();
-        return;
+        return true;
       }
       var localeMatch = location.pathname.match(/^\/([a-z]{2}(-[A-Z]{2})?)\//);
       window.location.href = localeMatch ? "/" + localeMatch[1] : "/";
+      return true;
     },
     setSaveHint: function (el, synced, userLoggedIn) {
       if (!el) return;
@@ -455,6 +479,13 @@
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
   }
+
+  window.addEventListener("beforeunload", function (e) {
+    if (!gameSessionActive) return;
+    e.preventDefault();
+    e.returnValue = LEAVE_CONFIRM_MESSAGE;
+    return LEAVE_CONFIRM_MESSAGE;
+  });
 
   try {
     window.parent.postMessage({ type: READY_TYPE, gameId: gameId }, location.origin);

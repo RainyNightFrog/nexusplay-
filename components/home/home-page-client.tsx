@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Image from "next/image";
+import { GameCoverImage } from "@/components/ui/game-cover-image";
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -99,7 +99,7 @@ function GameCard({
         </div>
 
         <div className="relative aspect-[16/10] overflow-hidden">
-          <Image
+          <GameCoverImage
             src={game.image}
             alt={game.title}
             fill

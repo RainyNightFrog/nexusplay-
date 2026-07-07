@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
+import { GameCoverImage } from "@/components/ui/game-cover-image";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -188,7 +189,7 @@ export default function CommunityPage() {
                       )}
                     >
                       <div className="relative size-20 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-zinc-800">
-                        <Image
+                        <GameCoverImage
                           src={game.image}
                           alt={game.title}
                           fill

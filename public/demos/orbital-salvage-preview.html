@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Orbital Salvage: Ring Defense · 軌道回收：環形防線</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%; height: 100%;
+      background: #050810;
+      color: #e8e6e3;
+      font-family: "Segoe UI", "Microsoft JhengHei", system-ui, sans-serif;
+      overflow-x: hidden; overflow-y: auto;
+    }
+    .orbit-bg {
+      position: fixed; inset: 0; pointer-events: none;
+      background:
+        radial-gradient(circle at 50% 50%, rgba(34,211,238,0.04) 0%, transparent 45%),
+        radial-gradient(circle at 50% 50%, transparent 30%, rgba(255,140,50,0.03) 70%, transparent 100%);
+    }
+    .orbit-bg::before, .orbit-bg::after {
+      content: ""; position: absolute; border-radius: 50%;
+      border: 1px solid rgba(34,211,238,0.06);
+      top: 50%; left: 50%; transform: translate(-50%, -50%);
+      animation: ringSpin 60s linear infinite;
+    }
+    .orbit-bg::before { width: 80vmin; height: 80vmin; }
+    .orbit-bg::after {
+      width: 55vmin; height: 55vmin;
+      border-color: rgba(255,140,50,0.08);
+      animation-direction: reverse; animation-duration: 45s;
+    }
+    @keyframes ringSpin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+    .glow { position: fixed; border-radius: 50%; filter: blur(90px); opacity: 0.28; pointer-events: none; }
+    .glow-1 { width: 420px; height: 420px; background: #22d3ee; top: -100px; right: -80px; animation: glowPulse 5s ease infinite; }
+    .glow-2 { width: 380px; height: 380px; background: #ff8c3a; bottom: -90px; left: -90px; animation: glowPulse 4s ease infinite reverse; }
+    @keyframes glowPulse { 0%,100% { opacity: 0.22; } 50% { opacity: 0.38; } }
+    .screen { display: none; position: relative; z-index: 2; min-height: 100%; }
+    .screen.active { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1rem; }
+    .panel {
+      text-align: center; padding: 2.2rem 2rem;
+      max-width: 620px; width: 92%; max-height: calc(100vh - 2rem); overflow-y: auto;
+      background: linear-gradient(160deg, rgba(12,18,28,0.96), rgba(6,10,18,0.92));
+      border: 1px solid rgba(34,211,238,0.32);
+      border-radius: 14px;
+      box-shadow: 0 0 60px rgba(34,211,238,0.1), inset 0 0 40px rgba(255,140,50,0.03);
+      backdrop-filter: blur(10px);
+    }
+    .badge {
+      display: inline-block; padding: 0.35rem 1.1rem; border-radius: 999px;
+      background: rgba(34,211,238,0.1); border: 1px solid rgba(34,211,238,0.38);
+      color: #67e8f9; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.14em; margin-bottom: 1rem;
+    }
+    h1 {
+      font-size: clamp(1.5rem, 4.2vw, 2.3rem); font-weight: 900;
+      background: linear-gradient(135deg, #fff 0%, #67e8f9 40%, #ff8c5a 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      margin-bottom: 0.35rem; letter-spacing: 0.02em;
+    }
+    .sub { color: #8b949e; font-size: 0.9rem; margin-bottom: 1.1rem; line-height: 1.65; }
+    .menu-stats {
+      display: flex; gap: 1.25rem; justify-content: center; margin: 1rem 0 1.25rem;
+      padding: 0.7rem; border: 1px solid rgba(34,211,238,0.15); border-radius: 8px; background: rgba(0,0,0,0.3);
+    }
+    .menu-stat { font-size: 0.7rem; color: #6e7681; letter-spacing: 0.08em; }
+    .menu-stat b { display: block; font-size: 1.3rem; color: #67e8f9; margin-top: 0.15rem; }
+    .diff-group { display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; margin: 1rem 0; }
+    button {
+      cursor: pointer; border: 1px solid rgba(34,211,238,0.4);
+      background: linear-gradient(180deg, rgba(34,211,238,0.12), rgba(34,211,238,0.04));
+      color: #67e8f9; padding: 0.62rem 1.15rem; font-size: 0.86rem; font-weight: 600;
+      border-radius: 6px; transition: all 0.2s; letter-spacing: 0.04em;
+    }
+    button:hover { background: rgba(34,211,238,0.22); box-shadow: 0 0 20px rgba(34,211,238,0.18); transform: translateY(-1px); }
+    button.selected { background: rgba(34,211,238,0.32); border-color: #22d3ee; color: #fff; box-shadow: 0 0 15px rgba(34,211,238,0.28); }
+    button.primary { background: linear-gradient(180deg, rgba(255,140,50,0.65), rgba(255,107,43,0.42)); color: #fff; border-color: #ff8c5a; }
+    button.primary:hover { box-shadow: 0 0 25px rgba(255,140,50,0.35); }
+    button:disabled, .tool-btn:disabled { opacity: 0.38; cursor: not-allowed; transform: none; box-shadow: none; }
+    .btn-row { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; margin-top: 1rem; }
+    .help-box { text-align: left; font-size: 0.84rem; line-height: 1.75; color: #adbac7; max-height: 55vh; overflow-y: auto; }
+    .help-box h3 { color: #67e8f9; font-size: 0.92rem; margin: 1rem 0 0.35rem; }
+    .help-box h3:first-child { margin-top: 0; }
+    .help-box ul { padding-left: 1.2rem; }
+    .help-box li { margin-bottom: 0.3rem; }
+    #gameScreen { padding: 0; }
+    #gameScreen.active {
+      justify-content: center; align-items: center;
+      padding: 0.35rem 0.45rem 0.5rem; overflow: hidden; height: 100%; min-height: 0; flex: 1;
+    }
+    html.in-game, html.in-game body { height: 100%; overflow: hidden; }
+    html.in-game body { display: flex; flex-direction: column; }
+    html.in-game .screen.active { flex: 1; min-height: 0; width: 100%; }
+    html.in-game .glow { opacity: 0; }
+    .game-wrap {
+      display: flex; flex-direction: column; align-items: stretch;
+      width: 100%; max-width: min(720px, 100%); height: 100%; max-height: 100%; min-height: 0;
+    }
+    .top-bar {
+      flex-shrink: 0; width: 100%; display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.35rem;
+      padding: 0.45rem 0.6rem; background: rgba(0,0,0,0.6);
+      border: 1px solid rgba(34,211,238,0.22); border-radius: 8px; margin-bottom: 0.4rem; font-size: 0.74rem;
+    }
+    .top-stat { text-align: center; padding: 0.3rem; border-right: 1px solid rgba(34,211,238,0.1); }
+    .top-stat:last-child { border-right: none; }
+    .top-stat .label { font-size: 0.62rem; color: #6e7681; letter-spacing: 0.1em; display: block; }
+    .top-stat b { color: #67e8f9; font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+    .core-hp-bar { width: 100%; height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; margin-top: 0.25rem; overflow: hidden; }
+    .core-hp-fill { height: 100%; background: linear-gradient(90deg, #ff4444, #ff8c5a); transition: width 0.3s; box-shadow: 0 0 8px rgba(255,140,50,0.5); }
+    .toolbar { flex-shrink: 0; display: flex; gap: 0.35rem; flex-wrap: wrap; margin-bottom: 0.35rem; width: 100%; justify-content: center; }
+    .tower-bar { padding: 0.35rem; background: rgba(0,0,0,0.45); border: 1px solid rgba(255,140,50,0.18); border-radius: 8px; }
+    .action-bar { margin-bottom: 0.5rem; }
+    .tool-btn { padding: 0.4rem 0.65rem; font-size: 0.72rem; }
+    .tool-btn.active { background: rgba(34,211,238,0.38); border-color: #22d3ee; color: #fff; box-shadow: 0 0 12px rgba(34,211,238,0.28); }
+    .tool-btn.wave-btn { background: rgba(255,140,50,0.18); border-color: rgba(255,140,50,0.5); color: #ffb380; }
+    .tool-btn.start-btn { background: rgba(74,222,128,0.2); border-color: rgba(74,222,128,0.55); color: #86efac; }
+    .tool-btn.auto-btn.on { background: rgba(250,204,21,0.25); border-color: rgba(250,204,21,0.6); color: #fde047; }
+    .tool-btn.upgrade-btn.on { background: rgba(192,132,252,0.28); border-color: rgba(192,132,252,0.55); color: #e9d5ff; }
+    .canvas-wrap {
+      position: relative; flex: 1 1 auto; min-height: 0; width: 100%;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 50%; overflow: hidden;
+      box-shadow: 0 0 50px rgba(34,211,238,0.12), 0 4px 24px rgba(0,0,0,0.55);
+    }
+    canvas {
+      display: block; cursor: crosshair; width: auto; height: 100%;
+      max-width: 100%; max-height: 100%; aspect-ratio: 1 / 1; background: #060a12;
+    }
+    .hint { flex-shrink: 0; font-size: 0.72rem; color: #6e7681; margin-top: 0.45rem; text-align: center; letter-spacing: 0.03em; }
+    .threat-bar { flex-shrink: 0; font-size: 0.68rem; color: #6e7681; text-align: center; margin-bottom: 0.3rem; letter-spacing: 0.12em; }
+    .threat-bar b { color: #ff8c5a; }
+    .phase-banner {
+      position: absolute; top: 0; left: 0; right: 0; z-index: 14;
+      text-align: center; padding: 0.42rem 0.55rem;
+      background: linear-gradient(180deg, rgba(0,0,0,0.88), rgba(0,0,0,0.55));
+      border-bottom: 1px solid rgba(34,211,238,0.25);
+      font-size: 0.78rem; line-height: 1.45; pointer-events: none; color: #67e8f9; letter-spacing: 0.04em;
+    }
+    .phase-banner.deploy { color: #86efac; border-color: rgba(134,239,172,0.28); }
+    .phase-banner.hidden { display: none; }
+    .phase-banner sub { display: block; font-size: 0.68rem; color: #8b949e; margin-top: 0.15rem; }
+    .wave-banner {
+      position: absolute; inset: 0; z-index: 15; pointer-events: none;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; animation: waveBanner 2s ease forwards;
+    }
+    @keyframes waveBanner {
+      0% { opacity: 0; transform: scale(2); }
+      15% { opacity: 1; transform: scale(1); }
+      70% { opacity: 1; transform: scale(1); }
+      100% { opacity: 0; transform: scale(0.85); }
+    }
+    .wave-banner h2 { font-size: 2.2rem; font-weight: 900; color: #67e8f9; text-shadow: 0 0 40px rgba(34,211,238,0.7); letter-spacing: 0.12em; }
+    .wave-banner p { color: #ffb380; font-size: 0.85rem; letter-spacing: 0.18em; margin-top: 0.5rem; }
+    .overlay-msg {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.82);
+      display: none; align-items: center; justify-content: center; z-index: 20; backdrop-filter: blur(6px);
+    }
+    .overlay-msg.show { display: flex; }
+    .overlay-box {
+      text-align: center; padding: 2.2rem 2rem;
+      background: linear-gradient(160deg, #121a28, #0a1018);
+      border: 1px solid rgba(34,211,238,0.4); border-radius: 14px; max-width: 420px;
+      box-shadow: 0 0 60px rgba(34,211,238,0.15);
+    }
+    .overlay-box h2 { color: #67e8f9; margin-bottom: 0.5rem; font-size: 1.5rem; }
+    .overlay-grade { font-size: 3.5rem; font-weight: 900; margin: 0.5rem 0; color: #ffd700; text-shadow: 0 0 30px rgba(255,215,0,0.5); }
+    .overlay-stats { display: flex; gap: 1.5rem; justify-content: center; margin: 1rem 0; font-size: 0.78rem; color: #6e7681; }
+    .overlay-stats b { display: block; color: #67e8f9; font-size: 1.1rem; margin-top: 0.15rem; }
+    @media (max-width: 520px) {
+      .top-bar { grid-template-columns: repeat(3, 1fr); }
+      .tool-btn { padding: 0.4rem 0.55rem; font-size: 0.7rem; }
+    }
+  </style>
+  <script src="/demos/platform-bridge.js"></script>
+  <script src="/demos/demo-game-enhance.js"></script>
+</head>
+<body>
+  <div class="orbit-bg"></div>
+  <div class="glow glow-1"></div>
+  <div class="glow glow-2"></div>
+
+  <div id="menu" class="screen active">
+    <div class="panel">
+      <span class="badge">ORBITAL SALVAGE · RANKED TD</span>
+      <h1>軌道回收：環形防線</h1>
+      <p class="sub">Orbital Salvage: Ring Defense<br>在環形軌道上部署防禦塔，攔截螺旋逼近核心反應爐的太空殘骸艦隊</p>
+      <div class="menu-stats">
+        <div class="menu-stat">最高波次<b id="bestWave">—</b></div>
+        <div class="menu-stat">最高分數<b id="bestScore">0</b></div>
+        <div class="menu-stat">最高評級<b id="bestGrade">—</b></div>
+      </div>
+      <p style="font-size:0.78rem;color:#6e7681;letter-spacing:0.1em;">選擇難度</p>
+      <div class="diff-group" id="menuDiff">
+        <button class="diff-btn selected" data-diff="easy">初級</button>
+        <button class="diff-btn" data-diff="normal">中級</button>
+        <button class="diff-btn" data-diff="hard">高級</button>
+      </div>
+      <div class="btn-row">
+        <button class="primary" id="btnStart">▶ 開始防禦</button>
+        <button id="btnLeaderboard">🏆 排行榜</button>
+        <button id="btnHelp">遊戲說明</button>
+      </div>
+      <p class="np-save-hint" id="saveHint">讀取進度中…</p>
+    </div>
+  </div>
+
+  <div id="leaderboard" class="screen">
+    <div class="panel">
+      <h1>🏆 玩家排行榜</h1>
+      <p class="sub" style="margin-bottom:0.5rem;">綜合戰績排行 · 登入平台帳號可同步至雲端</p>
+      <p id="lbLoading" style="font-size:0.82rem;color:#6e7681;margin:0.5rem 0;">載入中…</p>
+      <div class="np-lb-list" id="lbList"></div>
+      <div class="btn-row"><button class="primary" id="btnLbBack">返回</button></div>
+    </div>
+  </div>
+
+  <div id="help" class="screen">
+    <div class="panel">
+      <div class="help-screen-header">
+        <h1>遊戲說明</h1>
+        <button type="button" class="help-close-btn" id="btnHelpClose">✕ 關閉</button>
+      </div>
+      <div class="help-box">
+        <h3>🎯 遊戲目標</h3>
+        <p>中央<strong>反應爐核心</strong>是太空站最後防線。敵艦從外軌道生成，沿螺旋軌跡逼近核心。在環形槽位建造防禦塔、攔截敵軍，撐過 20 波攻勢（含 BOSS 波）。</p>
+        <h3>🛰️ 環形槽位</h3>
+        <ul>
+          <li>三層軌道環，每層有固定槽位可部署砲塔</li>
+          <li>點擊空槽建造，點擊已有砲塔可升級（開啟升級模式）</li>
+          <li>外環射程較遠、內環反應較快</li>
+        </ul>
+        <h3>🏭 砲塔種類</h3>
+        <ul>
+          <li><strong>脈衝塔 Pulse（45）：</strong> 射速極快、單體傷害低，前期清場</li>
+          <li><strong>磁軌塔 Rail（130）：</strong> 超遠射程、高爆發，對付高血量目標</li>
+          <li><strong>新星塔 Nova（175）：</strong> 範圍爆炸，應對密集敵群</li>
+          <li><strong>霜凍塔 Frost（120）：</strong> 減速光束，延緩螺旋推進</li>
+          <li><strong>回收塔 Salvage（90）：</strong> 持續產生廢料，弱攻擊力但經濟核心</li>
+        </ul>
+        <h3>👾 敵人與 BOSS</h3>
+        <ul>
+          <li><strong>碎片艦：</strong> 速度快、血量低</li>
+          <li><strong>裝甲艦：</strong> 緩慢但堅固</li>
+          <li><strong>幽靈艦：</strong> 螺旋速度極快</li>
+          <li><strong>護盾艦：</strong> 減傷 40%</li>
+          <li><strong>BOSS（每 5 波）：</strong> 巨型殘骸旗艦，超高血量與核心傷害</li>
+        </ul>
+        <h3>⚙️ 操作</h3>
+        <ul>
+          <li>部署完畢後點「開始」進入戰鬥</li>
+          <li>「下一波」手動開波，「自動」清空後自動接續</li>
+          <li>「升級」模式：點擊砲塔花費廢料升級（最高 Lv.3）</li>
+        </ul>
+      </div>
+      <div class="btn-row"><button class="primary" id="btnHelpBack">返回主選單</button></div>
+    </div>
+  </div>
+
+  <div id="gameScreen" class="screen">
+    <div class="game-wrap">
+      <div class="top-bar">
+        <div class="top-stat">
+          <span class="label">CORE HP</span>
+          <b id="hudCore">100</b>
+          <div class="core-hp-bar"><div class="core-hp-fill" id="coreHpFill" style="width:100%"></div></div>
+        </div>
+        <div class="top-stat"><span class="label">SCRAP</span><b id="hudScrap">200</b></div>
+        <div class="top-stat"><span class="label">WAVE</span><b id="hudWave">0</b>/<span id="hudMaxWave">20</span></div>
+        <div class="top-stat"><span class="label">KILLS</span><b id="hudKills">0</b></div>
+        <div class="top-stat"><span class="label">SCORE</span><b id="hudScore">0</b></div>
+      </div>
+      <div class="toolbar tower-bar">
+        <button class="tool-btn active" data-tower="pulse" title="脈衝塔">⚡45</button>
+        <button class="tool-btn" data-tower="rail" title="磁軌塔">🎯130</button>
+        <button class="tool-btn" data-tower="nova" title="新星塔">💥175</button>
+        <button class="tool-btn" data-tower="frost" title="霜凍塔">❄120</button>
+        <button class="tool-btn" data-tower="salvage" title="回收塔">♻90</button>
+      </div>
+      <div class="threat-bar" id="threatBar">軌道威脅 <b id="threatLevel">★☆☆</b> · 螺旋逼近模式</div>
+      <div class="toolbar action-bar">
+        <button class="tool-btn start-btn" id="btnStartBattle">▶ 開始</button>
+        <button class="tool-btn wave-btn" id="btnNextWave" disabled>▶ 下一波</button>
+        <button class="tool-btn auto-btn" id="btnAutoWave">🔄 自動 OFF</button>
+        <button class="tool-btn upgrade-btn" id="btnUpgradeMode">⬆ 升級 OFF</button>
+        <button class="tool-btn" id="btnGameHelp">❓ 說明</button>
+        <button class="tool-btn" id="btnGameLb">🏆 排行</button>
+        <button class="tool-btn" id="btnPause">⏸ 暫停</button>
+        <button class="tool-btn" id="btnQuit">🏠 主選單</button>
+        <button class="tool-btn" id="btnLeaveGame">← 離開</button>
+      </div>
+      <div class="canvas-wrap">
+        <div class="phase-banner deploy" id="phaseBanner">在環形槽位部署砲塔，點「▶ 開始」進入戰鬥</div>
+        <canvas id="canvas" width="640" height="640"></canvas>
+      </div>
+      <p class="hint">點環形槽位建造 → 升級模式可強化砲塔 → 攔截螺旋敵艦</p>
+    </div>
+  </div>
+
+  <div class="overlay-msg" id="overlay">
+    <div class="overlay-box">
+      <h2 id="overlayTitle">勝利</h2>
+      <div class="overlay-grade" id="overlayGrade">S</div>
+      <div class="overlay-stats">
+        <div>波次<b id="ovWave">0</b></div>
+        <div>分數<b id="ovScore">0</b></div>
+        <div>核心 HP<b id="ovHp">0</b></div>
+      </div>
+      <p id="overlayMsg" style="color:#adbac7;margin-bottom:1rem;line-height:1.6;font-size:0.88rem;"></p>
+      <div class="btn-row">
+        <button class="primary" id="btnRetry">再玩一次</button>
+        <button id="btnOverlayLb">🏆 排行榜</button>
+        <button id="btnMenu">主選單</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const CX = 320, CY = 320, CORE_R = 28, OUTER_R = 268;
+    const RING_DEFS = [
+      { radius: 230, slots: 14 },
+      { radius: 175, slots: 12 },
+      { radius: 120, slots: 10 },
+    ];
+    const MAX_WAVES = 20;
+    const MAX_TOWER_LV = 3;
+
+    const TOWERS = {
+      pulse:   { name: '脈衝', cost: 45,  range: 115, damage: 7,  rate: 220,  color: '#67e8f9', aoe: 0,  beam: false, slow: 0,    salvage: 0 },
+      rail:    { name: '磁軌', cost: 130, range: 200, damage: 52, rate: 1400, color: '#ffb380', aoe: 0,  beam: false, slow: 0,    salvage: 0 },
+      nova:    { name: '新星', cost: 175, range: 130, damage: 24, rate: 950,  color: '#c084fc', aoe: 42, beam: false, slow: 0,    salvage: 0 },
+      frost:   { name: '霜凍', cost: 120, range: 125, damage: 4,  rate: 120,  color: '#a5f3fc', aoe: 0,  beam: true,  slow: 0.42, salvage: 0 },
+      salvage: { name: '回收', cost: 90,  range: 90,  damage: 3,  rate: 600,  color: '#86efac', aoe: 0,  beam: false, slow: 0,    salvage: 6 },
+    };
+
+    const ENEMY_TYPES = {
+      shard:  { color: '#ff6b6b', accent: '#ff9999', radius: 8,  hpMul: 0.75, speedMul: 1.35, rewardMul: 0.85, coreDmg: 5,  armor: 0 },
+      armor:  { color: '#8899aa', accent: '#aabbcc', radius: 13, hpMul: 2.1,  speedMul: 0.62, rewardMul: 1.4,  coreDmg: 12, armor: 0 },
+      ghost:  { color: '#44dddd', accent: '#88ffff', radius: 7,  hpMul: 0.9,  speedMul: 1.7,  rewardMul: 1.0,  coreDmg: 6,  armor: 0 },
+      shield: { color: '#5599ff', accent: '#88bbff', radius: 10, hpMul: 1.4,  speedMul: 0.9,  rewardMul: 1.2,  coreDmg: 7,  armor: 0.4 },
+      boss:   { color: '#ff8c3a', accent: '#ffcc88', radius: 20, hpMul: 8.0,  speedMul: 0.38, rewardMul: 4.0,  coreDmg: 28, armor: 0.12, boss: true },
+    };
+
+    const DIFF = {
+      easy:   { coreHp: 120, startScrap: 240, enemyHp: 0.85, enemySpeed: 0.9,  reward: 14, spiralMul: 0.95 },
+      normal: { coreHp: 100, startScrap: 200, enemyHp: 1.0,  enemySpeed: 1.0,  reward: 12, spiralMul: 1.0 },
+      hard:   { coreHp: 75,  startScrap: 160, enemyHp: 1.35, enemySpeed: 1.2,  reward: 10, spiralMul: 1.1 },
+    };
+
+    let difficulty = 'easy', config = DIFF.easy;
+    let canvas, ctx, canvasSize = { w: 640, h: 640 }, slots = [], towers = [], enemies = [], bullets = [], particles = [], explosions = [];
+    let floatTexts = [], beams = [], scrapPopups = [];
+    let scrap = 200, kills = 0, score = 0, wave = 0, waveActive = false, paused = false;
+    let gameStarted = false, autoWave = false, autoWaveTimer = 0, upgradeMode = false;
+    let coreHp = 100, coreMaxHp = 100, selectedTower = 'pulse', selectedSlot = null;
+    let gameLoopCtrl = null, spawnQueue = [], spawnTimer = 0, spawnBurst = null;
+    let mouseX = 0, mouseY = 0, hoverSlot = null, shake = 0, corePulse = 0, orbitPhase = 0;
+    let bestWave = 0, bestScore = 0, bestGrade = '—', helpFromGame = false;
+
+    const $ = (id) => document.getElementById(id);
+    const screens = { menu: $('menu'), help: $('help'), game: $('gameScreen'), leaderboard: $('leaderboard') };
+
+    function buildSlots() {
+      slots = [];
+      RING_DEFS.forEach((ring, ri) => {
+        for (let i = 0; i < ring.slots; i++) {
+          const angle = (Math.PI * 2 * i) / ring.slots - Math.PI / 2;
+          slots.push({
+            id: ri + '-' + i, ring: ri, index: i,
+            angle, radius: ring.radius,
+            x: CX + Math.cos(angle) * ring.radius,
+            y: CY + Math.sin(angle) * ring.radius,
+            tower: null,
+          });
+        }
+      });
+    }
+    buildSlots();
+
+    function showScreen(name) {
+      Object.values(screens).forEach(s => s.classList.remove('active'));
+      screens[name].classList.add('active');
+      document.documentElement.classList.toggle('in-game', name === 'game');
+    }
+
+    document.querySelectorAll('.diff-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        difficulty = btn.dataset.diff;
+      });
+    });
+
+    document.querySelectorAll('.tool-btn[data-tower]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tool-btn[data-tower]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedTower = btn.dataset.tower;
+        upgradeMode = false;
+        $('btnUpgradeMode').textContent = '⬆ 升級 OFF';
+        $('btnUpgradeMode').classList.remove('on');
+      });
+    });
+
+    function closeHelp() {
+      if (helpFromGame) {
+        helpFromGame = false;
+        paused = false;
+        $('btnPause').textContent = '⏸ 暫停';
+        showScreen('game');
+        return;
+      }
+      showScreen('menu');
+    }
+
+    $('btnStart').onclick = startGame;
+    $('btnHelp').onclick = () => { helpFromGame = false; showScreen('help'); };
+    $('btnHelpBack').onclick = closeHelp;
+    $('btnHelpClose').onclick = closeHelp;
+    const lbCtrl = DemoEnhance.setupLeaderboard({
+      menuButton: $('btnLeaderboard'),
+      inGameButton: $('btnGameLb'),
+      backButton: $('btnLbBack'),
+      listEl: $('lbList'),
+      loadingEl: $('lbLoading'),
+      showScreen: (name) => showScreen(name),
+      menuScreen: 'menu',
+      leaderboardScreen: 'leaderboard',
+      limit: 15,
+      onPause: (p) => {
+        paused = p;
+        $('btnPause').textContent = p ? '▶ 繼續' : '⏸ 暫停';
+      },
+      onResume: () => {
+        paused = false;
+        $('btnPause').textContent = '⏸ 暫停';
+      },
+    });
+    $('btnOverlayLb').onclick = () => lbCtrl.open('game');
+    $('btnStartBattle').onclick = beginBattle;
+    $('btnNextWave').onclick = startNextWave;
+    $('btnAutoWave').onclick = toggleAutoWave;
+    $('btnUpgradeMode').onclick = toggleUpgradeMode;
+    $('btnPause').onclick = togglePause;
+    $('btnGameHelp').onclick = () => {
+      helpFromGame = true;
+      if (!paused) { paused = true; $('btnPause').textContent = '▶ 繼續'; }
+      showScreen('help');
+    };
+    $('btnQuit').onclick = quitToMenu;
+    DemoEnhance.setupLeaveGuard({
+      getActive: function () { return $('gameScreen').classList.contains('active'); },
+      button: $('btnLeaveGame'),
+      stopGame: function () {
+        if (gameLoopCtrl) gameLoopCtrl.stop();
+        PlatformBridge.setGameSessionActive(false);
+      },
+    });
+    $('btnRetry').onclick = () => { $('overlay').classList.remove('show'); startGame(); };
+    $('btnMenu').onclick = () => { $('overlay').classList.remove('show'); quitToMenu(); };
+
+    function applyProgress(p) {
+      if (!p) return;
+      bestWave = p.bestWave || 0;
+      bestScore = p.bestScore || 0;
+      bestGrade = p.bestGrade || '—';
+      refreshMenuStats();
+    }
+
+    function refreshMenuStats() {
+      $('bestWave').textContent = bestWave || '—';
+      $('bestScore').textContent = bestScore.toLocaleString();
+      $('bestGrade').textContent = bestGrade;
+    }
+
+    function calcLeaderboardScore(win) {
+      const base = score + kills * 80 + wave * 250;
+      return win ? Math.floor(base + coreHp * 8) : Math.floor(base);
+    }
+
+    async function persistRunResult(win, grade, lbScore) {
+      if (win && wave > bestWave) bestWave = wave;
+      if (lbScore > bestScore) bestScore = lbScore;
+      bestGrade = PlatformBridge.betterGrade(bestGrade, grade);
+      refreshMenuStats();
+      const result = await PlatformBridge.saveProgress({
+        bestWave, bestScore, bestGrade, difficulty, _incrementGames: 1,
+      });
+      PlatformBridge.setSaveHint($('saveHint'), result.synced, !!PlatformBridge.getUser());
+      await PlatformBridge.submitScore({
+        score: lbScore, grade,
+        meta: { kills, wave, coreHp: Math.ceil(coreHp), win, difficulty },
+      });
+    }
+
+    PlatformBridge.init().then(applyProgress).then(() => {
+      PlatformBridge.setSaveHint($('saveHint'), false, !!PlatformBridge.getUser());
+    });
+
+    function startGame() {
+      config = DIFF[difficulty];
+      canvas = $('canvas');
+      const sized = DemoEnhance.resizeCanvas(canvas, 640, 640);
+      ctx = sized.ctx;
+      canvasSize = { w: sized.w, h: sized.h };
+      buildSlots();
+      towers = []; enemies = []; bullets = []; particles = []; explosions = [];
+      floatTexts = []; beams = []; scrapPopups = [];
+      scrap = config.startScrap; kills = 0; score = 0; wave = 0;
+      waveActive = false; paused = false; gameStarted = false;
+      autoWave = false; autoWaveTimer = 0; upgradeMode = false;
+      coreHp = config.coreHp; coreMaxHp = config.coreHp;
+      selectedSlot = null; spawnQueue = []; spawnTimer = 0; shake = 0;
+      $('btnUpgradeMode').textContent = '⬆ 升級 OFF';
+      $('btnUpgradeMode').classList.remove('on');
+      $('hudMaxWave').textContent = MAX_WAVES;
+      updateWaveButtons();
+      updateHud();
+      showScreen('game');
+      PlatformBridge.setGameSessionActive(true);
+      canvas.onmousemove = onMouseMove;
+      canvas.onmouseleave = () => { hoverSlot = null; };
+      canvas.onclick = onCanvasClick;
+      if (gameLoopCtrl) gameLoopCtrl.stop();
+      gameLoopCtrl = DemoEnhance.createGameLoop((dt) => {
+        if (!paused) update(dt);
+        draw();
+      });
+      gameLoopCtrl.start();
+    }
+
+    function quitToMenu() {
+      if (gameLoopCtrl) gameLoopCtrl.stop();
+      PlatformBridge.setGameSessionActive(false);
+      showScreen('menu');
+    }
+
+    function toggleUpgradeMode() {
+      upgradeMode = !upgradeMode;
+      $('btnUpgradeMode').textContent = upgradeMode ? '⬆ 升級 ON' : '⬆ 升級 OFF';
+      $('btnUpgradeMode').classList.toggle('on', upgradeMode);
+      if (upgradeMode) {
+        document.querySelectorAll('.tool-btn[data-tower]').forEach(b => b.classList.remove('active'));
+      }
+    }
+
+    function updatePhaseBanner(main, sub, tone) {
+      const el = $('phaseBanner');
+      if (!main) { el.className = 'phase-banner hidden'; el.innerHTML = ''; return; }
+      el.className = 'phase-banner ' + (tone || '');
+      el.innerHTML = main + (sub ? '<sub>' + sub + '</sub>' : '');
+    }
+
+    function updateWaveButtons() {
+      $('btnStartBattle').textContent = gameStarted
+        ? (wave === 0 && !waveActive ? '▶ 開始敵襲' : '✓ 已開始')
+        : '▶ 開始';
+      $('btnNextWave').disabled = !gameStarted || waveActive || wave >= MAX_WAVES;
+      $('btnAutoWave').textContent = autoWave ? '🔄 自動 ON' : '🔄 自動 OFF';
+      $('btnAutoWave').classList.toggle('on', autoWave);
+      if (!gameStarted) {
+        updatePhaseBanner('在環形槽位部署砲塔，點「▶ 開始」進入戰鬥', '外環射程遠、內環反應快', 'deploy');
+      } else if (wave === 0 && !waveActive) {
+        updatePhaseBanner('準備完成 — 點「開始敵襲」或「下一波」', autoWave ? '自動下一波已開啟' : null, autoWave ? 'auto' : '');
+      } else if (waveActive) {
+        updatePhaseBanner('WAVE ' + wave + ' · 螺旋逼近中', wave % 5 === 0 ? '⚠ BOSS 波次' : null, '');
+      } else if (wave > 0 && wave < MAX_WAVES) {
+        updatePhaseBanner('第 ' + wave + ' 波已清空', autoWave ? '自動下一波倒數中…' : '點「下一波」繼續', autoWave ? 'auto' : '');
+      } else {
+        updatePhaseBanner(null);
+      }
+    }
+
+    function updateThreat() {
+      const stars = wave <= 4 ? '★☆☆' : wave <= 10 ? '★★☆' : wave <= 16 ? '★★★' : '★★★★';
+      $('threatLevel').textContent = stars;
+    }
+
+    function beginBattle() {
+      if (!gameStarted) {
+        gameStarted = true;
+        floatTexts.push({ x: CX, y: 60, text: '⚔ 環形防線啟動', color: '#86efac', life: 1200 });
+      }
+      if (waveActive || wave >= MAX_WAVES) { updateWaveButtons(); return; }
+      startNextWave();
+      updateWaveButtons();
+    }
+
+    function toggleAutoWave() {
+      autoWave = !autoWave;
+      updateWaveButtons();
+      if (autoWave && gameStarted && !waveActive && wave < MAX_WAVES) {
+        autoWaveTimer = wave === 0 ? 400 : 800;
+        if (wave === 0) startNextWave();
+      }
+    }
+
+    function togglePause() {
+      paused = !paused;
+      $('btnPause').textContent = paused ? '▶ 繼續' : '⏸ 暫停';
+    }
+
+    function updateHud() {
+      $('hudCore').textContent = Math.max(0, Math.ceil(coreHp));
+      $('hudScrap').textContent = scrap;
+      $('hudWave').textContent = wave;
+      $('hudKills').textContent = kills;
+      $('hudScore').textContent = score.toLocaleString();
+      $('coreHpFill').style.width = Math.max(0, (coreHp / coreMaxHp) * 100) + '%';
+    }
+
+    function showWaveBanner(w, subtitle) {
+      const wrap = document.querySelector('.canvas-wrap');
+      const div = document.createElement('div');
+      div.className = 'wave-banner';
+      div.innerHTML = '<h2>WAVE ' + w + '</h2><p>' + (subtitle || 'SPIRAL INTRUSION') + '</p>';
+      wrap.appendChild(div);
+      setTimeout(() => div.remove(), 2000);
+    }
+
+    function upgradeCost(tower) {
+      const base = TOWERS[tower.type].cost;
+      return Math.floor(base * (0.65 + tower.level * 0.55));
+    }
+
+    function getSlotAt(mx, my) {
+      let best = null, minD = 22;
+      slots.forEach(s => {
+        const d = Math.hypot(mx - s.x, my - s.y);
+        if (d < minD) { minD = d; best = s; }
+      });
+      return best;
+    }
+
+    function onMouseMove(e) {
+      const rect = canvas.getBoundingClientRect();
+      mouseX = (e.clientX - rect.left) / rect.width * canvasSize.w;
+      mouseY = (e.clientY - rect.top) / rect.height * canvasSize.h;
+      hoverSlot = getSlotAt(mouseX, mouseY);
+    }
+
+    function placeTower(slot, type) {
+      const spec = TOWERS[type];
+      if (scrap < spec.cost) {
+        floatTexts.push({ x: slot.x, y: slot.y, text: '廢料不足!', color: '#ff4444', life: 800 });
+        return;
+      }
+      scrap -= spec.cost;
+      const tower = {
+        slotId: slot.id, type, level: 1, x: slot.x, y: slot.y,
+        ring: slot.ring, angle: slot.angle, radius: slot.radius,
+        ...spec, lastShot: 0, salvageTimer: 0, angleAim: 0, recoil: 0, idle: Math.random() * Math.PI * 2,
+      };
+      slot.tower = tower;
+      towers.push(tower);
+      addParticles(slot.x, slot.y, spec.color, 10);
+      updateHud();
+    }
+
+    function upgradeTower(tower) {
+      if (tower.level >= MAX_TOWER_LV) {
+        floatTexts.push({ x: tower.x, y: tower.y - 12, text: '已滿級', color: '#fde047', life: 700 });
+        return;
+      }
+      const cost = upgradeCost(tower);
+      if (scrap < cost) {
+        floatTexts.push({ x: tower.x, y: tower.y, text: '廢料不足!', color: '#ff4444', life: 800 });
+        return;
+      }
+      scrap -= cost;
+      tower.level++;
+      tower.damage *= 1.35;
+      tower.range *= 1.08;
+      if (tower.salvage) tower.salvage = Math.ceil(tower.salvage * 1.4);
+      tower.rate *= 0.88;
+      addParticles(tower.x, tower.y, '#e9d5ff', 14);
+      floatTexts.push({ x: tower.x, y: tower.y - 18, text: 'Lv.' + tower.level, color: '#e9d5ff', life: 900 });
+      updateHud();
+    }
+
+    function onCanvasClick() {
+      if (paused || !hoverSlot) return;
+      if (hoverSlot.tower) {
+        if (upgradeMode) upgradeTower(hoverSlot.tower);
+        else selectedSlot = hoverSlot;
+        return;
+      }
+      if (upgradeMode) return;
+      placeTower(hoverSlot, selectedTower);
+    }
+
+    function pickWaveComposition(w) {
+      const isBoss = w % 5 === 0;
+      const count = isBoss ? 3 + Math.floor(w / 3) : 5 + w * 2;
+      const types = [];
+      for (let i = 0; i < count; i++) types.push('shard');
+      if (w >= 2) for (let i = 0; i < Math.floor(count * 0.2); i++) types[i * 2] = 'ghost';
+      if (w >= 3) types[types.length - 1] = 'armor';
+      if (w >= 4) types[Math.floor(count / 2)] = 'shield';
+      if (w >= 6 && w % 2 === 0) types[1] = 'armor';
+      if (isBoss) {
+        types[0] = 'boss';
+        if (w >= 10) types[types.length - 1] = 'boss';
+      }
+      return types;
+    }
+
+    function waveSubtitle(w) {
+      if (w % 5 === 0) return '⚠ SALVAGE DREADNOUGHT';
+      if (w >= 15) return '⚠ HEAVY ORBITAL SWARM';
+      if (w >= 8) return '⚠ MIXED SPIRAL ASSAULT';
+      return 'SPIRAL INTRUSION DETECTED';
+    }
+
+    function startNextWave() {
+      if (!gameStarted || waveActive || wave >= MAX_WAVES) return;
+      wave++;
+      waveActive = true;
+      autoWaveTimer = 0;
+      showWaveBanner(wave, waveSubtitle(wave));
+      const types = pickWaveComposition(wave);
+      spawnQueue = [];
+      types.forEach(type => {
+        const et = ENEMY_TYPES[type];
+        const hpBase = (16 + wave * 6) * config.enemyHp * et.hpMul;
+        const radialSpeed = (0.42 + wave * 0.025) * config.enemySpeed * et.speedMul;
+        const spinSpeed = (0.018 + wave * 0.0012) * config.spiralMul * et.speedMul;
+        spawnQueue.push({
+          type, hp: hpBase, maxHp: hpBase, radialSpeed, spinSpeed,
+          reward: Math.floor((config.reward + wave * 2) * et.rewardMul),
+          coreDmg: et.coreDmg, armor: et.armor || 0, boss: !!et.boss,
+          ...et, dead: false, hitFlash: 0,
+        });
+      });
+      spawnTimer = 0;
+      spawnBurst = { interval: wave % 5 === 0 ? 420 : 300, burstSize: Math.min(5, 2 + Math.floor(wave / 3)) };
+      updateWaveButtons();
+      updateThreat();
+      updateHud();
+    }
+
+    function spawnEnemy(offset) {
+      if (!spawnQueue.length) return;
+      const data = spawnQueue.shift();
+      const startAngle = Math.random() * Math.PI * 2;
+      const startR = OUTER_R + (offset ? Math.random() * 20 : 0);
+      enemies.push({
+        x: CX + Math.cos(startAngle) * startR,
+        y: CY + Math.sin(startAngle) * startR,
+        angle: startAngle, radius: startR,
+        ...data,
+      });
+      if (!offset) addParticles(CX + Math.cos(startAngle) * startR, CY + Math.sin(startAngle) * startR, data.color, 5);
+    }
+
+    function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+
+    function update(dt) {
+      corePulse += dt * 0.003;
+      orbitPhase += dt * 0.0015;
+      if (shake > 0) shake = Math.max(0, shake - dt * 0.05);
+
+      if (waveActive && spawnQueue.length) {
+        spawnTimer += dt;
+        if (spawnTimer >= spawnBurst.interval) {
+          spawnTimer = 0;
+          const n = Math.min(spawnBurst.burstSize, spawnQueue.length);
+          for (let i = 0; i < n; i++) spawnEnemy(i > 0);
+        }
+      }
+
+      if (autoWave && gameStarted && !waveActive && wave < MAX_WAVES) {
+        autoWaveTimer += dt;
+        const delay = wave === 0 ? 600 : 2200;
+        if (autoWaveTimer >= delay) { autoWaveTimer = 0; startNextWave(); }
+      }
+
+      enemies.forEach(e => {
+        if (e.slowTimer > 0) e.slowTimer -= dt;
+        const slowFactor = e.slowTimer > 0 ? (e.slowFactor || 0.5) : 1;
+        const step = DemoEnhance.clamp(dt / 16.667, 0, DemoEnhance.MAX_DELTA / 16.667);
+        e.radius -= e.radialSpeed * slowFactor * step;
+        e.angle += e.spinSpeed * slowFactor * step;
+        const tx = CX + Math.cos(e.angle) * e.radius;
+        const ty = CY + Math.sin(e.angle) * e.radius;
+        e.x = DemoEnhance.smoothStep(e.x, tx, 14, dt);
+        e.y = DemoEnhance.smoothStep(e.y, ty, 14, dt);
+        if (e.hitFlash > 0) e.hitFlash -= dt;
+        if (e.radius <= CORE_R + (e.boss ? 8 : 4)) {
+          e.dead = true;
+          coreHp -= e.coreDmg || 5;
+          shake = e.boss ? 20 : 10;
+          addExplosion(CX, CY, '#ff4444', e.boss ? 50 : 28);
+          updateHud();
+          if (coreHp <= 0) endGame(false);
+        }
+      });
+      enemies = enemies.filter(e => !e.dead);
+
+      beams = [];
+      towers.forEach(t => {
+        t.idle += dt * 0.001;
+        if (t.recoil > 0) t.recoil = Math.max(0, t.recoil - dt * 0.02);
+        if (t.salvage) {
+          t.salvageTimer += dt;
+          if (t.salvageTimer >= 3000) {
+            t.salvageTimer = 0;
+            const gain = Math.floor(t.salvage * t.level);
+            scrap += gain;
+            scrapPopups.push({ x: t.x, y: t.y - 10, text: '+' + gain, life: 800 });
+            updateHud();
+          }
+        }
+        let target = null, minD = t.range * (1 + (t.ring === 0 ? 0.05 : t.ring === 2 ? -0.05 : 0));
+        enemies.forEach(e => {
+          const d = dist(t, e);
+          if (d < minD) { minD = d; target = e; }
+        });
+        if (target) {
+          t.angleAim = Math.atan2(target.y - t.y, target.x - t.x);
+          t.lastShot += dt;
+          const dmgMul = 1 + (t.level - 1) * 0.35;
+          if (t.beam) {
+            beams.push({ x1: t.x, y1: t.y, x2: target.x, y2: target.y, color: t.color, life: 55 });
+            if (t.lastShot >= t.rate) {
+              t.lastShot = 0;
+              damageEnemy(target, t.damage * dmgMul);
+              if (t.slow) applySlow(target, t.slow);
+            }
+          } else if (t.lastShot >= t.rate) {
+            t.lastShot = 0;
+            t.recoil = t.aoe ? 5 : 7;
+            if (t.aoe) {
+              bullets.push({
+                x: t.x, y: t.y, tx: target.x, ty: target.y,
+                damage: t.damage * dmgMul, speed: 3.8, color: t.color, aoe: t.aoe, hit: false, trail: [],
+              });
+            } else {
+              bullets.push({
+                x: t.x, y: t.y, tx: target.x, ty: target.y,
+                damage: t.damage * dmgMul, speed: t.type === 'rail' ? 9 : 7,
+                color: t.color, aoe: 0, hit: false, trail: [],
+              });
+            }
+          }
+        } else {
+          t.angleAim = Math.sin(t.idle) * 0.4;
+        }
+      });
+
+      bullets.forEach(b => {
+        b.trail.push({ x: b.x, y: b.y });
+        if (b.trail.length > 7) b.trail.shift();
+        const dx = b.tx - b.x, dy = b.ty - b.y;
+        const len = Math.hypot(dx, dy) || 1;
+        b.x += (dx / len) * b.speed * (dt / 16);
+        b.y += (dy / len) * b.speed * (dt / 16);
+        if (Math.hypot(b.tx - b.x, b.ty - b.y) < 10) {
+          b.hit = true;
+          if (b.aoe) {
+            addExplosion(b.x, b.y, b.color, b.aoe);
+            enemies.forEach(e => { if (dist(b, e) < b.aoe) damageEnemy(e, b.damage); });
+          } else {
+            let hit = null, minD = 14;
+            enemies.forEach(e => { const d = dist(b, e); if (d < minD) { minD = d; hit = e; } });
+            if (hit) damageEnemy(hit, b.damage);
+            else addParticles(b.x, b.y, b.color, 3);
+          }
+        }
+      });
+      bullets = bullets.filter(b => !b.hit);
+
+      particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.life -= dt; p.vy += 0.03; });
+      particles = particles.filter(p => p.life > 0);
+      explosions.forEach(ex => { ex.r += ex.speed * (dt / 16); ex.life -= dt; ex.alpha = ex.life / ex.maxLife; });
+      explosions = explosions.filter(ex => ex.life > 0);
+      floatTexts.forEach(ft => { ft.y -= 0.45; ft.life -= dt; });
+      floatTexts = floatTexts.filter(ft => ft.life > 0);
+      scrapPopups.forEach(sp => { sp.y -= 0.6; sp.life -= dt; });
+      scrapPopups = scrapPopups.filter(sp => sp.life > 0);
+
+      if (waveActive && !spawnQueue.length && !enemies.length) {
+        waveActive = false;
+        const bonus = 30 + wave * 10;
+        scrap += bonus;
+        score += wave * 50;
+        floatTexts.push({ x: CX, y: CY - 40, text: '+' + bonus + ' 廢料', color: '#ffd700', life: 1100 });
+        updateHud();
+        updateWaveButtons();
+        if (wave >= MAX_WAVES) endGame(true);
+        else if (autoWave && gameStarted) autoWaveTimer = 0;
+      }
+    }
+
+    function applySlow(e, factor) {
+      e.slowTimer = 1400;
+      e.slowFactor = factor;
+    }
+
+    function damageEnemy(e, dmg) {
+      const reduced = dmg * (1 - (e.armor || 0));
+      e.hp -= reduced;
+      e.hitFlash = 100;
+      if (e.hp <= 0 && !e.dead) {
+        e.dead = true;
+        kills++;
+        const reward = Math.floor(e.reward);
+        scrap += reward;
+        score += Math.floor(e.reward * 3 + (e.boss ? 200 : 0));
+        scrapPopups.push({ x: e.x, y: e.y, text: '+' + reward, life: 700 });
+        addExplosion(e.x, e.y, e.color, e.radius * 2.2);
+        updateHud();
+      }
+    }
+
+    function addParticles(x, y, color, n) {
+      for (let i = 0; i < n; i++) {
+        const a = Math.random() * Math.PI * 2, s = 1.2 + Math.random() * 3.5;
+        particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 320 + Math.random() * 220, color, size: 2 + Math.random() * 2 });
+      }
+      DemoEnhance.capParticles(particles);
+    }
+
+    function addExplosion(x, y, color, radius) {
+      explosions.push({ x, y, r: 3, maxR: radius, speed: 2.8, life: 380, maxLife: 380, color, alpha: 1 });
+      addParticles(x, y, color, 9);
+    }
+
+    function getGrade(win) {
+      if (!win) return 'D';
+      const hpPct = coreHp / coreMaxHp;
+      if (hpPct >= 0.65) return 'S';
+      if (hpPct >= 0.45) return 'A';
+      if (hpPct >= 0.25) return 'B';
+      return 'C';
+    }
+
+    function endGame(win) {
+      paused = true;
+      const grade = getGrade(win);
+      const lbScore = calcLeaderboardScore(win);
+      $('overlayTitle').textContent = win ? '🏆 環形防線堅守成功' : '💥 核心反應爐失控';
+      $('overlayGrade').textContent = grade;
+      $('overlayGrade').style.color = win ? '#ffd700' : '#888';
+      $('ovWave').textContent = wave;
+      $('ovScore').textContent = lbScore.toLocaleString();
+      $('ovHp').textContent = Math.ceil(coreHp);
+      $('overlayMsg').textContent = win
+        ? '成功攔截 ' + MAX_WAVES + ' 波螺旋攻勢！最終分數 ' + lbScore.toLocaleString()
+        : '核心被突破。堅守 ' + wave + ' 波，擊殺 ' + kills + ' 艘。';
+      $('overlay').classList.add('show');
+      persistRunResult(win, grade, lbScore);
+    }
+
+    function drawOrbitRings() {
+      RING_DEFS.forEach((ring, i) => {
+        ctx.strokeStyle = 'rgba(34,211,238,' + (0.12 + i * 0.04) + ')';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([6, 10]);
+        ctx.lineDashOffset = -orbitPhase * 30 * (i % 2 === 0 ? 1 : -1);
+        ctx.beginPath();
+        ctx.arc(CX, CY, ring.radius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      });
+      ctx.strokeStyle = 'rgba(255,140,50,0.15)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(CX, CY, OUTER_R, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    function drawCore() {
+      const pulse = 0.5 + Math.sin(corePulse) * 0.2;
+      const grd = ctx.createRadialGradient(CX, CY, 4, CX, CY, CORE_R * 2.5);
+      grd.addColorStop(0, 'rgba(255,140,50,' + (0.55 + pulse * 0.2) + ')');
+      grd.addColorStop(0.45, 'rgba(34,211,238,' + (0.2 + pulse * 0.1) + ')');
+      grd.addColorStop(1, 'transparent');
+      ctx.fillStyle = grd;
+      ctx.beginPath();
+      ctx.arc(CX, CY, CORE_R * 2.2 + pulse * 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#1a1410';
+      ctx.beginPath();
+      ctx.arc(CX, CY, CORE_R + pulse * 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ff8c5a';
+      ctx.shadowColor = '#22d3ee';
+      ctx.shadowBlur = 16 + pulse * 10;
+      ctx.beginPath();
+      ctx.arc(CX, CY, CORE_R * 0.55 + pulse * 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = 'rgba(103,232,249,0.5)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(CX, CY, CORE_R + 10 + pulse * 6, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 9px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('CORE', CX, CY + 3);
+    }
+
+    function drawSlot(s, hovered) {
+      const hasTower = !!s.tower;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, hasTower ? 11 : 9, 0, Math.PI * 2);
+      if (hovered && !hasTower && !upgradeMode) {
+        const spec = TOWERS[selectedTower];
+        const afford = scrap >= spec.cost;
+        ctx.fillStyle = afford ? 'rgba(34,211,238,0.2)' : 'rgba(255,68,68,0.2)';
+        ctx.strokeStyle = afford ? 'rgba(34,211,238,0.55)' : 'rgba(255,68,68,0.5)';
+      } else if (hovered && hasTower && upgradeMode) {
+        ctx.fillStyle = 'rgba(192,132,252,0.25)';
+        ctx.strokeStyle = 'rgba(192,132,252,0.6)';
+      } else {
+        ctx.fillStyle = hasTower ? 'rgba(20,28,40,0.9)' : 'rgba(12,18,28,0.75)';
+        ctx.strokeStyle = hasTower ? 'rgba(255,140,50,0.4)' : 'rgba(34,211,238,0.25)';
+      }
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      if (!hasTower) {
+        ctx.fillStyle = 'rgba(103,232,249,0.35)';
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function drawTower(t) {
+      ctx.save();
+      ctx.translate(t.x, t.y);
+      ctx.rotate(t.angleAim);
+      const recoil = t.recoil || 0;
+      ctx.fillStyle = '#1a2430';
+      ctx.beginPath();
+      ctx.arc(0, 0, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = t.color;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      if (t.beam) {
+        ctx.fillStyle = t.color;
+        ctx.beginPath();
+        ctx.arc(0, 0, 4, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (t.aoe) {
+        ctx.fillStyle = t.color;
+        ctx.fillRect(recoil - 2, -5, 16, 4);
+        ctx.fillRect(recoil - 2, 1, 16, 4);
+      } else if (t.salvage) {
+        ctx.fillStyle = t.color;
+        ctx.fillRect(recoil, -3, 14, 6);
+        ctx.beginPath();
+        ctx.arc(-4, 0, 5, 0, Math.PI * 2);
+        ctx.stroke();
+      } else {
+        ctx.fillStyle = t.color;
+        ctx.fillRect(recoil - 1, -3, 18, 6);
+        ctx.fillRect(recoil + 14, -1.5, 8, 3);
+      }
+      ctx.restore();
+      if (t.level > 1) {
+        ctx.fillStyle = '#e9d5ff';
+        ctx.font = 'bold 8px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('L' + t.level, t.x, t.y - 14);
+      }
+    }
+
+    function drawEnemy(e) {
+      ctx.save();
+      ctx.translate(e.x, e.y);
+      ctx.rotate(e.angle + Math.PI / 2);
+      if (e.slowTimer > 0) { ctx.shadowColor = '#a5f3fc'; ctx.shadowBlur = 10; }
+      if (e.hitFlash > 0) ctx.globalAlpha = 0.5 + Math.sin(e.hitFlash * 0.2) * 0.5;
+      ctx.fillStyle = e.color;
+      ctx.strokeStyle = e.accent;
+      ctx.lineWidth = 1.5;
+      if (e.boss) {
+        ctx.beginPath();
+        for (let i = 0; i < 8; i++) {
+          const a = (Math.PI / 4) * i - Math.PI / 8;
+          const px = Math.cos(a) * e.radius, py = Math.sin(a) * e.radius;
+          i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 8px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('BOSS', 0, 3);
+      } else if (e.type === 'ghost') {
+        ctx.beginPath();
+        ctx.moveTo(0, -e.radius);
+        ctx.lineTo(e.radius * 0.7, 0);
+        ctx.lineTo(0, e.radius);
+        ctx.lineTo(-e.radius * 0.7, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      } else if (e.type === 'armor') {
+        ctx.fillRect(-e.radius, -e.radius * 0.8, e.radius * 2, e.radius * 1.6);
+        ctx.strokeRect(-e.radius + 1, -e.radius * 0.8 + 1, e.radius * 2 - 2, e.radius * 1.6 - 2);
+      } else if (e.type === 'shield') {
+        ctx.beginPath();
+        ctx.arc(0, 0, e.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.strokeStyle = '#88bbff';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, 0, e.radius + 4, 0, Math.PI * 2);
+        ctx.stroke();
+      } else {
+        ctx.beginPath();
+        ctx.moveTo(0, -e.radius);
+        ctx.lineTo(e.radius * 0.85, e.radius * 0.6);
+        ctx.lineTo(-e.radius * 0.85, e.radius * 0.6);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      }
+      const hpPct = e.hp / e.maxHp;
+      const barW = e.boss ? 38 : 26;
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = 'rgba(0,0,0,0.65)';
+      ctx.fillRect(-barW / 2, -e.radius - 11, barW, 4);
+      ctx.fillStyle = hpPct > 0.5 ? '#4ade80' : hpPct > 0.25 ? '#fbbf24' : '#f87171';
+      ctx.fillRect(-barW / 2, -e.radius - 11, barW * hpPct, 4);
+      ctx.restore();
+    }
+
+    function draw() {
+      ctx.save();
+      if (shake > 0) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+
+      ctx.fillStyle = '#060a12';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const bgGrd = ctx.createRadialGradient(CX, CY, 20, CX, CY, OUTER_R + 40);
+      bgGrd.addColorStop(0, 'rgba(255,140,50,0.06)');
+      bgGrd.addColorStop(0.5, 'rgba(34,211,238,0.03)');
+      bgGrd.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = bgGrd;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      drawOrbitRings();
+      drawCore();
+
+      slots.forEach(s => drawSlot(s, hoverSlot === s));
+
+      if (hoverSlot && !hoverSlot.tower && !upgradeMode) {
+        const spec = TOWERS[selectedTower];
+        ctx.strokeStyle = scrap >= spec.cost ? 'rgba(34,211,238,0.35)' : 'rgba(255,68,68,0.35)';
+        ctx.setLineDash([4, 5]);
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(hoverSlot.x, hoverSlot.y, spec.range, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      towers.forEach(drawTower);
+      enemies.forEach(drawEnemy);
+
+      bullets.forEach(b => {
+        b.trail.forEach((p, i) => {
+          ctx.globalAlpha = (i / b.trail.length) * 0.45;
+          ctx.fillStyle = b.color;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = b.color;
+        ctx.shadowColor = b.color;
+        ctx.shadowBlur = 7;
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.aoe ? 5 : 3.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      });
+
+      beams.forEach(b => {
+        ctx.strokeStyle = b.color;
+        ctx.lineWidth = 2.5;
+        ctx.shadowColor = b.color;
+        ctx.shadowBlur = 10;
+        ctx.globalAlpha = 0.85;
+        ctx.beginPath();
+        ctx.moveTo(b.x1, b.y1);
+        ctx.lineTo(b.x2, b.y2);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+      });
+
+      explosions.forEach(ex => {
+        ctx.globalAlpha = ex.alpha * 0.55;
+        ctx.strokeStyle = ex.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(ex.x, ex.y, ex.r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = ex.alpha * 0.18;
+        ctx.fillStyle = ex.color;
+        ctx.beginPath();
+        ctx.arc(ex.x, ex.y, ex.r * 0.55, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      });
+
+      particles.forEach(p => {
+        ctx.globalAlpha = Math.max(0, p.life / 500);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+        ctx.globalAlpha = 1;
+      });
+
+      floatTexts.forEach(ft => {
+        ctx.globalAlpha = Math.max(0, ft.life / 800);
+        ctx.fillStyle = ft.color;
+        ctx.font = 'bold 13px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(ft.text, ft.x, ft.y);
+        ctx.globalAlpha = 1;
+      });
+
+      scrapPopups.forEach(sp => {
+        ctx.globalAlpha = Math.max(0, sp.life / 700);
+        ctx.fillStyle = '#86efac';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(sp.text, sp.x, sp.y);
+        ctx.globalAlpha = 1;
+      });
+
+      if (paused && !$('overlay').classList.contains('show')) {
+        ctx.fillStyle = 'rgba(0,0,0,0.45)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 22px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('⏸ 暫停', CX, CY - 80);
+      }
+
+      ctx.restore();
+    }
+  </script>
+</body>
+</html>

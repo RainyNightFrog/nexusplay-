@@ -1,11 +1,11 @@
 "use client";
 
-import Image from "next/image";
+import { GameCoverImage } from "@/components/ui/game-cover-image";
 import { Link } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
 import { Crown, Heart, Share2, Star, Users } from "lucide-react";
-import { FEATURED_GAMES } from "@/lib/platform-catalog";
+import { PLATFORM_STAR_GAMES } from "@/lib/platform-catalog";
 import { TAG_COLORS, type Game } from "@/lib/games";
 import { useGameI18n } from "@/hooks/use-game-i18n";
 import { useFormatCount } from "@/hooks/use-format-count";
@@ -60,7 +60,7 @@ export function FeaturedGames({
   const tc = useTranslations("common");
   const { localizedBadge, localizedDescription, localizedTag } = useGameI18n();
   const { formatCount } = useFormatCount();
-  const featuredEntries = FEATURED_GAMES.map((catalog) => {
+  const featuredEntries = PLATFORM_STAR_GAMES.map((catalog) => {
     const live = resolveFeaturedGame(catalog.title, games);
     const accent = catalog.featuredAccent;
     const styles = ACCENT_STYLES[accent];
@@ -140,7 +140,7 @@ export function FeaturedGames({
                   )}
                 />
                 <div className="relative aspect-[16/11] overflow-hidden">
-                  <Image
+                  <GameCoverImage
                     src={game.image}
                     alt={game.title}
                     fill

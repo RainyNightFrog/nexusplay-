@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Signal Breach: ICE Protocol</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%; height: 100%;
+      background: #030a0f;
+      color: #d1fae5;
+      font-family: "Segoe UI", "Microsoft JhengHei", system-ui, sans-serif;
+      overflow-x: hidden;
+    }
+    .grid-bg {
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background-image:
+        linear-gradient(rgba(52,211,153,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(52,211,153,0.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+      animation: gridDrift 24s linear infinite;
+    }
+    @keyframes gridDrift { to { background-position: 40px 40px; } }
+    .glow {
+      position: fixed; border-radius: 50%; filter: blur(100px); pointer-events: none; z-index: 0;
+    }
+    .glow-a { width: 420px; height: 420px; background: #34d399; top: -140px; left: -100px; opacity: 0.18; animation: pulseGlow 5s ease infinite; }
+    .glow-b { width: 380px; height: 380px; background: #22d3ee; bottom: -120px; right: -80px; opacity: 0.15; animation: pulseGlow 6s ease infinite reverse; }
+    @keyframes pulseGlow { 0%,100% { opacity: 0.12; } 50% { opacity: 0.22; } }
+    .scanlines {
+      position: fixed; inset: 0; pointer-events: none; z-index: 1;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.1) 2px, rgba(0,0,0,0.1) 4px);
+    }
+    .screen {
+      display: none; position: relative; z-index: 2;
+      min-height: 100%; width: 100%;
+      padding: 1rem; box-sizing: border-box;
+    }
+    .screen.active {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    .panel {
+      text-align: center; padding: 2rem 1.8rem;
+      max-width: 640px; width: 92%;
+      max-height: calc(100vh - 2rem); overflow-y: auto;
+      background: linear-gradient(165deg, rgba(6,20,18,0.96), rgba(3,10,15,0.92));
+      border: 1px solid rgba(52,211,153,0.35);
+      border-radius: 14px;
+      box-shadow: 0 0 70px rgba(52,211,153,0.1), 0 0 40px rgba(34,211,238,0.06), inset 0 0 50px rgba(52,211,153,0.03);
+      backdrop-filter: blur(12px);
+    }
+    .badge {
+      display: inline-block; padding: 0.32rem 1rem; border-radius: 999px;
+      background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.4);
+      color: #34d399; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.18em; margin-bottom: 0.85rem;
+    }
+    h1 {
+      font-size: clamp(1.5rem, 4.5vw, 2.3rem); font-weight: 900;
+      background: linear-gradient(135deg, #ecfdf5 0%, #34d399 40%, #22d3ee 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      margin-bottom: 0.3rem; letter-spacing: 0.04em;
+    }
+    .sub { color: #6b8f84; font-size: 0.86rem; line-height: 1.65; margin-bottom: 1rem; }
+    .menu-stats {
+      display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;
+      margin: 0.85rem 0 1.1rem; padding: 0.65rem;
+      border: 1px solid rgba(34,211,238,0.15); border-radius: 8px; background: rgba(0,0,0,0.35);
+    }
+    .menu-stat { font-size: 0.68rem; color: #5a7a72; letter-spacing: 0.1em; }
+    .menu-stat b { display: block; font-size: 1.25rem; color: #22d3ee; margin-top: 0.12rem; }
+    button {
+      cursor: pointer; border: 1px solid rgba(52,211,153,0.45);
+      background: linear-gradient(180deg, rgba(52,211,153,0.14), rgba(52,211,153,0.04));
+      color: #34d399; padding: 0.6rem 1.1rem; font-size: 0.84rem; font-weight: 600;
+      border-radius: 6px; transition: all 0.2s; letter-spacing: 0.05em;
+    }
+    button:hover { background: rgba(52,211,153,0.22); box-shadow: 0 0 22px rgba(52,211,153,0.2); transform: translateY(-1px); }
+    button.cyan { border-color: rgba(34,211,238,0.5); color: #22d3ee; background: linear-gradient(180deg, rgba(34,211,238,0.12), rgba(34,211,238,0.03)); }
+    button.cyan:hover { background: rgba(34,211,238,0.2); box-shadow: 0 0 22px rgba(34,211,238,0.2); }
+    button.primary { background: linear-gradient(180deg, rgba(52,211,153,0.55), rgba(34,211,238,0.35)); color: #fff; border-color: #34d399; }
+    button.selected { background: rgba(52,211,153,0.32); border-color: #34d399; color: #ecfdf5; box-shadow: 0 0 18px rgba(52,211,153,0.25); }
+    button:disabled { opacity: 0.35; cursor: not-allowed; transform: none; box-shadow: none; }
+    .btn-row { display: flex; gap: 0.65rem; justify-content: center; flex-wrap: wrap; margin-top: 0.85rem; }
+    .diff-group { display: flex; gap: 0.45rem; justify-content: center; flex-wrap: wrap; margin: 0.85rem 0; }
+    .help-box { text-align: left; font-size: 0.82rem; line-height: 1.75; color: #8fb8aa; max-height: 52vh; overflow-y: auto; }
+    .help-box h3 { color: #34d399; font-size: 0.9rem; margin: 0.9rem 0 0.3rem; }
+    .help-box h3:first-child { margin-top: 0; }
+    .help-box ul { padding-left: 1.15rem; }
+    .help-box li { margin-bottom: 0.28rem; }
+    .legend { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; margin: 0.6rem 0; font-size: 0.68rem; color: #6b8f84; }
+    .legend span { padding: 0.2rem 0.5rem; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); }
+    /* Level select */
+    .level-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.45rem;
+      margin: 0.85rem 0; max-width: 360px; margin-left: auto; margin-right: auto;
+    }
+    .lvl-btn {
+      aspect-ratio: 1; padding: 0.35rem; font-size: 0.72rem;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.15rem;
+      position: relative;
+    }
+    .lvl-btn .num { font-size: 1rem; font-weight: 800; color: #22d3ee; }
+    .lvl-btn .stars { font-size: 0.55rem; letter-spacing: -0.05em; color: #fbbf24; }
+    .lvl-btn.locked { opacity: 0.35; pointer-events: none; }
+    .lvl-btn.cleared { border-color: rgba(52,211,153,0.6); }
+    /* Game screen */
+    #gameScreen { padding: 0.35rem 0.45rem 0.5rem; }
+    #gameScreen.active { justify-content: flex-start; height: 100%; overflow: hidden; }
+    html.in-game, html.in-game body { height: 100%; overflow: hidden; }
+    html.in-game body { display: flex; flex-direction: column; }
+    html.in-game .screen.active { flex: 1; min-height: 0; width: 100%; }
+    html.in-game .glow { opacity: 0; }
+    .game-wrap {
+      display: flex; flex-direction: column; align-items: stretch;
+      width: 100%; max-width: min(720px, 100%); height: 100%; max-height: 100%; min-height: 0;
+    }
+    .hud {
+      flex-shrink: 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.3rem; margin-bottom: 0.35rem;
+    }
+    .hud-block {
+      padding: 0.38rem 0.4rem; text-align: center;
+      border: 1px solid rgba(34,211,238,0.2); background: rgba(0,0,0,0.55); border-radius: 6px;
+      position: relative; overflow: hidden;
+    }
+    .hud-block::before {
+      content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(52,211,153,0.5), transparent);
+    }
+    .hud-label { font-size: 0.58rem; color: #5a7a72; letter-spacing: 0.12em; }
+    .hud-block b { display: block; font-size: 1rem; color: #34d399; margin-top: 0.08rem; font-variant-numeric: tabular-nums; }
+    .hud-block.combo-active b { color: #22d3ee; text-shadow: 0 0 12px rgba(34,211,238,0.5); }
+    .integrity-bar { height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; margin-top: 0.2rem; overflow: hidden; }
+    .integrity-fill { height: 100%; background: linear-gradient(90deg, #ef4444, #34d399); transition: width 0.3s; }
+    .timer-wrap { flex-shrink: 0; margin-bottom: 0.35rem; }
+    .timer-label { display: flex; justify-content: space-between; font-size: 0.65rem; color: #5a7a72; margin-bottom: 0.2rem; letter-spacing: 0.1em; }
+    .timer-bar { height: 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(34,211,238,0.15); border-radius: 4px; overflow: hidden; }
+    .timer-fill { height: 100%; background: linear-gradient(90deg, #22d3ee, #34d399); transition: width 0.15s linear; box-shadow: 0 0 10px rgba(34,211,238,0.4); }
+    .timer-fill.danger { background: linear-gradient(90deg, #ef4444, #f97316); }
+    .game-toolbar { flex-shrink: 0; display: flex; gap: 0.3rem; flex-wrap: wrap; justify-content: center; margin-bottom: 0.35rem; }
+    .tool-btn { padding: 0.35rem 0.65rem; font-size: 0.7rem; }
+    .canvas-wrap {
+      position: relative; flex: 1 1 auto; min-height: 0; width: 100%;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 8px; overflow: hidden;
+      border: 1px solid rgba(52,211,153,0.25);
+      box-shadow: 0 0 50px rgba(52,211,153,0.12), inset 0 0 30px rgba(0,0,0,0.5);
+    }
+    #gameCanvas { display: block; cursor: crosshair; max-width: 100%; max-height: 100%; }
+    .level-tag { flex-shrink: 0; text-align: center; font-size: 0.68rem; color: #5a7a72; margin-top: 0.3rem; letter-spacing: 0.08em; }
+    .level-tag b { color: #22d3ee; }
+    .hint { flex-shrink: 0; font-size: 0.68rem; color: #5a7a72; text-align: center; margin-top: 0.25rem; }
+    .toast {
+      position: absolute; top: 0.4rem; left: 50%; transform: translateX(-50%); z-index: 10;
+      padding: 0.35rem 0.75rem; font-size: 0.72rem; border-radius: 6px;
+      background: rgba(0,0,0,0.8); border: 1px solid rgba(52,211,153,0.4); color: #34d399;
+      pointer-events: none; opacity: 0; transition: opacity 0.3s;
+    }
+    .toast.show { opacity: 1; }
+    .pause-overlay {
+      position: fixed; inset: 0; z-index: 30; display: none; align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.75); backdrop-filter: blur(5px); padding: 1rem;
+    }
+    .pause-overlay.show { display: flex; }
+    .pause-box {
+      width: 100%; max-width: 340px; padding: 1.2rem 1.3rem; text-align: center;
+      border: 1px solid rgba(52,211,153,0.35); background: rgba(3,10,15,0.95); border-radius: 10px;
+    }
+    .pause-box h2 { font-size: 1.1rem; color: #34d399; margin-bottom: 0.3rem; }
+    .pause-box p { font-size: 0.76rem; color: #6b8f84; margin-bottom: 0.8rem; }
+    .result-grade {
+      font-size: 4rem; font-weight: 900; line-height: 1;
+      background: linear-gradient(180deg, #fff, #34d399);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      margin: 0.5rem 0;
+    }
+    .result-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin: 1rem 0; }
+    .result-stat { padding: 0.5rem; border: 1px solid rgba(34,211,238,0.15); background: rgba(0,0,0,0.3); border-radius: 6px; }
+    .result-stat .lbl { font-size: 0.62rem; color: #5a7a72; letter-spacing: 0.1em; }
+    .result-stat b { display: block; font-size: 1.1rem; color: #22d3ee; margin-top: 0.15rem; }
+    .np-save-hint { margin-top: 0.5rem; }
+    .countdown {
+      position: fixed; inset: 0; z-index: 40; display: none; align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.7); pointer-events: none;
+    }
+    .countdown.show { display: flex; }
+    .countdown-num { font-size: 5rem; font-weight: 900; color: #34d399; text-shadow: 0 0 40px rgba(52,211,153,0.6); }
+    @keyframes countPop { 0% { transform: scale(0.3); opacity: 0; } 60% { transform: scale(1.15); } 100% { transform: scale(1); opacity: 1; } }
+    .breach-flash {
+      position: fixed; inset: 0; z-index: 35; pointer-events: none; opacity: 0;
+      background: radial-gradient(circle, rgba(52,211,153,0.4) 0%, transparent 70%);
+      transition: opacity 0.5s;
+    }
+    .breach-flash.fail { background: radial-gradient(circle, rgba(239,68,68,0.35) 0%, transparent 70%); }
+    .breach-flash.show { opacity: 1; }
+  </style>
+</head>
+<body>
+  <div class="grid-bg"></div>
+  <div class="glow glow-a"></div>
+  <div class="glow glow-b"></div>
+  <div class="scanlines"></div>
+  <div class="breach-flash" id="breachFlash"></div>
+  <div class="countdown" id="countdown"><div class="countdown-num" id="countdownNum">3</div></div>
+  <div class="pause-overlay" id="pauseOverlay">
+    <div class="pause-box">
+      <h2>⏸ 連線暫停</h2>
+      <p>ICE 掃描已凍結，計時器停止。</p>
+      <div class="btn-row">
+        <button id="btnResume">繼續滲透</button>
+        <button class="cyan" id="btnPauseMenu">主選單</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen active" id="menuScreen">
+    <div class="panel">
+      <div class="badge">NEXUSPLAY DEMO</div>
+      <h1>訊號突破</h1>
+      <p class="sub">Signal Breach: ICE Protocol<br>在 8×8 節點網路中規劃滲透路徑，避開巡邏 ICE，奪取資料核心。</p>
+      <div class="menu-stats">
+        <div class="menu-stat">最高得分<b id="bestScore">0</b></div>
+        <div class="menu-stat">最佳評級<b id="bestGrade">—</b></div>
+        <div class="menu-stat">通關關卡<b id="clearedCount">0</b>/12</div>
+      </div>
+      <p style="font-size:0.72rem;color:#5a7a72;letter-spacing:0.1em;margin-bottom:0.4rem;">難度協議</p>
+      <div class="diff-group" id="diffGroup">
+        <button class="diff-btn selected" data-diff="easy">見習駭客</button>
+        <button class="diff-btn" data-diff="normal">滲透專家</button>
+        <button class="diff-btn" data-diff="hard">幽靈協議</button>
+      </div>
+      <div class="btn-row">
+        <button class="primary" id="btnLevels">選擇關卡</button>
+        <button id="btnHelp">操作說明</button>
+      </div>
+      <div class="btn-row">
+        <button class="cyan" id="btnLeaderboard">排行榜</button>
+        <button class="cyan" id="btnLeaveMenu">離開平台</button>
+      </div>
+      <div class="np-save-hint" id="saveHint"></div>
+    </div>
+  </div>
+
+  <div class="screen" id="levelScreen">
+    <div class="panel">
+      <div class="badge">LEVEL SELECT</div>
+      <h1 style="font-size:1.5rem;">關卡選擇</h1>
+      <p class="sub">完成關卡以解鎖下一層防火牆。星級依評級而定。</p>
+      <div class="level-grid" id="levelGrid"></div>
+      <div class="btn-row">
+        <button id="btnLevelBack">返回主選單</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen" id="helpScreen">
+    <div class="panel">
+      <div class="help-screen-header">
+        <h1 style="font-size:1.2rem;">操作說明</h1>
+        <button class="help-close-btn" id="btnHelpClose">關閉</button>
+      </div>
+      <div class="help-box">
+        <h3>🎯 目標</h3>
+        <ul>
+          <li>從<strong>接入點</strong>（綠色）出發，沿相鄰節點移動至<strong>資料核心</strong>（青色）。</li>
+          <li>每走一步 ICE 會巡邏移動；踩到 ICE 或與其同格將損失完整性。</li>
+          <li>在計時器歸零前完成突破，且完整性不歸零。</li>
+        </ul>
+        <h3>🧩 節點類型</h3>
+        <div class="legend">
+          <span style="color:#34d399">● 接入點</span>
+          <span style="color:#22d3ee">◆ 資料核心</span>
+          <span style="color:#ef4444">▲ ICE</span>
+          <span style="color:#6b7280">■ 鎖定節點</span>
+          <span style="color:#f97316">⬡ 防火牆</span>
+        </div>
+        <h3>⚡ 評分與連擊</h3>
+        <ul>
+          <li>連續安全移動累積<strong>連擊鏈</strong>，連擊越高加分越多。</li>
+          <li>剩餘時間、步數效率影響最終得分與評級 S/A/B/C/D。</li>
+          <li>難度影響 ICE 移動速度與計時上限。</li>
+        </ul>
+        <h3>🕹 操作</h3>
+        <ul>
+          <li>點擊與當前位置相鄰（上下左右）的可通行節點移動。</li>
+          <li>防火牆需額外一步穿透（消耗 2 步）。</li>
+          <li>可撤銷上一步（每關限 2 次）。</li>
+        </ul>
+      </div>
+      <div class="btn-row"><button id="btnHelpBack">返回</button></div>
+    </div>
+  </div>
+
+  <div class="screen" id="gameScreen">
+    <div class="game-wrap">
+      <div class="hud">
+        <div class="hud-block"><span class="hud-label">步數</span><b id="hudMoves">0</b></div>
+        <div class="hud-block"><span class="hud-label">得分</span><b id="hudScore">0</b></div>
+        <div class="hud-block" id="comboBlock"><span class="hud-label">連擊</span><b id="hudCombo">0</b></div>
+        <div class="hud-block"><span class="hud-label">完整性</span><b id="hudHp">3</b>
+          <div class="integrity-bar"><div class="integrity-fill" id="hpFill" style="width:100%"></div></div>
+        </div>
+        <div class="hud-block"><span class="hud-label">撤銷</span><b id="hudUndo">2</b></div>
+      </div>
+      <div class="timer-wrap">
+        <div class="timer-label"><span>突破計時</span><span id="timerText">60.0s</span></div>
+        <div class="timer-bar"><div class="timer-fill" id="timerFill" style="width:100%"></div></div>
+      </div>
+      <div class="game-toolbar">
+        <button class="tool-btn" id="btnPause">⏸ 暫停</button>
+        <button class="tool-btn" id="btnUndo">↩ 撤銷</button>
+        <button class="tool-btn cyan" id="btnGameHelp">❓ 說明</button>
+        <button class="tool-btn cyan" id="btnGameLb">🏆 排行</button>
+        <button class="tool-btn cyan" id="btnQuitGame">離開關卡</button>
+        <button class="tool-btn cyan" id="btnLeaveGame">← 離開</button>
+      </div>
+      <div class="canvas-wrap">
+        <canvas id="gameCanvas" width="480" height="480"></canvas>
+        <div class="toast" id="toast"></div>
+      </div>
+      <div class="level-tag">協議層級 <b id="levelName">—</b> · ICE <b id="iceCount">0</b></div>
+      <p class="hint">點擊相鄰節點規劃滲透路徑 · 避開紅色 ICE 巡邏</p>
+    </div>
+  </div>
+
+  <div class="screen" id="resultScreen">
+    <div class="panel">
+      <div class="badge" id="resultBadge">BREACH COMPLETE</div>
+      <h1 id="resultTitle">突破成功</h1>
+      <div class="result-grade" id="resultGrade">S</div>
+      <div class="result-stats">
+        <div class="result-stat"><span class="lbl">得分</span><b id="resScore">0</b></div>
+        <div class="result-stat"><span class="lbl">步數</span><b id="resMoves">0</b></div>
+        <div class="result-stat"><span class="lbl">最高連擊</span><b id="resCombo">0</b></div>
+      </div>
+      <p class="sub" id="resultMsg">—</p>
+      <div class="btn-row">
+        <button class="primary" id="btnNext">下一關</button>
+        <button id="btnRetry">重新滲透</button>
+      </div>
+      <div class="btn-row">
+        <button id="btnResultMenu">關卡選擇</button>
+        <button class="cyan" id="btnResultLeave">離開平台</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen" id="leaderboardScreen">
+    <div class="panel">
+      <div class="badge">LEADERBOARD</div>
+      <h1 style="font-size:1.4rem;">排行榜</h1>
+      <p id="lbLoading" style="font-size:0.8rem;color:#5a7a72;margin:1rem 0;">載入中…</p>
+      <div class="np-lb-list" id="lbList"></div>
+      <div class="btn-row"><button id="btnLbBack">返回</button></div>
+    </div>
+  </div>
+
+  <script src="/demos/platform-bridge.js"></script>
+  <script src="/demos/demo-game-enhance.js"></script>
+  <script>
+(function () {
+  'use strict';
+
+  var GRID = 8;
+  var CELL = 60;
+  var COLORS = {
+    bg: '#050f14', grid: 'rgba(52,211,153,0.08)', node: 'rgba(15,35,30,0.9)',
+    entry: '#34d399', core: '#22d3ee', path: 'rgba(52,211,153,0.35)',
+    player: '#ecfdf5', ice: '#ef4444', locked: '#374151', firewall: '#f97316',
+    highlight: 'rgba(34,211,238,0.45)', text: '#6b8f84'
+  };
+
+  var DIFF = {
+    easy:   { iceMult: 0.5, timeMult: 1.45, label: '見習駭客' },
+    normal: { iceMult: 1,   timeMult: 1,    label: '滲透專家' },
+    hard:   { iceMult: 1.8, timeMult: 0.72, label: '幽靈協議' }
+  };
+
+  var LEVELS = [
+    { name: '初始接入', time: 75, hp: 3, entry: [0,0], core: [7,7], locked: [], firewalls: [], ice: [{ path: [[3,0],[3,7]] }] },
+    { name: '側信道', time: 70, hp: 3, entry: [0,3], core: [7,4], locked: [[2,2],[2,3],[2,4]], firewalls: [], ice: [{ path: [[5,0],[5,7]] }, { path: [[0,5],[7,5]] }] },
+    { name: '雙層掃描', time: 68, hp: 3, entry: [0,0], core: [7,7], locked: [[1,1],[6,6]], firewalls: [[4,4]], ice: [{ path: [[0,7],[7,7],[7,0]] }] },
+    { name: '防火牆迷宮', time: 65, hp: 3, entry: [3,0], core: [3,7], locked: [[0,2],[1,2],[2,2],[5,2],[6,2],[7,2]], firewalls: [[3,3],[3,4]], ice: [{ path: [[0,0],[7,0]] }, { path: [[0,7],[7,7]] }] },
+    { name: '交叉巡邏', time: 62, hp: 3, entry: [0,0], core: [7,7], locked: [], firewalls: [[2,5],[5,2]], ice: [{ path: [[0,3],[7,3]] }, { path: [[3,0],[3,7]] }, { path: [[0,6],[7,6]] }] },
+    { name: '資料孤島', time: 60, hp: 2, entry: [0,4], core: [7,4], locked: [[3,0],[3,1],[3,2],[3,5],[3,6],[3,7],[4,0],[4,7]], firewalls: [[3,3],[3,4]], ice: [{ path: [[1,0],[1,7]] }, { path: [[6,0],[6,7]] }] },
+    { name: '幽靈迴路', time: 58, hp: 3, entry: [0,0], core: [0,7], locked: [[2,0],[2,1],[2,2],[2,3],[2,4],[2,5],[2,6]], firewalls: [[4,4],[5,5]], ice: [{ path: [[0,2],[7,2],[7,5],[0,5]] }, { path: [[5,0],[5,7]] }] },
+    { name: '三重 ICE', time: 55, hp: 2, entry: [4,0], core: [4,7], locked: [[0,3],[1,3],[2,3],[5,3],[6,3],[7,3]], firewalls: [[4,2],[4,5]], ice: [{ path: [[0,0],[7,0],[7,7],[0,7],[0,0]] }, { path: [[0,4],[7,4]] }, { path: [[4,0],[4,7]] }] },
+    { name: '鎖定核心', time: 52, hp: 2, entry: [0,0], core: [7,7], locked: [[6,5],[6,6],[6,7],[5,6],[5,7]], firewalls: [[3,3],[3,4],[4,3]], ice: [{ path: [[1,0],[1,7]] }, { path: [[7,1],[0,1]] }, { path: [[0,6],[7,6]] }] },
+    { name: '高速掃描', time: 48, hp: 2, entry: [0,7], core: [7,0], locked: [[3,2],[3,3],[3,4],[4,3]], firewalls: [[1,5],[5,1],[6,6]], ice: [{ path: [[0,0],[7,0],[7,7],[0,7]] }, { path: [[2,0],[2,7]] }, { path: [[5,0],[5,7]] }, { path: [[0,4],[7,4]] }] },
+    { name: '協議風暴', time: 45, hp: 2, entry: [0,3], core: [7,3], locked: [[1,1],[1,2],[6,1],[6,2],[1,5],[1,6],[6,5],[6,6]], firewalls: [[3,3],[4,3],[3,4],[4,4]], ice: [{ path: [[0,0],[7,0]] }, { path: [[0,7],[7,7]] }, { path: [[0,1],[7,1]] }, { path: [[0,6],[7,6]] }] },
+    { name: '終極 ICE', time: 40, hp: 1, entry: [0,0], core: [7,7], locked: [[2,2],[2,3],[2,4],[2,5],[5,2],[5,3],[5,4],[5,5]], firewalls: [[3,3],[4,4],[3,4],[4,3]], ice: [{ path: [[0,3],[7,3]] }, { path: [[3,0],[3,7]] }, { path: [[0,6],[7,6]] }, { path: [[6,0],[6,7]] }, { path: [[1,1],[6,6]] }] }
+  ];
+
+  var $ = function (id) { return document.getElementById(id); };
+  var screens = {
+    menu: $('menuScreen'), levels: $('levelScreen'), help: $('helpScreen'),
+    game: $('gameScreen'), result: $('resultScreen'), leaderboard: $('leaderboardScreen')
+  };
+
+  var canvas = $('gameCanvas');
+  var canvasInfo = DemoEnhance.resizeCanvas(canvas, GRID * CELL, GRID * CELL);
+  var ctx = canvasInfo.ctx;
+  var difficulty = 'normal', currentLevel = 0, progress = {};
+  var bestScore = 0, bestGrade = '—', levelStars = {}, maxUnlocked = 1;
+  var gameActive = false, paused = false, helpFromGame = false;
+  var timerId = null, timeLeft = 0, totalTime = 0;
+  var pulsePhase = 0, playerDisplay = { x: 0, y: 0 };
+  var moves = 0, score = 0, combo = 0, maxCombo = 0, integrity = 3, maxHp = 3;
+  var undosLeft = 2, playerPos = [0,0], path = [], particles = [];
+  var levelData = null, iceUnits = [], nodeMap = {}, firewallPending = null;
+  var historyStack = [];
+
+  function showScreen(name) {
+    Object.keys(screens).forEach(function (k) { screens[k].classList.remove('active'); });
+    screens[name].classList.add('active');
+    document.documentElement.classList.toggle('in-game', name === 'game');
+  }
+
+  function key(x, y) { return x + ',' + y; }
+
+  function buildNodeMap(ld) {
+    var map = {};
+    var x, y;
+    for (x = 0; x < GRID; x++) {
+      for (y = 0; y < GRID; y++) {
+        map[key(x, y)] = { type: 'empty', x: x, y: y };
+      }
+    }
+    map[key(ld.entry[0], ld.entry[1])].type = 'entry';
+    map[key(ld.core[0], ld.core[1])].type = 'core';
+    (ld.locked || []).forEach(function (p) { map[key(p[0], p[1])].type = 'locked'; });
+    (ld.firewalls || []).forEach(function (p) { map[key(p[0], p[1])].type = 'firewall'; });
+    return map;
+  }
+
+  function initIce(ld, diff) {
+    var mult = DIFF[diff].iceMult;
+    return (ld.ice || []).map(function (def, i) {
+      var pathArr = def.path.slice();
+      var idx = i % pathArr.length;
+      return {
+        path: pathArr, idx: idx, pos: pathArr[idx].slice(),
+        speed: Math.max(1, Math.round((def.speed || 1) * mult)),
+        pulse: Math.random() * Math.PI * 2
+      };
+    });
+  }
+
+  function getNeighbors(x, y) {
+    return [[x+1,y],[x-1,y],[x,y+1],[x,y-1]].filter(function (p) {
+      return p[0] >= 0 && p[0] < GRID && p[1] >= 0 && p[1] < GRID;
+    });
+  }
+
+  function isWalkable(x, y, ignoreFirewall) {
+    var n = nodeMap[key(x, y)];
+    if (!n) return false;
+    if (n.type === 'locked') return false;
+    if (n.type === 'firewall' && !ignoreFirewall) return true;
+    return n.type !== 'locked';
+  }
+
+  function iceAt(x, y) {
+    return iceUnits.some(function (ice) { return ice.pos[0] === x && ice.pos[1] === y; });
+  }
+
+  function spawnParticles(x, y, color, count) {
+    var cx = x * CELL + CELL / 2, cy = y * CELL + CELL / 2;
+    for (var i = 0; i < (count || 8); i++) {
+      var ang = Math.random() * Math.PI * 2;
+      var spd = 1 + Math.random() * 3;
+      particles.push({
+        x: cx, y: cy, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd,
+        life: 1, color: color, size: 1.5 + Math.random() * 2
+      });
+    }
+    DemoEnhance.capParticles(particles);
+  }
+
+  function showToast(msg) {
+    var el = $('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(function () { el.classList.remove('show'); }, 1600);
+  }
+
+  function updateHud() {
+    $('hudMoves').textContent = moves;
+    $('hudScore').textContent = score;
+    $('hudCombo').textContent = combo;
+    $('comboBlock').classList.toggle('combo-active', combo >= 2);
+    $('hudHp').textContent = integrity;
+    $('hpFill').style.width = Math.max(0, (integrity / maxHp) * 100) + '%';
+    $('hudUndo').textContent = undosLeft;
+  }
+
+  function pushHistory() {
+    historyStack.push({
+      playerPos: playerPos.slice(), path: path.map(function (p) { return p.slice(); }),
+      moves: moves, score: score, combo: combo, integrity: integrity,
+      iceUnits: iceUnits.map(function (ice) {
+        return { idx: ice.idx, pos: ice.pos.slice() };
+      }), firewallPending: firewallPending
+    });
+  }
+
+  function moveIce() {
+    iceUnits.forEach(function (ice) {
+      for (var s = 0; s < ice.speed; s++) {
+        ice.idx = (ice.idx + 1) % ice.path.length;
+        ice.pos = ice.path[ice.idx].slice();
+      }
+    });
+  }
+
+  function checkIceCollision() {
+    if (iceAt(playerPos[0], playerPos[1])) {
+      integrity--;
+      combo = 0;
+      spawnParticles(playerPos[0], playerPos[1], COLORS.ice, 16);
+      showToast('⚠ ICE 偵測！完整性 -1');
+      if (integrity <= 0) endLevel(false);
+      return true;
+    }
+    return false;
+  }
+
+  function addScore(base) {
+    var chainBonus = combo >= 2 ? Math.floor(base * (combo - 1) * 0.35) : 0;
+    score += base + chainBonus;
+  }
+
+  function tryMove(tx, ty) {
+    if (!gameActive || paused) return;
+    var px = playerPos[0], py = playerPos[1];
+    var dist = Math.abs(tx - px) + Math.abs(ty - py);
+    if (dist !== 1) return;
+    var node = nodeMap[key(tx, ty)];
+    if (!node || node.type === 'locked') return;
+
+    if (node.type === 'firewall') {
+      if (firewallPending && firewallPending[0] === px && firewallPending[1] === py) {
+        firewallPending = null;
+        spawnParticles(tx, ty, COLORS.firewall, 6);
+      } else {
+        pushHistory();
+        firewallPending = [tx, ty];
+        playerPos = [tx, ty];
+        path.push([tx, ty]);
+        moves++;
+        addScore(12);
+        combo++;
+        maxCombo = Math.max(maxCombo, combo);
+        spawnParticles(tx, ty, COLORS.firewall, 10);
+        showToast('防火牆穿透中…再移一步');
+        moveIce();
+        checkIceCollision();
+        updateHud();
+        return;
+      }
+    }
+
+    pushHistory();
+    playerPos = [tx, ty];
+    path.push([tx, ty]);
+    moves++;
+    addScore(10);
+    combo++;
+    maxCombo = Math.max(maxCombo, combo);
+    spawnParticles(tx, ty, COLORS.entry, 8);
+    moveIce();
+    if (!checkIceCollision()) {
+      if (node.type === 'core') {
+        var timeBonus = Math.floor(timeLeft * 8);
+        var moveBonus = Math.max(0, (levelData._optimal - moves) * 25);
+        score += timeBonus + moveBonus;
+        burstBreach(true);
+        setTimeout(function () { endLevel(true); }, 600);
+      }
+    }
+    updateHud();
+  }
+
+  function burstBreach(win) {
+    var flash = $('breachFlash');
+    flash.classList.toggle('fail', !win);
+    flash.classList.add('show');
+    setTimeout(function () { flash.classList.remove('show'); }, 500);
+    for (var i = 0; i < 40; i++) {
+      spawnParticles(Math.random() * GRID, Math.random() * GRID, win ? COLORS.core : COLORS.ice, 1);
+    }
+  }
+
+  function undoMove() {
+    if (!gameActive || paused || undosLeft <= 0 || historyStack.length === 0) return;
+    var state = historyStack.pop();
+    playerPos = state.playerPos;
+    path = state.path;
+    moves = state.moves;
+    score = state.score;
+    combo = state.combo;
+    integrity = state.integrity;
+    firewallPending = state.firewallPending;
+    iceUnits.forEach(function (ice, i) {
+      ice.idx = state.iceUnits[i].idx;
+      ice.pos = state.iceUnits[i].pos.slice();
+    });
+    undosLeft--;
+    playerDisplay.x = playerPos[0];
+    playerDisplay.y = playerPos[1];
+    updateHud();
+    showToast('已撤銷上一步');
+  }
+
+  function getGrade(win) {
+    if (!win) return 'D';
+    var ratio = timeLeft / totalTime;
+    var hpRatio = integrity / maxHp;
+    if (ratio >= 0.45 && hpRatio >= 1 && maxCombo >= 4) return 'S';
+    if (ratio >= 0.3 && hpRatio >= 0.66 && maxCombo >= 2) return 'A';
+    if (ratio >= 0.15 || hpRatio >= 0.5) return 'B';
+    if (integrity > 0) return 'C';
+    return 'D';
+  }
+
+  function starsFromGrade(g) {
+    return { S: 3, A: 2, B: 1, C: 0, D: 0 }[g] || 0;
+  }
+
+  function renderLevelGrid() {
+    var grid = $('levelGrid');
+    grid.innerHTML = '';
+    for (var i = 0; i < LEVELS.length; i++) {
+      var btn = document.createElement('button');
+      btn.className = 'lvl-btn';
+      var stars = levelStars[i] || 0;
+      var starStr = stars >= 3 ? '★★★' : stars === 2 ? '★★☆' : stars === 1 ? '★☆☆' : '☆☆☆';
+      btn.innerHTML = '<span class="num">' + (i + 1) + '</span><span class="stars">' + starStr + '</span>';
+      if (i + 1 > maxUnlocked) btn.classList.add('locked');
+      if (stars > 0) btn.classList.add('cleared');
+      (function (idx) {
+        btn.onclick = function () {
+          if (idx + 1 > maxUnlocked) return;
+          currentLevel = idx;
+          runCountdown(startLevel);
+        };
+      })(i);
+      grid.appendChild(btn);
+    }
+  }
+
+  function updatePlayerDisplay(dt) {
+    playerDisplay.x = DemoEnhance.smoothStep(playerDisplay.x, playerPos[0], 14, dt);
+    playerDisplay.y = DemoEnhance.smoothStep(playerDisplay.y, playerPos[1], 14, dt);
+  }
+
+  function drawGrid(dt) {
+    var dtScale = dt / 16.67;
+    ctx.fillStyle = COLORS.bg;
+    ctx.fillRect(0, 0, GRID * CELL, GRID * CELL);
+
+    var x, y;
+    for (x = 0; x < GRID; x++) {
+      for (y = 0; y < GRID; y++) {
+        var px = x * CELL, py = y * CELL;
+        ctx.strokeStyle = COLORS.grid;
+        ctx.strokeRect(px + 0.5, py + 0.5, CELL - 1, CELL - 1);
+        var node = nodeMap[key(x, y)];
+        var pulse = 0.5 + 0.5 * Math.sin(pulsePhase + x * 0.5 + y * 0.3);
+        ctx.fillStyle = COLORS.node;
+        ctx.beginPath();
+        var r = 6;
+        ctx.moveTo(px + 4 + r, py + 4);
+        ctx.lineTo(px + CELL - 4 - r, py + 4);
+        ctx.quadraticCurveTo(px + CELL - 4, py + 4, px + CELL - 4, py + 4 + r);
+        ctx.lineTo(px + CELL - 4, py + CELL - 4 - r);
+        ctx.quadraticCurveTo(px + CELL - 4, py + CELL - 4, px + CELL - 4 - r, py + CELL - 4);
+        ctx.lineTo(px + 4 + r, py + CELL - 4);
+        ctx.quadraticCurveTo(px + 4, py + CELL - 4, px + 4, py + CELL - 4 - r);
+        ctx.lineTo(px + 4, py + 4 + r);
+        ctx.quadraticCurveTo(px + 4, py + 4, px + 4 + r, py + 4);
+        ctx.closePath();
+        ctx.fill();
+
+        if (node.type === 'entry') {
+          ctx.fillStyle = 'rgba(52,211,153,' + (0.15 + pulse * 0.1) + ')';
+          ctx.fill();
+          ctx.strokeStyle = COLORS.entry;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.fillStyle = COLORS.entry;
+          ctx.font = 'bold 10px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('IN', px + CELL/2, py + CELL/2 + 4);
+        } else if (node.type === 'core') {
+          ctx.fillStyle = 'rgba(34,211,238,' + (0.12 + pulse * 0.12) + ')';
+          ctx.fill();
+          ctx.strokeStyle = COLORS.core;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(px + CELL/2, py + 14);
+          ctx.lineTo(px + CELL - 14, py + CELL/2);
+          ctx.lineTo(px + CELL/2, py + CELL - 14);
+          ctx.lineTo(px + 14, py + CELL/2);
+          ctx.closePath();
+          ctx.fillStyle = COLORS.core;
+          ctx.globalAlpha = 0.5 + pulse * 0.3;
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        } else if (node.type === 'locked') {
+          ctx.fillStyle = COLORS.locked;
+          ctx.globalAlpha = 0.7;
+          ctx.fill();
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = '#4b5563';
+          ctx.font = '14px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('✕', px + CELL/2, py + CELL/2 + 5);
+        } else if (node.type === 'firewall') {
+          ctx.fillStyle = 'rgba(249,115,22,' + (0.1 + pulse * 0.08) + ')';
+          ctx.fill();
+          ctx.strokeStyle = COLORS.firewall;
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+          if (firewallPending && playerPos[0] === x && playerPos[1] === y) {
+            ctx.strokeStyle = '#fbbf24';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([4, 3]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+          }
+        }
+      }
+    }
+
+    path.forEach(function (p, i) {
+      var cx = p[0] * CELL + CELL/2, cy = p[1] * CELL + CELL/2;
+      ctx.fillStyle = COLORS.path;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+      ctx.fill();
+      if (i > 0) {
+        var prev = path[i-1];
+        ctx.strokeStyle = 'rgba(52,211,153,0.5)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(prev[0]*CELL+CELL/2, prev[1]*CELL+CELL/2);
+        ctx.lineTo(cx, cy);
+        ctx.stroke();
+      }
+    });
+
+    iceUnits.forEach(function (ice) {
+      var ix = ice.pos[0] * CELL + CELL/2, iy = ice.pos[1] * CELL + CELL/2;
+      ice.pulse += dt * 0.005;
+      var r = 14 + Math.sin(ice.pulse) * 3;
+      var grd = ctx.createRadialGradient(ix, iy, 2, ix, iy, r);
+      grd.addColorStop(0, '#fca5a5');
+      grd.addColorStop(1, 'rgba(239,68,68,0)');
+      ctx.fillStyle = grd;
+      ctx.beginPath();
+      ctx.arc(ix, iy, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = COLORS.ice;
+      ctx.beginPath();
+      ctx.moveTo(ix, iy - 10);
+      ctx.lineTo(ix + 9, iy + 8);
+      ctx.lineTo(ix - 9, iy + 8);
+      ctx.closePath();
+      ctx.fill();
+    });
+
+    var nbrs = getNeighbors(playerPos[0], playerPos[1]);
+    nbrs.forEach(function (p) {
+      if (!isWalkable(p[0], p[1], true)) return;
+      var n = nodeMap[key(p[0], p[1])];
+      if (n.type === 'locked') return;
+      ctx.fillStyle = COLORS.highlight;
+      ctx.fillRect(p[0]*CELL+8, p[1]*CELL+8, CELL-16, CELL-16);
+    });
+
+    var plx = playerDisplay.x * CELL + CELL / 2, ply = playerDisplay.y * CELL + CELL / 2;
+    var pg = ctx.createRadialGradient(plx, ply, 2, plx, ply, 18);
+    pg.addColorStop(0, '#fff');
+    pg.addColorStop(0.5, COLORS.entry);
+    pg.addColorStop(1, 'rgba(52,211,153,0)');
+    ctx.fillStyle = pg;
+    ctx.beginPath();
+    ctx.arc(plx, ply, 18, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = COLORS.player;
+    ctx.beginPath();
+    ctx.arc(plx, ply, 8, 0, Math.PI*2);
+    ctx.fill();
+
+    particles = particles.filter(function (p) {
+      p.x += p.vx * dtScale; p.y += p.vy * dtScale; p.life -= dt * 0.0015; p.vy += 0.05 * dtScale;
+      if (p.life <= 0) return false;
+      ctx.globalAlpha = p.life;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI*2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      return true;
+    });
+  }
+
+  var loop = DemoEnhance.createGameLoop(function (dt) {
+    if (!gameActive) return;
+    pulsePhase += dt * 0.002;
+    updatePlayerDisplay(dt);
+    drawGrid(dt);
+  });
+
+  function canvasClick(e) {
+    if (!gameActive || paused) return;
+    var rect = canvas.getBoundingClientRect();
+    var cx = (e.clientX - rect.left) / rect.width * (GRID * CELL);
+    var cy = (e.clientY - rect.top) / rect.height * (GRID * CELL);
+    var gx = Math.floor(cx / CELL), gy = Math.floor(cy / CELL);
+    if (gx >= 0 && gx < GRID && gy >= 0 && gy < GRID) tryMove(gx, gy);
+  }
+
+  function stopTimer() {
+    clearInterval(timerId);
+    timerId = null;
+  }
+
+  function resumeTimer() {
+    if (!gameActive || paused) return;
+    stopTimer();
+    var fill = $('timerFill'), txt = $('timerText');
+    timerId = setInterval(function () {
+      if (paused) return;
+      timeLeft -= 0.1;
+      var pct = Math.max(0, (timeLeft / totalTime) * 100);
+      fill.style.width = pct + '%';
+      txt.textContent = Math.max(0, timeLeft).toFixed(1) + 's';
+      fill.classList.toggle('danger', timeLeft <= 8);
+      txt.style.color = timeLeft <= 8 ? '#ef4444' : '';
+      if (timeLeft <= 0) { stopTimer(); burstBreach(false); endLevel(false); }
+    }, 100);
+  }
+
+  function startLevel() {
+    var ld = LEVELS[currentLevel];
+    var diff = DIFF[difficulty];
+    levelData = ld;
+    levelData._optimal = Math.abs(ld.entry[0]-ld.core[0]) + Math.abs(ld.entry[1]-ld.core[1]) + 4;
+    nodeMap = buildNodeMap(ld);
+    iceUnits = initIce(ld, difficulty);
+    playerPos = ld.entry.slice();
+    path = [playerPos.slice()];
+    moves = 0; score = 0; combo = 0; maxCombo = 0;
+    maxHp = ld.hp; integrity = maxHp;
+    undosLeft = 2; firewallPending = null; historyStack = []; particles = [];
+    pulsePhase = 0;
+    playerDisplay.x = ld.entry[0]; playerDisplay.y = ld.entry[1];
+    paused = false; gameActive = true;
+    PlatformBridge.setGameSessionActive(true);
+    totalTime = ld.time * diff.timeMult;
+    timeLeft = totalTime;
+    $('timerFill').style.width = '100%';
+    $('timerFill').classList.remove('danger');
+    $('timerText').textContent = totalTime.toFixed(1) + 's';
+    $('timerText').style.color = '';
+    $('levelName').textContent = (currentLevel+1) + ' · ' + ld.name;
+    $('iceCount').textContent = iceUnits.length;
+    $('pauseOverlay').classList.remove('show');
+    $('btnPause').textContent = '⏸ 暫停';
+    updateHud();
+    showScreen('game');
+    loop.stop();
+    loop.start();
+    resumeTimer();
+  }
+
+  function endLevel(win) {
+    if (!gameActive) return;
+    stopTimer();
+    gameActive = false;
+    loop.stop();
+    var grade = getGrade(win);
+    var stars = starsFromGrade(grade);
+    if (win) {
+      var prev = levelStars[currentLevel] || 0;
+      if (stars > prev) levelStars[currentLevel] = stars;
+      if (currentLevel + 1 >= maxUnlocked && currentLevel < LEVELS.length - 1) maxUnlocked = currentLevel + 2;
+    }
+    $('resultBadge').textContent = win ? 'BREACH COMPLETE' : 'SIGNAL LOST';
+    $('resultTitle').textContent = win ? '✓ 突破成功' : '✗ 連線中斷';
+    $('resultGrade').textContent = grade;
+    $('resultGrade').style.background = win
+      ? 'linear-gradient(180deg,#fff,#34d399)' : 'linear-gradient(180deg,#888,#444)';
+    $('resultGrade').style.webkitBackgroundClip = 'text';
+    $('resultGrade').style.backgroundClip = 'text';
+    $('resScore').textContent = score.toLocaleString();
+    $('resMoves').textContent = moves;
+    $('resCombo').textContent = maxCombo;
+    $('resultMsg').textContent = win
+      ? '關卡「' + LEVELS[currentLevel].name + '」已滲透。剩餘完整性 ' + integrity + '，時間加成已結算。'
+      : 'ICE 協議阻斷了訊號。調整路徑後再試。';
+    $('btnNext').style.display = win && currentLevel < LEVELS.length - 1 ? '' : 'none';
+    showScreen('result');
+    persistResult(win, grade);
+  }
+
+  function applyProgress(p) {
+    if (!p) return;
+    bestScore = p.bestScore || 0;
+    bestGrade = p.bestGrade || '—';
+    levelStars = p.levelStars || {};
+    maxUnlocked = p.maxUnlocked || 1;
+    if (p.difficulty) difficulty = p.difficulty;
+    document.querySelectorAll('.diff-btn').forEach(function (b) {
+      b.classList.toggle('selected', b.dataset.diff === difficulty);
+    });
+    refreshMenu();
+  }
+
+  function refreshMenu() {
+    $('bestScore').textContent = bestScore.toLocaleString();
+    $('bestGrade').textContent = bestGrade;
+    var cleared = Object.keys(levelStars).filter(function (k) { return levelStars[k] > 0; }).length;
+    $('clearedCount').textContent = cleared;
+  }
+
+  async function persistResult(win, grade) {
+    var totalRunScore = score;
+    if (win) {
+      Object.keys(levelStars).forEach(function (k) {
+        totalRunScore += (levelStars[k] || 0) * 200;
+      });
+    }
+    bestScore = Math.max(bestScore, totalRunScore);
+    bestGrade = PlatformBridge.betterGrade(bestGrade, grade);
+    refreshMenu();
+    var result = await PlatformBridge.saveProgress({
+      bestScore: bestScore, bestGrade: bestGrade, difficulty: difficulty,
+      levelStars: levelStars, maxUnlocked: maxUnlocked,
+      _incrementGames: 1
+    });
+    PlatformBridge.setSaveHint($('saveHint'), result.synced, !!PlatformBridge.getUser());
+    await PlatformBridge.submitScore({
+      score: totalRunScore, grade: grade,
+      meta: { level: currentLevel + 1, moves: moves, combo: maxCombo, win: win, difficulty: difficulty }
+    });
+  }
+
+  function runCountdown(cb) {
+    var overlay = $('countdown'), numEl = $('countdownNum');
+    var seq = ['3','2','1','滲透!'];
+    var i = 0;
+    overlay.classList.add('show');
+    function step() {
+      if (i >= seq.length) { overlay.classList.remove('show'); cb(); return; }
+      numEl.textContent = seq[i];
+      numEl.style.animation = 'none';
+      void numEl.offsetWidth;
+      numEl.style.animation = 'countPop 0.65s ease';
+      i++;
+      setTimeout(step, i === seq.length ? 350 : 650);
+    }
+    step();
+  }
+
+  function togglePause(on) {
+    if (!gameActive) return;
+    paused = on;
+    if (on) {
+      stopTimer();
+      $('pauseOverlay').classList.add('show');
+      $('btnPause').textContent = '▶ 繼續';
+    } else {
+      $('pauseOverlay').classList.remove('show');
+      $('btnPause').textContent = '⏸ 暫停';
+      resumeTimer();
+    }
+  }
+
+  function resetSession() {
+    stopTimer();
+    gameActive = false;
+    PlatformBridge.setGameSessionActive(false);
+    paused = false;
+    loop.stop();
+    $('pauseOverlay').classList.remove('show');
+    $('countdown').classList.remove('show');
+    document.documentElement.classList.remove('in-game');
+  }
+
+  function quitToMenu(confirmFirst) {
+    if (confirmFirst && gameActive && !confirm('確定返回？目前進度可能尚未保存。')) return;
+    resetSession();
+    showScreen('menu');
+  }
+
+  function leavePlatform() {
+    if (!PlatformBridge.leaveToPlatform({ confirm: true })) return;
+    resetSession();
+  }
+
+  document.querySelectorAll('.diff-btn').forEach(function (btn) {
+    btn.onclick = function () {
+      document.querySelectorAll('.diff-btn').forEach(function (b) { b.classList.remove('selected'); });
+      btn.classList.add('selected');
+      difficulty = btn.dataset.diff;
+    };
+  });
+
+  $('btnLevels').onclick = function () { renderLevelGrid(); showScreen('levels'); };
+  $('btnLevelBack').onclick = function () { showScreen('menu'); };
+  $('btnHelp').onclick = function () { helpFromGame = false; showScreen('help'); };
+  $('btnHelpBack').onclick = closeHelp;
+  $('btnHelpClose').onclick = closeHelp;
+  var lbControl = DemoEnhance.setupLeaderboard({
+    menuButton: $('btnLeaderboard'),
+    inGameButton: $('btnGameLb'),
+    backButton: $('btnLbBack'),
+    listEl: $('lbList'),
+    loadingEl: $('lbLoading'),
+    showScreen: showScreen,
+    leaderboardScreen: 'leaderboard',
+    menuScreen: 'menu',
+    limit: 15,
+    onPause: function () {
+      if (gameActive && !paused) {
+        paused = true;
+        stopTimer();
+        $('btnPause').textContent = '▶ 繼續';
+      }
+      $('pauseOverlay').classList.remove('show');
+    }
+  });
+  $('btnLeaveMenu').onclick = function () { leavePlatform(); };
+  $('btnPause').onclick = function () { togglePause(!paused); };
+  $('btnResume').onclick = function () { togglePause(false); };
+  $('btnPauseMenu').onclick = function () { togglePause(false); quitToMenu(true); };
+  $('btnUndo').onclick = undoMove;
+  $('btnGameHelp').onclick = function () {
+    helpFromGame = true;
+    if (!paused) togglePause(true);
+    $('pauseOverlay').classList.remove('show');
+    showScreen('help');
+  };
+  $('btnQuitGame').onclick = function () { quitToMenu(true); };
+  $('btnRetry').onclick = function () { runCountdown(startLevel); };
+  $('btnNext').onclick = function () { currentLevel++; runCountdown(startLevel); };
+  $('btnResultMenu').onclick = function () { renderLevelGrid(); showScreen('levels'); };
+  $('btnResultLeave').onclick = function () { leavePlatform(); };
+  DemoEnhance.setupLeaveGuard({
+    getActive: function () { return gameActive; },
+    button: $('btnLeaveGame'),
+    stopGame: resetSession,
+  });
+  canvas.addEventListener('click', canvasClick);
+
+  function closeHelp() {
+    if (helpFromGame && !gameActive) { showScreen('menu'); helpFromGame = false; return; }
+    if (helpFromGame) {
+      helpFromGame = false;
+      showScreen('game');
+      togglePause(false);
+      return;
+    }
+    showScreen('menu');
+  }
+
+  PlatformBridge.init().then(function (p) {
+    applyProgress(p);
+    PlatformBridge.setSaveHint($('saveHint'), false, !!PlatformBridge.getUser());
+  });
+
+  window.addEventListener('resize', function () {
+    canvasInfo = DemoEnhance.resizeCanvas(canvas, GRID * CELL, GRID * CELL);
+    ctx = canvasInfo.ctx;
+    if (gameActive) drawGrid(16);
+  });
+})();
+  </script>
+</body>
+</html>

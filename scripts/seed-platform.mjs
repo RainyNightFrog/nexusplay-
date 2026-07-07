@@ -28,6 +28,61 @@ const NEW_GAMES = [
     rating_avg: 4.76,
     daysAgo: 8,
   },
+  {
+    title: "Neon Abyss: Void Runner",
+    description:
+      "在霓虹深淵中疾馳穿越三線虛空航道！閃避脈衝雷射與浮游地雷，蓄力虛空衝刺突破死局，收集能量核心疊加連擊倍率。每五波深淵領主降臨——唯有最頂尖的駕駛員能衝破虛無。",
+    category: "動作",
+    cover_url: "/covers/neon-abyss-runner-cover.png",
+    game_url: "/demos/neon-abyss-runner-preview.html",
+    plays_count: 72800,
+    rating_avg: 4.88,
+    daysAgo: 5,
+  },
+  {
+    title: "Signal Breach: ICE Protocol",
+    description:
+      "潛入企業主機的 8×8 訊號節點網路，在 ICE 安全程式巡邏的夾縊中，規劃滲透路徑直達資料核心。十二層防火牆關卡、倒數計時與連鎖破解加成。",
+    category: "益智",
+    cover_url: "/covers/signal-breach-cover.png",
+    game_url: "/demos/signal-breach-preview.html",
+    plays_count: 58400,
+    rating_avg: 4.84,
+    daysAgo: 6,
+  },
+  {
+    title: "Void Relay: Card Descent",
+    description:
+      "墜入虛空深淵的 Roguelike 卡牌征途！20 種虛空卡牌、敵人意圖預判、每層三選一強化卡組。第五層深淵領主守關，一路廝殺至第十五層深淵之底。",
+    category: "卡牌對戰",
+    cover_url: "/covers/void-relay-cover.png",
+    game_url: "/demos/void-relay-preview.html",
+    plays_count: 81200,
+    rating_avg: 4.91,
+    daysAgo: 4,
+  },
+  {
+    title: "Pulse Protocol: Neon Beat",
+    description:
+      "四軌霓虹節拍戰場！在脈衝協議的賽博律動中精準敲擊 Perfect / Great 判定，疊加連擊倍率衝入 Fever 狂熱模式。三首原創電子曲目 × 三種難度。",
+    category: "音樂節奏",
+    cover_url: "/covers/pulse-protocol-cover.png",
+    game_url: "/demos/pulse-protocol-preview.html",
+    plays_count: 66500,
+    rating_avg: 4.79,
+    daysAgo: 3,
+  },
+  {
+    title: "軌道回收：環形防線",
+    description:
+      "在環形軌道上部署脈衝、電磁、新星、冰霜與回收五系砲塔，攔截沿螺旋軌道殺向核心反應爐的敵潮。20 波攻防、環形升級槽位、BOSS 每五波來襲。",
+    category: "塔防",
+    cover_url: "/covers/orbital-salvage-cover.png",
+    game_url: "/demos/orbital-salvage-preview.html",
+    plays_count: 54300,
+    rating_avg: 4.86,
+    daysAgo: 7,
+  },
 ];
 
 const FORUM_SEED = {
@@ -239,6 +294,8 @@ async function main() {
       plays_count: game.plays_count,
       rating_avg: game.rating_avg,
       created_at: createdAt,
+      publish_status: "public",
+      status: "approved",
     }).select("id").single();
 
     if (error) {

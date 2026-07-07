@@ -45,6 +45,7 @@
     "fix:auth-urls": "node scripts/fix-auth-redirect-urls.mjs",
     "check:google": "node scripts/check-google-oauth.mjs",
     "db:forum": "node scripts/run-forum.mjs",
+    "db:chat": "node scripts/run-chat.mjs",
     "db:avatars": "node scripts/run-avatars.mjs",
     "db:seed": "node scripts/seed-platform.mjs",
     "db:assign-creator": "node scripts/assign-game-creator.mjs",

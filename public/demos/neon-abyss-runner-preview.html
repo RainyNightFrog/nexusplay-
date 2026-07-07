@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Neon Abyss: Void Runner · 霓虹深淵：虛空疾馳</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%; height: 100%;
+      background: #04060c;
+      color: #e2e8f0;
+      font-family: "Segoe UI", "Microsoft JhengHei", system-ui, sans-serif;
+      overflow-x: hidden; overflow-y: auto;
+    }
+    .grid-bg {
+      position: fixed; inset: 0; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(34,211,238,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(167,139,250,0.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+      animation: gridDrift 24s linear infinite;
+    }
+    @keyframes gridDrift { to { background-position: 40px 80px; } }
+    .glow { position: fixed; border-radius: 50%; filter: blur(100px); opacity: 0.32; pointer-events: none; }
+    .glow-1 { width: 480px; height: 480px; background: #22d3ee; top: -140px; left: -100px; animation: glowPulse 5s ease infinite; }
+    .glow-2 { width: 400px; height: 400px; background: #a78bfa; bottom: -120px; right: -80px; animation: glowPulse 6s ease infinite reverse; }
+    @keyframes glowPulse { 0%,100% { opacity: 0.22; } 50% { opacity: 0.42; } }
+    .scanline {
+      position: fixed; inset: 0; pointer-events: none; z-index: 1;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+    }
+    .screen { display: none; position: relative; z-index: 2; min-height: 100%; box-sizing: border-box; }
+    .screen.active { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1rem; }
+    .panel {
+      text-align: center; padding: 2rem 1.8rem;
+      max-width: 640px; width: 92%;
+      max-height: calc(100vh - 2rem); overflow-y: auto;
+      background: linear-gradient(165deg, rgba(12,18,32,0.96), rgba(6,10,18,0.92));
+      border: 1px solid rgba(34,211,238,0.35);
+      border-radius: 16px;
+      box-shadow: 0 0 70px rgba(34,211,238,0.1), 0 0 40px rgba(167,139,250,0.06), inset 0 0 50px rgba(34,211,238,0.02);
+      backdrop-filter: blur(12px);
+    }
+    .badge {
+      display: inline-block; padding: 0.35rem 1rem; border-radius: 999px;
+      background: rgba(34,211,238,0.1); border: 1px solid rgba(34,211,238,0.45);
+      color: #22d3ee; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.16em; margin-bottom: 0.9rem;
+    }
+    h1 {
+      font-size: clamp(1.5rem, 4.5vw, 2.35rem); font-weight: 900;
+      background: linear-gradient(135deg, #fff 0%, #22d3ee 40%, #a78bfa 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      margin-bottom: 0.35rem; letter-spacing: 0.03em;
+    }
+    .sub { color: #94a3b8; font-size: 0.88rem; margin-bottom: 1rem; line-height: 1.65; }
+    .menu-stats {
+      display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;
+      margin: 1rem 0 1.1rem; padding: 0.75rem;
+      border: 1px solid rgba(167,139,250,0.2); border-radius: 10px; background: rgba(0,0,0,0.35);
+    }
+    .menu-stat { font-size: 0.68rem; color: #64748b; letter-spacing: 0.1em; min-width: 4.5rem; }
+    .menu-stat b { display: block; font-size: 1.25rem; color: #22d3ee; margin-top: 0.2rem; font-variant-numeric: tabular-nums; }
+    .diff-group { display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; margin: 0.9rem 0; }
+    button {
+      cursor: pointer; border: 1px solid rgba(34,211,238,0.4);
+      background: linear-gradient(180deg, rgba(34,211,238,0.12), rgba(167,139,250,0.06));
+      color: #67e8f9; padding: 0.6rem 1.1rem; font-size: 0.84rem; font-weight: 600;
+      border-radius: 8px; transition: all 0.2s; letter-spacing: 0.04em;
+    }
+    button:hover { background: rgba(34,211,238,0.22); box-shadow: 0 0 22px rgba(34,211,238,0.25); transform: translateY(-1px); }
+    button.selected { background: rgba(167,139,250,0.35); border-color: #a78bfa; color: #fff; box-shadow: 0 0 18px rgba(167,139,250,0.35); }
+    button.primary { background: linear-gradient(180deg, rgba(34,211,238,0.55), rgba(167,139,250,0.45)); color: #fff; border-color: #22d3ee; }
+    button.primary:hover { box-shadow: 0 0 28px rgba(34,211,238,0.4); }
+    button:disabled { opacity: 0.38; cursor: not-allowed; transform: none; box-shadow: none; }
+    .btn-row { display: flex; gap: 0.7rem; justify-content: center; flex-wrap: wrap; margin-top: 1rem; }
+    .help-box { text-align: left; font-size: 0.83rem; line-height: 1.75; color: #cbd5e1; max-height: 52vh; overflow-y: auto; }
+    .help-box h3 { color: #a78bfa; font-size: 0.9rem; margin: 1rem 0 0.35rem; }
+    .help-box h3:first-child { margin-top: 0; }
+    .help-box ul { padding-left: 1.2rem; }
+    .help-box li { margin-bottom: 0.28rem; }
+    .help-box strong { color: #22d3ee; }
+    #gameScreen { padding: 0; }
+    #gameScreen.active {
+      justify-content: center; align-items: center;
+      padding: 0.3rem 0.4rem 0.45rem; overflow: hidden; height: 100%; min-height: 0; flex: 1;
+    }
+    html.in-game, html.in-game body { height: 100%; overflow: hidden; }
+    html.in-game body { display: flex; flex-direction: column; }
+    html.in-game .screen.active { flex: 1; min-height: 0; width: 100%; }
+    html.in-game .glow { opacity: 0.12; }
+    .game-wrap {
+      display: flex; flex-direction: column; align-items: stretch;
+      width: 100%; max-width: min(960px, 100%);
+      height: 100%; max-height: 100%; min-height: 0;
+    }
+    .top-bar {
+      flex-shrink: 0; width: 100%;
+      display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.3rem;
+      padding: 0.42rem 0.55rem; background: rgba(0,0,0,0.65);
+      border: 1px solid rgba(34,211,238,0.25); border-radius: 8px; margin-bottom: 0.35rem; font-size: 0.72rem;
+    }
+    .top-stat { text-align: center; padding: 0.25rem; border-right: 1px solid rgba(34,211,238,0.1); }
+    .top-stat:last-child { border-right: none; }
+    .top-stat .label { font-size: 0.58rem; color: #64748b; letter-spacing: 0.1em; display: block; }
+    .top-stat b { color: #22d3ee; font-size: 1rem; font-variant-numeric: tabular-nums; }
+    .top-stat b.violet { color: #c4b5fd; }
+    .hp-dots { display: flex; gap: 3px; justify-content: center; margin-top: 0.2rem; }
+    .hp-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.12); border: 1px solid rgba(34,211,238,0.3); }
+    .hp-dot.on { background: #22d3ee; box-shadow: 0 0 8px #22d3ee; }
+    .hp-dot.shield { background: #a78bfa; box-shadow: 0 0 8px #a78bfa; }
+    .toolbar { flex-shrink: 0; display: flex; gap: 0.35rem; flex-wrap: wrap; margin-bottom: 0.32rem; justify-content: center; }
+    .tool-btn { padding: 0.38rem 0.65rem; font-size: 0.7rem; }
+    .canvas-wrap {
+      position: relative; flex: 1 1 auto; min-height: 0; width: 100%;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 8px; overflow: hidden;
+      box-shadow: 0 0 50px rgba(34,211,238,0.12), 0 4px 24px rgba(0,0,0,0.55);
+      border: 1px solid rgba(167,139,250,0.2);
+    }
+    canvas {
+      display: block; touch-action: none;
+      width: auto; height: 100%; max-width: 100%; max-height: 100%;
+      aspect-ratio: 16 / 10;
+      background: #060a14;
+    }
+    .hint { flex-shrink: 0; font-size: 0.68rem; color: #64748b; margin-top: 0.38rem; text-align: center; letter-spacing: 0.04em; }
+    .wave-banner {
+      position: absolute; inset: 0; z-index: 12; pointer-events: none;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      animation: waveBanner 2.2s ease forwards;
+    }
+    @keyframes waveBanner {
+      0% { opacity: 0; transform: scale(1.8); }
+      12% { opacity: 1; transform: scale(1); }
+      72% { opacity: 1; }
+      100% { opacity: 0; transform: scale(0.9); }
+    }
+    .wave-banner h2 { font-size: 2.4rem; font-weight: 900; color: #22d3ee; text-shadow: 0 0 40px rgba(34,211,238,0.8); letter-spacing: 0.12em; }
+    .wave-banner p { color: #a78bfa; font-size: 0.85rem; letter-spacing: 0.18em; margin-top: 0.4rem; }
+    .wave-banner.boss h2 { color: #f472b6; text-shadow: 0 0 50px rgba(244,114,182,0.7); }
+    .dash-cd {
+      position: absolute; bottom: 0.5rem; left: 50%; transform: translateX(-50%);
+      font-size: 0.65rem; color: #94a3b8; letter-spacing: 0.08em; z-index: 10; pointer-events: none;
+      background: rgba(0,0,0,0.55); padding: 0.25rem 0.6rem; border-radius: 999px;
+      border: 1px solid rgba(34,211,238,0.2);
+    }
+    .dash-cd.ready { color: #22d3ee; border-color: rgba(34,211,238,0.5); }
+    .grade-display {
+      font-size: 4rem; font-weight: 900; margin: 0.4rem 0;
+      background: linear-gradient(135deg, #fde047, #22d3ee, #a78bfa);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      text-shadow: none; filter: drop-shadow(0 0 20px rgba(34,211,238,0.4));
+    }
+    .go-stats {
+      display: flex; gap: 1.2rem; justify-content: center; flex-wrap: wrap;
+      margin: 0.8rem 0; font-size: 0.76rem; color: #64748b;
+    }
+    .go-stats b { display: block; color: #22d3ee; font-size: 1.15rem; margin-top: 0.15rem; }
+    .go-lb-wrap { margin-top: 0.5rem; text-align: left; }
+    .go-lb-title { font-size: 0.78rem; color: #a78bfa; letter-spacing: 0.1em; margin-bottom: 0.4rem; text-align: center; }
+    @media (max-width: 560px) {
+      .top-bar { grid-template-columns: repeat(3, 1fr); }
+      .tool-btn { padding: 0.35rem 0.5rem; font-size: 0.66rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="grid-bg"></div>
+  <div class="glow glow-1"></div>
+  <div class="glow glow-2"></div>
+  <div class="scanline"></div>
+
+  <div id="menu" class="screen active">
+    <div class="panel">
+      <span class="badge">VOID RUNNER · ENDLESS</span>
+      <h1>霓虹深淵：虛空疾馳</h1>
+      <p class="sub">Neon Abyss: Void Runner<br>三線道無盡疾馳 · 穿越雷射與深淵障壁，收集能量維持連擊倍率</p>
+      <div class="menu-stats">
+        <div class="menu-stat">最高得分<b id="bestScore">0</b></div>
+        <div class="menu-stat">最高波次<b id="bestWave">—</b></div>
+        <div class="menu-stat">最高連擊<b id="bestCombo">×1</b></div>
+        <div class="menu-stat">最佳評級<b id="bestGrade">—</b></div>
+      </div>
+      <p style="font-size:0.76rem;color:#64748b;letter-spacing:0.1em;">選擇難度</p>
+      <div class="diff-group" id="menuDiff">
+        <button class="diff-btn selected" data-diff="easy">休閒</button>
+        <button class="diff-btn" data-diff="normal">標準</button>
+        <button class="diff-btn" data-diff="hard">深淵</button>
+      </div>
+      <div class="btn-row">
+        <button class="primary" id="btnStart">▶ 開始疾馳</button>
+        <button id="btnHelp">遊戲說明</button>
+        <button id="btnLeaderboard">🏆 排行榜</button>
+        <button id="btnLeaveMenu">← 離開平台</button>
+      </div>
+      <p class="np-save-hint" id="saveHint">讀取進度中…</p>
+    </div>
+  </div>
+
+  <div id="help" class="screen">
+    <div class="panel">
+      <div class="help-screen-header" style="display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:.75rem;">
+        <h1 style="margin:0!important;flex:1;text-align:left!important;font-size:1.1rem!important;">遊戲說明</h1>
+        <button type="button" class="help-close-btn" id="btnHelpClose" style="cursor:pointer;border:1px solid rgba(167,139,250,.5);background:rgba(167,139,250,.12);color:#c4b5fd;padding:.45rem .9rem;font-size:.78rem;font-weight:700;border-radius:6px;">✕ 關閉</button>
+      </div>
+      <div class="help-box">
+        <h3>🎯 遊戲目標</h3>
+        <p>操控虛空戰機在三線深淵航道中無盡疾馳。躲避障礙、穿越雷射、收集能量球維持連擊倍率，盡可能存活更多波次並取得高評級。</p>
+        <h3>🕹️ 操作</h3>
+        <ul>
+          <li><strong>A / D</strong> 或 <strong>← / →</strong>：切換左／中／右線道</li>
+          <li><strong>空白鍵</strong>：虛空衝刺（可穿越障礙，有冷卻）</li>
+          <li><strong>觸控滑動</strong>：左右滑動切換線道</li>
+          <li><strong>ESC / P</strong>：暫停遊戲</li>
+        </ul>
+        <h3>⚡ 障礙類型</h3>
+        <ul>
+          <li><strong>能量障壁（青）：</strong> 佔據單一線道，需閃避或衝刺穿越</li>
+          <li><strong>脈衝雷射（紫）：</strong> 橫掃一至兩條線道，注意預警閃爍</li>
+          <li><strong>游離地雷（粉）：</strong> 在線道間橫移，時機難以預測</li>
+        </ul>
+        <h3>👾 BOSS 波（每 5 波）</h3>
+        <ul>
+          <li><strong>第 5 波：</strong> 三重雷射掃射 — 雷射交替封鎖線道</li>
+          <li><strong>第 10 波：</strong> 障壁長城 — 連續障壁牆需精準衝刺</li>
+          <li><strong>第 15+ 波：</strong> 深淵風暴 — 地雷環繞與雷射交織</li>
+        </ul>
+        <h3>💎 道具與系統</h3>
+        <ul>
+          <li><strong>能量球：</strong> 收集提升連擊倍率（最高 ×5），久未收集會衰減</li>
+          <li><strong>護盾核心：</strong> 吸收一次傷害，外觀為紫色光環</li>
+          <li><strong>生命值：</strong> 共 3 點，撞擊障礙扣除 1 點</li>
+          <li><strong>評級：</strong> S ≥ 50000 · A ≥ 30000 · B ≥ 15000 · C ≥ 5000 · D 以下</li>
+        </ul>
+        <h3>⚙️ 難度</h3>
+        <ul>
+          <li><strong>休閒：</strong> 較慢速度、較低生成率，適合入門</li>
+          <li><strong>標準：</strong> 平衡挑戰</li>
+          <li><strong>深淵：</strong> 極速與高密度障礙，連擊獎勵更高</li>
+        </ul>
+      </div>
+      <div class="btn-row"><button class="primary" id="btnHelpBack">返回主選單</button></div>
+    </div>
+  </div>
+
+  <div id="leaderboardScreen" class="screen">
+    <div class="panel">
+      <h1>排行榜</h1>
+      <p class="sub">虛空疾馳最高紀錄</p>
+      <div id="lbLoading" style="color:#64748b;font-size:0.85rem;">載入中…</div>
+      <div class="np-lb-list" id="lbList"></div>
+      <div class="btn-row"><button id="btnLbBack">返回</button></div>
+    </div>
+  </div>
+
+  <div id="gameScreen" class="screen">
+    <div class="game-wrap">
+      <div class="top-bar">
+        <div class="top-stat"><span class="label">得分</span><b id="hudScore">0</b></div>
+        <div class="top-stat"><span class="label">波次</span><b id="hudWave">1</b></div>
+        <div class="top-stat"><span class="label">連擊</span><b class="violet" id="hudCombo">×1.0</b></div>
+        <div class="top-stat"><span class="label">距離</span><b id="hudDist">0</b></div>
+        <div class="top-stat">
+          <span class="label">生命</span>
+          <div class="hp-dots" id="hpDots"></div>
+        </div>
+        <div class="top-stat"><span class="label">護盾</span><b class="violet" id="hudShield">—</b></div>
+      </div>
+      <div class="toolbar">
+        <button class="tool-btn" id="btnPause">⏸ 暫停</button>
+        <button class="tool-btn" id="btnGameLb">🏆 排行</button>
+        <button class="tool-btn" id="btnGameHelp">❓ 說明</button>
+        <button class="tool-btn" id="btnQuit">🏠 主選單</button>
+        <button class="tool-btn" id="btnLeaveGame" style="border-color:rgba(248,113,113,0.45);color:#fca5a5;">← 離開</button>
+      </div>
+      <div class="canvas-wrap" id="canvasWrap">
+        <canvas id="canvas" width="960" height="600"></canvas>
+        <div class="dash-cd" id="dashCd">衝刺就緒 · SPACE</div>
+      </div>
+      <p class="hint">A/D 切換線道 · 空白鍵衝刺穿越障壁 · 收集能量球維持連擊</p>
+    </div>
+  </div>
+
+  <div id="gameover" class="screen">
+    <div class="panel">
+      <span class="badge">MISSION END</span>
+      <h1>任務結束</h1>
+      <div class="grade-display" id="goGrade">B</div>
+      <div class="go-stats">
+        <div>最終得分<b id="goScore">0</b></div>
+        <div>存活波次<b id="goWave">0</b></div>
+        <div>最高連擊<b id="goCombo">×1</b></div>
+        <div>行駛距離<b id="goDist">0</b></div>
+      </div>
+      <p class="sub" id="goMsg" style="margin-bottom:0.6rem;"></p>
+      <div class="go-lb-wrap">
+        <div class="go-lb-title">🏆 排行榜</div>
+        <p id="goLbLoading" style="font-size:0.8rem;color:#64748b;text-align:center;">載入中…</p>
+        <div class="np-lb-list" id="goLbList"></div>
+      </div>
+      <div class="btn-row">
+        <button class="primary" id="btnRetry">再玩一次</button>
+        <button id="btnGoMenu">主選單</button>
+        <button id="btnLeaveGo">← 離開平台</button>
+      </div>
+      <p class="np-save-hint" id="goSaveHint"></p>
+    </div>
+  </div>
+
+  <script src="/demos/platform-bridge.js"></script>
+  <script src="/demos/demo-game-enhance.js"></script>
+  <script>
+(function () {
+  'use strict';
+
+  const W = 960, H = 600;
+  const LANES = [W * 0.25, W * 0.5, W * 0.75];
+  const PLAYER_Y = H * 0.82;
+  const LANE_SWITCH_MS = 140;
+
+  const DIFF = {
+    easy:   { scroll: 220, spawn: 1.35, orbRate: 0.55, comboDecay: 0.00018, scoreMul: 1.0,  label: '休閒' },
+    normal: { scroll: 300, spawn: 1.0,  orbRate: 0.42, comboDecay: 0.00028, scoreMul: 1.25, label: '標準' },
+    hard:   { scroll: 390, spawn: 0.72, orbRate: 0.32, comboDecay: 0.00038, scoreMul: 1.6,  label: '深淵' },
+  };
+
+  const GRADE_THRESH = [
+    { g: 'S', min: 50000 },
+    { g: 'A', min: 30000 },
+    { g: 'B', min: 15000 },
+    { g: 'C', min: 5000 },
+    { g: 'D', min: 0 },
+  ];
+
+  const $ = (id) => document.getElementById(id);
+  const screens = { menu: $('menu'), help: $('help'), leaderboard: $('leaderboardScreen'), game: $('gameScreen'), gameover: $('gameover') };
+
+  let difficulty = 'easy', cfg = DIFF.easy;
+  let canvas, ctx, gameLoopCtrl, paused = false, running = false;
+  let helpFromGame = false;
+
+  let player = {}, obstacles = [], orbs = [], pickups = [], particles = [], floatTexts = [];
+  let score = 0, wave = 1, distance = 0, combo = 1, maxCombo = 1, hp = 3, shield = false;
+  let dashCd = 0, dashActive = false, dashTimer = 0, laneT = 0, targetLane = 1, currentLane = 1;
+  let spawnTimer = 0, waveTimer = 0, waveDuration = 18000, waveSpawns = 0, waveTarget = 12;
+  let shake = 0, scrollY = 0, bgPhase = 0, bossActive = false, invuln = 0;
+  let bestScore = 0, bestWave = 0, bestCombo = 1, bestGrade = '—';
+
+  const keys = {};
+  let touchStartX = 0, touchStartY = 0;
+
+  function showScreen(name) {
+    Object.values(screens).forEach((s) => s.classList.remove('active'));
+    screens[name].classList.add('active');
+    document.documentElement.classList.toggle('in-game', name === 'game');
+  }
+
+  function calcGrade(s) {
+    for (let i = 0; i < GRADE_THRESH.length; i++) {
+      if (s >= GRADE_THRESH[i].min) return GRADE_THRESH[i].g;
+    }
+    return 'D';
+  }
+
+  function applyProgress(p) {
+    if (!p) return;
+    bestScore = p.bestScore || 0;
+    bestWave = p.bestWave || 0;
+    bestCombo = p.bestCombo || 1;
+    bestGrade = p.bestGrade || '—';
+    refreshMenuStats();
+    if (p.difficulty && DIFF[p.difficulty]) {
+      difficulty = p.difficulty;
+      document.querySelectorAll('.diff-btn').forEach((b) => {
+        b.classList.toggle('selected', b.dataset.diff === difficulty);
+      });
+    }
+  }
+
+  function refreshMenuStats() {
+    $('bestScore').textContent = bestScore.toLocaleString();
+    $('bestWave').textContent = bestWave || '—';
+    $('bestCombo').textContent = '×' + (bestCombo % 1 === 0 ? bestCombo : bestCombo.toFixed(1));
+    $('bestGrade').textContent = bestGrade;
+  }
+
+  function updateHpDots() {
+    const el = $('hpDots');
+    let html = '';
+    for (let i = 0; i < 3; i++) {
+      let cls = 'hp-dot';
+      if (i < hp) cls += ' on';
+      if (shield && i === hp) cls += ' shield';
+      html += '<span class="' + cls + '"></span>';
+    }
+    el.innerHTML = html;
+    $('hudShield').textContent = shield ? 'ON' : '—';
+  }
+
+  function updateHud() {
+    $('hudScore').textContent = Math.floor(score).toLocaleString();
+    $('hudWave').textContent = wave;
+    $('hudCombo').textContent = '×' + combo.toFixed(1);
+    $('hudDist').textContent = Math.floor(distance).toLocaleString() + 'm';
+    updateHpDots();
+    const dashEl = $('dashCd');
+    if (dashActive) {
+      dashEl.textContent = '衝刺中…';
+      dashEl.className = 'dash-cd ready';
+    } else if (dashCd > 0) {
+      dashEl.textContent = '冷卻 ' + (dashCd / 1000).toFixed(1) + 's';
+      dashEl.className = 'dash-cd';
+    } else {
+      dashEl.textContent = '衝刺就緒 · SPACE';
+      dashEl.className = 'dash-cd ready';
+    }
+  }
+
+  function showWaveBanner(isBoss) {
+    const wrap = $('canvasWrap');
+    const old = wrap.querySelector('.wave-banner');
+    if (old) old.remove();
+    const div = document.createElement('div');
+    div.className = 'wave-banner' + (isBoss ? ' boss' : '');
+    const bossNames = ['', '', '', '', '三重雷射掃射', '深淵障壁長城', '深淵風暴'];
+    const bossIdx = Math.min(wave, bossNames.length - 1, Math.floor(wave / 5) * 5);
+    div.innerHTML = isBoss
+      ? '<h2>BOSS WAVE ' + wave + '</h2><p>' + (bossNames[bossIdx] || '深淵風暴') + '</p>'
+      : '<h2>WAVE ' + wave + '</h2><p>VOID CORRIDOR</p>';
+    wrap.appendChild(div);
+    setTimeout(() => div.remove(), 2200);
+  }
+
+  function resetGame() {
+    cfg = DIFF[difficulty];
+    player = { lane: 1, x: LANES[1], y: PLAYER_Y, w: 36, h: 44, tilt: 0 };
+    currentLane = 1; targetLane = 1; laneT = 1;
+    obstacles = []; orbs = []; pickups = []; particles = []; floatTexts = [];
+    score = 0; wave = 1; distance = 0; combo = 1; maxCombo = 1;
+    hp = 3; shield = false; dashCd = 0; dashActive = false; dashTimer = 0;
+    spawnTimer = 800; waveTimer = 0; waveSpawns = 0;
+    waveTarget = 10; waveDuration = 16000;
+    shake = 0; scrollY = 0; bgPhase = 0; bossActive = false; invuln = 0;
+    paused = false; running = true;
+    PlatformBridge.setGameSessionActive(true);
+    $('btnPause').textContent = '⏸ 暫停';
+    setupWave();
+    updateHud();
+  }
+
+  function setupWave() {
+    const isBoss = wave % 5 === 0;
+    bossActive = isBoss;
+    waveSpawns = 0;
+    waveTimer = 0;
+    waveTarget = isBoss ? 1 : 8 + Math.floor(wave * 1.2);
+    waveDuration = isBoss ? 28000 : 14000 + wave * 400;
+    showWaveBanner(isBoss);
+    if (isBoss) spawnBossPattern();
+  }
+
+  function laneX(lane) { return LANES[Math.max(0, Math.min(2, lane))]; }
+
+  function nearestLane(x) {
+    let best = 0, d = Infinity;
+    for (let i = 0; i < 3; i++) {
+      const dd = Math.abs(x - LANES[i]);
+      if (dd < d) { d = dd; best = i; }
+    }
+    return best;
+  }
+
+  function playerLane() {
+    return laneT < 1 ? nearestLane(player.x) : currentLane;
+  }
+
+  function spawnBarrier(lane, y) {
+    obstacles.push({ type: 'barrier', lane: lane, x: laneX(lane), y: y || -60, w: 70, h: 28, hit: false, warn: 0 });
+  }
+
+  function spawnLaser(lanes, y, width) {
+    obstacles.push({
+      type: 'laser', lanes: lanes.slice(), y: y || -40, h: 14, warn: 1200,
+      fireAt: performance.now() + 1200, active: false, width: width || W * 0.9,
+    });
+  }
+
+  function spawnMine(lane, y) {
+    obstacles.push({
+      type: 'mine', lane: lane, x: laneX(lane), y: y || -50, r: 16,
+      vx: (Math.random() > 0.5 ? 1 : -1) * (80 + wave * 4), phase: Math.random() * Math.PI * 2,
+    });
+  }
+
+  function spawnOrb(lane, y) {
+    orbs.push({ lane: lane, x: laneX(lane), y: y || -30, r: 12, pulse: Math.random() * Math.PI * 2, collected: false });
+  }
+
+  function spawnShieldPickup(lane, y) {
+    pickups.push({ type: 'shield', lane: lane, x: laneX(lane), y: y || -40, r: 14, spin: 0 });
+  }
+
+  function spawnRandomObstacle() {
+    const r = Math.random();
+    const lane = Math.floor(Math.random() * 3);
+    if (r < 0.42) spawnBarrier(lane);
+    else if (r < 0.72) {
+      const lanes = Math.random() < 0.5 ? [lane] : [lane, (lane + 1) % 3];
+      spawnLaser(lanes);
+    } else spawnMine(lane);
+    if (Math.random() < cfg.orbRate) spawnOrb(Math.floor(Math.random() * 3));
+    if (!shield && Math.random() < 0.06) spawnShieldPickup(Math.floor(Math.random() * 3));
+  }
+
+  function spawnBossPattern() {
+    const tier = Math.floor(wave / 5);
+    if (tier === 1) {
+      for (let i = 0; i < 5; i++) {
+        setTimeout(() => {
+          const lane = i % 3;
+          spawnLaser([lane, (lane + 1) % 3], -80 - i * 120, W * 0.95);
+        }, i * 600);
+      }
+    } else if (tier === 2) {
+      for (let row = 0; row < 6; row++) {
+        for (let l = 0; l < 3; l++) {
+          if ((row + l) % 2 === 0) spawnBarrier(l, -100 - row * 90);
+        }
+      }
+      spawnShieldPickup(1, -200);
+    } else {
+      for (let i = 0; i < 8; i++) spawnMine(i % 3, -60 - i * 70);
+      setTimeout(() => spawnLaser([0, 1, 2], -100, W), 400);
+      setTimeout(() => spawnLaser([0, 2], -100, W * 0.7), 1200);
+    }
+    for (let i = 0; i < 4; i++) spawnOrb(i % 3, -150 - i * 100);
+  }
+
+  function addParticles(x, y, color, n, speed) {
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const v = (speed || 120) * (0.4 + Math.random() * 0.8);
+      particles.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 400 + Math.random() * 400, color, size: 2 + Math.random() * 3 });
+    }
+    DemoEnhance.capParticles(particles);
+  }
+
+  function addFloat(x, y, text, color) {
+    floatTexts.push({ x, y, text, color: color || '#22d3ee', life: 900, vy: -40 });
+  }
+
+  function tryDash() {
+    if (dashCd > 0 || dashActive || !running) return;
+    dashActive = true;
+    dashTimer = 280;
+    dashCd = 2200;
+    shake = 8;
+    addParticles(player.x, player.y, '#22d3ee', 16, 200);
+    addFloat(player.x, player.y - 30, 'DASH!', '#a78bfa');
+  }
+
+  function moveLane(dir) {
+    const next = targetLane + dir;
+    if (next < 0 || next > 2 || next === targetLane) return;
+    targetLane = next;
+    laneT = 0;
+    player.tilt = dir * 0.35;
+  }
+
+  function collectOrb(o) {
+    o.collected = true;
+    combo = Math.min(5, combo + 0.35);
+    if (combo > maxCombo) maxCombo = combo;
+    const pts = Math.floor(80 * combo * cfg.scoreMul);
+    score += pts;
+    addParticles(o.x, o.y, '#22d3ee', 10, 100);
+    addFloat(o.x, o.y, '+' + pts, '#67e8f9');
+  }
+
+  function collectShield(p) {
+    shield = true;
+    addParticles(p.x, p.y, '#a78bfa', 14, 90);
+    addFloat(p.x, p.y, 'SHIELD', '#c4b5fd');
+  }
+
+  function takeHit() {
+    if (invuln > 0 || dashActive) return;
+    if (shield) {
+      shield = false;
+      invuln = 1200;
+      shake = 14;
+      addParticles(player.x, player.y, '#a78bfa', 20, 150);
+      addFloat(player.x, player.y - 20, '護盾破碎', '#c4b5fd');
+      combo = Math.max(1, combo - 0.5);
+      return;
+    }
+    hp--;
+    invuln = 1500;
+    shake = 22;
+    combo = Math.max(1, combo * 0.6);
+    addParticles(player.x, player.y, '#f472b6', 24, 180);
+    addFloat(player.x, player.y - 20, '-1 HP', '#f472b6');
+    if (hp <= 0) endGame();
+  }
+
+  function rectsOverlap(ax, ay, aw, ah, bx, by, bw, bh) {
+    return ax - aw / 2 < bx + bw / 2 && ax + aw / 2 > bx - bw / 2 && ay - ah / 2 < by + bh / 2 && ay + ah / 2 > by - bh / 2;
+  }
+
+  function dist(ax, ay, bx, by) {
+    const dx = ax - bx, dy = ay - by;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  function update(dt) {
+    if (!running || paused) return;
+    const scroll = cfg.scroll * (1 + wave * 0.04);
+    distance += scroll * dt * 0.01;
+    score += scroll * dt * 0.04 * combo * cfg.scoreMul;
+    bgPhase += dt * 0.001;
+    scrollY = (scrollY + scroll * dt * 0.06) % 80;
+
+    if (laneT < 1) {
+      laneT = Math.min(1, laneT + dt / LANE_SWITCH_MS);
+      const ease = laneT < 0.5 ? 2 * laneT * laneT : 1 - Math.pow(-2 * laneT + 2, 2) / 2;
+      const from = laneX(currentLane), to = laneX(targetLane);
+      player.x = from + (to - from) * ease;
+      if (laneT >= 1) { currentLane = targetLane; player.lane = currentLane; player.tilt *= 0.5; }
+    } else {
+      player.tilt *= 0.92;
+    }
+    player.x = laneX(currentLane) + (player.x - laneX(currentLane)) * (laneT < 1 ? 1 : 0.15);
+
+    if (dashActive) {
+      dashTimer -= dt;
+      if (dashTimer <= 0) dashActive = false;
+    }
+    if (dashCd > 0) dashCd -= dt;
+    if (invuln > 0) invuln -= dt;
+    if (combo > 1) combo = Math.max(1, combo - cfg.comboDecay * dt * 60);
+
+    spawnTimer -= dt;
+    if (spawnTimer <= 0 && waveSpawns < waveTarget) {
+      if (!bossActive || waveSpawns > 0) spawnRandomObstacle();
+      waveSpawns++;
+      spawnTimer = cfg.spawn * (900 - Math.min(500, wave * 20)) * (0.7 + Math.random() * 0.5);
+    }
+
+    waveTimer += dt;
+    if (waveTimer >= waveDuration && waveSpawns >= Math.min(waveTarget, 4)) {
+      wave++;
+      setupWave();
+    }
+
+    const dy = scroll * dt * 0.001;
+
+    obstacles.forEach((o) => {
+      if (o.type === 'barrier') {
+        o.y += dy;
+        if (o.warn < 400) o.warn += dt;
+      } else if (o.type === 'laser') {
+        o.y += dy * 0.85;
+        o.warn -= dt;
+        if (!o.active && performance.now() >= o.fireAt) o.active = true;
+      } else if (o.type === 'mine') {
+        o.y += dy * 1.1;
+        o.phase += dt * 0.004;
+        o.x += o.vx * dt * 0.001;
+        const minX = LANES[0] - 50, maxX = LANES[2] + 50;
+        if (o.x < minX || o.x > maxX) o.vx *= -1;
+        o.x += Math.sin(o.phase) * 30 * dt * 0.001;
+      }
+    });
+
+    orbs.forEach((o) => { o.y += dy; o.pulse += dt * 0.005; });
+    pickups.forEach((p) => { p.y += dy; p.spin += dt * 0.004; });
+
+    obstacles = obstacles.filter((o) => o.y < H + 80);
+    orbs = orbs.filter((o) => !o.collected && o.y < H + 40);
+    pickups = pickups.filter((p) => p.y < H + 40);
+
+    if (!dashActive) {
+      const pl = playerLane();
+      obstacles.forEach((o) => {
+        if (o.type === 'barrier') {
+          if (Math.abs(o.lane - pl) < 0.5 && rectsOverlap(player.x, player.y, player.w * 0.7, player.h * 0.6, o.x, o.y, o.w, o.h))
+            takeHit();
+        } else if (o.type === 'laser' && o.active) {
+          const inLane = o.lanes.indexOf(pl) >= 0;
+          if (inLane && Math.abs(o.y - player.y) < 22) takeHit();
+        } else if (o.type === 'mine') {
+          if (dist(player.x, player.y, o.x, o.y) < o.r + 14) takeHit();
+        }
+      });
+    }
+
+    const pl = playerLane();
+    orbs.forEach((o) => {
+      if (Math.abs(o.lane - pl) < 0.6 && dist(player.x, player.y - 10, o.x, o.y) < o.r + 20)
+        collectOrb(o);
+    });
+    pickups.forEach((p, i) => {
+      if (Math.abs(p.lane - pl) < 0.6 && dist(player.x, player.y, p.x, p.y) < p.r + 22) {
+        if (p.type === 'shield') collectShield(p);
+        pickups.splice(i, 1);
+      }
+    });
+
+    particles.forEach((p) => {
+      p.x += p.vx * dt * 0.001;
+      p.y += p.vy * dt * 0.001;
+      p.life -= dt;
+      p.vy += 40 * dt * 0.001;
+    });
+    particles = particles.filter((p) => p.life > 0);
+
+    floatTexts.forEach((f) => { f.y += f.vy * dt * 0.001; f.life -= dt; });
+    floatTexts = floatTexts.filter((f) => f.life > 0);
+
+    if (shake > 0) shake = Math.max(0, shake - dt * 0.04);
+    updateHud();
+  }
+
+  function drawBackground() {
+    const grd = ctx.createLinearGradient(0, 0, 0, H);
+    grd.addColorStop(0, '#080c18');
+    grd.addColorStop(0.5, '#060a14');
+    grd.addColorStop(1, '#0a0618');
+    ctx.fillStyle = grd;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.strokeStyle = 'rgba(34,211,238,0.06)';
+    ctx.lineWidth = 1;
+    for (let y = -80 + scrollY; y < H; y += 40) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+    for (let i = 0; i < 3; i++) {
+      const x = LANES[i];
+      ctx.strokeStyle = i === 1 ? 'rgba(167,139,250,0.18)' : 'rgba(34,211,238,0.12)';
+      ctx.setLineDash([12, 18]);
+      ctx.lineDashOffset = -bgPhase * 60;
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    ctx.fillStyle = 'rgba(34,211,238,0.03)';
+    for (let i = 0; i < 30; i++) {
+      const sx = (i * 137 + bgPhase * 200) % W;
+      const sy = (i * 89 + scrollY * 2) % H;
+      ctx.fillRect(sx, sy, 2, 2);
+    }
+  }
+
+  function drawObstacles() {
+    obstacles.forEach((o) => {
+      if (o.type === 'barrier') {
+        const alpha = Math.min(1, o.warn / 300);
+        ctx.save();
+        ctx.translate(o.x, o.y);
+        ctx.globalAlpha = 0.35 + alpha * 0.65;
+        ctx.fillStyle = '#0e7490';
+        ctx.strokeStyle = '#22d3ee';
+        ctx.lineWidth = 2;
+        ctx.shadowColor = '#22d3ee';
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.roundRect(-o.w / 2, -o.h / 2, o.w, o.h, 4);
+        ctx.fill(); ctx.stroke();
+        ctx.fillStyle = 'rgba(34,211,238,0.25)';
+        ctx.fillRect(-o.w / 2 + 4, -2, o.w - 8, 4);
+        ctx.restore();
+      } else if (o.type === 'laser') {
+        const firing = o.active;
+        const warnPulse = o.warn > 0 ? 0.4 + Math.sin(performance.now() * 0.02) * 0.3 : 0;
+        if (!firing && o.warn > 0) {
+          o.lanes.forEach((ln) => {
+            ctx.fillStyle = 'rgba(244,114,182,' + (warnPulse * 0.5) + ')';
+            ctx.fillRect(laneX(ln) - 35, o.y - 4, 70, 8);
+          });
+        }
+        if (firing) {
+          ctx.save();
+          ctx.shadowColor = '#a78bfa';
+          ctx.shadowBlur = 14;
+          const lg = ctx.createLinearGradient(0, o.y - 8, 0, o.y + 8);
+          lg.addColorStop(0, 'rgba(167,139,250,0)');
+          lg.addColorStop(0.5, '#e879f9');
+          lg.addColorStop(1, 'rgba(167,139,250,0)');
+          ctx.fillStyle = lg;
+          ctx.fillRect(W / 2 - o.width / 2, o.y - 10, o.width, 20);
+          o.lanes.forEach((ln) => {
+            ctx.fillStyle = 'rgba(255,255,255,0.9)';
+            ctx.fillRect(laneX(ln) - 30, o.y - 3, 60, 6);
+          });
+          ctx.restore();
+        }
+      } else if (o.type === 'mine') {
+        ctx.save();
+        ctx.translate(o.x, o.y);
+        ctx.rotate(performance.now() * 0.003);
+        ctx.fillStyle = '#831843';
+        ctx.strokeStyle = '#f472b6';
+        ctx.lineWidth = 2;
+        ctx.shadowColor = '#f472b6';
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * Math.PI * 2;
+          const r = i % 2 === 0 ? o.r : o.r * 0.55;
+          const px = Math.cos(a) * r, py = Math.sin(a) * r;
+          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#fbcfe8';
+        ctx.beginPath(); ctx.arc(0, 0, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
+    });
+  }
+
+  function drawOrbs() {
+    orbs.forEach((o) => {
+      const pulse = 1 + Math.sin(o.pulse) * 0.15;
+      ctx.save();
+      ctx.translate(o.x, o.y);
+      ctx.shadowColor = '#22d3ee';
+      ctx.shadowBlur = 16;
+      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, o.r * pulse);
+      g.addColorStop(0, '#fff');
+      g.addColorStop(0.4, '#22d3ee');
+      g.addColorStop(1, 'rgba(34,211,238,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(0, 0, o.r * pulse, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    });
+    pickups.forEach((p) => {
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.spin);
+      ctx.strokeStyle = '#a78bfa';
+      ctx.lineWidth = 2;
+      ctx.shadowColor = '#a78bfa';
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.arc(0, 0, p.r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(167,139,250,0.2)';
+      ctx.fill();
+      ctx.fillStyle = '#c4b5fd';
+      ctx.font = 'bold 10px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('◆', 0, 1);
+      ctx.restore();
+    });
+  }
+
+  function drawPlayer() {
+    const flicker = invuln > 0 && Math.floor(invuln / 80) % 2 === 0;
+    if (flicker) ctx.globalAlpha = 0.45;
+    ctx.save();
+    ctx.translate(player.x, player.y);
+    ctx.rotate(player.tilt);
+    if (dashActive) {
+      ctx.globalAlpha = 0.85;
+      ctx.shadowColor = '#22d3ee';
+      ctx.shadowBlur = 30;
+    }
+    if (shield) {
+      ctx.strokeStyle = 'rgba(167,139,250,0.7)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 28, 34, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    const bodyGrad = ctx.createLinearGradient(0, -22, 0, 22);
+    bodyGrad.addColorStop(0, '#67e8f9');
+    bodyGrad.addColorStop(0.5, '#22d3ee');
+    bodyGrad.addColorStop(1, '#0e7490');
+    ctx.fillStyle = bodyGrad;
+    ctx.strokeStyle = '#a5f3fc';
+    ctx.lineWidth = 1.5;
+    ctx.shadowColor = '#22d3ee';
+    ctx.shadowBlur = dashActive ? 25 : 12;
+    ctx.beginPath();
+    ctx.moveTo(0, -24);
+    ctx.lineTo(16, 10);
+    ctx.lineTo(6, 20);
+    ctx.lineTo(0, 14);
+    ctx.lineTo(-6, 20);
+    ctx.lineTo(-16, 10);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#a78bfa';
+    ctx.fillRect(-3, -8, 6, 14);
+    if (dashActive) {
+      ctx.fillStyle = 'rgba(34,211,238,0.5)';
+      ctx.beginPath();
+      ctx.moveTo(-8, 18); ctx.lineTo(0, 32); ctx.lineTo(8, 18);
+      ctx.fill();
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
+  function drawParticles() {
+    particles.forEach((p) => {
+      ctx.globalAlpha = Math.max(0, p.life / 500);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(p.x, p.y, p.size, p.size);
+    });
+    ctx.globalAlpha = 1;
+    floatTexts.forEach((f) => {
+      ctx.globalAlpha = Math.max(0, f.life / 900);
+      ctx.fillStyle = f.color;
+      ctx.font = 'bold 14px "Microsoft JhengHei", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(f.text, f.x, f.y);
+    });
+    ctx.globalAlpha = 1;
+  }
+
+  function drawVignette() {
+    const vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.2, W / 2, H / 2, H * 0.85);
+    vg.addColorStop(0, 'rgba(0,0,0,0)');
+    vg.addColorStop(1, 'rgba(0,0,0,0.45)');
+    ctx.fillStyle = vg;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  function render() {
+    if (!ctx) return;
+    const sx = (Math.random() - 0.5) * shake;
+    const sy = (Math.random() - 0.5) * shake;
+    ctx.save();
+    ctx.translate(sx, sy);
+    drawBackground();
+    drawOrbs();
+    drawObstacles();
+    drawPlayer();
+    drawParticles();
+    drawVignette();
+    ctx.restore();
+
+    if (paused) {
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#22d3ee';
+      ctx.font = 'bold 28px "Microsoft JhengHei", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('⏸ 暫停', W / 2, H * 0.45);
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '14px sans-serif';
+      ctx.fillText('按 P 或空白鍵繼續', W / 2, H * 0.45 + 36);
+    }
+  }
+
+  gameLoopCtrl = DemoEnhance.createGameLoop(function (dt) {
+    if (paused || !running) return;
+    update(dt);
+    render();
+  });
+
+  async function endGame() {
+    running = false;
+    PlatformBridge.setGameSessionActive(false);
+    gameLoopCtrl.stop();
+    const finalScore = Math.floor(score);
+    const grade = calcGrade(finalScore);
+    $('goGrade').textContent = grade;
+    $('goScore').textContent = finalScore.toLocaleString();
+    $('goWave').textContent = wave;
+    $('goCombo').textContent = '×' + (maxCombo % 1 === 0 ? maxCombo : maxCombo.toFixed(1));
+    $('goDist').textContent = Math.floor(distance).toLocaleString() + 'm';
+    $('goMsg').textContent = '你在 ' + cfg.label + ' 難度下穿越了 ' + wave + ' 波深淵航道。' +
+      (grade === 'S' ? ' 傳說級虛空駕駛員！' : grade === 'A' ? ' 出色的疾馳表現！' : ' 再試一次，突破極限！');
+
+    if (finalScore > bestScore) bestScore = finalScore;
+    if (wave > bestWave) bestWave = wave;
+    if (maxCombo > bestCombo) bestCombo = maxCombo;
+    bestGrade = PlatformBridge.betterGrade(bestGrade, grade);
+    refreshMenuStats();
+
+    const result = await PlatformBridge.saveProgress({
+      bestScore, bestWave, bestCombo, bestGrade,
+      difficulty,
+      _incrementGames: true,
+    });
+    PlatformBridge.setSaveHint($('goSaveHint'), result.synced, !!PlatformBridge.getUser());
+    PlatformBridge.setSaveHint($('saveHint'), result.synced, !!PlatformBridge.getUser());
+
+    await PlatformBridge.submitScore({
+      score: finalScore,
+      grade,
+      meta: { wave, combo: parseFloat(maxCombo.toFixed(1)), distance: Math.floor(distance), difficulty },
+    });
+
+    showScreen('gameover');
+    $('goLbLoading').style.display = 'block';
+    $('goLbList').innerHTML = '';
+    const entries = await PlatformBridge.fetchLeaderboard(15);
+    $('goLbLoading').style.display = 'none';
+    PlatformBridge.renderLeaderboard($('goLbList'), entries);
+  }
+
+  function startGame() {
+    canvas = $('canvas');
+    ctx = DemoEnhance.resizeCanvas(canvas, W, H).ctx;
+    showScreen('game');
+    resetGame();
+    gameLoopCtrl.stop();
+    gameLoopCtrl.start();
+  }
+
+  function quitToMenu() {
+    running = false;
+    PlatformBridge.setGameSessionActive(false);
+    gameLoopCtrl.stop();
+    showScreen('menu');
+  }
+
+  function togglePause() {
+    if (!running) return;
+    paused = !paused;
+    $('btnPause').textContent = paused ? '▶ 繼續' : '⏸ 暫停';
+    if (paused) {
+      gameLoopCtrl.stop();
+      render();
+    } else {
+      gameLoopCtrl.start();
+    }
+  }
+
+  function closeHelp() {
+    if (helpFromGame) {
+      helpFromGame = false;
+      paused = false;
+      $('btnPause').textContent = '⏸ 暫停';
+      showScreen('game');
+      if (running) gameLoopCtrl.start();
+      return;
+    }
+    showScreen('menu');
+  }
+
+  document.querySelectorAll('.diff-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.diff-btn').forEach((b) => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      difficulty = btn.dataset.diff;
+    });
+  });
+
+  $('btnStart').onclick = startGame;
+  $('btnRetry').onclick = startGame;
+  $('btnHelp').onclick = () => { helpFromGame = false; showScreen('help'); };
+  $('btnHelpBack').onclick = closeHelp;
+  $('btnHelpClose').onclick = closeHelp;
+  $('btnGameHelp').onclick = () => {
+    helpFromGame = true;
+    if (!paused) togglePause();
+    showScreen('help');
+  };
+  $('btnQuit').onclick = quitToMenu;
+  $('btnGoMenu').onclick = quitToMenu;
+  $('btnLeaveMenu').onclick = () => PlatformBridge.leaveToPlatform({ confirm: true });
+  $('btnLeaveGo').onclick = () => PlatformBridge.leaveToPlatform({ confirm: true });
+  DemoEnhance.setupLeaveGuard({
+    getActive: () => running,
+    button: $('btnLeaveGame'),
+    stopGame: () => {
+      running = false;
+      paused = false;
+      if (gameLoopCtrl) gameLoopCtrl.stop();
+      PlatformBridge.setGameSessionActive(false);
+    },
+  });
+  $('btnPause').onclick = togglePause;
+
+  DemoEnhance.setupLeaderboard({
+    menuButton: $('btnLeaderboard'),
+    inGameButton: $('btnGameLb'),
+    backButton: $('btnLbBack'),
+    listEl: $('lbList'),
+    loadingEl: $('lbLoading'),
+    showScreen: function (k) { showScreen(k); },
+    leaderboardScreen: 'leaderboard',
+    onPause: function () {
+      paused = true;
+      $('btnPause').textContent = '▶ 繼續';
+      gameLoopCtrl.stop();
+    },
+    onResume: function () {
+      if (running) {
+        paused = false;
+        $('btnPause').textContent = '⏸ 暫停';
+        gameLoopCtrl.start();
+      }
+    },
+  });
+
+  window.addEventListener('keydown', (e) => {
+    keys[e.code] = true;
+    if (e.code === 'KeyA' || e.code === 'ArrowLeft') moveLane(-1);
+    if (e.code === 'KeyD' || e.code === 'ArrowRight') moveLane(1);
+    if (e.code === 'Space') {
+      e.preventDefault();
+      if (screens.game.classList.contains('active') && !paused) tryDash();
+      else if (paused) togglePause();
+    }
+    if (e.code === 'KeyP' || e.code === 'Escape') {
+      if (screens.game.classList.contains('active')) togglePause();
+    }
+  });
+  window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+
+  const wrap = $('canvasWrap');
+  wrap.addEventListener('touchstart', (e) => {
+    if (!running) return;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+  wrap.addEventListener('touchend', (e) => {
+    if (!running) return;
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const dy = e.changedTouches[0].clientY - touchStartY;
+    if (Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy)) {
+      moveLane(dx > 0 ? 1 : -1);
+    } else if (Math.abs(dx) < 20 && Math.abs(dy) < 20) {
+      tryDash();
+    }
+  }, { passive: true });
+
+  window.addEventListener('resize', () => { if (running && !paused) render(); });
+
+  PlatformBridge.init().then((p) => {
+    applyProgress(p);
+    PlatformBridge.setSaveHint($('saveHint'), false, !!PlatformBridge.getUser());
+  });
+})();
+  </script>
+</body>
+</html>

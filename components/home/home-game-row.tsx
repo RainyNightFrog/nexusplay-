@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { GameCoverImage } from "@/components/ui/game-cover-image";
 import { Heart } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
@@ -87,7 +87,7 @@ export function HomeGameRow({
               )}
             >
               <div className="relative aspect-[16/10] overflow-hidden">
-                <Image
+                <GameCoverImage
                   src={game.image}
                   alt={game.title}
                   fill

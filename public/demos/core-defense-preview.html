@@ -499,12 +499,19 @@
       if (animId) cancelAnimationFrame(animId);
       gameStarted = false;
       waveActive = false;
+      PlatformBridge.setGameSessionActive(false);
       showScreen('menu');
     };
-    $('btnLeaveGame').onclick = () => {
-      if (animId) cancelAnimationFrame(animId);
-      PlatformBridge.leaveToPlatform();
-    };
+    DemoEnhance.setupLeaveGuard({
+      getActive: function () { return $('gameScreen').classList.contains('active'); },
+      button: $('btnLeaveGame'),
+      stopGame: function () {
+        if (animId) cancelAnimationFrame(animId);
+        gameStarted = false;
+        waveActive = false;
+        PlatformBridge.setGameSessionActive(false);
+      },
+    });
     $('skillFission').onclick = useSkillFission;
     $('skillOverdrive').onclick = useSkillOverdrive;
     $('skillAirdrop').onclick = useSkillAirdrop;
@@ -583,6 +590,7 @@
       updateWaveButtons();
       updateHud();
       showScreen('game');
+      PlatformBridge.setGameSessionActive(true);
       canvas.onmousemove = onMouseMove;
       canvas.onmouseleave = () => { hoverCell = null; };
       canvas.onclick = onCanvasClick;
@@ -593,6 +601,7 @@
 
     function quitGame() {
       if (animId) cancelAnimationFrame(animId);
+      PlatformBridge.setGameSessionActive(false);
       showScreen('menu');
     }
 
