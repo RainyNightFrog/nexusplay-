@@ -33,6 +33,8 @@ export type ForumCommentRecord = {
 export type ForumPost = ForumPostRecord & {
   author_name: string;
   author_equipped_title: import("@/lib/titles").EquippedTitle | null;
+  /** 示範貼文虛擬玩家 ID（用於查看玩家資料卡） */
+  author_virtual_player_id?: string | null;
   comment_count?: number;
 };
 
@@ -43,6 +45,8 @@ export type ForumPostWithGame = ForumPost & {
 export type ForumComment = ForumCommentRecord & {
   author_name: string;
   author_equipped_title: import("@/lib/titles").EquippedTitle | null;
+  /** 示範留言虛擬玩家 ID（用於查看玩家資料卡） */
+  author_virtual_player_id?: string | null;
 };
 
 export const FORUM_CATEGORIES: {

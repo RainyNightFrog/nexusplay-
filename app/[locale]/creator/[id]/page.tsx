@@ -26,8 +26,6 @@ export default function CreatorPublicPage() {
   const { formatCount } = useFormatCount();
   const { favoriteCounts, loadFavoriteCounts } = useGameFavoriteActions();
   const [creator, setCreator] = useState<PublicCreatorProfile | null>(null);
-  const [following, setFollowing] = useState(false);
-  const [followerCount, setFollowerCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,14 +42,6 @@ export default function CreatorPublicPage() {
       })
       .catch(() => setError(t("loadFailed")))
       .finally(() => setLoading(false));
-
-    fetch(`/api/creators/${creatorId}/follow`)
-      .then((response) => response.json())
-      .then((data: { following?: boolean; followerCount?: number }) => {
-        setFollowing(data.following === true);
-        setFollowerCount(data.followerCount ?? 0);
-      })
-      .catch(() => undefined);
   }, [creatorId, t]);
 
   useEffect(() => {
@@ -149,8 +139,6 @@ export default function CreatorPublicPage() {
 
         <FollowCreatorButton
           creatorId={creator.id}
-          initialFollowing={following}
-          initialFollowerCount={followerCount}
           className="mt-6 flex justify-center sm:justify-start"
         />
 

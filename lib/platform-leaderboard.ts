@@ -39,25 +39,23 @@ export function isUserOnline(lastActiveAt: string, now = Date.now()): boolean {
   return now - ts <= ONLINE_THRESHOLD_MS;
 }
 
-export function formatDurationSeconds(seconds: number, locale: string): string {
+export type DurationFormatter = (
+  key: "durationHoursMinutes" | "durationHoursOnly",
+  values: { hours: number; minutes: number }
+) => string;
+
+export function formatDurationSeconds(
+  seconds: number,
+  format: DurationFormatter
+): string {
   const hours = Math.max(0, Math.floor(seconds / 3600));
   const minutes = Math.floor((seconds % 3600) / 60);
 
-  if (locale.startsWith("zh")) {
-    return minutes > 0 ? `${hours} 小時 ${minutes} 分` : `${hours} 小時`;
-  }
-
-  if (locale === "ja") {
-    return minutes > 0 ? `${hours}時間${minutes}分` : `${hours}時間`;
-  }
-
   if (minutes > 0) {
-    return hours === 1
-      ? `1 hr ${minutes} min`
-      : `${hours} hrs ${minutes} min`;
+    return format("durationHoursMinutes", { hours, minutes });
   }
 
-  return hours === 1 ? "1 hr" : `${hours} hrs`;
+  return format("durationHoursOnly", { hours, minutes });
 }
 
 export function formatDonationAmount(amount: number, locale: string): string {

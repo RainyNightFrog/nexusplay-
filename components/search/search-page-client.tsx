@@ -22,6 +22,7 @@ import { SiteSearch } from "@/components/layout/site-search";
 import { SearchHistoryPanel } from "@/components/search/search-history-panel";
 import { UserBadge } from "@/components/UserBadge";
 import { SearchShortcuts } from "@/components/search/search-shortcuts";
+import { FollowCreatorButton } from "@/components/creator/follow-creator-button";
 import type { SearchCreatorResult } from "@/lib/platform-search-service";
 import { addSearchHistory } from "@/lib/search-history";
 import type { Game } from "@/lib/games";
@@ -160,38 +161,47 @@ function SearchPageContent() {
                 </h2>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                   {creators.map((creator) => (
-                    <Link
+                    <div
                       key={creator.id}
-                      href={`/creator/${creator.id}`}
-                      className="flex items-center gap-3 rounded-2xl border border-white/10 bg-zinc-900/60 p-4 transition hover:border-violet-400/30"
+                      className="flex items-center gap-3 rounded-2xl border border-white/10 bg-zinc-900/60 p-4"
                     >
-                      <div className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-zinc-950">
-                        {creator.avatarUrl ? (
-                          <Image
-                            src={creator.avatarUrl}
-                            alt={creator.displayName}
-                            width={48}
-                            height={48}
-                            className="size-full object-cover"
+                      <Link
+                        href={`/creator/${creator.id}`}
+                        className="flex min-w-0 flex-1 items-center gap-3 transition hover:opacity-90"
+                      >
+                        <div className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-zinc-950">
+                          {creator.avatarUrl ? (
+                            <Image
+                              src={creator.avatarUrl}
+                              alt={creator.displayName}
+                              width={48}
+                              height={48}
+                              className="size-full object-cover"
+                            />
+                          ) : (
+                            <UserRound className="size-6 text-violet-400" />
+                          )}
+                        </div>
+                        <div className="min-w-0 text-left">
+                          <UserBadge
+                            username={creator.displayName}
+                            title={creator.equippedTitle}
+                            layout="compact"
+                            animateTitle={false}
+                            usernameClassName="font-semibold text-white"
+                            titleClassName="text-[9px]"
                           />
-                        ) : (
-                          <UserRound className="size-6 text-violet-400" />
-                        )}
-                      </div>
-                      <div className="min-w-0 text-left">
-                        <UserBadge
-                          username={creator.displayName}
-                          title={creator.equippedTitle}
-                          layout="compact"
-                          animateTitle={false}
-                          usernameClassName="font-semibold text-white"
-                          titleClassName="text-[9px]"
-                        />
-                        <p className="text-xs text-zinc-500">
-                          {t("creatorGameCount", { count: creator.gameCount })}
-                        </p>
-                      </div>
-                    </Link>
+                          <p className="text-xs text-zinc-500">
+                            {t("creatorGameCount", { count: creator.gameCount })}
+                          </p>
+                        </div>
+                      </Link>
+                      <FollowCreatorButton
+                        creatorId={creator.id}
+                        compact
+                        showFollowerCount={false}
+                      />
+                    </div>
                   ))}
                 </div>
               </section>

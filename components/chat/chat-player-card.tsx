@@ -33,11 +33,13 @@ import {
   formatDurationSeconds,
   type PlatformLeaderboardEntry,
 } from "@/lib/platform-leaderboard";
+import { formatRelativeTimeFromIso } from "@/lib/format-relative-time";
 import {
   isVirtualLeaderboardUserId,
   VIRTUAL_LEADERBOARD_USER_PREFIX,
 } from "@/lib/platform-leaderboard-virtual";
 import { Link } from "@/i18n/navigation";
+import { FollowCreatorButton } from "@/components/creator/follow-creator-button";
 import { cn } from "@/lib/utils";
 
 export type ChatPlayerPreview = {
@@ -125,38 +127,6 @@ export function forumAuthorToPlayerPreview(
   };
 }
 
-function formatLastActive(value: string | null, locale: string) {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-
-  const diffMs = Date.now() - date.getTime();
-  const minutes = Math.floor(diffMs / 60_000);
-  if (minutes < 1) {
-    return locale.startsWith("zh") ? "剛剛" : "Just now";
-  }
-  if (minutes < 60) {
-    return locale.startsWith("zh") ? `${minutes} 分鐘前` : `${minutes}m ago`;
-  }
-
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) {
-    return locale.startsWith("zh") ? `${hours} 小時前` : `${hours}h ago`;
-  }
-
-  const days = Math.floor(hours / 24);
-  if (days < 7) {
-    return locale.startsWith("zh") ? `${days} 天前` : `${days}d ago`;
-  }
-
-  return date.toLocaleString(locale, {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 function StatItem({
   icon,
   label,
@@ -191,8 +161,12 @@ export function ChatPlayerCard({
   onDirectMessage,
 }: ChatPlayerCardProps) {
   const t = useTranslations("chat");
+  const tcx = useTranslations("common");
   const locale = useLocale();
   const { profile, loading, error } = useChatPlayerProfile(player, open);
+
+  const formatDuration = (seconds: number) =>
+    formatDurationSeconds(seconds, (key, values) => tcx(key, values));
 
   if (!player) return null;
 
@@ -202,6 +176,10 @@ export function ChatPlayerCard({
   const equippedTitle = player.equippedTitle ?? detail?.equippedTitle ?? null;
   const isCreator = detail?.isCreator ?? player.isCreator;
   const isVirtual = detail?.isVirtual ?? player.isVirtual;
+  const creatorUserId =
+    isCreator && !isVirtual
+      ? (detail?.userId ?? player.userId) || null
+      : null;
   const countryLabel = detail?.countryCode
     ? formatCountryName(detail.countryCode, locale)
     : null;
@@ -315,17 +293,17 @@ export function ChatPlayerCard({
                 <StatItem
                   icon={<Clock3 className="size-3.5 shrink-0" />}
                   label={t("playerCardOnlineTime")}
-                  value={formatDurationSeconds(detail.onlineSeconds, locale)}
+                  value={formatDuration(detail.onlineSeconds)}
                 />
                 <StatItem
                   icon={<Gamepad2 className="size-3.5 shrink-0" />}
                   label={t("playerCardPlayTime")}
-                  value={formatDurationSeconds(detail.playSeconds, locale)}
+                  value={formatDuration(detail.playSeconds)}
                 />
                 <StatItem
                   icon={<Clock3 className="size-3.5 shrink-0" />}
                   label={t("playerCardLastActive")}
-                  value={formatLastActive(detail.lastActiveAt, locale)}
+                  value={formatRelativeTimeFromIso(detail.lastActiveAt, tcx, locale)}
                 />
                 <StatItem
                   icon={<Trophy className="size-3.5 shrink-0" />}
@@ -382,6 +360,16 @@ export function ChatPlayerCard({
           ) : null}
 
           <div className="flex w-full flex-col gap-2 sm:flex-row sm:justify-center">
+            {creatorUserId && !player.isOwn && (
+              <FollowCreatorButton
+                creatorId={creatorUserId}
+                compact
+                centered
+                showFollowerCount={false}
+                className="w-full sm:max-w-xs"
+              />
+            )}
+
             {isVirtual && player.virtualPlayerId && onDirectMessage && (
               <Button
                 type="button"
@@ -406,6 +394,19 @@ export function ChatPlayerCard({
               >
                 <UserRound className="size-4" />
                 {t("playerCardViewProfile")}
+              </Button>
+            )}
+
+            {creatorUserId && !player.isOwn && (
+              <Button
+                nativeButton={false}
+                variant="outline"
+                className="h-10 flex-1 gap-2 border-white/10 bg-white/5 text-sm text-zinc-200 hover:bg-white/10 sm:max-w-xs"
+                render={<Link href={`/creator/${creatorUserId}`} />}
+                onClick={() => onOpenChange(false)}
+              >
+                <UserRound className="size-4" />
+                {t("playerCardViewCreator")}
               </Button>
             )}
           </div>

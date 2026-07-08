@@ -39,6 +39,7 @@
     "db:phase-ae-platform": "node scripts/run-phase-ae-platform.mjs",
     "check:platform": "node scripts/check-platform-env.mjs",
     "i18n:sync": "node scripts/repair-i18n-keys.mjs && node scripts/sync-missing-i18n.mjs",
+    "i18n:translate": "node scripts/translate-all-locales.mjs",
     "setup:google": "node scripts/setup-google-oauth.mjs",
     "setup:google:finish": "node scripts/complete-google-oauth.mjs",
     "setup:google:ui": "node scripts/open-google-setup-ui.mjs",
@@ -102,6 +103,7 @@
     "@types/web-push": "^3.6.4",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
+    "opencc-js": "^1.4.0",
     "pg": "^8.22.0",
     "tailwindcss": "^4",
     "typescript": "^5"

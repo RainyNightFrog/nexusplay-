@@ -24,6 +24,7 @@ import {
   X,
 } from "lucide-react";
 import { GameEmbedBridge } from "@/components/game/game-embed-bridge";
+import { FollowCreatorButton } from "@/components/creator/follow-creator-button";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { SiteHeader } from "@/components/layout/site-header";
 import { LeaderboardNavButton } from "@/components/LeaderboardModal";
@@ -686,6 +687,15 @@ function GamePageContent() {
                   )}
                 </span>
               </div>
+
+              {game.creatorId && !isGameOwner && (
+                <FollowCreatorButton
+                  creatorId={game.creatorId}
+                  compact
+                  centered
+                  className="mt-4"
+                />
+              )}
 
               <div className="mt-3 flex items-center justify-center gap-2 text-sm text-zinc-400">
                 <Users className="size-4 shrink-0 text-cyan-400" />

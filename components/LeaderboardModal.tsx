@@ -124,12 +124,13 @@ function LeaderboardCard({
   animateKey: string;
   onPlayerClick?: (entry: PlatformLeaderboardEntry) => void;
 }) {
+  const tcx = useTranslations("common");
   const isTopThree = entry.rank <= 3;
 
   const valueLabel =
     tab === "donated"
       ? formatDonationAmount(entry.value, locale)
-      : formatDurationSeconds(entry.value, locale);
+      : formatDurationSeconds(entry.value, (key, values) => tcx(key, values));
 
   const cardBody = (
     <div

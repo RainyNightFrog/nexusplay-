@@ -11,13 +11,178 @@ import {
 import {
   buildLocalizedForumComments,
   buildLocalizedForumPosts,
+  findMaterializedSeedPostIndex,
+  parseSeedForumPostId,
+  seedForumPostStableKey,
 } from "@/lib/forum-seed-builder";
+import { getAmbientUserPlayerMap } from "@/lib/ambient-user-index";
 import { resolveEquippedTitles } from "@/lib/equipped-title-service";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-const SEED_USER_PREFIX = "seed-forum-";
+function collectMaterializedSeedKeys(
+  gameId: number,
+  gameTitle: string,
+  realPosts: ForumPost[]
+): Set<string> {
+  const keys = new Set<string>();
+  if (!gameTitle) return keys;
+
+  for (const post of realPosts) {
+    const index = findMaterializedSeedPostIndex(gameTitle, post);
+    if (index !== null) {
+      keys.add(seedForumPostStableKey(gameId, index));
+    }
+  }
+
+  return keys;
+}
+
+function mergeRealPostsWithRemainingSeeds(
+  gameId: number,
+  gameTitle: string,
+  realPosts: ForumPost[],
+  locale?: string | null
+): ForumPost[] {
+  if (!gameTitle) return realPosts;
+
+  const materialized = collectMaterializedSeedKeys(gameId, gameTitle, realPosts);
+  const remainingSeeds = buildLocalizedForumPosts(gameId, gameTitle, locale).filter(
+    (seed) => {
+      const parsed = parseSeedForumPostId(seed.id);
+      if (!parsed) return true;
+      return !materialized.has(seedForumPostStableKey(gameId, parsed.postIndex));
+    }
+  );
+
+  return [...realPosts, ...remainingSeeds].sort(
+    (a, b) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+}
+
+async function resolveAmbientUserIdForVirtualPlayer(
+  supabase: SupabaseClient,
+  virtualPlayerId: string | null | undefined
+): Promise<string | null> {
+  if (!virtualPlayerId) return null;
+  const map = await getAmbientUserPlayerMap(supabase);
+  for (const [userId, playerId] of map.entries()) {
+    if (playerId === virtualPlayerId) return userId;
+  }
+  return null;
+}
+
+async function resolveMaterializedAuthorUserId(
+  supabase: SupabaseClient,
+  gameId: number,
+  virtualPlayerId: string | null | undefined,
+  fallbackUserId: string
+): Promise<string> {
+  const ambient = await resolveAmbientUserIdForVirtualPlayer(
+    supabase,
+    virtualPlayerId
+  );
+  if (ambient) return ambient;
+
+  const { data: game } = await supabase
+    .from("games")
+    .select("creator_id")
+    .eq("id", gameId)
+    .maybeSingle();
+  if (game?.creator_id) return game.creator_id as string;
+
+  return fallbackUserId;
+}
+
+export async function materializeSeedForumPostIfNeeded(
+  gameId: number,
+  seedPostId: number,
+  locale: string | null | undefined,
+  actingUserId: string
+): Promise<number> {
+  const parsed = parseSeedForumPostId(seedPostId);
+  if (!parsed || parsed.gameId !== gameId) {
+    throw new Error("找不到此貼文");
+  }
+
+  const supabase = createServerSupabase();
+  const { data: gameRow } = await supabase
+    .from("games")
+    .select("title")
+    .eq("id", gameId)
+    .maybeSingle();
+
+  if (!gameRow?.title) {
+    throw new Error("找不到此貼文");
+  }
+
+  const seedPosts = buildLocalizedForumPosts(gameId, gameRow.title, locale);
+  const seedPost = seedPosts[parsed.postIndex];
+  if (!seedPost || seedPost.id !== seedPostId) {
+    throw new Error("找不到此貼文");
+  }
+
+  const { data: existingPosts } = await supabase
+    .from("forum_posts")
+    .select("id, title, category, content")
+    .eq("game_id", gameId);
+
+  for (const row of existingPosts ?? []) {
+    const index = findMaterializedSeedPostIndex(
+      gameRow.title,
+      row as ForumPostRecord
+    );
+    if (index === parsed.postIndex) {
+      return row.id as number;
+    }
+  }
+
+  const authorUserId = await resolveMaterializedAuthorUserId(
+    supabase,
+    gameId,
+    seedPost.author_virtual_player_id,
+    actingUserId
+  );
+
+  const realPost = await createForumPost(
+    {
+      gameId,
+      userId: authorUserId,
+      title: seedPost.title,
+      category: seedPost.category,
+      content: seedPost.content,
+    },
+    supabase
+  );
+
+  const seedComments = buildLocalizedForumComments(
+    seedPostId,
+    gameRow.title,
+    parsed.postIndex,
+    locale
+  );
+
+  for (const seedComment of seedComments) {
+    const commentAuthorId = await resolveMaterializedAuthorUserId(
+      supabase,
+      gameId,
+      seedComment.author_virtual_player_id,
+      actingUserId
+    );
+    await createForumComment(
+      {
+        postId: realPost.id,
+        userId: commentAuthorId,
+        content: seedComment.content,
+      },
+      supabase
+    );
+  }
+
+  return realPost.id;
+}
 
 
 async function attachCommentCounts(
@@ -127,10 +292,6 @@ export async function getForumPostsByGameId(
 
   gameTitle = gameRow?.title ?? "";
 
-  if (records.length === 0) {
-    return buildLocalizedForumPosts(gameId, gameTitle, locale);
-  }
-
   const { nameMap, titleMap } = await resolveAuthorDisplay(
     records.map((row) => row.user_id)
   );
@@ -138,7 +299,8 @@ export async function getForumPostsByGameId(
     supabase,
     records.map((row) => row.id)
   );
-  return mapPosts(records, nameMap, titleMap, commentCounts);
+  const realPosts = mapPosts(records, nameMap, titleMap, commentCounts);
+  return mergeRealPostsWithRemainingSeeds(gameId, gameTitle, realPosts, locale);
 }
 
 export async function getAllForumPosts(
@@ -154,7 +316,6 @@ export async function getAllForumPosts(
     return [];
   }
 
-  const gameTitleMap = new Map(games.map((game) => [game.id, game.title]));
   const gameIds = games.map((game) => game.id);
   const { data: records, error } = await supabase
     .from("forum_posts")
@@ -162,15 +323,9 @@ export async function getAllForumPosts(
     .in("game_id", gameIds)
     .order("created_at", { ascending: false });
 
-  const postsByGame = new Map<number, ForumPostRecord[]>();
-  for (const row of (records ?? []) as ForumPostRecord[]) {
-    const existing = postsByGame.get(row.game_id) ?? [];
-    existing.push(row);
-    postsByGame.set(row.game_id, existing);
-  }
-
   const allPosts: ForumPostWithGame[] = [];
   const dbRecords = error ? [] : ((records ?? []) as ForumPostRecord[]);
+  const mappedByGame = new Map<number, ForumPost[]>();
 
   if (dbRecords.length > 0) {
     const { nameMap, titleMap } = await resolveAuthorDisplay(
@@ -184,21 +339,26 @@ export async function getAllForumPosts(
     for (const record of dbRecords) {
       const mapped = mapPosts([record], nameMap, titleMap, commentCounts)[0];
       if (!mapped) continue;
-      allPosts.push({
-        ...mapped,
-        game_title: gameTitleMap.get(record.game_id) ?? "",
-      });
+      const list = mappedByGame.get(record.game_id) ?? [];
+      list.push(mapped);
+      mappedByGame.set(record.game_id, list);
     }
   }
 
   for (const game of games) {
-    if ((postsByGame.get(game.id) ?? []).length > 0) continue;
-    allPosts.push(
-      ...buildLocalizedForumPosts(game.id, game.title, locale).map((post) => ({
+    const realPosts = mappedByGame.get(game.id) ?? [];
+    const merged = mergeRealPostsWithRemainingSeeds(
+      game.id,
+      game.title,
+      realPosts,
+      locale
+    );
+    for (const post of merged) {
+      allPosts.push({
         ...post,
         game_title: game.title,
-      }))
-    );
+      });
+    }
   }
 
   return allPosts.sort(
@@ -236,24 +396,47 @@ export async function getForumCommentsByPostId(
   locale?: string | null
 ): Promise<ForumComment[]> {
   if (postId < 0) {
-    const gameId = Math.floor(Math.abs(postId) / 100);
-    const postIndex = (Math.abs(postId) % 100) - 1;
+    const parsed = parseSeedForumPostId(postId);
+    if (!parsed) return [];
+
     const supabase = createServerSupabase();
     const { data: gameRow } = await supabase
       .from("games")
       .select("title")
-      .eq("id", gameId)
+      .eq("id", parsed.gameId)
       .maybeSingle();
 
-    if (gameRow?.title) {
-      return buildLocalizedForumComments(
-        postId,
+    if (!gameRow?.title) return [];
+
+    const seedPosts = buildLocalizedForumPosts(
+      parsed.gameId,
+      gameRow.title,
+      locale
+    );
+    const seedPost = seedPosts[parsed.postIndex];
+    if (!seedPost) return [];
+
+    const { data: existingPosts } = await supabase
+      .from("forum_posts")
+      .select("id, title, category, content")
+      .eq("game_id", parsed.gameId);
+
+    for (const row of existingPosts ?? []) {
+      const index = findMaterializedSeedPostIndex(
         gameRow.title,
-        postIndex,
-        locale
+        row as ForumPostRecord
       );
+      if (index === parsed.postIndex) {
+        return getForumCommentsByPostId(row.id as number, locale);
+      }
     }
-    return [];
+
+    return buildLocalizedForumComments(
+      postId,
+      gameRow.title,
+      parsed.postIndex,
+      locale
+    );
   }
 
   const supabase = createServerSupabase();

@@ -43,8 +43,11 @@ import { UserBadge } from "@/components/UserBadge";
 import {
   ChatPlayerCard,
   forumAuthorToPlayerPreview,
+  virtualPlayerToPlayerPreview,
   type ChatPlayerPreview,
 } from "@/components/chat/chat-player-card";
+import { isSeedForumUserId } from "@/lib/forum-seed-builder";
+import { getVirtualPlayerById } from "@/lib/virtual-players";
 import { cn } from "@/lib/utils";
 
 type GameOption = { id: number; title: string };
@@ -127,7 +130,10 @@ function AuthorChip({
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick?.();
+      }}
       className="flex flex-col items-center gap-2 text-xs text-zinc-400 transition-opacity hover:opacity-85"
     >
       {content}
@@ -186,9 +192,32 @@ export function CommunityForum({
     (
       name: string,
       userId: string,
-      equippedTitle?: import("@/lib/titles").EquippedTitle | null
+      equippedTitle?: import("@/lib/titles").EquippedTitle | null,
+      virtualPlayerId?: string | null
     ) => {
       if (!profile) return;
+
+      if (virtualPlayerId) {
+        const player = getVirtualPlayerById(virtualPlayerId);
+        if (player) {
+          setPlayerPreview(
+            virtualPlayerToPlayerPreview({
+              id: player.id,
+              displayName: name,
+              avatarUrl: null,
+              equippedTitle,
+            })
+          );
+          setPlayerCardOpen(true);
+          return;
+        }
+      }
+
+      if (isSeedForumUserId(userId)) {
+        onToast(t("seedPlayerProfile"));
+        return;
+      }
+
       setPlayerPreview(
         forumAuthorToPlayerPreview(name, userId, equippedTitle, {
           isOwn: profile.id === userId,
@@ -196,7 +225,7 @@ export function CommunityForum({
       );
       setPlayerCardOpen(true);
     },
-    [profile]
+    [onToast, profile, t]
   );
 
   const [posts, setPosts] = useState<ForumPostWithGame[]>([]);
@@ -513,11 +542,6 @@ export function CommunityForum({
       return;
     }
 
-    if (selectedPost.id < 0) {
-      onToast(t("seedPost"));
-      return;
-    }
-
     const content = replyContent.trim();
     if (!content) {
       onToast(t("replyRequired"));
@@ -536,6 +560,7 @@ export function CommunityForum({
       );
       const data = (await response.json()) as {
         comment?: ForumComment;
+        postId?: number;
         error?: string;
       };
 
@@ -544,20 +569,54 @@ export function CommunityForum({
         return;
       }
 
-      setComments((prev) => [...prev, data.comment!]);
+      const resolvedPostId = data.postId ?? selectedPost.id;
+      const materialized = resolvedPostId !== selectedPost.id;
+
+      if (materialized) {
+        const materializedPost: ForumPostWithGame = {
+          ...selectedPost,
+          id: resolvedPostId,
+        };
+        setSelectedPost(materializedPost);
+        setPosts((prev) => {
+          const withoutSeed = prev.filter((post) => post.id !== selectedPost.id);
+          const existing = withoutSeed.find((post) => post.id === resolvedPostId);
+          if (existing) {
+            return withoutSeed.map((post) =>
+              post.id === resolvedPostId
+                ? {
+                    ...post,
+                    comment_count: (post.comment_count ?? 0) + 1,
+                  }
+                : post
+            );
+          }
+          return [
+            {
+              ...materializedPost,
+              comment_count: (selectedPost.comment_count ?? 0) + 1,
+            },
+            ...withoutSeed,
+          ];
+        });
+        await loadComments(resolvedPostId, selectedPost.game_id);
+      } else {
+        setComments((prev) => [...prev, data.comment!]);
+        setPosts((prev) =>
+          prev.map((post) =>
+            post.id === selectedPost.id
+              ? { ...post, comment_count: (post.comment_count ?? 0) + 1 }
+              : post
+          )
+        );
+        setSelectedPost((prev) =>
+          prev
+            ? { ...prev, comment_count: (prev.comment_count ?? 0) + 1 }
+            : prev
+        );
+      }
+
       setReplyContent("");
-      setPosts((prev) =>
-        prev.map((post) =>
-          post.id === selectedPost.id
-            ? { ...post, comment_count: (post.comment_count ?? 0) + 1 }
-            : post
-        )
-      );
-      setSelectedPost((prev) =>
-        prev
-          ? { ...prev, comment_count: (prev.comment_count ?? 0) + 1 }
-          : prev
-      );
       onToast(t("replySuccess"));
     } catch {
       onToast(t("replyFailed"));
@@ -575,8 +634,6 @@ export function CommunityForum({
       action();
     }
   };
-
-  const isSeedPost = selectedPost ? selectedPost.id < 0 : false;
 
   return (
     <div className="p-5 text-center sm:p-8">
@@ -664,7 +721,8 @@ export function CommunityForum({
                             handleAuthorClick(
                               selectedPost.author_name,
                               selectedPost.user_id,
-                              selectedPost.author_equipped_title
+                              selectedPost.author_equipped_title,
+                              selectedPost.author_virtual_player_id
                             )
                         : undefined
                     }
@@ -707,7 +765,8 @@ export function CommunityForum({
                                   handleAuthorClick(
                                     comment.author_name,
                                     comment.user_id,
-                                    comment.author_equipped_title
+                                    comment.author_equipped_title,
+                                    comment.author_virtual_player_id
                                   )
                               : undefined
                           }
@@ -742,14 +801,9 @@ export function CommunityForum({
                       onKeyDown={(event) =>
                         handleSubmitOnShortcut(event, handleSubmitReply)
                       }
-                      placeholder={
-                        isSeedPost
-                          ? t("seedReplyPlaceholder")
-                          : t("replyPlaceholder")
-                      }
+                      placeholder={t("replyPlaceholder")}
                       maxLength={FORUM_LIMITS.comment}
                       rows={3}
-                      disabled={isSeedPost}
                       className="min-h-24 resize-none border-white/10 bg-white/5 text-zinc-100 placeholder:text-zinc-500 focus-visible:border-violet-400/40 focus-visible:ring-violet-500/20"
                     />
                     <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -758,7 +812,7 @@ export function CommunityForum({
                       </span>
                       <Button
                         onClick={handleSubmitReply}
-                        disabled={replying || !replyContent.trim() || isSeedPost}
+                        disabled={replying || !replyContent.trim()}
                         className="gap-2 bg-gradient-to-r from-violet-600 to-cyan-600 text-white hover:from-violet-500 hover:to-cyan-500"
                       >
                         {replying ? (
@@ -1091,7 +1145,8 @@ export function CommunityForum({
                                 handleAuthorClick(
                                   post.author_name,
                                   post.user_id,
-                                  post.author_equipped_title
+                                  post.author_equipped_title,
+                                  post.author_virtual_player_id
                                 )
                             : undefined
                         }

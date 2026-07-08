@@ -312,6 +312,10 @@ export function TipSupportPanel({
           {t("tipSupportDesc")}
         </p>
 
+        <p className="mt-2 text-[11px] leading-relaxed text-zinc-600">
+          {t("tipSpendingHint")}
+        </p>
+
         {suggestedTipAmount != null && (
           <p className="mt-2 text-xs text-zinc-400">
             {t("tipSuggestedAmount", { amount: suggestedTipAmount.toFixed(2) })}
@@ -335,13 +339,7 @@ export function TipSupportPanel({
   return (
     <>
       {embedded ? (
-        <div className={className}>
-          {tipCardContent}
-          <GamePaymentMethodsPanel
-            onCardsChange={onPaymentMethodsChange}
-            className="mt-5 border-t border-fuchsia-400/15 pt-5"
-          />
-        </div>
+        <div className={className}>{tipCardContent}</div>
       ) : (
         <div
           className={cn(
@@ -589,6 +587,10 @@ export function TipSupportPanel({
 
                   {error && <p className="text-sm text-rose-400">{error}</p>}
 
+                  <p className="rounded-xl border border-white/6 bg-zinc-950/35 px-3 py-2.5 text-center text-[11px] leading-relaxed text-zinc-500">
+                    {t("tipSpendingHint")}
+                  </p>
+
                   <label className="flex items-start gap-3 rounded-xl border border-white/8 bg-zinc-950/40 px-3 py-3 text-left">
                     <Checkbox
                       checked={showNameOnWall}
@@ -630,6 +632,11 @@ export function TipSupportPanel({
                       {t("tipLegalLink")}
                     </Link>
                   </p>
+
+                  <GamePaymentMethodsPanel
+                    onCardsChange={onPaymentMethodsChange}
+                    className="mt-6 border-t border-white/8 pt-6"
+                  />
                 </div>
               )}
             </motion.div>

@@ -3,6 +3,7 @@ import {
   createForumComment,
   forumPostBelongsToGame,
   getForumCommentsByPostId,
+  materializeSeedForumPostIfNeeded,
 } from "@/lib/forum-service";
 import { FORUM_LIMITS } from "@/lib/forum";
 import { resolveRequestLocale } from "@/lib/request-locale";
@@ -68,7 +69,19 @@ export async function POST(
       return NextResponse.json({ error: "請先登入才能參與討論" }, { status: 401 });
     }
 
-    const belongs = await forumPostBelongsToGame(numericPostId, gameId);
+    const locale = await resolveRequestLocale(request);
+    let targetPostId = numericPostId;
+
+    if (numericPostId < 0) {
+      targetPostId = await materializeSeedForumPostIfNeeded(
+        gameId,
+        numericPostId,
+        locale,
+        user.id
+      );
+    }
+
+    const belongs = await forumPostBelongsToGame(targetPostId, gameId);
     if (!belongs) {
       return NextResponse.json({ error: "找不到此貼文" }, { status: 404 });
     }
@@ -82,7 +95,7 @@ export async function POST(
 
     const comment = await createForumComment(
       {
-        postId: numericPostId,
+        postId: targetPostId,
         userId: user.id,
         content,
       },
@@ -91,13 +104,13 @@ export async function POST(
 
     const { notifyForumPostAuthorOfReply } = await import("@/lib/forum-reply-notify");
     void notifyForumPostAuthorOfReply({
-      postId: numericPostId,
+      postId: targetPostId,
       gameId,
       replierUserId: user.id,
       replyContent: content,
     });
 
-    return NextResponse.json({ comment }, { status: 201 });
+    return NextResponse.json({ comment, postId: targetPostId }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "發表回覆失敗";
     return NextResponse.json({ error: message }, { status: 500 });

@@ -7,10 +7,14 @@ import {
 
 import {
   VIRTUAL_PLAYERS_BY_LOCALE,
+  getVirtualPlayerById,
   type VirtualPlayerLocale,
 } from "@/lib/virtual-players";
 
 export type ForumSeedLocale = VirtualPlayerLocale;
+
+/** 示範作者索引一律對應此語系虛擬玩家池，避免切換介面語言時換人 */
+const CANONICAL_SEED_AUTHOR_LOCALE: ForumSeedLocale = "zh-HK";
 
 export type LocalizedText = Record<ForumSeedLocale, string>;
 
@@ -53,6 +57,27 @@ export function resolveAppLocale(locale?: string | null): AppLocale {
   return defaultLocale;
 }
 
+export function resolveStableSeedVirtualPlayerId(
+  author: SeedAuthorRef
+): string | null {
+  if (author.kind !== "player") return null;
+  const pool = VIRTUAL_PLAYERS_BY_LOCALE[CANONICAL_SEED_AUTHOR_LOCALE];
+  return pool[author.index % pool.length]?.id ?? null;
+}
+
+export function resolveSeedContentLocale(
+  author: SeedAuthorRef,
+  viewerLocale: ForumSeedLocale
+): ForumSeedLocale {
+  if (author.kind === "official") {
+    return viewerLocale;
+  }
+
+  const playerId = resolveStableSeedVirtualPlayerId(author);
+  const player = playerId ? getVirtualPlayerById(playerId) : null;
+  return player?.locale ?? viewerLocale;
+}
+
 export function resolveSeedAuthorName(
   author: SeedAuthorRef,
   locale: ForumSeedLocale
@@ -61,8 +86,9 @@ export function resolveSeedAuthorName(
     return OFFICIAL_AUTHOR_NAMES[author.key][locale];
   }
 
-  const pool = VIRTUAL_PLAYERS_BY_LOCALE[locale];
-  return pool[author.index % pool.length]!.displayName;
+  const playerId = resolveStableSeedVirtualPlayerId(author);
+  const player = playerId ? getVirtualPlayerById(playerId) : null;
+  return player?.displayName ?? "匿名玩家";
 }
 
 export function pickLocalizedText(

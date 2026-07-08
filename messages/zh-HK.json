@@ -250,7 +250,9 @@
     "timeJustNow": "剛剛",
     "timeMinutes": "{count} 分鐘前",
     "timeHours": "{count} 小時前",
-    "timeDays": "{count} 天前"
+    "timeDays": "{count} 天前",
+    "durationHoursMinutes": "{hours} 小時 {minutes} 分",
+    "durationHoursOnly": "{hours} 小時"
   },
   "home": {
     "statsPlaying": "在玩",
@@ -431,6 +433,7 @@
     "forumHint": "也可前往社群討論區發起完整討論串",
     "tipSupportTitle": "支持創作者",
     "tipSupportDesc": "打賞為自願支持，不影響遊玩。100% 可選，感謝你的鼓勵！",
+    "tipSpendingHint": "請適度課金、量力而為，依自身狀況理性消費。",
     "tipSuggestedAmount": "建議打賞：${amount} USD",
     "tipSupportButton": "打賞支持",
     "tipPreviewBadge": "預覽模式",
@@ -1160,6 +1163,7 @@
     "postSuccess": "文章已發表",
     "loginRequiredReply": "請先登入才能參與討論",
     "seedPost": "此為示範貼文，請發起新討論參與交流",
+    "seedPlayerProfile": "此為示範帳號，無法查看玩家資料",
     "replyRequired": "請輸入回覆內容",
     "replyFailed": "發表回覆失敗",
     "replySuccess": "留言已發表",
@@ -1622,6 +1626,7 @@
     "playerCardReal": "平台玩家",
     "playerCardDm": "私訊",
     "playerCardViewProfile": "查看我的檔案",
+    "playerCardViewCreator": "查看創作者主頁",
     "playerCardRegion": "區域",
     "playerCardLoadFailed": "載入玩家資料失敗",
     "playerCardOnlineTime": "在線時長",

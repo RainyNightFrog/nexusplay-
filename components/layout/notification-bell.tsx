@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Bell, Loader2 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { useAuth } from "@/hooks/use-auth";
@@ -10,30 +10,13 @@ import {
   type NotificationFilter,
 } from "@/components/notifications/notification-filter-bar";
 import type { UserNotification, UserNotificationKind } from "@/lib/user-notifications-service";
+import { formatRelativeTimeFromIso } from "@/lib/format-relative-time";
 import { cn } from "@/lib/utils";
-
-function formatRelativeTime(value: string) {
-  const date = new Date(value);
-  const diffMs = Date.now() - date.getTime();
-  const diffMinutes = Math.floor(diffMs / 60_000);
-
-  if (diffMinutes < 1) return "剛剛";
-  if (diffMinutes < 60) return `${diffMinutes} 分鐘前`;
-
-  const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) return `${diffHours} 小時前`;
-
-  const diffDays = Math.floor(diffHours / 24);
-  if (diffDays < 7) return `${diffDays} 天前`;
-
-  return date.toLocaleDateString("zh-HK", {
-    month: "short",
-    day: "numeric",
-  });
-}
 
 export function NotificationBell() {
   const t = useTranslations("notifications");
+  const tcx = useTranslations("common");
+  const locale = useLocale();
   const { profile } = useAuth();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -227,7 +210,7 @@ export function NotificationBell() {
                       {item.body}
                     </p>
                     <p className="mt-1.5 text-[11px] text-zinc-600">
-                      {formatRelativeTime(item.createdAt)}
+                      {formatRelativeTimeFromIso(item.createdAt, tcx, locale)}
                     </p>
                   </>
                 );

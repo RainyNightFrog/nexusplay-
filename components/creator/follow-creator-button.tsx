@@ -1,17 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2, UserPlus, UserMinus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
+import { cn } from "@/lib/utils";
 
 type FollowCreatorButtonProps = {
   creatorId: string;
   initialFollowing?: boolean;
   initialFollowerCount?: number;
   className?: string;
+  compact?: boolean;
+  showFollowerCount?: boolean;
+  centered?: boolean;
 };
 
 export function FollowCreatorButton({
@@ -19,6 +23,9 @@ export function FollowCreatorButton({
   initialFollowing = false,
   initialFollowerCount = 0,
   className,
+  compact = false,
+  showFollowerCount = true,
+  centered = false,
 }: FollowCreatorButtonProps) {
   const t = useTranslations("creatorPublic");
   const router = useRouter();
@@ -27,9 +34,34 @@ export function FollowCreatorButton({
   const [followerCount, setFollowerCount] = useState(initialFollowerCount);
   const [submitting, setSubmitting] = useState(false);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    void fetch(`/api/creators/${creatorId}/follow`, {
+      credentials: "same-origin",
+      cache: "no-store",
+    })
+      .then((response) => response.json())
+      .then((data: { following?: boolean; followerCount?: number }) => {
+        if (cancelled) return;
+        if (typeof data.following === "boolean") {
+          setFollowing(data.following);
+        }
+        if (typeof data.followerCount === "number") {
+          setFollowerCount(data.followerCount);
+        }
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [creatorId]);
+
   if (profile?.id === creatorId) {
+    if (!showFollowerCount) return null;
     return (
-      <p className={className}>
+      <p className={cn("text-sm text-zinc-500", className)}>
         {t("followerCount", { count: followerCount })}
       </p>
     );
@@ -66,12 +98,23 @@ export function FollowCreatorButton({
   }
 
   return (
-    <div className={className}>
-      <div className="flex flex-wrap items-center gap-3">
+    <div
+      className={cn(
+        centered ? "flex flex-col items-center" : "",
+        className
+      )}
+    >
+      <div
+        className={cn(
+          "flex flex-wrap items-center gap-3",
+          centered && "justify-center"
+        )}
+      >
         <Button
           type="button"
           onClick={() => void toggleFollow()}
           disabled={submitting}
+          size={compact ? "sm" : "default"}
           variant={following ? "outline" : "default"}
           className={
             following
@@ -88,9 +131,11 @@ export function FollowCreatorButton({
           )}
           {following ? t("unfollowBtn") : t("followBtn")}
         </Button>
-        <p className="text-sm text-zinc-500">
-          {t("followerCount", { count: followerCount })}
-        </p>
+        {showFollowerCount && (
+          <p className="text-sm text-zinc-500">
+            {t("followerCount", { count: followerCount })}
+          </p>
+        )}
       </div>
     </div>
   );
