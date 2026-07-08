@@ -37,7 +37,7 @@ export function useApiError() {
           : t("databaseUnavailable");
       }
 
-      return null;
+      return message;
     },
     [t]
   );

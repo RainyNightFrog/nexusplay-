@@ -1,4 +1,4 @@
-import { sanitizePlainText } from "@/lib/sanitize";
+import { sanitizePlainText } from "@/lib/sanitize-plain";
 
 export type BillingAddress = {
   billing_name: string | null;

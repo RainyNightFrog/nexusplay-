@@ -385,7 +385,7 @@ function PayoutSettingsContent() {
             </p>
 
             {payout?.payoutStatus === "active" ? (
-              <div className="flex items-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-500/5 p-3 text-sm text-emerald-200">
+              <div className="flex items-center justify-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-500/5 p-3 text-center text-sm text-emerald-200">
                 <CheckCircle2 className="size-4 shrink-0" />
                 {t("payoutStripeConnected")}
               </div>

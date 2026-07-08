@@ -14,7 +14,7 @@ import {
 } from "@/lib/tip-fee-policy";
 import { cn } from "@/lib/utils";
 
-export function LegalView() {
+export function LegalView({ paymentsLive }: { paymentsLive: boolean }) {
   const t = useTranslations("legal");
 
   const sections = [
@@ -43,8 +43,10 @@ export function LegalView() {
         }),
         t("paymentsP4"),
         t("paymentsP5"),
-        t("paymentsP6"),
+        paymentsLive ? t("paymentsP6Live") : t("paymentsP6"),
         t("paymentsP7", { days: FEE_CHANGE_NOTICE_DAYS }),
+        t("paymentsP8"),
+        t("paymentsP9"),
       ],
     },
     {
@@ -90,9 +92,15 @@ export function LegalView() {
         <p className="text-center text-sm leading-relaxed text-zinc-400">
           {t("intro")}
         </p>
-        <p className="mx-auto mt-3 max-w-2xl text-center text-xs text-amber-200/80">
-          {t("draftNotice")}
-        </p>
+        {paymentsLive ? (
+          <p className="mx-auto mt-3 max-w-2xl text-center text-xs text-emerald-200/90">
+            {t("paymentsLiveNotice")}
+          </p>
+        ) : (
+          <p className="mx-auto mt-3 max-w-2xl text-center text-xs text-amber-200/80">
+            {t("draftNotice")}
+          </p>
+        )}
 
         <div className="mt-10 space-y-10">
           {sections.map((section) => (

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
+import { getPlatformModeStatus } from "@/lib/platform-mode";
 import { LegalView } from "./legal-view";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -12,5 +13,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default function LegalPage() {
-  return <LegalView />;
+  const { paymentsLive } = getPlatformModeStatus();
+
+  return <LegalView paymentsLive={paymentsLive} />;
 }

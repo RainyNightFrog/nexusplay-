@@ -8,9 +8,24 @@ export function isStripeConfigured() {
   return Boolean(process.env.STRIPE_SECRET_KEY?.trim());
 }
 
-/** 金流是否已正式上線（需 Stripe 金鑰 + 明確開關） */
+/** 金流是否已正式上線（需 Stripe 金鑰 + 明確開關 + 金鑰模式一致） */
 export function isPaymentsLive() {
-  return isStripeConfigured() && process.env.STRIPE_PAYMENTS_LIVE === "true";
+  if (!isStripeConfigured() || process.env.STRIPE_PAYMENTS_LIVE !== "true") {
+    return false;
+  }
+
+  const secret = process.env.STRIPE_SECRET_KEY?.trim() ?? "";
+  const publishable =
+    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim() ?? "";
+  const isLiveKey = secret.startsWith("sk_live_");
+  const isTestKey = secret.startsWith("sk_test_");
+  const publishableLive = publishable.startsWith("pk_live_");
+  const publishableTest = publishable.startsWith("pk_test_");
+
+  if (isLiveKey && publishableLive) return true;
+  if (isTestKey && publishableTest) return true;
+
+  return false;
 }
 
 export function getStripeClient() {

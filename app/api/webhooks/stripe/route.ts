@@ -4,11 +4,13 @@ import { syncConnectAccountFromWebhook } from "@/lib/creator-connect-webhook";
 import { syncCreatorPayoutFromStripeEvent } from "@/lib/creator-payout-webhook";
 import { finalizeTipPayment } from "@/lib/tip-checkout-service";
 import {
+  handleTipDisputeClosed,
   handleTipDisputeCreated,
   handleTipRefund,
   markTipPaymentFailed,
 } from "@/lib/tip-payment-webhook";
 import { getStripeClient, isStripeConfigured } from "@/lib/stripe-connect";
+import { claimStripeWebhookEvent } from "@/lib/stripe-webhook-dedup";
 
 export async function POST(request: Request) {
   if (!isStripeConfigured()) {
@@ -35,6 +37,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "簽章驗證失敗" }, { status: 400 });
   }
 
+  const isNewEvent = await claimStripeWebhookEvent(event.id, event.type);
+  if (!isNewEvent) {
+    return NextResponse.json({ received: true, duplicate: true });
+  }
+
   try {
     switch (event.type) {
       case "payment_intent.succeeded": {
@@ -55,6 +62,11 @@ export async function POST(request: Request) {
       case "charge.dispute.created": {
         const dispute = event.data.object as Stripe.Dispute;
         await handleTipDisputeCreated(dispute);
+        break;
+      }
+      case "charge.dispute.closed": {
+        const dispute = event.data.object as Stripe.Dispute;
+        await handleTipDisputeClosed(dispute);
         break;
       }
       case "account.updated": {

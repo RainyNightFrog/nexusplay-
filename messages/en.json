@@ -472,6 +472,7 @@
     "tipSuccessLive": "Tip sent successfully — thank you!",
     "tipClose": "Close",
     "tipCheckoutFailed": "Could not start tip checkout",
+    "tipCreatorPayoutNotReady": "The creator has not finished Stripe payout setup. Tips are unavailable for now. Creators: go to Settings → Payout to connect Stripe.",
     "tipLegalLink": "Payments & Tips Policy",
     "leaveConfirmTitle": "Leave this game?",
     "leaveConfirmDescription": "Your game is in progress. Unsaved progress may be lost.",
@@ -1374,7 +1375,11 @@
       "zipTooLargeGeneric": "Game zip exceeds the size limit",
       "supabaseConnection": "Cannot connect to Supabase. Check your Project URL in .env.local and restart.",
       "supabaseFileTooLarge": "File exceeds Supabase size limit (Free plan max 50 MB per file). Compress the zip or upgrade.",
-      "zipMissingIndex": "zip 根目錄需包含 index.html（或 index.htm）"
+      "zipMissingIndex": "zip 根目錄需包含 index.html（或 index.htm）",
+      "creatorPayoutNotReady": "The creator has not finished payout setup. Tips are unavailable for now.",
+      "creatorStripeNotConnected": "The creator has not connected Stripe yet.",
+      "loginRequiredTip": "Please sign in to send a tip",
+      "selfTipNotAllowed": "You cannot tip your own game"
     }
   },
   "admin": {
@@ -1649,7 +1654,11 @@
     "paymentsP4": "Estimated creator net ≈ tip − platform fee (currently 0%) − processor fee. Funds are processed through the platform and accumulate until batch payout.",
     "paymentsP5": "Tips are generally non-refundable support payments; any refund policy after launch will be posted here.",
     "paymentsP6": "Payments are not live yet — enabling tips does not create real transactions today.",
+    "paymentsP6Live": "Tips are processed by Stripe. Sandbox/test mode does not charge real money; live keys create real charges. You cannot tip your own games.",
     "paymentsP7": "We may adjust the site-wide platform fee. Any change will be announced at least {days} days in advance and applies only to new transactions after the effective date — never retroactively to settled or withdrawn amounts.",
+    "paymentsP8": "NexusPlay routes voluntary tips to creators via Stripe Connect marketplace. The platform currently charges 0% service fee. This is not tax or legal advice.",
+    "paymentsP9": "Creators are responsible for their own tax obligations. Tips are voluntary support, not purchases of games or digital goods. Disputes and refunds follow Stripe and platform policy.",
+    "paymentsLiveNotice": "Payments are enabled. Test keys use Stripe sandbox; live keys create real charges.",
     "disclaimerTitle": "Disclaimer",
     "disclaimerP1": "NexusPlay is not fully liable for user-uploaded games, creator statements, or interactions between users. Games are provided by creators; we provide hosting and discovery.",
     "disclaimerP2": "The service is provided \"as is\" without guarantees of uninterrupted or error-free operation. To the extent permitted by law, we are not liable for losses from network issues, third-party services, or force majeure.",

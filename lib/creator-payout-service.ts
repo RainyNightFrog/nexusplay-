@@ -126,6 +126,10 @@ export async function startConnectOnboarding(params: {
     return { mode: "preview" as const };
   }
 
+  if (!isPaymentsLive()) {
+    return { mode: "preview" as const };
+  }
+
   const supabase = createServerSupabase();
   const row = await readCreatorPayoutRow(supabase, params.userId);
   let accountId = row?.stripe_connect_account_id ?? null;

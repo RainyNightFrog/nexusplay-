@@ -65,4 +65,8 @@ export const API_ERROR_KEY_BY_MESSAGE: Record<string, string> = {
   "LEGACY_IMPORTS_TABLE_MISSING": "legacyImportsTableMissing",
   "讀取遷移碼失敗": "legacyImportLoadFailed",
   "建立遷移碼失敗": "legacyImportCreateFailed",
+  "創作者尚未完成收款設定，暫無法打賞": "creatorPayoutNotReady",
+  "創作者尚未連結 Stripe": "creatorStripeNotConnected",
+  "請先登入才能打賞": "loginRequiredTip",
+  "不能打賞自己的遊戲": "selfTipNotAllowed",
 };

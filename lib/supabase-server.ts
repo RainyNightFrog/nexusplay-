@@ -2,8 +2,18 @@ import { createClient } from "@supabase/supabase-js";
 
 export function createServerSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const isProduction =
+    process.env.VERCEL_ENV === "production" ||
+    process.env.NODE_ENV === "production";
+
+  if (isProduction && !serviceKey) {
+    throw new Error(
+      "生產環境必須設定 SUPABASE_SERVICE_ROLE_KEY（金流與 webhook 需要 service role）"
+    );
+  }
+
   const key = serviceKey || anonKey;
 
   if (!url || !key) {

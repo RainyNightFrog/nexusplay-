@@ -157,8 +157,15 @@ export async function requestCreatorWithdrawal(userId: string) {
     .select("id")
     .single();
 
-  if (insertError || !payoutRow) {
-    throw new Error(insertError?.message ?? "建立提領紀錄失敗");
+  if (insertError) {
+    if (insertError.code === "23505") {
+      return { error: "已有進行中的提領，請稍後再試", status: 409 as const };
+    }
+    throw new Error(insertError.message);
+  }
+
+  if (!payoutRow) {
+    throw new Error("建立提領紀錄失敗");
   }
 
   try {

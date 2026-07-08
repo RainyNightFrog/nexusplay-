@@ -111,6 +111,7 @@ export function TipSupportPanel({
   const suggestedTipAmount = tipInfo?.suggestedTipAmount ?? suggestedProp;
   const platformFeePercent = tipInfo?.platformFeePercent ?? 0;
   const paymentsLive = tipInfo?.paymentsLive ?? false;
+  const creatorPayoutReady = tipInfo?.creatorPayoutReady ?? false;
 
   useEffect(() => {
     if (!tipsEnabledProp) {
@@ -156,6 +157,10 @@ export function TipSupportPanel({
     const value = Number.parseFloat(amount);
     return Number.isFinite(value) ? value : 0;
   }, [amount]);
+
+  const canCheckout =
+    parsedAmount >= MIN_TIP_USD &&
+    (!paymentsLive || creatorPayoutReady);
 
   const breakdown = useMemo(
     () => estimateCreatorNetFromTip(parsedAmount, platformFeePercent),
@@ -256,7 +261,8 @@ export function TipSupportPanel({
     } catch (checkoutError) {
       setError(
         checkoutError instanceof Error
-          ? translateApiError(checkoutError.message)
+          ? translateApiError(checkoutError.message) ??
+              checkoutError.message
           : t("tipCheckoutFailed")
       );
     } finally {
@@ -398,7 +404,7 @@ export function TipSupportPanel({
                   </p>
 
                   {receipt && (
-                    <div className="mt-4 rounded-xl border border-white/8 bg-zinc-950/60 p-4 text-left text-xs text-zinc-400">
+                    <div className="mt-4 rounded-xl border border-white/8 bg-zinc-950/60 p-4 text-center text-xs text-zinc-400">
                       <p className="font-medium text-zinc-200">{t("tipReceiptTitle")}</p>
                       <p className="mt-2 text-zinc-500">{receipt.gameTitle}</p>
                       <p className="mt-1 font-mono text-fuchsia-200">
@@ -443,22 +449,27 @@ export function TipSupportPanel({
                   </Button>
                 </div>
               ) : clientSecret && stripePromise && selectedPaymentMethodId ? (
-                <TipSavedCardForm
-                  clientSecret={clientSecret}
-                  paymentMethodId={selectedPaymentMethodId}
-                  cardLabel={savedCardLabel}
-                  onSuccess={(nextReceipt) => {
-                    setReceipt(nextReceipt);
-                    setSuccess(true);
-                  }}
-                  onError={(message) => setError(message)}
-                  onUseNewCard={() => {
-                    setClientSecret(null);
-                    setPublishableKey(null);
-                    setSelectedPaymentMethodId(null);
-                    setSavedCardLabel("");
-                  }}
-                />
+                <Elements
+                  stripe={stripePromise}
+                  options={{ clientSecret, appearance: { theme: "night" } }}
+                >
+                  <TipSavedCardForm
+                    clientSecret={clientSecret}
+                    paymentMethodId={selectedPaymentMethodId}
+                    cardLabel={savedCardLabel}
+                    onSuccess={(nextReceipt) => {
+                      setReceipt(nextReceipt);
+                      setSuccess(true);
+                    }}
+                    onError={(message) => setError(message)}
+                    onUseNewCard={() => {
+                      setClientSecret(null);
+                      setPublishableKey(null);
+                      setSelectedPaymentMethodId(null);
+                      setSavedCardLabel("");
+                    }}
+                  />
+                </Elements>
               ) : clientSecret && stripePromise ? (
                 <Elements
                   stripe={stripePromise}
@@ -474,6 +485,13 @@ export function TipSupportPanel({
                 </Elements>
               ) : (
                 <div className="space-y-4">
+                  {paymentsLive && !creatorPayoutReady && (
+                    <div className="flex items-start gap-2 rounded-xl border border-amber-400/20 bg-amber-500/5 p-3 text-xs text-amber-100/90">
+                      <Info className="mt-0.5 size-4 shrink-0" />
+                      {t("tipCreatorPayoutNotReady")}
+                    </div>
+                  )}
+
                   {!paymentsLive && (
                     <div className="flex items-start gap-2 rounded-xl border border-amber-400/20 bg-amber-500/5 p-3 text-xs text-amber-100/90">
                       <Info className="mt-0.5 size-4 shrink-0" />
@@ -612,7 +630,7 @@ export function TipSupportPanel({
                   <Button
                     type="button"
                     onClick={startCheckout}
-                    disabled={submitting}
+                    disabled={submitting || !canCheckout}
                     className="w-full gap-2 bg-gradient-to-r from-fuchsia-500 to-violet-600"
                   >
                     {submitting ? (

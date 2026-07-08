@@ -172,6 +172,10 @@ export async function createTipPaymentIntent(params: {
 
   const { game, creatorProfile, platformFeePercent } = context;
 
+  if (params.payerId === game.creator_id) {
+    return { error: "不能打賞自己的遊戲", status: 403 };
+  }
+
   if (creatorProfile.payout_status !== "active") {
     return {
       error: "創作者尚未完成收款設定，暫無法打賞",
@@ -292,6 +296,11 @@ export async function recordPreviewTip(params: {
   }
 
   const { game, platformFeePercent } = context;
+
+  if (params.payerId === game.creator_id) {
+    return { error: "不能打賞自己的遊戲", status: 403 };
+  }
+
   const breakdown = buildTipBreakdown(params.amountUsd, platformFeePercent);
   const billingSnapshot = await loadPayerBillingSnapshot(supabase, params.payerId);
 
@@ -326,7 +335,46 @@ export async function recordPreviewTip(params: {
 
 export { loadTipReceiptForPayer };
 
-export async function finalizeTipPayment(paymentIntentId: string) {
+function resolveTransferDestination(
+  paymentIntent: Stripe.PaymentIntent
+): string | null {
+  const destination = paymentIntent.transfer_data?.destination;
+  if (!destination) return null;
+  return typeof destination === "string" ? destination : destination.id;
+}
+
+async function validateTipPaymentIntent(
+  paymentIntent: Stripe.PaymentIntent,
+  tip: {
+    amount_usd: number | string;
+    payer_id: string;
+    creator_id: string;
+  },
+  creatorConnectAccountId: string | null
+) {
+  const expectedCents = Math.round(Number(tip.amount_usd) * 100);
+  if (paymentIntent.amount !== expectedCents) {
+    return false;
+  }
+  if (paymentIntent.metadata?.nexusplay_payer_id !== tip.payer_id) {
+    return false;
+  }
+  if (paymentIntent.metadata?.nexusplay_creator_id !== tip.creator_id) {
+    return false;
+  }
+  if (
+    creatorConnectAccountId &&
+    resolveTransferDestination(paymentIntent) !== creatorConnectAccountId
+  ) {
+    return false;
+  }
+  return true;
+}
+
+export async function finalizeTipPayment(
+  paymentIntentId: string,
+  options?: { expectedPayerId?: string }
+) {
   if (!isStripeConfigured()) {
     return { ok: false, reason: "stripe_not_configured" as const };
   }
@@ -363,26 +411,65 @@ export async function finalizeTipPayment(paymentIntentId: string) {
     return { ok: true, alreadyProcessed: true, tipId: tip.id, receipt };
   }
 
-  const { error: updateTipError } = await supabase
-    .from("game_tips")
-    .update({ status: "succeeded" })
-    .eq("id", tip.id)
-    .eq("status", "pending");
-
-  if (updateTipError) {
-    throw new Error(updateTipError.message);
+  if (
+    options?.expectedPayerId &&
+    options.expectedPayerId !== tip.payer_id
+  ) {
+    return { ok: false, reason: "forbidden" as const };
   }
 
   const { data: creatorProfile } = await supabase
     .from("profiles")
-    .select("creator_balance_usd")
+    .select("stripe_connect_account_id, creator_balance_usd")
     .eq("id", tip.creator_id)
     .maybeSingle();
+
+  const valid = await validateTipPaymentIntent(
+    paymentIntent,
+    tip,
+    creatorProfile?.stripe_connect_account_id ?? null
+  );
+  if (!valid) {
+    console.error("[tip] payment intent validation failed", paymentIntentId);
+    return { ok: false, reason: "validation_failed" as const };
+  }
+
+  const { data: claimed, error: claimError } = await supabase
+    .from("game_tips")
+    .update({ status: "succeeded" })
+    .eq("id", tip.id)
+    .eq("status", "pending")
+    .select("id")
+    .maybeSingle();
+
+  if (claimError) {
+    throw new Error(claimError.message);
+  }
+
+  if (!claimed) {
+    const { data: current } = await supabase
+      .from("game_tips")
+      .select("status")
+      .eq("id", tip.id)
+      .maybeSingle();
+
+    if (current?.status === "succeeded") {
+      const receipt = await loadTipReceiptForPayer(
+        supabase,
+        tip.id,
+        tip.payer_id
+      );
+      return { ok: true, alreadyProcessed: true, tipId: tip.id, receipt };
+    }
+
+    return { ok: false, reason: "claim_failed" as const };
+  }
 
   const currentBalance =
     typeof creatorProfile?.creator_balance_usd === "number"
       ? creatorProfile.creator_balance_usd
-      : Number.parseFloat(String(creatorProfile?.creator_balance_usd ?? 0)) || 0;
+      : Number.parseFloat(String(creatorProfile?.creator_balance_usd ?? 0)) ||
+        0;
 
   const newBalance =
     Math.round((currentBalance + Number(tip.creator_net_usd)) * 100) / 100;

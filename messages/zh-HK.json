@@ -472,6 +472,7 @@
     "tipSuccessLive": "打賞成功，感謝你的支持！",
     "tipClose": "關閉",
     "tipCheckoutFailed": "無法建立打賞",
+    "tipCreatorPayoutNotReady": "創作者尚未完成 Stripe 收款設定，暫時無法打賞。若你是創作者，請先到「設定 → 收款」連接 Stripe。",
     "tipLegalLink": "付款與打賞政策",
     "leaveConfirmTitle": "確定要離開遊戲？",
     "leaveConfirmDescription": "遊戲進行中，目前進度可能尚未保存。",
@@ -1374,7 +1375,11 @@
       "zipTooLargeGeneric": "遊戲 zip 超過大小上限",
       "zipMissingIndex": "zip 根目錄需包含 index.html（或 index.htm）",
       "supabaseConnection": "無法連線 Supabase：Project URL 可能錯誤或專案 DNS 尚未生效。請到 Supabase → Settings → Data API 複製「Project URL」，貼到 .env.local 後重啟。",
-      "supabaseFileTooLarge": "檔案超過 Supabase 大小上限（Free 方案單檔最大 50 MB）。請壓縮 zip 後再試，或升級 Pro 方案提高上限。"
+      "supabaseFileTooLarge": "檔案超過 Supabase 大小上限（Free 方案單檔最大 50 MB）。請壓縮 zip 後再試，或升級 Pro 方案提高上限。",
+      "creatorPayoutNotReady": "創作者尚未完成收款設定，暫無法打賞",
+      "creatorStripeNotConnected": "創作者尚未連結 Stripe",
+      "loginRequiredTip": "請先登入才能打賞",
+      "selfTipNotAllowed": "不能打賞自己的遊戲"
     }
   },
   "admin": {
@@ -1650,7 +1655,11 @@
     "paymentsP4": "創作者預估實收 ≈ 打賞金額 − 平台服務費（目前 0%）− 金流手續費。款項經平台金流處理後累積至帳戶餘額，達門檻後批次提領。",
     "paymentsP5": "打賞一般視為對創作者的支持，通常不提供與零售商品相同的退費保障；若金流上線後另有退款政策，將於本頁更新。",
     "paymentsP6": "目前金流尚在準備中，勾選「開啟打賞」不會立即產生真實交易。",
+    "paymentsP6Live": "打賞經 Stripe 處理。沙盒／測試模式不會產生真實扣款；正式金鑰上線後將產生真實交易。請勿為自己上傳的遊戲打賞。",
     "paymentsP7": "平台保留調整全站服務費的權利，任何調整將至少提前 {days} 日於站內公告，且僅適用於公告生效後的新交易，不追溯已結算或已提領的款項。",
+    "paymentsP8": "NexusPlay 以市集模式代收打賞並轉至創作者 Stripe Connect 帳戶。平台目前收取 0% 服務費，主要提供金流路由與平台功能；此說明不構成稅務或法律意見。",
+    "paymentsP9": "創作者須自行申報所在地稅務義務。玩家打賞為自願支持，通常不視為購買遊戲或數位商品。若有爭議、退款或 chargeback，將依 Stripe 與本平台政策處理。",
+    "paymentsLiveNotice": "金流功能已啟用。使用測試金鑰時為沙盒交易；切換正式金鑰後將產生真實扣款。",
     "privacyTitle": "私隱政策",
     "privacyP1": "NexusPlay 收集帳戶資料（電郵、顯示名稱）、遊戲上傳內容、遊玩與分析事件，以及打賞／提領相關交易紀錄，以提供平台服務。",
     "privacyP2": "帳單地址僅用於收據與合規用途；付款卡資料由 Stripe 等第三方金流商處理，平台不儲存完整卡號。",

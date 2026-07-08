@@ -1,4 +1,5 @@
 import { createServerSupabase } from "@/lib/supabase-server";
+import { isPaymentsLive } from "@/lib/stripe-connect";
 import { resolveEquippedTitles } from "@/lib/equipped-title-service";
 import type { EquippedTitle } from "@/lib/titles";
 
@@ -15,12 +16,13 @@ export async function listGameSupporters(
   limit = 12
 ): Promise<GameSupporter[]> {
   const supabase = createServerSupabase();
+  const tipStatuses = isPaymentsLive() ? ["succeeded"] : ["succeeded", "preview"];
 
   const { data: tips, error } = await supabase
     .from("game_tips")
     .select("payer_id, amount_usd, created_at, public_anonymous")
     .eq("game_id", gameId)
-    .in("status", ["succeeded", "preview"])
+    .in("status", tipStatuses)
     .order("created_at", { ascending: false })
     .limit(limit);
 
