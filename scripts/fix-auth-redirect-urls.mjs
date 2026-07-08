@@ -8,9 +8,13 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { execSync } from "node:child_process";
+import {
+  PRODUCTION_SITE_URL,
+  getAuthRedirectAllowList,
+  mergeAuthRedirectAllowList,
+} from "./auth-site-config.mjs";
 
 const PROJECT_REF = "icydkixwynxizrgfzelq";
-const PRODUCTION_SITE_URL = "https://nexusplay-five.vercel.app";
 
 function loadEnvLocal() {
   const envPath = resolve(process.cwd(), ".env.local");
@@ -34,39 +38,6 @@ function parseTokenArg() {
     }
   }
   return "";
-}
-
-function getAuthRedirectAllowList() {
-  const productionBase = PRODUCTION_SITE_URL.replace(/\/$/, "");
-  const localBase = "http://localhost:3000";
-  return [
-    `${productionBase}/auth/callback`,
-    `${productionBase}/**`,
-    `${localBase}/auth/callback`,
-    `${localBase}/**`,
-  ];
-}
-
-function expandRedirectAllowListEntry(value) {
-  const trimmed = value.trim();
-  if (!trimmed) return [];
-  return trimmed
-    .split(/(?<=\/auth\/callback)(?=https?:\/\/)/i)
-    .map((part) => part.trim())
-    .filter(Boolean);
-}
-
-function mergeRedirectUrls(existing) {
-  const values = new Set();
-  for (const entry of String(existing ?? "").split(/[\n,]/)) {
-    for (const url of expandRedirectAllowListEntry(entry)) {
-      values.add(url);
-    }
-  }
-  for (const url of getAuthRedirectAllowList()) {
-    values.add(url);
-  }
-  return [...values].join("\n");
 }
 
 function copyToClipboard(text) {
@@ -95,7 +66,7 @@ async function patchSupabase(accessToken) {
     throw new Error(current.message ?? `Supabase API ${currentResponse.status}`);
   }
 
-  const uriAllowList = mergeRedirectUrls(current.uri_allow_list);
+  const uriAllowList = mergeAuthRedirectAllowList(current.uri_allow_list);
   const patchResponse = await fetch(
     `https://api.supabase.com/v1/projects/${PROJECT_REF}/config/auth`,
     {
@@ -120,16 +91,17 @@ async function main() {
   const accessToken =
     parseTokenArg() || env.SUPABASE_ACCESS_TOKEN?.trim() || "";
 
-  const correctUrls = getAuthRedirectAllowList().join("\n");
+  const allowList = getAuthRedirectAllowList();
 
   console.log("");
   console.log("══════════════════════════════════════════════════════════");
   console.log("  RainyNightFrog · 修正 Supabase Redirect URLs");
   console.log("══════════════════════════════════════════════════════════");
   console.log("");
-  console.log("正確應為以下 4 行（每行一條，不可黏在一起）：");
+  console.log(`Site URL: ${PRODUCTION_SITE_URL}`);
+  console.log("Redirect URLs 應包含：");
   console.log("");
-  for (const line of getAuthRedirectAllowList()) {
+  for (const line of allowList) {
     console.log(`  ${line}`);
   }
   console.log("");
@@ -138,26 +110,27 @@ async function main() {
     console.log("偵測到 Access Token，正在自動修正 Supabase…");
     const result = await patchSupabase(accessToken);
     console.log("");
-    console.log("✓ 已更新 Redirect URLs：");
-    console.log(result.uri_allow_list);
+    console.log("✓ 已更新 Site URL 與 Redirect URLs：");
+    console.log(`  Site URL → ${result.site_url}`);
+    console.log(`  Redirect URLs →\n${result.uri_allow_list}`);
     console.log("");
-    console.log("請重新測試：http://localhost:3000/auth");
+    console.log("請重新測試：https://rainynightfrog.com/auth");
     return;
   }
 
-  const copied = copyToClipboard(correctUrls);
+  const copied = copyToClipboard(allowList.join("\n"));
   if (copied) {
-    console.log("✓ 已複製正確 4 行到剪貼簿");
+    console.log("✓ 已複製 Redirect URLs 到剪貼簿");
   }
 
   console.log("");
   console.log("手動修正步驟（約 30 秒）：");
   console.log("  1. 開啟 Supabase → Authentication → URL Configuration");
-  console.log("  2. 刪除錯誤的那一行（兩條網址黏在一起的）");
-  console.log("  3. 按 Add URL，分別貼上上面 4 行（每次一行）");
+  console.log(`  2. Site URL 設為 ${PRODUCTION_SITE_URL}`);
+  console.log("  3. Redirect URLs 貼上上面清單（每次一行）");
   console.log("  4. 按 Save changes");
   console.log("");
-  console.log("或到 http://localhost:3000/auth/setup-google");
+  console.log("或到 https://rainynightfrog.com/auth/setup-google");
   console.log("  勾選「只修正 Redirect URLs」+ 貼 Supabase Access Token 一鍵完成");
   console.log("");
 

@@ -2,12 +2,16 @@ export const PRODUCTION_SITE_URL = "https://rainynightfrog.com";
 export const LEGACY_PRODUCTION_SITE_URL = "https://nexusplay-five.vercel.app";
 export const LOCAL_SITE_URL = "http://localhost:3000";
 
-export function getAuthCallbackUrl(origin: string) {
+export function getAuthCallbackUrl(origin) {
   return `${origin.replace(/\/$/, "")}/auth/callback`;
 }
 
 export function getProductionSiteOrigins() {
-  return [PRODUCTION_SITE_URL, `https://www.rainynightfrog.com`, LEGACY_PRODUCTION_SITE_URL];
+  return [
+    PRODUCTION_SITE_URL,
+    "https://www.rainynightfrog.com",
+    LEGACY_PRODUCTION_SITE_URL,
+  ];
 }
 
 export function getAuthRedirectAllowList(siteUrl = PRODUCTION_SITE_URL) {
@@ -17,7 +21,7 @@ export function getAuthRedirectAllowList(siteUrl = PRODUCTION_SITE_URL) {
     LOCAL_SITE_URL.replace(/\/$/, ""),
   ]);
 
-  const urls = new Set<string>();
+  const urls = new Set();
   for (const origin of origins) {
     urls.add(getAuthCallbackUrl(origin));
     urls.add(`${origin}/**`);
@@ -26,8 +30,7 @@ export function getAuthRedirectAllowList(siteUrl = PRODUCTION_SITE_URL) {
   return [...urls];
 }
 
-/** Split glued entries like `.../callbackhttp://localhost...` into separate URLs. */
-export function expandRedirectAllowListEntry(value: string): string[] {
+export function expandRedirectAllowListEntry(value) {
   const trimmed = value.trim();
   if (!trimmed) return [];
   return trimmed
@@ -36,11 +39,8 @@ export function expandRedirectAllowListEntry(value: string): string[] {
     .filter(Boolean);
 }
 
-export function mergeAuthRedirectAllowList(
-  existing: string | null | undefined,
-  siteUrl = PRODUCTION_SITE_URL
-) {
-  const values = new Set<string>();
+export function mergeAuthRedirectAllowList(existing, siteUrl = PRODUCTION_SITE_URL) {
+  const values = new Set();
 
   for (const entry of String(existing ?? "").split(/[\n,]/)) {
     for (const url of expandRedirectAllowListEntry(entry)) {

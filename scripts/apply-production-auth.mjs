@@ -8,9 +8,14 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
+import {
+  PRODUCTION_SITE_URL,
+  LOCAL_SITE_URL,
+  mergeAuthRedirectAllowList,
+} from "./auth-site-config.mjs";
+
 const PROJECT_REF = "icydkixwynxizrgfzelq";
-const PRODUCTION_SITE_URL = "https://nexusplay-five.vercel.app";
-const LOCAL_CALLBACK = "http://localhost:3000/auth/callback";
+const LOCAL_CALLBACK = `${LOCAL_SITE_URL}/auth/callback`;
 
 function loadEnvFile(fileName) {
   const envPath = resolve(process.cwd(), fileName);
@@ -49,15 +54,7 @@ function parseArgs() {
 }
 
 function mergeRedirectUrls(existing) {
-  const values = new Set([
-    `${PRODUCTION_SITE_URL}/auth/callback`,
-    LOCAL_CALLBACK,
-  ]);
-  for (const value of String(existing ?? "").split(/[\n,]/)) {
-    const trimmed = value.trim();
-    if (trimmed) values.add(trimmed);
-  }
-  return [...values].join("\n");
+  return mergeAuthRedirectAllowList(existing, PRODUCTION_SITE_URL);
 }
 
 async function patchDirect(accessToken) {

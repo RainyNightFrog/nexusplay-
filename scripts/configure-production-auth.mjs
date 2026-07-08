@@ -3,16 +3,22 @@
  *
  * Usage:
  *   node scripts/configure-production-auth.mjs
- *   node scripts/configure-production-auth.mjs --site-url https://nexusplay-five.vercel.app
+ *   node scripts/configure-production-auth.mjs --site-url https://rainynightfrog.com
  *
  * Requires SUPABASE_ACCESS_TOKEN in .env.local (create at supabase.com/dashboard/account/tokens)
  */
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
+import {
+  PRODUCTION_SITE_URL,
+  LOCAL_SITE_URL,
+  mergeAuthRedirectAllowList,
+} from "./auth-site-config.mjs";
+
 const PROJECT_REF = "icydkixwynxizrgfzelq";
-const DEFAULT_PRODUCTION_SITE = "https://nexusplay-five.vercel.app";
-const LOCAL_SITE = "http://localhost:3000";
+const DEFAULT_PRODUCTION_SITE = PRODUCTION_SITE_URL;
+const LOCAL_SITE = LOCAL_SITE_URL;
 const LOCAL_CALLBACK = `${LOCAL_SITE}/auth/callback`;
 
 function loadEnv() {
@@ -64,15 +70,7 @@ async function getAuthConfig(accessToken) {
 }
 
 function mergeRedirectUrls(existing, productionCallback) {
-  const values = new Set(
-    String(existing ?? "")
-      .split(/[\n,]/)
-      .map((value) => value.trim())
-      .filter(Boolean)
-  );
-  values.add(productionCallback);
-  values.add(LOCAL_CALLBACK);
-  return [...values].join("\n");
+  return mergeAuthRedirectAllowList(existing, DEFAULT_PRODUCTION_SITE);
 }
 
 async function patchAuthConfig(accessToken, body) {

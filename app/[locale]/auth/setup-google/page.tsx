@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PRODUCTION_SITE_URL } from "@/lib/auth-redirect-urls";
 import { CheckCircle2, Copy, ExternalLink, Loader2 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
@@ -45,7 +46,7 @@ export default function SetupGooglePage() {
           clientId,
           clientSecret,
           patchUrlsOnly,
-          siteUrl: "https://nexusplay-five.vercel.app",
+          siteUrl: PRODUCTION_SITE_URL,
         }),
       });
 

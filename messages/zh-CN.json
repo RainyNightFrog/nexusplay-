@@ -1248,7 +1248,7 @@
     "launchChecklistHint_env_supabase_public": "Vercel 环境变数与本机 .env.local 应一致。",
     "launchChecklistHint_env_supabase_anon": "前端登入与 API 读取需要此金钥。",
     "launchChecklistHint_env_service_role": "Webhook、管理员 API 与伺服器写入需要。",
-    "launchChecklistHint_env_site_url": "应为 https://nexusplay-five.vercel.app，勿用 localhost。",
+    "launchChecklistHint_env_site_url": "应为 https://rainynightfrog.com，勿用 localhost。",
     "launchChecklistHint_db_games_readable": "确认 Supabase 连线与 RLS 未阻挡公开读取。",
     "launchChecklistHint_probe_homepage": "自动探测正式站首页 HTTP 状态。",
     "launchChecklistHint_probe_game_api": "确认 /api/games/1 不回 500。",

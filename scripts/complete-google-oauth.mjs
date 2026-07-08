@@ -11,25 +11,22 @@ import { resolve } from "node:path";
 import * as readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 
+import {
+  PRODUCTION_SITE_URL,
+  LOCAL_SITE_URL,
+  mergeAuthRedirectAllowList,
+} from "./auth-site-config.mjs";
+
 const PROJECT_REF = "icydkixwynxizrgfzelq";
 const GOOGLE_REDIRECT_URI = `https://${PROJECT_REF}.supabase.co/auth/v1/callback`;
-const PRODUCTION_SITE_URL = "https://nexusplay-five.vercel.app";
-const LOCAL_SITE_URL = "http://localhost:3000";
+const LOCAL_SITE = LOCAL_SITE_URL;
 
 function getAuthRedirectAllowList(siteUrl = PRODUCTION_SITE_URL) {
-  return [
-    `${siteUrl.replace(/\/$/, "")}/auth/callback`,
-    `${LOCAL_SITE_URL}/auth/callback`,
-  ];
+  return mergeAuthRedirectAllowList("", siteUrl).split("\n");
 }
 
-function mergeAuthRedirectAllowList(existing, siteUrl = PRODUCTION_SITE_URL) {
-  const values = new Set(getAuthRedirectAllowList(siteUrl));
-  for (const value of String(existing ?? "").split(/[\n,]/)) {
-    const trimmed = value.trim();
-    if (trimmed) values.add(trimmed);
-  }
-  return [...values].join("\n");
+function mergeAuthRedirectAllowListExisting(existing, siteUrl = PRODUCTION_SITE_URL) {
+  return mergeAuthRedirectAllowList(existing, siteUrl);
 }
 
 function loadEnvLocal() {
@@ -158,7 +155,7 @@ async function main() {
       external_google_client_id: clientId,
       external_google_secret: clientSecret,
       site_url: PRODUCTION_SITE_URL,
-      uri_allow_list: mergeAuthRedirectAllowList(current.uri_allow_list),
+      uri_allow_list: mergeAuthRedirectAllowListExisting(current.uri_allow_list),
     });
 
     upsertEnvLocal("SUPABASE_ACCESS_TOKEN", accessToken);

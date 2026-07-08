@@ -6,6 +6,10 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { execSync } from "node:child_process";
+import {
+  GOOGLE_AUTHORIZED_JAVASCRIPT_ORIGINS,
+  PRODUCTION_SITE_URL,
+} from "./auth-site-config.mjs";
 
 function loadEnv() {
   const envPath = resolve(process.cwd(), ".env.local");
@@ -70,7 +74,7 @@ function main() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
   const projectRef = extractProjectRef(supabaseUrl);
   const googleRedirectUri = `https://${projectRef}.supabase.co/auth/v1/callback`;
-  const productionSite = "https://nexusplay-five.vercel.app";
+  const productionSite = PRODUCTION_SITE_URL;
   const productionCallback = `${productionSite}/auth/callback`;
   const localCallback = "http://localhost:3000/auth/callback";
 
@@ -117,6 +121,11 @@ function main() {
   console.log(`  Site URL：${productionSite}`);
   console.log(`  Redirect URLs：${productionCallback}`);
   console.log(`                ${localCallback}`);
+  console.log("");
+  console.log("── Google Authorized JavaScript origins（請加到 OAuth 用戶端）──");
+  for (const origin of GOOGLE_AUTHORIZED_JAVASCRIPT_ORIGINS) {
+    console.log(`  ${origin}`);
+  }
   console.log("");
   console.log("── 完成後測試 ──");
   console.log("  npm run dev  →  打開 http://localhost:3000/auth");
