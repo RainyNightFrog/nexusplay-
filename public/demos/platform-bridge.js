@@ -433,7 +433,12 @@
       "padding:.55rem .65rem;border-bottom:1px solid rgba(255,255,255,.06);font-size:.82rem}" +
       ".np-lb-row.me{background:rgba(0,255,200,.06);border-radius:4px}" +
       ".np-lb-rank{font-weight:800;opacity:.7}.np-lb-rank.top{color:#ffd700;opacity:1}" +
-      ".np-lb-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}" +
+      ".np-lb-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:.35rem;min-width:0}" +
+      ".np-lb-player{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}" +
+      ".np-lb-title{font-size:.68rem;font-weight:600;opacity:.9;letter-spacing:.02em;flex-shrink:0}" +
+      ".np-lb-title-rare{color:#67e8f9}" +
+      ".np-lb-title-epic{color:#c4b5fd}" +
+      ".np-lb-title-legendary{color:#fde68a}" +
       ".np-lb-score{font-weight:700;font-variant-numeric:tabular-nums}" +
       ".np-lb-grade{font-size:.75rem;opacity:.85;min-width:1.2rem;text-align:center}" +
       ".np-lb-empty{color:#888;font-size:.85rem;padding:1.5rem 0;text-align:center}" +
@@ -561,6 +566,24 @@
           var rankCls = e.rank <= 3 ? " top" : "";
           var meCls = e.isMe ? " me" : "";
           var grade = e.grade ? e.grade : "\u2014";
+          var titleHtml = "";
+          if (e.equippedTitle && e.equippedTitle.name) {
+            var tier = e.equippedTitle.rarity_tier || "common";
+            var tierCls =
+              tier === "legendary"
+                ? " np-lb-title-legendary"
+                : tier === "epic"
+                  ? " np-lb-title-epic"
+                  : tier === "rare"
+                    ? " np-lb-title-rare"
+                    : "";
+            titleHtml =
+              '<span class="np-lb-title' +
+              tierCls +
+              '">\u300C' +
+              escapeHtml(e.equippedTitle.name) +
+              "\u300D</span>";
+          }
           return (
             '<div class="np-lb-row' +
             meCls +
@@ -570,8 +593,10 @@
             '">#' +
             e.rank +
             "</span>" +
-            '<span class="np-lb-name">' +
+            '<span class="np-lb-name"><span class="np-lb-player">' +
             escapeHtml(e.playerName) +
+            "</span>" +
+            titleHtml +
             "</span>" +
             '<span class="np-lb-grade">' +
             grade +

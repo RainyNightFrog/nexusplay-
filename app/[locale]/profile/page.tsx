@@ -17,6 +17,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { Link, useRouter } from "@/i18n/navigation";
+import { AchievementsModal } from "@/components/AchievementsModal";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -32,6 +33,7 @@ import {
   accountLabelClassName,
   accountSectionTitleClassName,
 } from "@/components/settings/account-shell";
+import { UserBadge } from "@/components/UserBadge";
 import { cn } from "@/lib/utils";
 
 export default function ProfilePage() {
@@ -55,6 +57,7 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [achievementsOpen, setAchievementsOpen] = useState(false);
 
   const showToast = useCallback((message: string) => {
     setToast(message);
@@ -235,6 +238,29 @@ export default function ProfilePage() {
             />
 
             <p className="mt-3 text-xs text-zinc-500">{t("avatarHint")}</p>
+
+            <div className="mt-4 flex flex-col items-center gap-2 text-center">
+              <UserBadge
+                username={displayName || profile.display_name}
+                title={profile.equipped_title}
+                usernameClassName="text-lg font-semibold text-zinc-100"
+                titleClassName="text-xs"
+              />
+              <p className="text-xs text-zinc-500">
+                {profile.equipped_title
+                  ? t("equippedTitleHint")
+                  : t("noEquippedTitle")}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setAchievementsOpen(true)}
+                className="border-white/10 bg-white/5 text-zinc-200 hover:bg-white/10"
+              >
+                {t("changeTitle")}
+              </Button>
+            </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-8">
@@ -412,6 +438,14 @@ export default function ProfilePage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AchievementsModal
+        open={achievementsOpen}
+        onOpenChange={(open) => {
+          setAchievementsOpen(open);
+          if (!open) void refreshProfile();
+        }}
+      />
     </AccountShell>
   );
 }

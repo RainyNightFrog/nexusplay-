@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -40,6 +40,11 @@ import {
 } from "@/lib/forum";
 import { localeDateMap, type AppLocale } from "@/i18n/routing";
 import { UserBadge } from "@/components/UserBadge";
+import {
+  ChatPlayerCard,
+  forumAuthorToPlayerPreview,
+  type ChatPlayerPreview,
+} from "@/components/chat/chat-player-card";
 import { cn } from "@/lib/utils";
 
 type GameOption = { id: number; title: string };
@@ -77,15 +82,17 @@ function AuthorChip({
   name,
   userId,
   equippedTitle,
+  onClick,
 }: {
   name: string;
   userId: string;
   equippedTitle?: import("@/lib/titles").EquippedTitle | null;
+  onClick?: () => void;
 }) {
   const shortId = userId.replace(/-/g, "").slice(0, 6).toUpperCase();
 
-  return (
-    <div className="flex flex-col items-center gap-2 text-xs text-zinc-400">
+  const content = (
+    <>
       <span
         className={cn(
           "flex size-7 items-center justify-center rounded-full",
@@ -100,12 +107,31 @@ function AuthorChip({
           username={name}
           title={equippedTitle}
           layout="stacked"
+          animateTitle={false}
           usernameClassName="text-zinc-300"
           titleClassName="text-[9px]"
         />
         <p className="font-mono text-[10px] text-zinc-500">#{shortId}</p>
       </div>
-    </div>
+    </>
+  );
+
+  if (!onClick) {
+    return (
+      <div className="flex flex-col items-center gap-2 text-xs text-zinc-400">
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex flex-col items-center gap-2 text-xs text-zinc-400 transition-opacity hover:opacity-85"
+    >
+      {content}
+    </button>
   );
 }
 
@@ -156,6 +182,23 @@ export function CommunityForum({
     [locale]
   );
 
+  const handleAuthorClick = useCallback(
+    (
+      name: string,
+      userId: string,
+      equippedTitle?: import("@/lib/titles").EquippedTitle | null
+    ) => {
+      if (!profile) return;
+      setPlayerPreview(
+        forumAuthorToPlayerPreview(name, userId, equippedTitle, {
+          isOwn: profile.id === userId,
+        })
+      );
+      setPlayerCardOpen(true);
+    },
+    [profile]
+  );
+
   const [posts, setPosts] = useState<ForumPostWithGame[]>([]);
   const [postsLoading, setPostsLoading] = useState(true);
   const [postsError, setPostsError] = useState<string | null>(null);
@@ -165,6 +208,9 @@ export function CommunityForum({
   const [selectedPost, setSelectedPost] = useState<ForumPostWithGame | null>(
     null
   );
+  const [playerPreview, setPlayerPreview] = useState<ChatPlayerPreview | null>(null);
+  const [playerCardOpen, setPlayerCardOpen] = useState(false);
+  const threadTopRef = useRef<HTMLDivElement>(null);
   const [comments, setComments] = useState<ForumComment[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
 
@@ -303,6 +349,20 @@ export function CommunityForum({
       setComments([]);
     }
   }, [selectedPost, loadComments]);
+
+  useEffect(() => {
+    if (!selectedPost) return;
+
+    const timer = window.setTimeout(() => {
+      threadTopRef.current?.scrollIntoView({ behavior: "auto", block: "start" });
+    }, 50);
+
+    return () => window.clearTimeout(timer);
+  }, [selectedPost?.id]);
+
+  const openPost = useCallback((post: ForumPostWithGame) => {
+    setSelectedPost(post);
+  }, []);
 
   const handleCreatePost = async () => {
     if (!profile) {
@@ -480,12 +540,13 @@ export function CommunityForum({
       <AnimatePresence mode="wait">
         {selectedPost ? (
           <motion.div
+            ref={threadTopRef}
             key={`thread-${selectedPost.id}`}
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.22 }}
-            className="space-y-5"
+            className="scroll-mt-24 space-y-5"
           >
             <Button
               variant="ghost"
@@ -528,6 +589,16 @@ export function CommunityForum({
                     name={selectedPost.author_name}
                     userId={selectedPost.user_id}
                     equippedTitle={selectedPost.author_equipped_title}
+                    onClick={
+                      profile
+                        ? () =>
+                            handleAuthorClick(
+                              selectedPost.author_name,
+                              selectedPost.user_id,
+                              selectedPost.author_equipped_title
+                            )
+                        : undefined
+                    }
                   />
                 </div>
                 <p className="mt-5 whitespace-pre-wrap text-sm leading-relaxed text-zinc-300">
@@ -563,6 +634,16 @@ export function CommunityForum({
                           name={comment.author_name}
                           userId={comment.user_id}
                           equippedTitle={comment.author_equipped_title}
+                          onClick={
+                            profile
+                              ? () =>
+                                  handleAuthorClick(
+                                    comment.author_name,
+                                    comment.user_id,
+                                    comment.author_equipped_title
+                                  )
+                              : undefined
+                          }
                         />
                         <span className="text-xs text-zinc-500">
                           {formatDate(comment.created_at)}
@@ -902,7 +983,7 @@ export function CommunityForum({
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.03 }}
-                    onClick={() => setSelectedPost(post)}
+                    onClick={() => openPost(post)}
                     className={cn(
                       "group w-full overflow-hidden rounded-xl border border-white/10",
                       "border-l-4 bg-zinc-900/50 p-4 text-center transition-all duration-200",
@@ -939,6 +1020,16 @@ export function CommunityForum({
                         name={post.author_name}
                         userId={post.user_id}
                         equippedTitle={post.author_equipped_title}
+                        onClick={
+                          profile
+                            ? () =>
+                                handleAuthorClick(
+                                  post.author_name,
+                                  post.user_id,
+                                  post.author_equipped_title
+                                )
+                            : undefined
+                        }
                       />
                     </div>
                   </motion.button>
@@ -974,6 +1065,12 @@ export function CommunityForum({
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ChatPlayerCard
+        player={playerPreview}
+        open={playerCardOpen}
+        onOpenChange={setPlayerCardOpen}
+      />
     </div>
   );
 }

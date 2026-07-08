@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { Globe, Heart, Loader2, UserRound } from "lucide-react";
 import { Link, useRouter } from "@/i18n/navigation";
 import { FollowCreatorButton } from "@/components/creator/follow-creator-button";
+import { UserBadge } from "@/components/UserBadge";
 import { RssFeedLink } from "@/components/feeds/rss-feed-link";
 import { FeedJsonLink } from "@/components/feeds/feed-json-link";
 import { SiteHeader } from "@/components/layout/site-header";
@@ -100,7 +101,14 @@ export default function CreatorPublicPage() {
             )}
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-white">{creator.displayName}</h1>
+            <h1 className="text-3xl font-bold text-white">
+              <UserBadge
+                username={creator.displayName}
+                title={creator.equippedTitle}
+                usernameClassName="text-3xl font-bold text-white"
+                titleClassName="text-sm"
+              />
+            </h1>
             <p className="mt-1 text-sm text-zinc-500">{t("memberSince", {
               date: new Date(creator.createdAt).toLocaleDateString(),
             })}</p>

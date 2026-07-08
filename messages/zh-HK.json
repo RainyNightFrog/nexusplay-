@@ -822,6 +822,9 @@
     "avatarFailed": "頭像上傳失敗",
     "profileUpdated": "個人資料已更新",
     "saveFailed": "儲存失敗，請稍後再試",
+    "equippedTitleHint": "此稱號會顯示於聊天、討論區、排行榜等全站位置",
+    "noEquippedTitle": "尚未佩戴稱號",
+    "changeTitle": "更換稱號",
     "settingsHint": "外觀、通知與系統偏好請至"
   },
   "settings": {

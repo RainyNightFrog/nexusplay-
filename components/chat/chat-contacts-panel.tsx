@@ -5,7 +5,9 @@ import { ArrowLeft, Loader2, MessageCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { ChatInput } from "@/components/chat/chat-input";
+import { UserBadge } from "@/components/UserBadge";
 import { useVirtualContacts, useVirtualDm } from "@/hooks/use-virtual-dm";
+import type { EquippedTitle } from "@/lib/titles";
 import { getVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
 import { getVirtualPlayerById } from "@/lib/virtual-players";
 import { cn } from "@/lib/utils";
@@ -21,6 +23,7 @@ function ContactListItem({
     avatarUrl: string;
     lastMessage: string | null;
     lastMessageAt: string | null;
+    equippedTitle?: EquippedTitle | null;
   };
   active: boolean;
   onSelect: () => void;
@@ -44,9 +47,14 @@ function ContactListItem({
         />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-zinc-100">
-          {contact.displayName}
-        </p>
+        <UserBadge
+          username={contact.displayName}
+          title={contact.equippedTitle}
+          layout="compact"
+          animateTitle={false}
+          usernameClassName="text-sm text-zinc-100"
+          titleClassName="text-[9px]"
+        />
         <p className="truncate text-xs text-zinc-500">
           {contact.lastMessage ?? "—"}
         </p>
@@ -59,11 +67,13 @@ function VirtualDmThread({
   playerId,
   displayName,
   avatarUrl,
+  equippedTitle,
   onBack,
 }: {
   playerId: string;
   displayName: string;
   avatarUrl: string;
+  equippedTitle?: EquippedTitle | null;
   onBack: () => void;
 }) {
   const t = useTranslations("chat");
@@ -91,9 +101,14 @@ function VirtualDmThread({
           />
         </div>
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-zinc-100">
-            {displayName}
-          </p>
+          <UserBadge
+            username={displayName}
+            title={equippedTitle}
+            layout="compact"
+            animateTitle={false}
+            usernameClassName="text-sm font-semibold text-zinc-100"
+            titleClassName="text-[9px]"
+          />
           <p className="text-[10px] text-zinc-500">{t("contactsVirtualHint")}</p>
         </div>
       </div>
@@ -199,6 +214,7 @@ export function ChatContactsPanel({
             `https://api.dicebear.com/9.x/notionists/png?seed=${encodeURIComponent(player.id)}&size=128`,
           lastMessage: null,
           lastMessageAt: null,
+          equippedTitle: null,
         };
       })()
     : null;
@@ -209,6 +225,7 @@ export function ChatContactsPanel({
         playerId={selectedPlayer.id}
         displayName={selectedPlayer.displayName}
         avatarUrl={selectedPlayer.avatarUrl}
+        equippedTitle={selectedPlayer.equippedTitle ?? null}
         onBack={() => {
           setSelectedId(null);
           void reload();

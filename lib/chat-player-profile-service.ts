@@ -214,20 +214,39 @@ async function loadVirtualPlayerProfile(
 
 export async function getChatPlayerPublicProfile(
   supabase: SupabaseClient,
-  options: { userId?: string | null; virtualPlayerId?: string | null }
-): Promise<ChatPlayerPublicProfile | null> {
-  if (options.virtualPlayerId) {
-    return loadVirtualPlayerProfile(supabase, options.virtualPlayerId);
+  options: {
+    userId?: string | null;
+    virtualPlayerId?: string | null;
+    fallbackEquippedTitle?: EquippedTitle | null;
   }
+): Promise<ChatPlayerPublicProfile | null> {
+  let profile: ChatPlayerPublicProfile | null = null;
 
   if (options.userId) {
     const ambientMap = await getAmbientUserPlayerMap(supabase);
-    const virtualPlayerId = ambientMap.get(options.userId);
-    if (virtualPlayerId) {
-      return loadVirtualPlayerProfile(supabase, virtualPlayerId);
+    const mappedVirtualId = ambientMap.get(options.userId);
+    if (mappedVirtualId) {
+      profile = await loadVirtualPlayerProfile(
+        supabase,
+        options.virtualPlayerId ?? mappedVirtualId
+      );
+    } else {
+      profile = await loadRealUserProfile(supabase, options.userId);
     }
-    return loadRealUserProfile(supabase, options.userId);
   }
 
-  return null;
+  if (!profile && options.virtualPlayerId) {
+    profile = await loadVirtualPlayerProfile(supabase, options.virtualPlayerId);
+  }
+
+  if (!profile) return null;
+
+  if (!profile.equippedTitle && options.fallbackEquippedTitle) {
+    return {
+      ...profile,
+      equippedTitle: options.fallbackEquippedTitle,
+    };
+  }
+
+  return profile;
 }

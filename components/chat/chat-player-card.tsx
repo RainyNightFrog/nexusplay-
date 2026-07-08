@@ -30,7 +30,12 @@ import { getVirtualPlayerById } from "@/lib/virtual-players";
 import {
   formatDonationAmount,
   formatDurationSeconds,
+  type PlatformLeaderboardEntry,
 } from "@/lib/platform-leaderboard";
+import {
+  isVirtualLeaderboardUserId,
+  VIRTUAL_LEADERBOARD_USER_PREFIX,
+} from "@/lib/platform-leaderboard-virtual";
 import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 
@@ -57,6 +62,47 @@ export function chatMessageToPlayerPreview(
     isVirtual: message.is_virtual,
     virtualPlayerId: message.virtual_player_id,
     isOwn: message.is_own,
+  };
+}
+
+export function parseVirtualLeaderboardUserId(userId: string): string | null {
+  if (!isVirtualLeaderboardUserId(userId)) return null;
+  const playerId = userId.slice(VIRTUAL_LEADERBOARD_USER_PREFIX.length);
+  return playerId || null;
+}
+
+export function leaderboardEntryToPlayerPreview(
+  entry: PlatformLeaderboardEntry
+): ChatPlayerPreview {
+  const virtualPlayerId = parseVirtualLeaderboardUserId(entry.userId);
+
+  return {
+    userId: entry.userId,
+    displayName: entry.displayName,
+    avatarUrl: entry.avatarUrl,
+    equippedTitle: entry.equippedTitle,
+    isCreator: false,
+    isVirtual: Boolean(virtualPlayerId),
+    virtualPlayerId,
+    isOwn: entry.isMe ?? false,
+  };
+}
+
+export function forumAuthorToPlayerPreview(
+  name: string,
+  userId: string,
+  equippedTitle: EquippedTitle | null | undefined,
+  options?: { isOwn?: boolean }
+): ChatPlayerPreview {
+  return {
+    userId,
+    displayName: name,
+    avatarUrl: null,
+    equippedTitle: equippedTitle ?? null,
+    isCreator: false,
+    isVirtual: false,
+    virtualPlayerId: null,
+    isOwn: options?.isOwn ?? false,
   };
 }
 
@@ -108,12 +154,12 @@ function StatItem({
   value: string;
 }) {
   return (
-    <div className="rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2.5">
-      <div className="mb-1 flex items-center gap-1.5 text-[10px] text-zinc-500">
+    <div className="rounded-lg border border-white/8 bg-white/[0.03] px-3 py-2 text-center">
+      <div className="mb-1 flex items-center justify-center gap-1.5 text-[11px] text-zinc-400 sm:text-xs">
         {icon}
-        <span>{label}</span>
+        <span className="line-clamp-1">{label}</span>
       </div>
-      <p className="text-sm font-medium text-zinc-100">{value}</p>
+      <p className="text-sm font-semibold text-zinc-100 sm:text-base">{value}</p>
     </div>
   );
 }
@@ -143,7 +189,7 @@ export function ChatPlayerCard({
     : null;
   const detail = profile;
   const avatarUrl = detail?.avatarUrl ?? player.avatarUrl;
-  const equippedTitle = detail?.equippedTitle ?? player.equippedTitle;
+  const equippedTitle = player.equippedTitle ?? detail?.equippedTitle ?? null;
   const isCreator = detail?.isCreator ?? player.isCreator;
   const isVirtual = detail?.isVirtual ?? player.isVirtual;
 
@@ -151,18 +197,23 @@ export function ChatPlayerCard({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         overlayClassName="z-[70]"
-        className="z-[71] max-h-[85vh] overflow-y-auto border-white/10 bg-zinc-950 text-zinc-100 sm:max-w-md"
+        className={cn(
+          "z-[71] max-h-[min(82vh,720px)] w-[min(calc(100vw-1rem),40rem)] max-w-[calc(100vw-1rem)] overflow-y-auto",
+          "border-white/10 bg-zinc-950 p-4 text-center text-base text-zinc-100 sm:max-w-2xl sm:p-5"
+        )}
       >
-        <DialogHeader>
-          <DialogTitle>{t("playerCardTitle")}</DialogTitle>
+        <DialogHeader className="items-center gap-1 text-center sm:pb-0">
+          <DialogTitle className="text-lg font-bold sm:text-xl">
+            {t("playerCardTitle")}
+          </DialogTitle>
           <DialogDescription className="sr-only">
             {displayName}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4 py-1">
-          <div className="flex flex-col items-center gap-3 text-center">
-            <div className="relative">
+        <div className="flex flex-col gap-3 sm:gap-4">
+          <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center sm:gap-5">
+            <div className="relative shrink-0">
               <div
                 className={cn(
                   "relative size-20 overflow-hidden rounded-full ring-2",
@@ -188,35 +239,37 @@ export function ChatPlayerCard({
                 )}
               </div>
               {detail?.isOnline && (
-                <span className="absolute bottom-1 right-1 size-3.5 rounded-full border-2 border-zinc-950 bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+                <span className="absolute bottom-0.5 right-0.5 size-3.5 rounded-full border-2 border-zinc-950 bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
               )}
             </div>
 
-            <div>
+            <div className="flex min-w-0 flex-col items-center sm:items-start sm:text-left">
               <UserBadge
                 username={displayName}
                 title={equippedTitle}
-                usernameClassName="text-lg font-semibold text-zinc-100"
-                titleClassName="text-xs"
+                layout="stacked"
+                className="sm:items-start"
+                usernameClassName="text-lg font-semibold text-zinc-100 sm:text-xl"
+                titleClassName="text-sm"
               />
-              <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5">
+              <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5 sm:justify-start">
                 {isCreator && (
-                  <span className="rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] text-violet-300">
+                  <span className="rounded-full bg-violet-500/15 px-2 py-0.5 text-xs text-violet-300">
                     {t("creatorBadge")}
                   </span>
                 )}
                 {isVirtual ? (
-                  <span className="rounded-full bg-cyan-500/15 px-2 py-0.5 text-[10px] text-cyan-300">
+                  <span className="rounded-full bg-cyan-500/15 px-2 py-0.5 text-xs text-cyan-300">
                     {t("playerCardVirtual")}
                   </span>
                 ) : (
-                  <span className="rounded-full bg-white/8 px-2 py-0.5 text-[10px] text-zinc-400">
+                  <span className="rounded-full bg-white/8 px-2 py-0.5 text-xs text-zinc-400">
                     {t("playerCardReal")}
                   </span>
                 )}
               </div>
               {virtualPlayer && (
-                <p className="mt-2 text-xs text-zinc-500">
+                <p className="mt-1.5 text-xs text-zinc-500 sm:text-sm">
                   {t("playerCardLocale")}：
                   {LOCALE_LABELS[virtualPlayer.locale] ?? virtualPlayer.locale}
                 </p>
@@ -225,12 +278,12 @@ export function ChatPlayerCard({
           </div>
 
           {loading ? (
-            <div className="flex items-center justify-center py-8 text-sm text-zinc-500">
+            <div className="flex items-center justify-center py-6 text-sm text-zinc-500">
               <Loader2 className="mr-2 size-4 animate-spin" />
               {t("loading")}
             </div>
           ) : error ? (
-            <p className="py-6 text-center text-sm text-rose-300">{error}</p>
+            <p className="py-4 text-center text-sm text-rose-300 sm:text-base">{error}</p>
           ) : detail ? (
             <>
               {detail.website && (
@@ -238,7 +291,7 @@ export function ChatPlayerCard({
                   href={detail.website}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 rounded-xl border border-cyan-500/20 bg-cyan-500/10 px-3 py-2 text-sm text-cyan-200 transition-colors hover:bg-cyan-500/15"
+                  className="flex items-center justify-center gap-2 rounded-lg border border-cyan-500/20 bg-cyan-500/10 px-3 py-2 text-sm text-cyan-200 transition-colors hover:bg-cyan-500/15 sm:text-base"
                 >
                   <Globe className="size-4 shrink-0" />
                   <span className="truncate">{detail.website}</span>
@@ -246,49 +299,49 @@ export function ChatPlayerCard({
                 </a>
               )}
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
                 <StatItem
-                  icon={<Clock3 className="size-3" />}
+                  icon={<Clock3 className="size-3.5 shrink-0" />}
                   label={t("playerCardOnlineTime")}
                   value={formatDurationSeconds(detail.onlineSeconds, locale)}
                 />
                 <StatItem
-                  icon={<Gamepad2 className="size-3" />}
+                  icon={<Gamepad2 className="size-3.5 shrink-0" />}
                   label={t("playerCardPlayTime")}
                   value={formatDurationSeconds(detail.playSeconds, locale)}
                 />
                 <StatItem
-                  icon={<Clock3 className="size-3" />}
+                  icon={<Clock3 className="size-3.5 shrink-0" />}
                   label={t("playerCardLastActive")}
                   value={formatLastActive(detail.lastActiveAt, locale)}
                 />
                 <StatItem
-                  icon={<Trophy className="size-3" />}
+                  icon={<Trophy className="size-3.5 shrink-0" />}
                   label={t("playerCardAchievements")}
                   value={t("playerCardAchievementCount", {
                     count: detail.achievementCount,
                   })}
                 />
                 <StatItem
-                  icon={<MessageCircle className="size-3" />}
+                  icon={<MessageCircle className="size-3.5 shrink-0" />}
                   label={t("playerCardForumPosts")}
                   value={String(detail.forumPostCount)}
                 />
                 <StatItem
-                  icon={<Wallet className="size-3" />}
+                  icon={<Wallet className="size-3.5 shrink-0" />}
                   label={t("playerCardDonated")}
                   value={formatDonationAmount(detail.donatedTotal, locale)}
                 />
                 {detail.isCreator && (
                   <StatItem
-                    icon={<Wallet className="size-3" />}
+                    icon={<Wallet className="size-3.5 shrink-0" />}
                     label={t("playerCardTipsReceived")}
                     value={String(detail.tipsReceivedCount)}
                   />
                 )}
                 {detail.isCreator && (
                   <StatItem
-                    icon={<Gamepad2 className="size-3" />}
+                    icon={<Gamepad2 className="size-3.5 shrink-0" />}
                     label={t("playerCardPublishedGames")}
                     value={String(detail.publishedGames)}
                   />
@@ -296,15 +349,15 @@ export function ChatPlayerCard({
               </div>
 
               {detail.achievementHighlights.length > 0 && (
-                <div className="rounded-xl border border-white/8 bg-white/[0.02] p-3">
-                  <p className="mb-2 text-xs font-medium text-zinc-400">
+                <div className="rounded-lg border border-white/8 bg-white/[0.02] px-3 py-2.5 text-center">
+                  <p className="mb-2 text-xs font-medium text-zinc-400 sm:text-sm">
                     {t("playerCardRecentAchievements")}
                   </p>
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex flex-wrap justify-center gap-1.5">
                     {detail.achievementHighlights.map((item) => (
                       <span
                         key={item.id}
-                        className="inline-flex items-center gap-1 rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-100"
+                        className="inline-flex items-center gap-1 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-xs text-amber-100 sm:text-sm"
                       >
                         <span>{item.badge_icon}</span>
                         <span>{item.title}</span>
@@ -316,11 +369,11 @@ export function ChatPlayerCard({
             </>
           ) : null}
 
-          <div className="flex w-full flex-col gap-2">
+          <div className="flex w-full flex-col gap-2 sm:flex-row sm:justify-center">
             {isVirtual && player.virtualPlayerId && onDirectMessage && (
               <Button
                 type="button"
-                className="w-full gap-2 bg-gradient-to-r from-cyan-600 to-violet-600 text-white hover:from-cyan-500 hover:to-violet-500"
+                className="h-10 flex-1 gap-2 text-sm bg-gradient-to-r from-cyan-600 to-violet-600 text-white hover:from-cyan-500 hover:to-violet-500 sm:max-w-xs"
                 onClick={() => {
                   onOpenChange(false);
                   onDirectMessage(player.virtualPlayerId!);
@@ -335,8 +388,8 @@ export function ChatPlayerCard({
               <Button
                 nativeButton={false}
                 variant="outline"
-                className="w-full gap-2 border-white/10 bg-white/5 text-zinc-200 hover:bg-white/10"
-                render={<Link href="/account/profile" />}
+                className="h-10 flex-1 gap-2 border-white/10 bg-white/5 text-sm text-zinc-200 hover:bg-white/10 sm:max-w-xs"
+                render={<Link href="/profile" />}
                 onClick={() => onOpenChange(false)}
               >
                 <UserRound className="size-4" />

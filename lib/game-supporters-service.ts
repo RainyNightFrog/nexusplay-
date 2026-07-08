@@ -1,10 +1,13 @@
 import { createServerSupabase } from "@/lib/supabase-server";
+import { resolveEquippedTitles } from "@/lib/equipped-title-service";
+import type { EquippedTitle } from "@/lib/titles";
 
 export type GameSupporter = {
   displayName: string;
   amountUsd: number;
   createdAt: string;
   anonymous: boolean;
+  equippedTitle: EquippedTitle | null;
 };
 
 export async function listGameSupporters(
@@ -40,14 +43,21 @@ export async function listGameSupporters(
     (payers ?? []).map((payer) => [payer.id, payer.display_name as string])
   );
 
-  return tips.map((tip) => ({
-    // 所有成功打賞皆顯示於支持者牆；public_anonymous 僅控制是否公開名稱
-    displayName: tip.public_anonymous
-      ? "__anonymous__"
-      : payerMap.get(tip.payer_id as string) ?? "Supporter",
-    amountUsd:
-      Math.round(Number.parseFloat(String(tip.amount_usd)) * 100) / 100,
-    createdAt: tip.created_at as string,
-    anonymous: tip.public_anonymous === true,
-  }));
+  const titleMap = await resolveEquippedTitles(supabase, payerIds);
+
+  return tips.map((tip) => {
+    const payerId = tip.payer_id as string;
+    const isAnonymous = tip.public_anonymous === true;
+
+    return {
+      displayName: isAnonymous
+        ? "__anonymous__"
+        : payerMap.get(payerId) ?? "Supporter",
+      amountUsd:
+        Math.round(Number.parseFloat(String(tip.amount_usd)) * 100) / 100,
+      createdAt: tip.created_at as string,
+      anonymous: isAnonymous,
+      equippedTitle: isAnonymous ? null : titleMap.get(payerId) ?? null,
+    };
+  });
 }

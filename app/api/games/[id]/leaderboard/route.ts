@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { checkFirstWinAchievement } from "@/lib/achievement-unlock-service";
 import { isAdminUser } from "@/lib/admin-auth";
+import { resolveEquippedTitles } from "@/lib/equipped-title-service";
 import {
   getTopLeaderboard,
   mapPublicLeaderboard,
@@ -59,9 +60,13 @@ export async function GET(
     );
 
     const rows = await getTopLeaderboard(createServerSupabase(), gameId, limit);
+    const titleMap = await resolveEquippedTitles(
+      createServerSupabase(),
+      rows.map((row) => row.user_id)
+    );
 
     return NextResponse.json({
-      entries: mapPublicLeaderboard(rows, user?.id),
+      entries: mapPublicLeaderboard(rows, user?.id, titleMap),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "讀取排行榜失敗";

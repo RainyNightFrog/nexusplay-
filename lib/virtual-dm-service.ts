@@ -60,16 +60,20 @@ export async function listVirtualContacts(
     .map(([playerId, last]) => {
       const player = getVirtualPlayerById(playerId);
       if (!player) return null;
-      return {
+      const contact: VirtualContactSummary = {
         id: player.id,
         displayName: player.displayName,
         locale: player.locale,
-        avatarUrl: getVirtualPlayerAvatarUrl(player.id),
+        avatarUrl:
+          getVirtualPlayerAvatarUrl(player.id) ??
+          `https://api.dicebear.com/9.x/notionists/png?seed=${encodeURIComponent(player.id)}&size=128`,
         lastMessage: last.content,
         lastMessageAt: last.created_at,
+        equippedTitle: null,
       };
+      return contact;
     })
-    .filter((row): row is VirtualContactSummary => Boolean(row))
+    .filter((row): row is VirtualContactSummary => row !== null)
     .sort((a, b) => {
       const aTime = a.lastMessageAt ? Date.parse(a.lastMessageAt) : 0;
       const bTime = b.lastMessageAt ? Date.parse(b.lastMessageAt) : 0;

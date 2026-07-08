@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { EquippedTitle } from "@/lib/titles";
 
 export type LeaderboardRow = {
   id: number;
@@ -19,6 +20,7 @@ export type LeaderboardPublicEntry = {
   meta: Record<string, unknown>;
   updatedAt: string;
   isMe?: boolean;
+  equippedTitle: EquippedTitle | null;
 };
 
 export function validateLeaderboardSubmit(body: {
@@ -117,7 +119,8 @@ export async function submitLeaderboardScore(
 
 export function mapPublicLeaderboard(
   rows: LeaderboardRow[],
-  currentUserId?: string | null
+  currentUserId?: string | null,
+  titleMap?: Map<string, EquippedTitle | null>
 ): LeaderboardPublicEntry[] {
   return rows.map((row, index) => ({
     rank: index + 1,
@@ -127,5 +130,6 @@ export function mapPublicLeaderboard(
     meta: (row.meta as Record<string, unknown>) ?? {},
     updatedAt: row.updated_at,
     isMe: currentUserId ? row.user_id === currentUserId : false,
+    equippedTitle: titleMap?.get(row.user_id) ?? null,
   }));
 }

@@ -18,6 +18,11 @@ import { useAuth } from "@/hooks/use-auth";
 import { getInitials } from "@/lib/auth";
 import { UserBadge } from "@/components/UserBadge";
 import {
+  ChatPlayerCard,
+  leaderboardEntryToPlayerPreview,
+  type ChatPlayerPreview,
+} from "@/components/chat/chat-player-card";
+import {
   formatDonationAmount,
   formatDurationSeconds,
   LEADERBOARD_PAGE_SIZE,
@@ -111,11 +116,13 @@ function LeaderboardCard({
   tab,
   locale,
   animateKey,
+  onPlayerClick,
 }: {
   entry: PlatformLeaderboardEntry;
   tab: LeaderboardTab;
   locale: string;
   animateKey: string;
+  onPlayerClick?: (entry: PlatformLeaderboardEntry) => void;
 }) {
   const isTopThree = entry.rank <= 3;
 
@@ -136,37 +143,48 @@ function LeaderboardCard({
         <RankBadge rank={entry.rank} />
       </div>
 
-      <PlayerAvatar
-        displayName={entry.displayName}
-        avatarUrl={entry.avatarUrl}
-        rank={entry.rank}
-      />
+      <button
+        type="button"
+        onClick={() => onPlayerClick?.(entry)}
+        disabled={!onPlayerClick}
+        className={cn(
+          "flex min-w-0 flex-1 items-center gap-3 text-left sm:gap-4",
+          onPlayerClick && "cursor-pointer rounded-xl transition-colors hover:bg-white/[0.03]"
+        )}
+      >
+        <PlayerAvatar
+          displayName={entry.displayName}
+          avatarUrl={entry.avatarUrl}
+          rank={entry.rank}
+        />
 
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <UserBadge
-            username={entry.displayName}
-            title={entry.equippedTitle}
-            usernameClassName={cn(
-              "max-w-full truncate",
-              isTopThree ? "text-base sm:text-lg" : "text-sm sm:text-base",
-              "text-zinc-100"
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <UserBadge
+              username={entry.displayName}
+              title={entry.equippedTitle}
+              animateTitle={false}
+              usernameClassName={cn(
+                "max-w-full truncate",
+                isTopThree ? "text-base sm:text-lg" : "text-sm sm:text-base",
+                "text-zinc-100"
+              )}
+              titleClassName="text-[10px] sm:text-xs"
+            />
+            <OnlineIndicator isOnline={entry.isOnline} />
+            {entry.isMe && (
+              <span className="shrink-0 rounded-full bg-cyan-500/15 px-2.5 py-0.5 text-xs font-semibold text-cyan-300 sm:text-sm">
+                你
+              </span>
             )}
-            titleClassName="text-[10px] sm:text-xs"
-          />
-          <OnlineIndicator isOnline={entry.isOnline} />
-          {entry.isMe && (
-            <span className="shrink-0 rounded-full bg-cyan-500/15 px-2.5 py-0.5 text-xs font-semibold text-cyan-300 sm:text-sm">
-              你
-            </span>
+          </div>
+          {isTopThree && (
+            <p className="mt-1 text-sm text-zinc-500 sm:text-base">
+              #{entry.rank} · {entry.isOnline ? "競技中" : "稍後再戰"}
+            </p>
           )}
         </div>
-        {isTopThree && (
-          <p className="mt-1 text-sm text-zinc-500 sm:text-base">
-            #{entry.rank} · {entry.isOnline ? "競技中" : "稍後再戰"}
-          </p>
-        )}
-      </div>
+      </button>
 
       <div className="shrink-0 text-right">
         <p
@@ -205,6 +223,7 @@ function LeaderboardList({
   loading,
   fetchError,
   animateKey,
+  onPlayerClick,
 }: {
   entries: PlatformLeaderboardEntry[];
   tab: LeaderboardTab;
@@ -212,6 +231,7 @@ function LeaderboardList({
   loading: boolean;
   fetchError: boolean;
   animateKey: string;
+  onPlayerClick?: (entry: PlatformLeaderboardEntry) => void;
 }) {
   const t = useTranslations("leaderboard");
 
@@ -252,6 +272,7 @@ function LeaderboardList({
           tab={tab}
           locale={locale}
           animateKey={animateKey}
+          onPlayerClick={onPlayerClick}
         />
       ))}
     </div>
@@ -313,6 +334,7 @@ function LeaderboardTabPanel({
   animateKey,
   page,
   onPageChange,
+  onPlayerClick,
 }: {
   entries: PlatformLeaderboardEntry[];
   tab: LeaderboardTab;
@@ -322,6 +344,7 @@ function LeaderboardTabPanel({
   animateKey: string;
   page: number;
   onPageChange: (page: number) => void;
+  onPlayerClick?: (entry: PlatformLeaderboardEntry) => void;
 }) {
   const totalPages = Math.max(1, Math.ceil(entries.length / LEADERBOARD_PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -338,6 +361,7 @@ function LeaderboardTabPanel({
           loading={loading}
           fetchError={fetchError}
           animateKey={animateKey}
+          onPlayerClick={onPlayerClick}
         />
       </div>
       <LeaderboardPagination
@@ -366,7 +390,14 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
     playTime: 1,
     donated: 1,
   });
+  const [playerPreview, setPlayerPreview] = useState<ChatPlayerPreview | null>(null);
+  const [playerCardOpen, setPlayerCardOpen] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const handlePlayerClick = useCallback((entry: PlatformLeaderboardEntry) => {
+    setPlayerPreview(leaderboardEntryToPlayerPreview(entry));
+    setPlayerCardOpen(true);
+  }, []);
 
   const setTabPage = useCallback((tab: LeaderboardTab, page: number) => {
     setPageByTab((prev) => ({ ...prev, [tab]: page }));
@@ -426,6 +457,7 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
   const donatedEntries = data?.donated ?? [];
 
   return (
+    <>
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
         className={cn(
@@ -539,6 +571,7 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
                     animateKey={animateKey}
                     page={pageByTab.online}
                     onPageChange={(page) => setTabPage("online", page)}
+                    onPlayerClick={handlePlayerClick}
                   />
                 </TabsContent>
                 <TabsContent value="playTime" keepMounted={false} className="mt-0 flex min-h-0 flex-1 flex-col outline-none">
@@ -551,6 +584,7 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
                     animateKey={animateKey}
                     page={pageByTab.playTime}
                     onPageChange={(page) => setTabPage("playTime", page)}
+                    onPlayerClick={handlePlayerClick}
                   />
                 </TabsContent>
                 <TabsContent value="donated" keepMounted={false} className="mt-0 flex min-h-0 flex-1 flex-col outline-none">
@@ -563,6 +597,7 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
                     animateKey={animateKey}
                     page={pageByTab.donated}
                     onPageChange={(page) => setTabPage("donated", page)}
+                    onPlayerClick={handlePlayerClick}
                   />
                 </TabsContent>
               </div>
@@ -577,5 +612,12 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
         </div>
       </DialogContent>
     </Dialog>
+
+    <ChatPlayerCard
+      player={playerPreview}
+      open={playerCardOpen}
+      onOpenChange={setPlayerCardOpen}
+    />
+    </>
   );
 }

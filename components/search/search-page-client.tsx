@@ -20,6 +20,7 @@ import { NavActions } from "@/components/layout/nav-actions";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteSearch } from "@/components/layout/site-search";
 import { SearchHistoryPanel } from "@/components/search/search-history-panel";
+import { UserBadge } from "@/components/UserBadge";
 import { SearchShortcuts } from "@/components/search/search-shortcuts";
 import type { SearchCreatorResult } from "@/lib/platform-search-service";
 import { addSearchHistory } from "@/lib/search-history";
@@ -178,9 +179,14 @@ function SearchPageContent() {
                         )}
                       </div>
                       <div className="min-w-0 text-left">
-                        <p className="truncate font-semibold text-white">
-                          {creator.displayName}
-                        </p>
+                        <UserBadge
+                          username={creator.displayName}
+                          title={creator.equippedTitle}
+                          layout="compact"
+                          animateTitle={false}
+                          usernameClassName="font-semibold text-white"
+                          titleClassName="text-[9px]"
+                        />
                         <p className="text-xs text-zinc-500">
                           {t("creatorGameCount", { count: creator.gameCount })}
                         </p>

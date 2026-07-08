@@ -39,6 +39,18 @@ export const RARITY_BORDER_CLASS: Record<RarityTier, string> = {
     "border-amber-400/40 shadow-[0_0_20px_rgba(251,191,36,0.25)] animate-pulse",
 };
 
-export function getTitleDisplayClass(cssClass: string, rarityTier: RarityTier) {
-  return cssClass || `title-tier-${rarityTier}`;
+export type TitleDisplayOptions = {
+  animate?: boolean;
+};
+
+export function getTitleDisplayClass(
+  cssClass: string,
+  rarityTier: RarityTier,
+  options?: TitleDisplayOptions
+) {
+  const base = cssClass || `title-tier-${rarityTier}`;
+  if (options?.animate === false) {
+    return `${base} title-tier-no-animate`;
+  }
+  return base;
 }

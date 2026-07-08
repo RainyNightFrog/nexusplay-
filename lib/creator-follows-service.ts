@@ -1,5 +1,7 @@
 import { mapRecordToGame } from "@/lib/games-data";
 import type { Game } from "@/lib/games";
+import { resolveEquippedTitles } from "@/lib/equipped-title-service";
+import type { EquippedTitle } from "@/lib/titles";
 import { createServerSupabase } from "@/lib/supabase-server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -8,6 +10,7 @@ export type FollowedCreator = {
   displayName: string;
   avatarUrl: string | null;
   followedAt: string;
+  equippedTitle: EquippedTitle | null;
 };
 
 export async function readCreatorFollowerCount(creatorId: string) {
@@ -94,6 +97,8 @@ export async function listFollowedCreators(
     (profiles ?? []).map((profile) => [profile.id as string, profile])
   );
 
+  const titleMap = await resolveEquippedTitles(supabase, creatorIds);
+
   return follows
     .map((row) => {
       const profile = profileMap.get(row.creator_id as string);
@@ -103,6 +108,7 @@ export async function listFollowedCreators(
         displayName: profile.display_name as string,
         avatarUrl: (profile.avatar_url as string | null) ?? null,
         followedAt: row.created_at as string,
+        equippedTitle: titleMap.get(profile.id as string) ?? null,
       };
     })
     .filter((item): item is FollowedCreator => Boolean(item));

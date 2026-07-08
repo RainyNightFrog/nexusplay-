@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { Loader2, UserRound, UserX } from "lucide-react";
 import { Link, useRouter } from "@/i18n/navigation";
 import { AccountSettingsPageHeader } from "@/components/settings/account-settings-layout";
+import { UserBadge } from "@/components/UserBadge";
 import { accountCardClassName, settingsListRowClassName } from "@/components/settings/account-shell";
 import { Button } from "@/components/ui/button";
 import type { FollowedCreator } from "@/lib/creator-follows-service";
@@ -92,9 +93,14 @@ export default function FollowingSettingsPage() {
                     )}
                   </div>
                   <div className="min-w-0 text-left">
-                    <p className="truncate font-medium text-zinc-100">
-                      {creator.displayName}
-                    </p>
+                    <UserBadge
+                      username={creator.displayName}
+                      title={creator.equippedTitle}
+                      layout="compact"
+                      animateTitle={false}
+                      usernameClassName="text-zinc-100"
+                      titleClassName="text-[9px]"
+                    />
                     <p className="text-xs text-zinc-500">
                       {new Date(creator.followedAt).toLocaleDateString()}
                     </p>

@@ -822,6 +822,9 @@
     "avatarFailed": "Avatar upload failed",
     "profileUpdated": "Profile updated",
     "saveFailed": "Save failed, please try again later",
+    "equippedTitleHint": "This title appears across chat, forums, leaderboards, and the rest of the site",
+    "noEquippedTitle": "No title equipped",
+    "changeTitle": "Change title",
     "settingsHint": "For appearance, notifications, and system preferences, go to"
   },
   "settings": {

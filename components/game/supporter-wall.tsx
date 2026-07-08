@@ -3,13 +3,16 @@
 import { useCallback, useEffect, useState } from "react";
 import { Heart, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { UserBadge } from "@/components/UserBadge";
 import { cn } from "@/lib/utils";
+import type { EquippedTitle } from "@/lib/titles";
 
 type Supporter = {
   displayName: string;
   amountUsd: number;
   createdAt: string;
   anonymous?: boolean;
+  equippedTitle?: EquippedTitle | null;
 };
 
 type SupporterWallProps = {
@@ -107,10 +110,19 @@ export function SupporterWall({
             key={`${supporter.createdAt}-${index}`}
             className="flex items-center justify-between rounded-xl border border-white/8 bg-zinc-950/40 px-3 py-2 text-xs"
           >
-            <span className="truncate text-zinc-300">
-              {supporter.anonymous || supporter.displayName === "__anonymous__"
-                ? t("anonymousSupporter")
-                : supporter.displayName}
+            <span className="min-w-0 truncate text-zinc-300">
+              {supporter.anonymous || supporter.displayName === "__anonymous__" ? (
+                t("anonymousSupporter")
+              ) : (
+                <UserBadge
+                  username={supporter.displayName}
+                  title={supporter.equippedTitle}
+                  layout="compact"
+                  animateTitle={false}
+                  usernameClassName="text-zinc-300"
+                  titleClassName="text-[8px]"
+                />
+              )}
             </span>
             <span className="font-mono text-fuchsia-200">
               ${supporter.amountUsd.toFixed(2)}

@@ -1,4 +1,6 @@
 import { createServerSupabase } from "@/lib/supabase-server";
+import { resolveEquippedTitleForUser } from "@/lib/equipped-title-service";
+import type { EquippedTitle } from "@/lib/titles";
 
 export type PublicCreatorProfile = {
   id: string;
@@ -7,6 +9,7 @@ export type PublicCreatorProfile = {
   website: string | null;
   twitter: string | null;
   createdAt: string;
+  equippedTitle: EquippedTitle | null;
   games: Array<{
     id: number;
     title: string;
@@ -61,6 +64,8 @@ export async function loadPublicCreatorProfile(
 
   if (gamesError) throw new Error(gamesError.message);
 
+  const equippedTitle = await resolveEquippedTitleForUser(supabase, creatorId);
+
   return {
     id: profile.id,
     displayName: profile.display_name,
@@ -68,6 +73,7 @@ export async function loadPublicCreatorProfile(
     website: readOptionalString(metadata.website),
     twitter: readOptionalString(metadata.twitter),
     createdAt: profile.created_at,
+    equippedTitle,
     games: (games ?? []).map((game) => ({
       id: game.id,
       title: game.title,

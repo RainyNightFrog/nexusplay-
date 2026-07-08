@@ -2,15 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import type { ChatPlayerPreview } from "@/components/chat/chat-player-card";
 import type { ChatPlayerPublicProfile } from "@/lib/chat-player-profile-service";
 
-type PlayerProfileTarget = {
-  userId: string;
-  virtualPlayerId: string | null;
-} | null;
-
 export function useChatPlayerProfile(
-  player: PlayerProfileTarget,
+  player: ChatPlayerPreview | null,
   open: boolean
 ) {
   const t = useTranslations("chat");
@@ -27,7 +23,8 @@ export function useChatPlayerProfile(
       const params = new URLSearchParams();
       if (player.virtualPlayerId) {
         params.set("virtualPlayerId", player.virtualPlayerId);
-      } else {
+      }
+      if (player.userId && !player.isVirtual) {
         params.set("userId", player.userId);
       }
 

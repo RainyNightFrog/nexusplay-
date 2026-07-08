@@ -14,6 +14,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { GAME_GENRES } from "@/lib/game-metadata";
+import { UserBadge } from "@/components/UserBadge";
 import { addSearchHistory, readSearchHistory } from "@/lib/search-history";
 import type { SearchCreatorResult } from "@/lib/platform-search-service";
 import type { Game } from "@/lib/games";
@@ -311,9 +312,15 @@ export function SiteSearch({
                       className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-white/5"
                     >
                       <UserRound className="size-4 shrink-0 text-violet-400" />
-                      <span className="truncate text-zinc-200">
-                        {creator.displayName}
-                      </span>
+                      <UserBadge
+                        username={creator.displayName}
+                        title={creator.equippedTitle}
+                        layout="compact"
+                        animateTitle={false}
+                        className="min-w-0 flex-1"
+                        usernameClassName="text-zinc-200"
+                        titleClassName="text-[9px]"
+                      />
                       <span className="ml-auto text-xs text-zinc-500">
                         {ts("creatorLabel")}
                       </span>

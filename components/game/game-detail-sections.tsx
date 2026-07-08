@@ -362,6 +362,7 @@ export function GameDetailSections({
                       <UserBadge
                         username={comment.author_name}
                         title={comment.author_equipped_title}
+                        animateTitle={false}
                         usernameClassName="text-sm text-zinc-200"
                         titleClassName="text-[10px]"
                       />

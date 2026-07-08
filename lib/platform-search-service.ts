@@ -1,5 +1,7 @@
 import { mapRecordToGame } from "@/lib/games-data";
 import type { Game } from "@/lib/games";
+import { resolveEquippedTitles } from "@/lib/equipped-title-service";
+import type { EquippedTitle } from "@/lib/titles";
 import { createServerSupabase } from "@/lib/supabase-server";
 
 export type SearchCreatorResult = {
@@ -7,6 +9,7 @@ export type SearchCreatorResult = {
   displayName: string;
   avatarUrl: string | null;
   gameCount: number;
+  equippedTitle: EquippedTitle | null;
 };
 
 export type PlatformSearchResult = {
@@ -143,6 +146,7 @@ export async function searchPlatform(
       displayName: row.display_name as string,
       avatarUrl: (row.avatar_url as string | null) ?? null,
       gameCount,
+      equippedTitle: null,
     });
     seenCreatorIds.add(id);
   }
@@ -159,13 +163,23 @@ export async function searchPlatform(
       displayName: game.creator,
       avatarUrl: null,
       gameCount,
+      equippedTitle: null,
     });
     seenCreatorIds.add(game.creatorId);
   }
 
+  const slicedCreators = creators.slice(0, 8);
+  const titleMap = await resolveEquippedTitles(
+    supabase,
+    slicedCreators.map((creator) => creator.id)
+  );
+
   return {
     query,
     games,
-    creators: creators.slice(0, 8),
+    creators: slicedCreators.map((creator) => ({
+      ...creator,
+      equippedTitle: titleMap.get(creator.id) ?? null,
+    })),
   };
 }

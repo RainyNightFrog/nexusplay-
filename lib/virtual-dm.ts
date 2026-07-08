@@ -9,8 +9,9 @@ export type VirtualDmMessage = {
 export type VirtualContactSummary = {
   id: string;
   displayName: string;
-  locale: string;
+  locale: import("@/lib/virtual-players").VirtualPlayerLocale;
   avatarUrl: string;
   lastMessage: string | null;
   lastMessageAt: string | null;
+  equippedTitle: import("@/lib/titles").EquippedTitle | null;
 };

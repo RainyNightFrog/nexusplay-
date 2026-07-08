@@ -687,6 +687,9 @@
     "avatarFailed": "头像上传失败",
     "profileUpdated": "个人资料已更新",
     "saveFailed": "保存失败，请稍后再试",
+    "equippedTitleHint": "此称号会显示于聊天、讨论区、排行榜等全站位置",
+    "noEquippedTitle": "尚未佩戴称号",
+    "changeTitle": "更换称号",
     "settingsHint": "外观、通知与系统偏好请至"
   },
   "settings": {

@@ -149,7 +149,7 @@ function AchievementProgressPanel({
   const t = useTranslations("achievements");
 
   return (
-    <aside className="hidden w-52 shrink-0 flex-col gap-3 border-l border-white/8 bg-zinc-950/40 p-4 lg:flex xl:w-60">
+    <aside className="hidden w-52 shrink-0 flex-col gap-3 overflow-y-auto overscroll-contain border-l border-white/8 bg-zinc-950/40 p-4 lg:flex xl:w-60">
       <div className="rounded-xl border border-white/8 bg-zinc-900/60 p-4 text-center">
         <ProgressRing percent={summary.completion_percent} unlocked={false} size={72} />
         <p className="mt-2 text-sm font-medium text-zinc-300">{t("overallProgress")}</p>
@@ -291,50 +291,50 @@ function TitleWardrobePanel({
   const unlockedCount = titles.filter((title) => title.unlocked).length;
 
   return (
-    <aside className="hidden w-52 shrink-0 flex-col gap-3 border-l border-white/8 bg-zinc-950/40 p-4 lg:flex xl:w-60">
-      <div className="rounded-xl border border-violet-400/15 bg-violet-500/5 p-4">
-        <p className="text-xs font-semibold uppercase tracking-wider text-violet-300/80 sm:text-sm">
+    <aside className="hidden w-48 shrink-0 flex-col gap-2 overflow-y-auto overscroll-contain border-l border-white/8 bg-zinc-950/40 p-3 lg:flex xl:w-52">
+      <div className="rounded-lg border border-violet-400/15 bg-violet-500/5 p-3">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-violet-300/80">
           {t("titleCollection")}
         </p>
-        <p className="mt-1 text-3xl font-bold text-violet-200">
+        <p className="mt-0.5 text-2xl font-bold text-violet-200">
           {unlockedCount}
-          <span className="text-lg font-normal text-zinc-500">/{titles.length}</span>
+          <span className="text-sm font-normal text-zinc-500">/{titles.length}</span>
         </p>
       </div>
 
-      <div className="space-y-2">
-        <p className="px-1 text-xs font-semibold uppercase tracking-wider text-zinc-500 sm:text-sm">
+      <div className="space-y-1.5">
+        <p className="px-0.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
           {t("titleWardrobeSteps")}
         </p>
-        <ol className="space-y-2 text-sm leading-relaxed text-zinc-400">
-          <li className="flex gap-2 rounded-lg border border-white/5 bg-zinc-900/50 px-3 py-2.5">
+        <ol className="space-y-1 text-xs leading-snug text-zinc-400">
+          <li className="flex gap-1.5 rounded-md border border-white/5 bg-zinc-900/50 px-2 py-1.5">
             <span className="font-bold text-amber-300">1</span>
             <span>{t("titleStep1")}</span>
           </li>
-          <li className="flex gap-2 rounded-lg border border-white/5 bg-zinc-900/50 px-3 py-2.5">
+          <li className="flex gap-1.5 rounded-md border border-white/5 bg-zinc-900/50 px-2 py-1.5">
             <span className="font-bold text-violet-300">2</span>
             <span>{t("titleStep2")}</span>
           </li>
-          <li className="flex gap-2 rounded-lg border border-white/5 bg-zinc-900/50 px-3 py-2.5">
+          <li className="flex gap-1.5 rounded-md border border-white/5 bg-zinc-900/50 px-2 py-1.5">
             <span className="font-bold text-cyan-300">3</span>
             <span>{t("titleStep3")}</span>
           </li>
         </ol>
       </div>
 
-      <div className="mt-auto rounded-xl border border-white/8 bg-zinc-900/60 p-4">
-        <p className="text-xs font-medium text-zinc-500 sm:text-sm">{t("displayPreview")}</p>
+      <div className="mt-auto rounded-lg border border-white/8 bg-zinc-900/60 p-3">
+        <p className="text-[11px] font-medium text-zinc-500">{t("displayPreview")}</p>
         {equippedTitle ? (
-          <div className="mt-2 rounded-lg border border-cyan-400/15 bg-black/25 px-3 py-2.5">
+          <div className="mt-1.5 rounded-md border border-cyan-400/15 bg-black/25 px-2 py-1.5">
             <UserBadge
               username={displayName}
               title={equippedTitle}
-              usernameClassName="text-base text-zinc-200"
-              titleClassName="text-sm"
+              usernameClassName="text-sm text-zinc-200"
+              titleClassName="text-xs"
             />
           </div>
         ) : (
-          <p className="mt-2 text-sm text-zinc-600">{t("noEquipped")}</p>
+          <p className="mt-1.5 text-xs text-zinc-600">{t("noEquipped")}</p>
         )}
       </div>
     </aside>
@@ -375,7 +375,7 @@ function TitleCard({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-xl border p-5 transition-all sm:p-6",
+        "relative overflow-hidden rounded-lg border p-3.5 transition-all sm:p-4",
         locked
           ? "border-white/5 bg-zinc-900/30"
           : cn(
@@ -392,130 +392,134 @@ function TitleCard({
         )}
       />
 
-      <div className="relative space-y-4">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2">
+      <div className="relative space-y-2.5">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
             <span
               className={cn(
-                "rounded-full border px-2.5 py-1 text-xs font-semibold sm:text-sm",
+                "rounded-full border px-2 py-0.5 text-[11px] font-semibold",
                 statusClass
               )}
             >
               {statusLabel}
             </span>
-            <span className="rounded-full border border-white/10 bg-black/30 px-2.5 py-1 text-xs text-zinc-400 sm:text-sm">
+            <span className="rounded-full border border-white/10 bg-black/30 px-2 py-0.5 text-[11px] text-zinc-400">
               {RARITY_LABELS[title.rarity_tier]}
             </span>
           </div>
           {title.is_equipped ? (
-            <Crown className="size-5 shrink-0 text-amber-300" />
+            <Crown className="size-4 shrink-0 text-amber-300" />
           ) : locked ? (
-            <Lock className="size-5 shrink-0 text-zinc-600" />
+            <Lock className="size-4 shrink-0 text-zinc-600" />
           ) : (
-            <Sparkles className="size-5 shrink-0 text-violet-300" />
+            <Sparkles className="size-4 shrink-0 text-violet-300" />
           )}
         </div>
 
-        <div>
-          <p
-            className={cn(
-              "text-lg font-bold sm:text-xl",
-              locked
-                ? "text-zinc-500"
-                : getTitleDisplayClass(title.css_class, title.rarity_tier)
-            )}
-          >
-            {title.name}
-          </p>
-
-          <p className="mt-2 text-sm leading-relaxed text-zinc-400 sm:text-base">
-            {achievement ? (
-              <>
-                {t("unlockRequirement", { achievement: achievement.title })}{" "}
-                <span aria-hidden>{achievement.badge_icon}</span>
-                {!locked && (
-                  <span
-                    className={cn(
-                      "ml-1",
-                      achievement.unlocked ? "text-emerald-400" : "text-amber-300"
-                    )}
-                  >
-                    ·{" "}
-                    {achievement.unlocked
-                      ? t("achievementCompleted")
-                      : t("achievementInProgress")}
-                  </span>
-                )}
-              </>
-            ) : (
-              t("unlockRequirementUnknown")
-            )}
-          </p>
-        </div>
-
-        <div className="rounded-lg border border-white/5 bg-black/20 px-4 py-3">
-          <p className="mb-2 text-xs font-medium uppercase tracking-wider text-zinc-500 sm:text-sm">
-            {locked ? t("displayPreviewLocked") : t("displayPreview")}
-          </p>
-          <UserBadge
-            username={displayName}
-            title={locked ? { ...title, name: title.name } : title}
-            usernameClassName={cn(
-              "text-base",
-              locked ? "text-zinc-600" : "text-zinc-200"
-            )}
-            titleClassName={locked ? "opacity-40 text-sm" : "text-sm sm:text-base"}
-          />
-        </div>
-
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          {locked && onGoToAchievements && achievement && (
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={onGoToAchievements}
-              className="h-10 gap-1.5 px-3 text-sm text-zinc-400 hover:text-amber-300"
-            >
-              {t("goToAchievement")}
-              <ArrowRight className="size-4" />
-            </Button>
-          )}
-          {locked ? (
-            <Button
-              type="button"
-              variant="outline"
-              disabled
-              className="h-10 border-white/10 bg-white/5 px-4 text-sm text-zinc-500"
-            >
-              <Lock className="size-4" />
-              {t("locked")}
-            </Button>
-          ) : title.is_equipped ? (
-            <Button
-              type="button"
-              variant="outline"
-              disabled={equipping}
-              onClick={() => onUnequip()}
-              className="h-10 border-rose-400/20 bg-rose-500/10 px-4 text-sm text-rose-200 hover:bg-rose-500/15"
-            >
-              {equipping ? <Loader2 className="size-4 animate-spin" /> : null}
-              {t("unequip")}
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              disabled={equipping}
-              onClick={() => onEquip(title.id)}
-              className="h-10 border-0 bg-gradient-to-r from-cyan-500 to-violet-600 px-4 text-sm text-white shadow-md shadow-cyan-500/20 hover:from-cyan-400 hover:to-violet-500"
-            >
-              {equipping ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Medal className="size-4" />
+        <div className="flex flex-col gap-2.5 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0 flex-1">
+            <p
+              className={cn(
+                "text-base font-bold sm:text-lg",
+                locked
+                  ? "text-zinc-500"
+                  : getTitleDisplayClass(title.css_class, title.rarity_tier)
               )}
-              {t("equip")}
-            </Button>
-          )}
+            >
+              {title.name}
+            </p>
+
+            <p className="mt-1 text-left text-xs leading-snug text-zinc-400 sm:text-sm">
+              {achievement ? (
+                <>
+                  {t("unlockRequirement", { achievement: achievement.title })}{" "}
+                  <span aria-hidden>{achievement.badge_icon}</span>
+                  {!locked && (
+                    <span
+                      className={cn(
+                        "ml-1",
+                        achievement.unlocked ? "text-emerald-400" : "text-amber-300"
+                      )}
+                    >
+                      ·{" "}
+                      {achievement.unlocked
+                        ? t("achievementCompleted")
+                        : t("achievementInProgress")}
+                    </span>
+                  )}
+                </>
+              ) : (
+                t("unlockRequirementUnknown")
+              )}
+            </p>
+          </div>
+
+          <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
+            <div className="rounded-md border border-white/5 bg-black/20 px-2.5 py-1.5">
+              <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-zinc-500">
+                {locked ? t("displayPreviewLocked") : t("displayPreview")}
+              </p>
+              <UserBadge
+                username={displayName}
+                title={locked ? { ...title, name: title.name } : title}
+                usernameClassName={cn(
+                  "text-sm",
+                  locked ? "text-zinc-600" : "text-zinc-200"
+                )}
+                titleClassName={locked ? "opacity-40 text-xs" : "text-xs sm:text-sm"}
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center justify-end gap-1.5">
+              {locked && onGoToAchievements && achievement && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={onGoToAchievements}
+                  className="h-8 gap-1 px-2 text-xs text-zinc-400 hover:text-amber-300"
+                >
+                  {t("goToAchievement")}
+                  <ArrowRight className="size-3.5" />
+                </Button>
+              )}
+              {locked ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled
+                  className="h-8 border-white/10 bg-white/5 px-3 text-xs text-zinc-500"
+                >
+                  <Lock className="size-3.5" />
+                  {t("locked")}
+                </Button>
+              ) : title.is_equipped ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={equipping}
+                  onClick={() => onUnequip()}
+                  className="h-8 border-rose-400/20 bg-rose-500/10 px-3 text-xs text-rose-200 hover:bg-rose-500/15"
+                >
+                  {equipping ? <Loader2 className="size-3.5 animate-spin" /> : null}
+                  {t("unequip")}
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  disabled={equipping}
+                  onClick={() => onEquip(title.id)}
+                  className="h-8 border-0 bg-gradient-to-r from-cyan-500 to-violet-600 px-3 text-xs text-white shadow-md shadow-cyan-500/20 hover:from-cyan-400 hover:to-violet-500"
+                >
+                  {equipping ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <Medal className="size-3.5" />
+                  )}
+                  {t("equip")}
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -639,7 +643,7 @@ export function AchievementsModal({ open, onOpenChange }: AchievementsModalProps
       <DialogContent
         showCloseButton
         className={cn(
-          "flex max-h-[92vh] w-[min(calc(100vw-1rem),1120px)] max-w-[min(calc(100vw-1rem),1120px)] flex-col gap-0 overflow-hidden",
+          "!flex max-h-[92vh] w-[min(calc(100vw-1rem),1120px)] max-w-[min(calc(100vw-1rem),1120px)] flex-col gap-0 overflow-hidden",
           "sm:max-w-[1120px]",
           "border-amber-400/15 bg-zinc-950/95 p-0 text-base text-zinc-100",
           "shadow-2xl shadow-amber-500/10 backdrop-blur-xl"
@@ -647,7 +651,7 @@ export function AchievementsModal({ open, onOpenChange }: AchievementsModalProps
       >
         <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-amber-500/10 via-violet-500/5 to-transparent" />
 
-        <div className="relative flex min-h-0 flex-col gap-4 px-5 py-5 sm:gap-5 sm:px-6 sm:py-6">
+        <div className="relative flex min-h-0 flex-1 flex-col gap-4 overflow-hidden px-5 py-5 sm:gap-5 sm:px-6 sm:py-6">
           <DialogHeader className="shrink-0 space-y-1.5 text-center">
             <DialogTitle className="flex items-center justify-center gap-3 text-2xl font-bold sm:text-3xl">
               <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500/25 to-violet-500/20 sm:size-12">
@@ -690,10 +694,10 @@ export function AchievementsModal({ open, onOpenChange }: AchievementsModalProps
             onValueChange={(value) =>
               setActiveTab(value as "achievements" | "titles")
             }
-            className="flex min-h-0 flex-col"
+            className="flex min-h-0 flex-1 flex-col"
           >
-            <div className="overflow-hidden rounded-xl border border-white/10 bg-zinc-900/40">
-              <TabsList className="!flex !h-auto !w-full items-stretch gap-1.5 rounded-none border-0 border-b border-white/10 bg-zinc-900/80 p-1.5 group-data-horizontal/tabs:!h-auto">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-white/10 bg-zinc-900/40">
+              <TabsList className="!flex !h-auto !w-full shrink-0 items-stretch gap-1.5 rounded-none border-0 border-b border-white/10 bg-zinc-900/80 p-1.5 group-data-horizontal/tabs:!h-auto">
                 <TabsTrigger
                   value="achievements"
                   className={cn(
@@ -716,7 +720,7 @@ export function AchievementsModal({ open, onOpenChange }: AchievementsModalProps
                 </TabsTrigger>
               </TabsList>
 
-              <div className="flex items-center justify-between gap-3 border-b border-white/5 px-4 py-3 text-base text-zinc-500 sm:px-5">
+              <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/5 px-4 py-3 text-base text-zinc-500 sm:px-5">
                 <span className="min-w-0 truncate text-sm sm:text-base">
                   {loading
                     ? t("loading")
@@ -738,8 +742,8 @@ export function AchievementsModal({ open, onOpenChange }: AchievementsModalProps
                 </Button>
               </div>
 
-              <div className="flex h-[min(62vh,620px)] min-h-[480px] max-h-[620px]">
-                <div className="min-w-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-gutter:stable] px-4 py-3 sm:px-5 sm:py-4">
+              <div className="flex min-h-0 flex-1">
+                <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-gutter:stable] px-4 py-3 pb-6 sm:px-5 sm:py-4 sm:pb-8">
                 <TabsContent value="achievements" className="mt-0 outline-none">
                   {loading && !achievementsData ? (
                     <div className="flex items-center justify-center py-16 text-zinc-500">
@@ -806,41 +810,41 @@ export function AchievementsModal({ open, onOpenChange }: AchievementsModalProps
                   ) : error ? (
                     <p className="py-16 text-center text-base text-zinc-500">{t("loadError")}</p>
                   ) : (
-                    <div className="space-y-4">
-                      <div className="rounded-xl border border-violet-400/15 bg-violet-500/5 px-4 py-3 text-sm leading-relaxed text-violet-100/90 sm:text-base">
+                    <div className="space-y-2.5">
+                      <div className="rounded-lg border border-violet-400/15 bg-violet-500/5 px-3 py-2 text-xs leading-snug text-violet-100/90 sm:text-sm">
                         {t("titleWardrobeGuide")}
                       </div>
 
                       {titlesData && (
-                        <div className="rounded-xl border border-white/8 bg-zinc-900/50 p-4 lg:hidden">
-                          <div className="flex items-center justify-between gap-3">
+                        <div className="rounded-lg border border-white/8 bg-zinc-900/50 p-3 lg:hidden">
+                          <div className="flex items-center justify-between gap-2">
                             <div>
-                              <p className="text-sm font-medium text-zinc-300 sm:text-base">
+                              <p className="text-xs font-medium text-zinc-300 sm:text-sm">
                                 {t("titleCollection")}
                               </p>
-                              <p className="text-base text-zinc-500 sm:text-lg">
+                              <p className="text-sm text-zinc-500 sm:text-base">
                                 {allTitles.filter((title) => title.unlocked).length}/
                                 {allTitles.length}
                               </p>
                             </div>
                             <div className="min-w-0 text-right">
-                              <p className="text-xs text-zinc-500 sm:text-sm">{t("displayPreview")}</p>
+                              <p className="text-[10px] text-zinc-500 sm:text-xs">{t("displayPreview")}</p>
                               {equippedTitleEntry ? (
                                 <UserBadge
                                   username={displayName}
                                   title={equippedTitleEntry}
-                                  usernameClassName="text-sm text-zinc-300 sm:text-base"
-                                  titleClassName="text-xs sm:text-sm"
+                                  usernameClassName="text-xs text-zinc-300 sm:text-sm"
+                                  titleClassName="text-[10px] sm:text-xs"
                                 />
                               ) : (
-                                <p className="text-sm text-zinc-600">{t("noEquipped")}</p>
+                                <p className="text-xs text-zinc-600">{t("noEquipped")}</p>
                               )}
                             </div>
                           </div>
                         </div>
                       )}
 
-                      <div className="space-y-3">
+                      <div className="space-y-2">
                         {allTitles.map((title) => (
                           <TitleCard
                             key={title.id}
