@@ -76,6 +76,15 @@ const REQUIRED = [
 ];
 
 const CRON_EMAIL = ["CRON_SECRET", "RESEND_API_KEY", "EMAIL_FROM"];
+const POST_LAUNCH_OPTIONAL = [
+  { key: "RESEND_API_KEY", label: "打賞收據郵件" },
+  { key: "EMAIL_FROM", label: "寄件人地址" },
+  { key: "VAPID_PUBLIC_KEY", label: "瀏覽器推播（公鑰）" },
+  { key: "VAPID_PRIVATE_KEY", label: "瀏覽器推播（私鑰）" },
+  { key: "NEXT_PUBLIC_GA_MEASUREMENT_ID", label: "Google Analytics 4" },
+  { key: "WEBSUB_HUB_URL", label: "WebSub Feed 推送" },
+];
+
 const OPTIONAL = [
   "PLATFORM_PREVIEW_MODE",
   "NEXT_PUBLIC_SITE_URL",
@@ -107,6 +116,22 @@ const emailReady =
 const previewMode =
   previewExplicit || (!paymentsLive && !emailReady);
 console.log(`\nPLATFORM_MODE: ${previewMode ? "PREVIEW (email/payments skipped)" : "LIVE"}`);
+
+const postLaunchMissing = POST_LAUNCH_OPTIONAL.filter(
+  ({ key }) => envStatus(env, key) !== "SET"
+);
+if (postLaunchMissing.length) {
+  console.log("\n=== 上線後可補（本機未設定）===");
+  for (const { key, label } of postLaunchMissing) {
+    console.log(`  [ ] ${label} (${key})`);
+  }
+  console.log(
+    "\nVercel Production 目前亦未設定：RESEND、VAPID、GA、WEBSUB（可用 npx vercel env ls production 確認）"
+  );
+} else {
+  console.log("\n=== 上線後可補功能 ===");
+  console.log("本機已齊全（Resend / 推播 / GA / WebSub）");
+}
 
 const db = await checkTables(env);
 console.log("\n=== Supabase tables ===");

@@ -1,6 +1,7 @@
 "use client";
 
-import { Info, Sparkles } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Coins, Info, Sparkles } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -18,14 +19,39 @@ type TipsFeeDisclosureProps = {
   variant?: "compact" | "full";
   exampleTipAmount?: number;
   className?: string;
+  paymentsLive?: boolean;
 };
 
 export function TipsFeeDisclosure({
   variant = "full",
   exampleTipAmount = 10,
   className,
+  paymentsLive: paymentsLiveProp,
 }: TipsFeeDisclosureProps) {
   const t = useTranslations("dashboard");
+  const [paymentsLive, setPaymentsLive] = useState(paymentsLiveProp ?? false);
+
+  useEffect(() => {
+    if (paymentsLiveProp !== undefined) {
+      setPaymentsLive(paymentsLiveProp);
+      return;
+    }
+
+    let cancelled = false;
+    fetch("/api/auth/payment-methods")
+      .then((response) => response.json())
+      .then((data: { paymentsLive?: boolean }) => {
+        if (!cancelled) setPaymentsLive(data.paymentsLive === true);
+      })
+      .catch(() => {
+        if (!cancelled) setPaymentsLive(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [paymentsLiveProp]);
+
   const platformPercent = PLANNED_PLATFORM_FEE_PERCENT;
   const feeWaived = isPlatformFeeWaived(platformPercent);
   const example = estimateCreatorNetFromTip(exampleTipAmount, platformPercent);
@@ -54,17 +80,26 @@ export function TipsFeeDisclosure({
             {t("tipsFeeWaivedBadge")}
           </Badge>
         )}
-        <Badge
-          variant="outline"
-          className="border-amber-400/30 bg-amber-500/10 text-amber-200"
-        >
-          <Sparkles className="mr-1 size-3" />
-          {t("tipsPreviewBanner")}
-        </Badge>
+        {paymentsLive ? (
+          <Badge className="border-0 bg-emerald-500/20 text-emerald-200">
+            <Coins className="mr-1 size-3" />
+            {t("tipsFeeLiveBanner")}
+          </Badge>
+        ) : (
+          <Badge
+            variant="outline"
+            className="border-amber-400/30 bg-amber-500/10 text-amber-200"
+          >
+            <Sparkles className="mr-1 size-3" />
+            {t("tipsPreviewBanner")}
+          </Badge>
+        )}
       </div>
 
       <p className="mt-2 text-xs leading-relaxed text-zinc-400">
-        {t("tipsFeeDisclosureIntro")}
+        {paymentsLive
+          ? t("tipsFeeDisclosureIntroLive")
+          : t("tipsFeeDisclosureIntro")}
       </p>
 
       <div className="mt-4 space-y-3 text-left">

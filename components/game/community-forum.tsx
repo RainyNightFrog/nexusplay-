@@ -46,7 +46,10 @@ import {
   virtualPlayerToPlayerPreview,
   type ChatPlayerPreview,
 } from "@/components/chat/chat-player-card";
-import { isSeedForumUserId } from "@/lib/forum-seed-builder";
+import {
+  isSeedForumPostId,
+  isSeedForumUserId,
+} from "@/lib/forum-seed-builder";
 import { getVirtualPlayerById } from "@/lib/virtual-players";
 import { cn } from "@/lib/utils";
 
@@ -694,6 +697,14 @@ export function CommunityForum({
               <div className="p-5 text-center sm:p-6">
                 <div className="flex flex-wrap items-center justify-center gap-2">
                   <CategoryBadge category={selectedPost.category} />
+                  {isSeedForumPostId(selectedPost.id) && (
+                    <Badge
+                      variant="outline"
+                      className="border-amber-400/30 bg-amber-500/10 text-[11px] text-amber-200"
+                    >
+                      {t("seedPostBadge")}
+                    </Badge>
+                  )}
                   {isHub && selectedPost.game_title && (
                     <Link
                       href={`/game/${selectedPost.game_id}/forum`}
@@ -710,6 +721,11 @@ export function CommunityForum({
                 <h4 className="mt-3 text-2xl font-bold tracking-tight text-white">
                   {selectedPost.title}
                 </h4>
+                {isSeedForumPostId(selectedPost.id) && (
+                  <p className="mt-3 rounded-lg border border-amber-400/20 bg-amber-500/5 px-3 py-2 text-xs leading-relaxed text-amber-100/90">
+                    {t("seedPost")}
+                  </p>
+                )}
                 <div className="mt-4 flex justify-center">
                   <AuthorChip
                     name={selectedPost.author_name}
@@ -801,7 +817,11 @@ export function CommunityForum({
                       onKeyDown={(event) =>
                         handleSubmitOnShortcut(event, handleSubmitReply)
                       }
-                      placeholder={t("replyPlaceholder")}
+                      placeholder={
+                        isSeedForumPostId(selectedPost.id)
+                          ? t("seedReplyPlaceholder")
+                          : t("replyPlaceholder")
+                      }
                       maxLength={FORUM_LIMITS.comment}
                       rows={3}
                       className="min-h-24 resize-none border-white/10 bg-white/5 text-zinc-100 placeholder:text-zinc-500 focus-visible:border-violet-400/40 focus-visible:ring-violet-500/20"
@@ -1127,6 +1147,14 @@ export function CommunityForum({
                   >
                     <div className="flex flex-wrap items-center justify-center gap-2">
                       <CategoryBadge category={post.category} />
+                      {isSeedForumPostId(post.id) && (
+                        <Badge
+                          variant="outline"
+                          className="border-amber-400/30 bg-amber-500/10 text-[11px] text-amber-200"
+                        >
+                          {t("seedPostBadge")}
+                        </Badge>
+                      )}
                       {isHub && post.game_title && (
                         <span className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] text-zinc-400">
                           <Gamepad2 className="size-3" />

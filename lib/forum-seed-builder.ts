@@ -113,6 +113,10 @@ export function buildLocalizedGameComments(
   });
 }
 
+export function isSeedForumPostId(postId: number) {
+  return postId < 0;
+}
+
 export function parseSeedForumPostId(postId: number): {
   gameId: number;
   postIndex: number;

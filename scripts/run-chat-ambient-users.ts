@@ -25,10 +25,13 @@ async function main() {
   const bootstrap = process.argv.includes("--bootstrap");
   const result = await ensureAllAmbientPlayers();
   console.log(
-    `✓ 虛擬聊天帳號就緒：${result.total} 個（新建 ${result.created.length}）`
+    `✓ 虛擬聊天帳號就緒：${result.total} 個（新建 ${result.created.length}、同步暱稱 ${result.synced.length}）`
   );
   if (result.created.length > 0) {
-    console.log(result.created.join(", "));
+    console.log("新建:", result.created.join(", "));
+  }
+  if (result.synced.length > 0) {
+    console.log("已同步暱稱:", result.synced.length, "個帳號");
   }
 
   if (bootstrap) {

@@ -139,6 +139,34 @@ async function listAmbientBotUsers(supabase: SupabaseClient) {
   return byEmail;
 }
 
+async function syncAmbientPlayerProfile(
+  supabase: SupabaseClient,
+  userId: string,
+  player: VirtualPlayer,
+  options?: { asCreator?: boolean }
+) {
+  const role = options?.asCreator ? "creator" : "player";
+  const { error: profileError } = await supabase.from("profiles").upsert(
+    {
+      id: userId,
+      display_name: player.displayName,
+      role,
+    },
+    { onConflict: "id" }
+  );
+  if (profileError) throw new Error(profileError.message);
+
+  const { error: authError } = await supabase.auth.admin.updateUserById(userId, {
+    user_metadata: {
+      display_name: player.displayName,
+      role,
+      ambient_bot: true,
+      ambient_id: player.id,
+    },
+  });
+  if (authError) throw new Error(authError.message);
+}
+
 async function ensureAmbientPlayer(
   supabase: SupabaseClient,
   player: VirtualPlayer,
@@ -149,7 +177,10 @@ async function ensureAmbientPlayer(
     ? ambientCreatorBotEmail(player.id)
     : ambientBotEmail(player.id);
   const cached = cache.get(email);
-  if (cached) return cached;
+  if (cached) {
+    await syncAmbientPlayerProfile(supabase, cached, player, options);
+    return cached;
+  }
 
   const { data, error } = await supabase.auth.admin.createUser({
     email,
@@ -369,19 +400,22 @@ export async function ensureAllAmbientPlayers() {
   const supabase = createServerSupabase();
   const cache = await listAmbientBotUsers(supabase);
   const created: string[] = [];
+  const synced: string[] = [];
 
   for (const player of VIRTUAL_PLAYERS) {
     for (const asCreator of [false, true] as const) {
       const email = asCreator
         ? ambientCreatorBotEmail(player.id)
         : ambientBotEmail(player.id);
-      if (cache.has(email)) continue;
+      const existed = cache.has(email);
       await ensureAmbientPlayer(supabase, player, cache, { asCreator });
-      created.push(`${asCreator ? "creator:" : "world:"}${player.displayName}`);
+      const label = `${asCreator ? "creator:" : "world:"}${player.displayName}`;
+      if (existed) synced.push(label);
+      else created.push(label);
     }
   }
 
-  return { total: VIRTUAL_PLAYERS.length * 2, created };
+  return { total: VIRTUAL_PLAYERS.length * 2, created, synced };
 }
 
 /** 灌入近期聊天記錄，讓世界頻道一打開就有對話感 */
