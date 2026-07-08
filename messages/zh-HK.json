@@ -132,6 +132,7 @@
     "tabPlayTime": "⏳ 遊戲時長榜",
     "tabDonated": "💰 貢獻榜",
     "empty": "暫無排行數據，快來搶佔榜首！",
+    "emptyDonated": "尚無打賞記錄",
     "fetchError": "無法載入排行榜，請確認開發伺服器已啟動，或聯絡管理員執行資料庫設定。",
     "loading": "同步競技數據中…",
     "refresh": "刷新",
@@ -589,8 +590,6 @@
     "tipsFeeCreatorNetFormulaZero": "實收 ≈ 打賞金額 − 金流手續費（目前無平台服務費）",
     "tipsFeeExampleLine": "例：玩家打賞 ${tip} → 平台 −${platform}、金流 −${processor} → 您約收 ${net}",
     "tipsFeeExampleLineZero": "例：玩家打賞 ${tip} → 平台 $0.00、金流 −${processor} → 您約收 ${net}",
-    "tipsFeeItchCompareTitle": "與 itch.io 對照",
-    "tipsFeeItchCompareDesc": "itch.io 採 Open Revenue Sharing，創作者自行設定分给平台的比例（0%～100%，預設 10%），金流費另計。NexusPlay 早期全站 0%，日後若調整可能參考 {futurePercent}% 並提前公告；已鎖定 0% 的早期遊戲維持不變。",
     "tipsFeePlayerBriefTitle": "玩家會看到什麼？",
     "tipsFeePlayerBriefDesc": "打賞完全自願，不贊助也能完整遊玩。付款前會顯示確切金額；這是支持創作者，不是購買商品。",
     "tipsFeeSettlementDesc": "多筆打賞會累積至創作者帳戶，達結算門檻後批次提領（週期將於金流上線時公布）。",
@@ -698,7 +697,9 @@
     "alertZip": "請上傳遊戲壓縮檔",
     "invalidGameId": "無效的遊戲 ID",
     "readFailed": "讀取遊戲資料失敗",
-    "orphanGameHint": "「{title}」尚未綁定創作者帳號（舊版上傳常見）。儲存變更後將自動綁定至你的帳號。"
+    "orphanGameHint": "「{title}」尚未綁定創作者帳號（舊版上傳常見）。儲存變更後將自動綁定至你的帳號。",
+    "tipsFeePlatformCompareTitle": "與業界常見做法對照",
+    "tipsFeePlatformCompareDesc": "部分平台允許創作者自行設定平台分成比例（0%～100%），金流費另計。NexusPlay 早期全站 0%，日後若調整可能參考 {futurePercent}% 並提前公告；已鎖定 0% 的早期遊戲維持不變。"
   },
   "auth": {
     "callbackFailed": "登入驗證失敗，請再試一次",
@@ -839,7 +840,9 @@
     "resetDesc": "將所有系統設定還原為 NexusPlay 預設值",
     "resetBtn": "重置設定",
     "resetDone": "已恢復預設設定",
-    "profileHint": "頭像、暱稱與帳戶權限請至"
+    "profileHint": "頭像、暱稱與帳戶權限請至",
+    "supportEmailDesc": "玩家對你的遊戲有問題或需要支援時，可透過此信箱聯絡你。",
+    "paymentDesc": "管理打賞時使用的信用卡。"
   },
   "accountSettings": {
     "navGroupAccount": "帳戶",
@@ -883,7 +886,7 @@
     "creatorTitle": "創作者設定",
     "creatorDesc": "管理玩家聯絡方式與平台費政策",
     "supportEmailSection": "支援信箱",
-    "supportEmailDesc": "玩家對你的遊戲有問題或需要支援時，可透過此信箱聯絡你（參考 itch.io Support Email）。",
+    "supportEmailDesc": "玩家對你的遊戲有問題或需要支援時，可透過此信箱聯絡你。",
     "supportEmailLabel": "支援信箱地址",
     "supportEmailPlaceholder": "support@example.com",
     "useExistingEmail": "使用現有註冊信箱",
@@ -960,7 +963,7 @@
     "deleteBtn": "永久刪除帳戶",
     "deleteFailed": "刪除帳戶失敗",
     "paymentTitle": "付款方式",
-    "paymentDesc": "管理打賞時使用的信用卡（參考 itch.io Credit Cards）",
+    "paymentDesc": "管理打賞時使用的信用卡。",
     "paymentPreviewBanner": "打賞功能即將上線",
     "paymentPreviewDesc": "儲存付款方式後，打賞時無需重複輸入卡號。金流上線前此頁為預覽，不會產生真實扣款。",
     "paymentCardsSection": "已儲存的信用卡",
@@ -1109,9 +1112,17 @@
     "replySuccess": "留言已發表",
     "categories": {
       "general": "綜合討論",
-      "bug": "Bug 回報",
+      "question": "求助提問",
+      "guide": "攻略心得",
+      "showcase": "精彩分享",
+      "review": "遊戲評價",
       "feedback": "建議反饋",
-      "guide": "攻略心得"
+      "bug": "Bug 回報",
+      "multiplayer": "組隊交友",
+      "lore": "劇情世界觀",
+      "speedrun": "競速挑戰",
+      "meme": "趣味梗圖",
+      "update": "版本動態"
     }
   },
   "rules": {

@@ -5,6 +5,7 @@ import {
   type ForumCategory,
 } from "@/lib/forum";
 import { createForumPost, getForumPostsByGameId } from "@/lib/forum-service";
+import { resolveRequestLocale } from "@/lib/request-locale";
 import { triggerForumWebSubPing } from "@/lib/websub-service";
 import { sanitizePlainText } from "@/lib/sanitize-plain";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
@@ -15,7 +16,7 @@ function parseGameId(raw: string) {
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -26,7 +27,8 @@ export async function GET(
       return NextResponse.json({ error: "無效的遊戲 ID" }, { status: 400 });
     }
 
-    const posts = await getForumPostsByGameId(gameId);
+    const locale = await resolveRequestLocale(request);
+    const posts = await getForumPostsByGameId(gameId, locale);
     return NextResponse.json({ posts });
   } catch (error) {
     const message = error instanceof Error ? error.message : "讀取討論區失敗";

@@ -8,7 +8,11 @@ create table if not exists public.forum_posts (
   game_id bigint not null references public.games (id) on delete cascade,
   user_id uuid not null references auth.users (id) on delete cascade,
   title text not null,
-  category text not null check (category in ('general', 'bug', 'feedback', 'guide')),
+  category text not null check (category in (
+    'general', 'bug', 'feedback', 'guide',
+    'question', 'showcase', 'review', 'multiplayer',
+    'meme', 'lore', 'speedrun', 'update'
+  )),
   content text not null,
   created_at timestamptz not null default now()
 );

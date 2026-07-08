@@ -348,7 +348,21 @@
   function getGuestName() {
     var stored = readLocal("guest-name");
     if (stored) return stored;
-    var names = ["霓虹駭客", "鋼鐵指揮官", "矩陣行者", "裂變守衛", "量子玩家"];
+    var names = [
+      "Shout~listenme",
+      "Tonightゝ",
+      "ObiWanKenobi",
+      "Vengeance",
+      "Stormborn",
+      "Mana Lisa",
+      "Tank Sinatra",
+      "Healium",
+      "Shadowfax",
+      "BOOM SHAKA LAKA",
+      "打小是祖宗",
+      "鐵鳩船長",
+      "你今日食左未",
+    ];
     return names[Math.floor(Math.random() * names.length)];
   }
 

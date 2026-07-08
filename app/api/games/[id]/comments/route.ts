@@ -3,6 +3,7 @@ import {
   createGameComment,
   getGameCommentsByGameId,
 } from "@/lib/game-comments-service";
+import { resolveRequestLocale } from "@/lib/request-locale";
 import { sanitizePlainText } from "@/lib/sanitize";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { MAX_COMMENT_LENGTH } from "@/lib/game-page-content";
@@ -13,7 +14,7 @@ function parseGameId(raw: string) {
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -24,7 +25,8 @@ export async function GET(
       return NextResponse.json({ error: "無效的遊戲 ID" }, { status: 400 });
     }
 
-    const comments = await getGameCommentsByGameId(gameId);
+    const locale = await resolveRequestLocale(request);
+    const comments = await getGameCommentsByGameId(gameId, locale);
     return NextResponse.json({ comments });
   } catch (error) {
     const message = error instanceof Error ? error.message : "讀取評論失敗";

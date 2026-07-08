@@ -132,6 +132,7 @@
     "tabPlayTime": "⏳ Play Time",
     "tabDonated": "💰 Top Supporters",
     "empty": "No rankings yet — be the first on the board!",
+    "emptyDonated": "No tips recorded yet",
     "fetchError": "Could not load leaderboards. Make sure the dev server is running, or ask an admin to run the database setup.",
     "loading": "Syncing live stats…",
     "refresh": "Refresh",
@@ -588,8 +589,6 @@
     "tipsFeeCreatorNetFormulaZero": "Net ≈ tip amount − payment fee (no platform fee currently)",
     "tipsFeeExampleLine": "e.g. ${tip} tip → platform −${platform}, processor −${processor} → you ~${net}",
     "tipsFeeExampleLineZero": "e.g. ${tip} tip → platform $0.00, processor −${processor} → you ~${net}",
-    "tipsFeeItchCompareTitle": "Compare with itch.io",
-    "tipsFeeItchCompareDesc": "itch.io uses Open Revenue Sharing (creators choose 0–100%, default 10%); payment fees are separate. NexusPlay is 0% during early access; a future site-wide rate (reference {futurePercent}%) would be announced in advance. Games locked at 0% stay at 0%.",
     "tipsFeePlayerBriefTitle": "What players see",
     "tipsFeePlayerBriefDesc": "Tips are voluntary — games remain fully playable without paying. The exact amount is shown before checkout. Tips support creators; they are not product purchases.",
     "tipsFeeSettlementDesc": "Tips accumulate in your creator balance and are paid out in batches once a threshold is met (schedule announced at launch).",
@@ -698,7 +697,9 @@
     "alertZip": "Please upload a game zip file",
     "invalidGameId": "Invalid game ID",
     "readFailed": "Failed to load game data",
-    "unreadTipsBadge": "{count} new tip(s)"
+    "unreadTipsBadge": "{count} new tip(s)",
+    "tipsFeePlatformCompareTitle": "Industry context",
+    "tipsFeePlatformCompareDesc": "Some platforms let creators choose their revenue share (0–100%); payment processor fees are separate. NexusPlay is 0% during early access; a future site-wide rate (reference {futurePercent}%) would be announced in advance. Games locked at 0% stay at 0%."
   },
   "auth": {
     "callbackFailed": "Login verification failed, please try again",
@@ -839,7 +840,9 @@
     "resetDesc": "Restore all system settings to NexusPlay defaults",
     "resetBtn": "Reset settings",
     "resetDone": "Settings restored to defaults",
-    "profileHint": "For avatar, nickname, and account permissions, go to"
+    "profileHint": "For avatar, nickname, and account permissions, go to",
+    "supportEmailDesc": "Players can contact you about your games via this address.",
+    "paymentDesc": "Manage saved cards for tips."
   },
   "accountSettings": {
     "navGroupAccount": "Account",
@@ -881,7 +884,7 @@
     "creatorTitle": "Creator settings",
     "creatorDesc": "Support contact and platform fee policy",
     "supportEmailSection": "Support email",
-    "supportEmailDesc": "Players can contact you about your games via this address (similar to itch.io Support Email).",
+    "supportEmailDesc": "Players can contact you about your games via this address.",
     "supportEmailLabel": "Support email address",
     "supportEmailPlaceholder": "support@example.com",
     "useExistingEmail": "Use registered email",
@@ -950,7 +953,7 @@
     "deleteBtn": "Permanently delete account",
     "deleteFailed": "Failed to delete account",
     "paymentTitle": "Payment methods",
-    "paymentDesc": "Manage saved cards for tips (similar to itch.io Credit Cards)",
+    "paymentDesc": "Manage saved cards for tips.",
     "paymentPreviewBanner": "Tips coming soon",
     "paymentPreviewDesc": "Saved cards speed up checkout. This page is a preview until payments launch — no real charges.",
     "paymentCardsSection": "Saved credit cards",
@@ -1109,9 +1112,17 @@
     "replySuccess": "Comment posted",
     "categories": {
       "general": "General discussion",
-      "bug": "Bug report",
+      "question": "Q&A",
+      "guide": "Guides & tips",
+      "showcase": "Highlights",
+      "review": "Reviews",
       "feedback": "Feedback",
-      "guide": "Guides & tips"
+      "bug": "Bug report",
+      "multiplayer": "LFG & co-op",
+      "lore": "Lore",
+      "speedrun": "Speedruns",
+      "meme": "Memes",
+      "update": "Updates"
     }
   },
   "rules": {

@@ -22,9 +22,9 @@ const NEW_KEYS = {
     "Net ≈ tip amount − platform fee − payment fee",
   tipsFeeExampleLine:
     "e.g. ${tip} tip → platform −${platform}, processor −${processor} → you ~${net}",
-  tipsFeeItchCompareTitle: "Compare with itch.io",
-  tipsFeeItchCompareDesc:
-    "itch.io uses Open Revenue Sharing: creators choose what % of each sale goes to itch.io (0–100%, default 10%). Payment processor fees (PayPal/Stripe) are separate. NexusPlay currently plans a fixed {percent}% default; adjustable sharing may come later.",
+  tipsFeePlatformCompareTitle: "Industry context",
+  tipsFeePlatformCompareDesc:
+    "Some platforms let creators choose their revenue share (0–100%); payment processor fees are separate. NexusPlay currently plans a fixed {percent}% default; adjustable sharing may come later.",
   tipsFeePlayerBriefTitle: "What players see",
   tipsFeePlayerBriefDesc:
     "Tips are voluntary — games remain fully playable without paying. The exact amount is shown before checkout. Tips support creators; they are not product purchases.",

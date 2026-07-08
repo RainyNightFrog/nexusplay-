@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { motion } from "framer-motion";
 import { Calendar, Loader2, MessageSquare, Send } from "lucide-react";
 import { Link } from "@/i18n/navigation";
@@ -70,6 +70,7 @@ export function GameDetailSections({
   galleryUrls,
   devlogs,
 }: GameDetailSectionsProps) {
+  const locale = useLocale();
   const tc = useTranslations("common");
   const tg = useTranslations("game");
   const { translateApiError } = useApiError();
@@ -92,7 +93,9 @@ export function GameDetailSections({
     async function loadComments() {
       setCommentsLoading(true);
       try {
-        const response = await fetch(`/api/games/${gameId}/comments`);
+        const response = await fetch(
+          `/api/games/${gameId}/comments?locale=${encodeURIComponent(locale)}`
+        );
         const data = (await response.json()) as {
           comments?: GameComment[];
           error?: string;
@@ -111,7 +114,7 @@ export function GameDetailSections({
     return () => {
       cancelled = true;
     };
-  }, [gameId]);
+  }, [gameId, locale]);
 
   const submitComment = useCallback(async () => {
     const trimmed = commentDraft.trim();

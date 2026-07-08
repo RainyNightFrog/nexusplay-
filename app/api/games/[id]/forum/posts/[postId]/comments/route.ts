@@ -5,6 +5,7 @@ import {
   getForumCommentsByPostId,
 } from "@/lib/forum-service";
 import { FORUM_LIMITS } from "@/lib/forum";
+import { resolveRequestLocale } from "@/lib/request-locale";
 import { sanitizePlainText } from "@/lib/sanitize-plain";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 
@@ -14,20 +15,21 @@ function parseId(raw: string) {
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string; postId: string }> }
 ) {
   try {
     const { id, postId } = await params;
     const gameId = parseId(id);
     const numericPostId = parseId(postId);
+    const locale = await resolveRequestLocale(request);
 
     if (!gameId || numericPostId === null) {
       return NextResponse.json({ error: "無效的 ID" }, { status: 400 });
     }
 
     if (numericPostId < 0) {
-      const comments = await getForumCommentsByPostId(numericPostId);
+      const comments = await getForumCommentsByPostId(numericPostId, locale);
       return NextResponse.json({ comments });
     }
 
@@ -36,7 +38,7 @@ export async function GET(
       return NextResponse.json({ error: "找不到此貼文" }, { status: 404 });
     }
 
-    const comments = await getForumCommentsByPostId(numericPostId);
+    const comments = await getForumCommentsByPostId(numericPostId, locale);
     return NextResponse.json({ comments });
   } catch (error) {
     const message = error instanceof Error ? error.message : "讀取回覆失敗";

@@ -1,10 +1,12 @@
 import {
   type GameComment,
-  type SeedGameComment,
   MAX_COMMENT_LENGTH,
 } from "@/lib/game-page-content";
+import {
+  buildLocalizedGameComments,
+  isSeedGameCommentUserId,
+} from "@/lib/forum-seed-builder";
 import { formatForumAuthor } from "@/lib/forum";
-import { SEED_GAME_COMMENTS } from "@/lib/platform-catalog";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -17,26 +19,11 @@ type GameCommentRecord = {
   created_at: string;
 };
 
-const SEED_USER_PREFIX = "seed-comment-";
-
-function buildSeedComments(gameId: number, gameTitle: string): GameComment[] {
-  const seeds = SEED_GAME_COMMENTS[gameTitle];
-  if (!seeds?.length) return [];
-
-  const now = Date.now();
-  return seeds.map((seed, index) => ({
-    id: -(gameId * 100 + index + 1),
-    game_id: gameId,
-    user_id: `${SEED_USER_PREFIX}${gameId}-${index}`,
-    content: seed.content,
-    created_at: new Date(now - seed.offsetHours * 3_600_000).toISOString(),
-    author_name: seed.authorName,
-  }));
-}
-
 async function resolveAuthorNames(userIds: string[]) {
   const supabase = createServerSupabase();
-  const uniqueIds = [...new Set(userIds.filter((id) => !id.startsWith(SEED_USER_PREFIX)))];
+  const uniqueIds = [
+    ...new Set(userIds.filter((id) => !isSeedGameCommentUserId(id))),
+  ];
   const nameMap = new Map<string, string>();
 
   if (uniqueIds.length === 0) {
@@ -65,9 +52,8 @@ function mapComments(
 ): GameComment[] {
   return records.map((record) => ({
     ...record,
-    author_name: record.user_id.startsWith(SEED_USER_PREFIX)
-      ? formatForumAuthor(record.user_id)
-      : nameMap.get(record.user_id) ?? formatForumAuthor(record.user_id),
+    author_name:
+      nameMap.get(record.user_id) ?? formatForumAuthor(record.user_id),
   }));
 }
 
@@ -84,9 +70,10 @@ async function loadGameTitle(gameId: number) {
 function mergeWithSeedComments(
   gameId: number,
   gameTitle: string,
-  comments: GameComment[]
+  comments: GameComment[],
+  locale?: string | null
 ): GameComment[] {
-  const seeds = buildSeedComments(gameId, gameTitle);
+  const seeds = buildLocalizedGameComments(gameId, gameTitle, locale);
   if (!seeds.length) return comments;
 
   const merged = [...comments, ...seeds].sort(
@@ -96,7 +83,10 @@ function mergeWithSeedComments(
   return merged.slice(0, 50);
 }
 
-export async function getGameCommentsByGameId(gameId: number): Promise<GameComment[]> {
+export async function getGameCommentsByGameId(
+  gameId: number,
+  locale?: string | null
+): Promise<GameComment[]> {
   const supabase = createServerSupabase();
 
   const { data, error } = await supabase
@@ -112,7 +102,7 @@ export async function getGameCommentsByGameId(gameId: number): Promise<GameComme
       error.message.includes("schema cache")
     ) {
       const gameTitle = await loadGameTitle(gameId);
-      return buildSeedComments(gameId, gameTitle);
+      return buildLocalizedGameComments(gameId, gameTitle, locale);
     }
     throw new Error(`讀取評論失敗：${error.message}`);
   }
@@ -121,12 +111,12 @@ export async function getGameCommentsByGameId(gameId: number): Promise<GameComme
   const gameTitle = await loadGameTitle(gameId);
 
   if (records.length === 0) {
-    return buildSeedComments(gameId, gameTitle);
+    return buildLocalizedGameComments(gameId, gameTitle, locale);
   }
 
   const nameMap = await resolveAuthorNames(records.map((row) => row.user_id));
   const realComments = mapComments(records, nameMap);
-  return mergeWithSeedComments(gameId, gameTitle, realComments);
+  return mergeWithSeedComments(gameId, gameTitle, realComments, locale);
 }
 
 export async function createGameComment(
@@ -160,5 +150,3 @@ export async function createGameComment(
   const nameMap = await resolveAuthorNames([record.user_id]);
   return mapComments([record], nameMap)[0]!;
 }
-
-export type { SeedGameComment };

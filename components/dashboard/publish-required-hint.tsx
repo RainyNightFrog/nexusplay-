@@ -6,13 +6,11 @@ import { cn } from "@/lib/utils";
 
 type PublishRequiredHintProps = {
   publishStatus: GamePublishStatus;
-  active?: boolean;
   className?: string;
 };
 
 export function PublishRequiredHint({
   publishStatus,
-  active = true,
   className,
 }: PublishRequiredHintProps) {
   const t = useTranslations("dashboard");
@@ -25,7 +23,6 @@ export function PublishRequiredHint({
         isPublic
           ? "border-cyan-400/20 bg-cyan-500/5 text-cyan-100/90"
           : "border-amber-400/20 bg-amber-500/5 text-amber-100/90",
-        !active && "opacity-70",
         className
       )}
     >

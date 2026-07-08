@@ -107,8 +107,8 @@ export function TipsFeeDisclosure({
               accent="violet"
             />
             <FeeBlock
-              title={t("tipsFeeItchCompareTitle")}
-              description={t("tipsFeeItchCompareDesc", {
+              title={t("tipsFeePlatformCompareTitle")}
+              description={t("tipsFeePlatformCompareDesc", {
                 futurePercent: PLANNED_FUTURE_PLATFORM_FEE_PERCENT,
               })}
               accent="violet"

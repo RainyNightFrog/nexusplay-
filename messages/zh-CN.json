@@ -40,6 +40,7 @@
     "tabPlayTime": "⏳ 游戏时长榜",
     "tabDonated": "💰 贡献榜",
     "empty": "暂无排行数据，快来抢占榜首！",
+    "emptyDonated": "尚无打赏记录",
     "loading": "同步竞技数据中…",
     "refresh": "刷新",
     "lastUpdated": "更新于 {time}",
@@ -554,8 +555,6 @@
     "tipsFeeCreatorNetTitle": "Estimated creator net (per tip)",
     "tipsFeeCreatorNetFormula": "Net ≈ tip amount − platform fee − payment fee",
     "tipsFeeExampleLine": "e.g. ${tip} tip → platform −${platform}, processor −${processor} → you ~${net}",
-    "tipsFeeItchCompareTitle": "Compare with itch.io",
-    "tipsFeeItchCompareDesc": "itch.io uses Open Revenue Sharing (creators choose 0–100%, default 10%); payment fees are separate. NexusPlay is 0% during early access; a future site-wide rate (reference {futurePercent}%) would be announced in advance. Games locked at 0% stay at 0%.",
     "tipsFeePlayerBriefTitle": "What players see",
     "tipsFeePlayerBriefDesc": "Tips are voluntary — games remain fully playable without paying. The exact amount is shown before checkout. Tips support creators; they are not product purchases.",
     "tipsFeeSettlementDesc": "Tips accumulate in your creator balance and are paid out in batches once a threshold is met (schedule announced at launch).",
@@ -579,7 +578,9 @@
     "statVisitors": "Unique visitors",
     "statUniquePlayers": "Unique players",
     "statPageViews": "Page views",
-    "unreadTipsBadge": "{count} new tip(s)"
+    "unreadTipsBadge": "{count} new tip(s)",
+    "tipsFeePlatformCompareTitle": "与业界常见做法对照",
+    "tipsFeePlatformCompareDesc": "部分平台允许创作者自行设定平台分成比例（0%～100%），金流费另计。NexusPlay 早期全站 0%，日后若调整可能参考 {futurePercent}% 并提前公告；已锁定 0% 的早期游戏维持不变。"
   },
   "auth": {
     "callbackFailed": "登录验证失败，请再试一次",
@@ -722,7 +723,9 @@
     "forumDigestHistoryLoading": "Loading delivery history…",
     "forumDigestHistoryEmpty": "No digest deliveries yet.",
     "forumDigestHistorySent": "Sent · {count} discussion(s)",
-    "forumDigestHistoryFailed": "Delivery failed"
+    "forumDigestHistoryFailed": "Delivery failed",
+    "supportEmailDesc": "玩家对你的游戏有问题或需要支援时，可透过此信箱联络你。",
+    "paymentDesc": "管理打赏时使用的信用卡。"
   },
   "community": {
     "hub": "社区中心",
@@ -792,9 +795,17 @@
     "replySuccess": "留言已发表",
     "categories": {
       "general": "综合讨论",
-      "bug": "Bug 回报",
+      "question": "求助提问",
+      "guide": "攻略心得",
+      "showcase": "精彩分享",
+      "review": "游戏评价",
       "feedback": "建议反馈",
-      "guide": "攻略心得"
+      "bug": "Bug 回报",
+      "multiplayer": "组队交友",
+      "lore": "剧情世界观",
+      "speedrun": "竞速挑战",
+      "meme": "趣味梗图",
+      "update": "版本动态"
     },
     "searchPlaceholder": "Search threads, content, or authors…",
     "searchNoResults": "No matching threads",
@@ -1214,7 +1225,7 @@
     "creatorTitle": "Creator settings",
     "creatorDesc": "Support contact and platform fee policy",
     "supportEmailSection": "Support email",
-    "supportEmailDesc": "Players can contact you about your games via this address (similar to itch.io Support Email).",
+    "supportEmailDesc": "玩家对你的游戏有问题或需要支援时，可透过此信箱联络你。",
     "supportEmailLabel": "Support email address",
     "supportEmailPlaceholder": "support@example.com",
     "useExistingEmail": "Use registered email",
@@ -1241,7 +1252,7 @@
     "deleteBtn": "Permanently delete account",
     "deleteFailed": "Failed to delete account",
     "paymentTitle": "Payment methods",
-    "paymentDesc": "Manage saved cards for tips (similar to itch.io Credit Cards)",
+    "paymentDesc": "管理打赏时使用的信用卡。",
     "paymentPreviewBanner": "Tips coming soon",
     "paymentPreviewDesc": "Saved cards speed up checkout. This page is a preview until payments launch — no real charges.",
     "paymentCardsSection": "Saved credit cards",

@@ -56,13 +56,6 @@ type CommunityForumProps = {
 type CategoryFilter = "all" | ForumCategory;
 type GameFilter = "all" | number;
 
-const CATEGORY_ACCENT: Record<ForumCategory, string> = {
-  general: "border-l-sky-400",
-  bug: "border-l-rose-400",
-  feedback: "border-l-amber-400",
-  guide: "border-l-emerald-400",
-};
-
 function CategoryBadge({ category }: { category: string }) {
   const t = useTranslations("forum");
   const meta = getForumCategoryMeta(category);
@@ -224,8 +217,8 @@ export function CommunityForum({
     setPostsError(null);
     try {
       const url = isHub
-        ? "/api/community/forum/posts"
-        : `/api/games/${gameId}/forum/posts`;
+        ? `/api/community/forum/posts?locale=${encodeURIComponent(locale)}`
+        : `/api/games/${gameId}/forum/posts?locale=${encodeURIComponent(locale)}`;
       const response = await fetch(url);
       const contentType = response.headers.get("content-type") ?? "";
       if (!contentType.includes("application/json")) {
@@ -260,14 +253,14 @@ export function CommunityForum({
     } finally {
       setPostsLoading(false);
     }
-  }, [gameId, isHub, onPostsChange, onPostsLoaded, onToast, t]);
+  }, [gameId, isHub, locale, onPostsChange, onPostsLoaded, onToast, t, translateApiError]);
 
   const loadComments = useCallback(
     async (postId: number, postGameId: number) => {
       setCommentsLoading(true);
       try {
         const response = await fetch(
-          `/api/games/${postGameId}/forum/posts/${postId}/comments`
+          `/api/games/${postGameId}/forum/posts/${postId}/comments?locale=${encodeURIComponent(locale)}`
         );
         const data = (await response.json()) as {
           comments?: ForumComment[];
@@ -281,7 +274,7 @@ export function CommunityForum({
         setCommentsLoading(false);
       }
     },
-    [onToast, t]
+    [locale, onToast, t]
   );
 
   useEffect(() => {
@@ -499,8 +492,7 @@ export function CommunityForum({
               className={cn(
                 "overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/70",
                 "border-l-4 shadow-xl shadow-black/30",
-                CATEGORY_ACCENT[selectedPost.category as ForumCategory] ??
-                  "border-l-violet-400"
+                getForumCategoryMeta(selectedPost.category).accentClass
               )}
             >
               <div className="p-5 text-center sm:p-6">
@@ -904,8 +896,7 @@ export function CommunityForum({
                       "group w-full overflow-hidden rounded-xl border border-white/10",
                       "border-l-4 bg-zinc-900/50 p-4 text-center transition-all duration-200",
                       "hover:border-violet-400/30 hover:bg-zinc-900/80 hover:shadow-lg hover:shadow-violet-500/5",
-                      CATEGORY_ACCENT[post.category as ForumCategory] ??
-                        "border-l-violet-400"
+                      getForumCategoryMeta(post.category).accentClass
                     )}
                   >
                     <div className="flex flex-wrap items-center justify-center gap-2">

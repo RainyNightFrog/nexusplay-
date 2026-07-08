@@ -9,64 +9,14 @@ import {
   VALID_FORUM_CATEGORIES,
 } from "@/lib/forum";
 import {
-  FORUM_SEED_POSTS,
-} from "@/lib/platform-catalog";
+  buildLocalizedForumComments,
+  buildLocalizedForumPosts,
+} from "@/lib/forum-seed-builder";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 const SEED_USER_PREFIX = "seed-forum-";
-
-function buildSeedPosts(gameId: number, gameTitle: string): ForumPost[] {
-  const seeds = FORUM_SEED_POSTS[gameTitle];
-  if (!seeds?.length) return [];
-
-  const now = Date.now();
-
-  return seeds.map((seed, index) => {
-    const userId = `${SEED_USER_PREFIX}${gameId}-${index}`;
-    const createdAt = new Date(
-      now - seed.createdAtOffsetDays * 86_400_000
-    ).toISOString();
-
-    return {
-      id: -(gameId * 100 + index + 1),
-      game_id: gameId,
-      user_id: userId,
-      title: seed.title,
-      category: seed.category,
-      content: seed.content,
-      created_at: createdAt,
-      author_name: seed.authorName,
-      comment_count: seed.comments?.length ?? 0,
-    };
-  });
-}
-
-function buildSeedComments(
-  postId: number,
-  gameTitle: string,
-  postIndex: number
-): ForumComment[] {
-  const seeds = FORUM_SEED_POSTS[gameTitle];
-  const seed = seeds?.[postIndex];
-  if (!seed?.comments?.length) return [];
-
-  const postCreatedAt = new Date(
-    Date.now() - seed.createdAtOffsetDays * 86_400_000
-  ).getTime();
-
-  return seed.comments.map((comment, index) => ({
-    id: -(postId * 10 + index + 1),
-    post_id: postId,
-    user_id: `${SEED_USER_PREFIX}comment-${postId}-${index}`,
-    content: comment.content,
-    created_at: new Date(
-      postCreatedAt + comment.offsetHours * 3_600_000
-    ).toISOString(),
-    author_name: comment.authorName,
-  }));
-}
 
 
 async function attachCommentCounts(
@@ -145,7 +95,10 @@ function mapComments(
   }));
 }
 
-export async function getForumPostsByGameId(gameId: number): Promise<ForumPost[]> {
+export async function getForumPostsByGameId(
+  gameId: number,
+  locale?: string | null
+): Promise<ForumPost[]> {
   const supabase = createServerSupabase();
 
   let records: ForumPostRecord[] = [];
@@ -170,7 +123,7 @@ export async function getForumPostsByGameId(gameId: number): Promise<ForumPost[]
   gameTitle = gameRow?.title ?? "";
 
   if (records.length === 0) {
-    return buildSeedPosts(gameId, gameTitle);
+    return buildLocalizedForumPosts(gameId, gameTitle, locale);
   }
 
   const nameMap = await resolveAuthorNames(records.map((row) => row.user_id));
@@ -181,7 +134,9 @@ export async function getForumPostsByGameId(gameId: number): Promise<ForumPost[]
   return mapPosts(records, nameMap, commentCounts);
 }
 
-export async function getAllForumPosts(): Promise<ForumPostWithGame[]> {
+export async function getAllForumPosts(
+  locale?: string | null
+): Promise<ForumPostWithGame[]> {
   const supabase = createServerSupabase();
   const { data: games } = await supabase
     .from("games")
@@ -232,7 +187,7 @@ export async function getAllForumPosts(): Promise<ForumPostWithGame[]> {
   for (const game of games) {
     if ((postsByGame.get(game.id) ?? []).length > 0) continue;
     allPosts.push(
-      ...buildSeedPosts(game.id, game.title).map((post) => ({
+      ...buildLocalizedForumPosts(game.id, game.title, locale).map((post) => ({
         ...post,
         game_title: game.title,
       }))
@@ -270,7 +225,8 @@ export async function getForumPostById(
 }
 
 export async function getForumCommentsByPostId(
-  postId: number
+  postId: number,
+  locale?: string | null
 ): Promise<ForumComment[]> {
   if (postId < 0) {
     const gameId = Math.floor(Math.abs(postId) / 100);
@@ -283,7 +239,12 @@ export async function getForumCommentsByPostId(
       .maybeSingle();
 
     if (gameRow?.title) {
-      return buildSeedComments(postId, gameRow.title, postIndex);
+      return buildLocalizedForumComments(
+        postId,
+        gameRow.title,
+        postIndex,
+        locale
+      );
     }
     return [];
   }

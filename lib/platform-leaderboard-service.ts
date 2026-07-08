@@ -5,6 +5,10 @@ import {
   type PlatformLeaderboardEntry,
   type PlatformLeaderboardsResponse,
 } from "@/lib/platform-leaderboard";
+import {
+  getVirtualPlatformLeaderboardEntries,
+  mergePlatformLeaderboardEntries,
+} from "@/lib/platform-leaderboard-virtual";
 
 type ProfileRow = {
   id: string;
@@ -27,11 +31,17 @@ async function fetchTopByColumn(
   supabase: SupabaseClient,
   column: "total_online_time" | "total_play_time" | "total_donated"
 ): Promise<ActivityStatsRow[]> {
-  const { data, error } = await supabase
+  let query = supabase
     .from("user_activity_stats")
     .select(
       "user_id, total_online_time, total_play_time, total_donated, last_active_at"
-    )
+    );
+
+  if (column === "total_donated") {
+    query = query.gt("total_donated", 0);
+  }
+
+  const { data, error } = await query
     .order(column, { ascending: false })
     .order("last_active_at", { ascending: false })
     .limit(LEADERBOARD_LIMIT);
@@ -111,11 +121,25 @@ export async function getPlatformLeaderboards(
   ];
 
   const profiles = await loadProfiles(supabase, userIds);
+  const virtual = getVirtualPlatformLeaderboardEntries(currentUserId);
 
   return {
-    online: mapEntries(onlineRows, profiles, "total_online_time", currentUserId),
-    playTime: mapEntries(playRows, profiles, "total_play_time", currentUserId),
-    donated: mapEntries(donatedRows, profiles, "total_donated", currentUserId),
+    online: mergePlatformLeaderboardEntries(
+      mapEntries(onlineRows, profiles, "total_online_time", currentUserId),
+      virtual.online,
+      currentUserId
+    ),
+    playTime: mergePlatformLeaderboardEntries(
+      mapEntries(playRows, profiles, "total_play_time", currentUserId),
+      virtual.playTime,
+      currentUserId
+    ),
+    donated: mapEntries(
+      donatedRows,
+      profiles,
+      "total_donated",
+      currentUserId
+    ),
     fetchedAt: new Date().toISOString(),
   };
 }

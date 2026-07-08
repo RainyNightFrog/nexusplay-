@@ -15,6 +15,14 @@
     {
       "path": "/api/cron/chat-cleanup",
       "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/chat-ambient-world",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/chat-ambient-creator",
+      "schedule": "*/45 * * * *"
     }
   ]
 }

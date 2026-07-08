@@ -232,7 +232,9 @@ function LeaderboardList({
     return (
       <div className="flex min-h-48 flex-col items-center justify-center gap-2 text-center">
         <Trophy className="size-8 text-zinc-600" />
-        <p className="text-sm text-zinc-500">{t("empty")}</p>
+        <p className="text-sm text-zinc-500">
+          {tab === "donated" ? t("emptyDonated") : t("empty")}
+        </p>
       </div>
     );
   }

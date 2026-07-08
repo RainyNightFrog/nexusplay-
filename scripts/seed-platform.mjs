@@ -91,7 +91,7 @@ const FORUM_SEED = {
       title: "求神秘虛擬卡牌的核心卡組搭配！",
       category: "guide",
       authorEmail: "seed.void.guide@nexusplay.local",
-      authorName: "深淵抽卡師",
+      authorName: "鐵鳩船長",
       content:
         "剛入坑 VOID GACHA，目前手上有 3 張 SSR 虛空卡，但深淵關卡第 7 層一直卡關。\n\n想請各位大佬分享「核心卡組」的組法：\n- 虛無共鳴流 vs 暴擊連鎖流哪個更穩？\n- 微交易抽卡池要不要等活動再砸？\n\n任何心得都歡迎，感謝！",
       daysAgo: 2,
@@ -100,7 +100,7 @@ const FORUM_SEED = {
       title: "回報：充值微交易介面的 UI 顯示 Bug",
       category: "bug",
       authorEmail: "seed.void.bug@nexusplay.local",
-      authorName: "夜城測試員",
+      authorName: "哈姆亂太郎",
       content:
         "在 1440p 螢幕下，充值微交易介面的確認按鈕會被底部導覽列遮住約 20%。\n\n重現步驟：\n1. 進入商城 → 虛空禮包\n2. 點擊購買\n3. 確認視窗底部按鈕不可點擊\n\n裝置：Chrome 136 / Windows 11",
       daysAgo: 5,
@@ -109,7 +109,7 @@ const FORUM_SEED = {
       title: "新賽季深淵排名心得分享",
       category: "general",
       authorEmail: "seed.void.rank@nexusplay.local",
-      authorName: "虛空領主",
+      authorName: "旺角揸Fit人",
       content:
         "這季深淵排名賽的節奏比上季快很多，建議大家早點定好主核心，不要頻繁換卡組。\n\n我個人用「虛無共鳴 + 護盾循環」穩定在前 500，祝大家衝榜順利！",
       daysAgo: 1,
@@ -120,7 +120,7 @@ const FORUM_SEED = {
       title: "Mindustry X 第 12 關通關佈局分享",
       category: "guide",
       authorEmail: "seed.core.guide@nexusplay.local",
-      authorName: "鋼鐵工程師",
+      authorName: "硬之練膠術師",
       content:
         "第 12 關異星機械潮會從東、北兩側同時進攻，建議佈局如下：\n\n🔧 核心區：雙層輸送帶環形供彈，銅→鋼→穿甲彈藥全自動\n🛡️ 外圍：雷射塔 + 濺射砲塔 3:2 比例\n⚡ 關鍵：第 8 波前完成核心裂變升級\n\n附上我的佈局邏輯，歡迎交流優化！",
       daysAgo: 3,
@@ -129,7 +129,7 @@ const FORUM_SEED = {
       title: "這款 3D 渲染優化得太流暢了吧！",
       category: "feedback",
       authorEmail: "seed.core.fps@nexusplay.local",
-      authorName: "FPS獵人",
+      authorName: "長崎涼美",
       content:
         "在 GTX 1660 上全高畫質還能穩 60fps，工廠全速運轉時也沒明顯掉幀。\n\n重工業場景的粒子效果和金屬材質質感真的頂，NeonTowers 的技術力太強了。",
       daysAgo: 1,
@@ -138,7 +138,7 @@ const FORUM_SEED = {
       title: "核心裂變升級時機怎麼抓？",
       category: "general",
       authorEmail: "seed.core.tips@nexusplay.local",
-      authorName: "防線指揮官",
+      authorName: "伊莎Bear",
       content:
         "每次都在猶豫什麼時候點核心裂變——太早資源不夠，太晚又撐不住。\n\n大家通常第幾波升級？有沒有通用的資源門檻參考？",
       daysAgo: 4,
@@ -149,7 +149,7 @@ const FORUM_SEED = {
       title: "012 矩陣全餐打法真的能提高勝率嗎？",
       category: "guide",
       authorEmail: "seed.cyber.guide@nexusplay.local",
-      authorName: "概率學徒",
+      authorName: "蠟筆小新",
       content:
         "看了幾場高端局的回放，全餐打法（0-1-2 矩陣三線同開）好像勝率很高，但資源消耗也驚人。\n\n想請教：\n- 適合新手嗎？\n- 什麼牌型下才值得啟動全餐？\n- 有沒有反制策略？",
       daysAgo: 2,
@@ -158,7 +158,7 @@ const FORUM_SEED = {
       title: "復古電競霓虹風的 UI 設計太戳我了",
       category: "feedback",
       authorEmail: "seed.cyber.ui@nexusplay.local",
-      authorName: "UI收藏家",
+      authorName: "陳冠希",
       content:
         "黑魂金配色 + 霓虹線條的 HUD 簡直藝術品級別，統計面板那個概率曲線動畫我可以看一整天。\n\nEliteRoyal Gaming 的視覺團隊真的懂高端電競審美。",
       daysAgo: 1,
@@ -167,7 +167,7 @@ const FORUM_SEED = {
       title: "對戰配對有時候等太久",
       category: "bug",
       authorEmail: "seed.cyber.match@nexusplay.local",
-      authorName: "夜城玩家",
+      authorName: "打小是祖宗",
       content:
         "尖峰時段（晚上 9-11 點）配對有時要等 2-3 分鐘，不知道是不是伺服器負載問題？\n\n有人有同樣狀況嗎？",
       daysAgo: 6,

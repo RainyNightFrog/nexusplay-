@@ -40,6 +40,7 @@
     "tabPlayTime": "⏳ Play Time",
     "tabDonated": "💰 Top Supporters",
     "empty": "No rankings yet — be the first on the board!",
+    "emptyDonated": "No tips recorded yet",
     "loading": "Syncing live stats…",
     "refresh": "Refresh",
     "lastUpdated": "Updated at {time}",
@@ -438,8 +439,6 @@
     "tipsFeeCreatorNetTitle": "Estimated creator net (per tip)",
     "tipsFeeCreatorNetFormula": "Net ≈ tip amount − platform fee − payment fee",
     "tipsFeeExampleLine": "e.g. ${tip} tip → platform −${platform}, processor −${processor} → you ~${net}",
-    "tipsFeeItchCompareTitle": "Compare with itch.io",
-    "tipsFeeItchCompareDesc": "itch.io uses Open Revenue Sharing (creators choose 0–100%, default 10%); payment fees are separate. NexusPlay is 0% during early access; a future site-wide rate (reference {futurePercent}%) would be announced in advance. Games locked at 0% stay at 0%.",
     "tipsFeePlayerBriefTitle": "What players see",
     "tipsFeePlayerBriefDesc": "Tips are voluntary — games remain fully playable without paying. The exact amount is shown before checkout. Tips support creators; they are not product purchases.",
     "tipsFeeSettlementDesc": "Tips accumulate in your creator balance and are paid out in batches once a threshold is met (schedule announced at launch).",
@@ -578,7 +577,9 @@
     "statVisitors": "Unique visitors",
     "statUniquePlayers": "Unique players",
     "statPageViews": "Page views",
-    "unreadTipsBadge": "{count} new tip(s)"
+    "unreadTipsBadge": "{count} new tip(s)",
+    "tipsFeePlatformCompareTitle": "Industry context",
+    "tipsFeePlatformCompareDesc": "Some platforms let creators choose their revenue share (0–100%); payment processor fees are separate. NexusPlay is 0% during early access; a future site-wide rate (reference {futurePercent}%) would be announced in advance. Games locked at 0% stay at 0%."
   },
   "auth": {
     "callbackFailed": "Échec de la vérification de connexion, veuillez réessayer",
@@ -721,7 +722,9 @@
     "forumDigestHistoryLoading": "Loading delivery history…",
     "forumDigestHistoryEmpty": "No digest deliveries yet.",
     "forumDigestHistorySent": "Sent · {count} discussion(s)",
-    "forumDigestHistoryFailed": "Delivery failed"
+    "forumDigestHistoryFailed": "Delivery failed",
+    "supportEmailDesc": "Players can contact you about your games via this address.",
+    "paymentDesc": "Manage saved cards for tips."
   },
   "community": {
     "hub": "Hub communautaire",
@@ -791,9 +794,17 @@
     "replySuccess": "Commentaire publié",
     "categories": {
       "general": "Discussion générale",
-      "bug": "Rapport de bug",
+      "question": "Questions",
+      "guide": "Guides et astuces",
+      "showcase": "Moments forts",
+      "review": "Avis",
       "feedback": "Retour d'expérience",
-      "guide": "Guides et astuces"
+      "bug": "Rapport de bug",
+      "multiplayer": "Multijoueur",
+      "lore": "Lore",
+      "speedrun": "Speedrun",
+      "meme": "Mèmes",
+      "update": "Mises à jour"
     },
     "searchPlaceholder": "Search threads, content, or authors…",
     "searchNoResults": "No matching threads",
@@ -1212,7 +1223,7 @@
     "creatorTitle": "Creator settings",
     "creatorDesc": "Support contact and platform fee policy",
     "supportEmailSection": "Support email",
-    "supportEmailDesc": "Players can contact you about your games via this address (similar to itch.io Support Email).",
+    "supportEmailDesc": "Players can contact you about your games via this address.",
     "supportEmailLabel": "Support email address",
     "supportEmailPlaceholder": "support@example.com",
     "useExistingEmail": "Use registered email",
@@ -1237,7 +1248,7 @@
     "deleteBtn": "Permanently delete account",
     "deleteFailed": "Failed to delete account",
     "paymentTitle": "Payment methods",
-    "paymentDesc": "Manage saved cards for tips (similar to itch.io Credit Cards)",
+    "paymentDesc": "Manage saved cards for tips.",
     "paymentPreviewBanner": "Tips coming soon",
     "paymentPreviewDesc": "Saved cards speed up checkout. This page is a preview until payments launch — no real charges.",
     "paymentCardsSection": "Saved credit cards",
