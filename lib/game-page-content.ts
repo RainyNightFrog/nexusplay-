@@ -17,6 +17,7 @@ export type GameComment = {
   content: string;
   created_at: string;
   author_name: string;
+  author_equipped_title: import("@/lib/titles").EquippedTitle | null;
 };
 
 export type SeedGameComment = {

@@ -7,6 +7,7 @@ import {
   isSeedGameCommentUserId,
 } from "@/lib/forum-seed-builder";
 import { formatForumAuthor } from "@/lib/forum";
+import { resolveEquippedTitles } from "@/lib/equipped-title-service";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -48,12 +49,14 @@ async function resolveAuthorNames(userIds: string[]) {
 
 function mapComments(
   records: GameCommentRecord[],
-  nameMap: Map<string, string>
+  nameMap: Map<string, string>,
+  titleMap: Map<string, import("@/lib/titles").EquippedTitle | null>
 ): GameComment[] {
   return records.map((record) => ({
     ...record,
     author_name:
       nameMap.get(record.user_id) ?? formatForumAuthor(record.user_id),
+    author_equipped_title: titleMap.get(record.user_id) ?? null,
   }));
 }
 
@@ -115,7 +118,11 @@ export async function getGameCommentsByGameId(
   }
 
   const nameMap = await resolveAuthorNames(records.map((row) => row.user_id));
-  const realComments = mapComments(records, nameMap);
+  const titleMap = await resolveEquippedTitles(
+    supabase,
+    records.map((row) => row.user_id)
+  );
+  const realComments = mapComments(records, nameMap, titleMap);
   return mergeWithSeedComments(gameId, gameTitle, realComments, locale);
 }
 
@@ -147,6 +154,10 @@ export async function createGameComment(
   }
 
   const record = data as GameCommentRecord;
-  const nameMap = await resolveAuthorNames([record.user_id]);
-  return mapComments([record], nameMap)[0]!;
+  const serverSupabase = createServerSupabase();
+  const [nameMap, titleMap] = await Promise.all([
+    resolveAuthorNames([record.user_id]),
+    resolveEquippedTitles(serverSupabase, [record.user_id]),
+  ]);
+  return mapComments([record], nameMap, titleMap)[0]!;
 }

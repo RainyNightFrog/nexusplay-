@@ -3,9 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
-import { Loader2, LogOut, Heart, Palette, Settings, Shield, UserRound, Bell } from "lucide-react";
+import { Loader2, LogOut, Heart, Palette, Settings, Shield, UserRound, Bell, Trophy } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { AchievementsModal } from "@/components/AchievementsModal";
+import { UserBadge } from "@/components/UserBadge";
 import { getInitials } from "@/lib/auth";
 import { getCreatorDashboardHref } from "@/lib/creator-nav";
 import { NotificationBell } from "@/components/layout/notification-bell";
@@ -16,6 +18,7 @@ export function UserNav() {
   const t = useTranslations("nav");
   const { profile, loading, signOut, isCreator, isAdmin } = useAuth();
   const [open, setOpen] = useState(false);
+  const [achievementsOpen, setAchievementsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -92,9 +95,13 @@ export function UserNav() {
           )}
         >
           <div className="border-b border-white/5 px-3 py-2.5 text-center">
-            <p className="truncate text-sm font-medium text-white">
-              {profile.display_name}
-            </p>
+            <UserBadge
+              username={profile.display_name}
+              title={profile.equipped_title}
+              layout="stacked"
+              usernameClassName="truncate text-sm font-medium text-white"
+              titleClassName="text-[10px]"
+            />
             <p className="mt-0.5 text-xs text-zinc-500">
               {isAdmin
                 ? t("roleAdmin")
@@ -125,6 +132,18 @@ export function UserNav() {
               {t("creatorDashboard")}
             </Link>
           )}
+
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              setAchievementsOpen(true);
+            }}
+            className="flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white"
+          >
+            <Trophy className="size-4 text-amber-400" />
+            {t("achievements")}
+          </button>
 
           <Link
             href="/profile"
@@ -176,6 +195,7 @@ export function UserNav() {
         </div>
       )}
       </div>
+      <AchievementsModal open={achievementsOpen} onOpenChange={setAchievementsOpen} />
     </div>
   );
 }

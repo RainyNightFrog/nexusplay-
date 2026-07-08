@@ -6,6 +6,7 @@ import {
   writeAdminLog,
 } from "@/lib/admin-service";
 import { triggerNewGameFollowerNotify } from "@/lib/creator-follow-notify";
+import { onCreatorGameWentLive } from "@/lib/achievement-unlock-service";
 import { triggerWebSubFeedPing } from "@/lib/websub-service";
 import { createServerSupabase } from "@/lib/supabase-server";
 
@@ -59,6 +60,7 @@ export async function PATCH(
         creatorId: game.creator_id,
         gameTitle: game.title,
       });
+      void onCreatorGameWentLive(supabase, game.creator_id);
       triggerWebSubFeedPing();
     }
 

@@ -518,3 +518,58 @@
   margin-left: auto;
   margin-right: auto;
 }
+
+/* ── 稱號視覺特效（成就系統） ── */
+@keyframes title-gradient-flow {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.title-tier-common {
+  color: rgb(161 161 170);
+}
+
+.title-tier-rare {
+  color: rgb(103 232 249);
+  text-shadow:
+    0 0 6px rgba(34, 211, 238, 0.55),
+    0 0 14px rgba(34, 211, 238, 0.25);
+}
+
+.title-tier-epic {
+  background-image: linear-gradient(
+    90deg,
+    rgb(196 181 253),
+    rgb(240 171 252),
+    rgb(103 232 249)
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 8px rgba(167, 139, 250, 0.45));
+}
+
+.title-tier-legendary {
+  background-image: linear-gradient(
+    90deg,
+    rgb(253 230 138),
+    rgb(240 171 252),
+    rgb(103 232 249),
+    rgb(253 230 138)
+  );
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: title-gradient-flow 3s ease-in-out infinite;
+  filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.4));
+}
+
+.animate-gradient {
+  animation: title-gradient-flow 3s ease-in-out infinite;
+}

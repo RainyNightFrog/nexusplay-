@@ -5,6 +5,8 @@ import {
   type ChatMessageRecord,
   isValidChatChannel,
 } from "@/lib/chat";
+import { getAmbientUserPlayerMap } from "@/lib/ambient-user-index";
+import { resolveEquippedTitles } from "@/lib/equipped-title-service";
 import { formatForumAuthor } from "@/lib/forum";
 import { createServerSupabase } from "@/lib/supabase-server";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -48,17 +50,23 @@ async function resolveAuthorProfiles(userIds: string[]) {
 function mapChatMessage(
   record: ChatMessageRecord,
   profileMap: Map<string, AuthorProfile>,
+  titleMap: Map<string, import("@/lib/titles").EquippedTitle | null>,
+  ambientMap: Map<string, string>,
   viewerId?: string
 ): ChatMessage {
   const profile = profileMap.get(record.user_id);
   const displayName = profile?.display_name ?? null;
+  const virtualPlayerId = ambientMap.get(record.user_id) ?? null;
 
   return {
     ...record,
     author_name: formatForumAuthor(record.user_id, displayName),
     author_avatar_url: profile?.avatar_url ?? null,
+    author_equipped_title: titleMap.get(record.user_id) ?? null,
     is_creator: profile?.role === "creator",
     is_own: viewerId ? record.user_id === viewerId : false,
+    is_virtual: Boolean(virtualPlayerId),
+    virtual_player_id: virtualPlayerId,
   };
 }
 
@@ -87,10 +95,17 @@ export async function listChatMessages(
   if (error) throw new Error(error.message);
 
   const records = (data ?? []) as ChatMessageRecord[];
-  const profileMap = await resolveAuthorProfiles(records.map((row) => row.user_id));
+  const userIds = records.map((row) => row.user_id);
+  const [profileMap, titleMap, ambientMap] = await Promise.all([
+    resolveAuthorProfiles(userIds),
+    resolveEquippedTitles(supabase, userIds),
+    getAmbientUserPlayerMap(supabase),
+  ]);
 
   return records
-    .map((record) => mapChatMessage(record, profileMap, viewerId))
+    .map((record) =>
+      mapChatMessage(record, profileMap, titleMap, ambientMap, viewerId)
+    )
     .reverse();
 }
 
@@ -200,8 +215,19 @@ export async function createChatMessage(
   if (error) throw new Error(error.message);
 
   const record = data as ChatMessageRecord;
-  const profileMap = await resolveAuthorProfiles([record.user_id]);
-  return mapChatMessage(record, profileMap, input.userId);
+  const serverSupabase = createServerSupabase();
+  const [profileMap, titleMap, ambientMap] = await Promise.all([
+    resolveAuthorProfiles([record.user_id]),
+    resolveEquippedTitles(serverSupabase, [record.user_id]),
+    getAmbientUserPlayerMap(serverSupabase),
+  ]);
+  return mapChatMessage(
+    record,
+    profileMap,
+    titleMap,
+    ambientMap,
+    input.userId
+  );
 }
 
 export async function recallChatMessage(
@@ -236,8 +262,13 @@ export async function recallChatMessage(
   if (error) throw new Error(error.message);
 
   const record = data as ChatMessageRecord;
-  const profileMap = await resolveAuthorProfiles([record.user_id]);
-  return mapChatMessage(record, profileMap, userId);
+  const serverSupabase = createServerSupabase();
+  const [profileMap, titleMap, ambientMap] = await Promise.all([
+    resolveAuthorProfiles([record.user_id]),
+    resolveEquippedTitles(serverSupabase, [record.user_id]),
+    getAmbientUserPlayerMap(serverSupabase),
+  ]);
+  return mapChatMessage(record, profileMap, titleMap, ambientMap, userId);
 }
 
 export async function cleanupExpiredChatMessages() {

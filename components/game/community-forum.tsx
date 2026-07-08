@@ -39,6 +39,7 @@ import {
   type ForumPostWithGame,
 } from "@/lib/forum";
 import { localeDateMap, type AppLocale } from "@/i18n/routing";
+import { UserBadge } from "@/components/UserBadge";
 import { cn } from "@/lib/utils";
 
 type GameOption = { id: number; title: string };
@@ -75,9 +76,11 @@ function CategoryBadge({ category }: { category: string }) {
 function AuthorChip({
   name,
   userId,
+  equippedTitle,
 }: {
   name: string;
   userId: string;
+  equippedTitle?: import("@/lib/titles").EquippedTitle | null;
 }) {
   const shortId = userId.replace(/-/g, "").slice(0, 6).toUpperCase();
 
@@ -93,7 +96,13 @@ function AuthorChip({
         {name.slice(0, 1).toUpperCase()}
       </span>
       <div className="min-w-0 text-center">
-        <p className="font-medium text-zinc-300">{name}</p>
+        <UserBadge
+          username={name}
+          title={equippedTitle}
+          layout="stacked"
+          usernameClassName="text-zinc-300"
+          titleClassName="text-[9px]"
+        />
         <p className="font-mono text-[10px] text-zinc-500">#{shortId}</p>
       </div>
     </div>
@@ -518,6 +527,7 @@ export function CommunityForum({
                   <AuthorChip
                     name={selectedPost.author_name}
                     userId={selectedPost.user_id}
+                    equippedTitle={selectedPost.author_equipped_title}
                   />
                 </div>
                 <p className="mt-5 whitespace-pre-wrap text-sm leading-relaxed text-zinc-300">
@@ -552,6 +562,7 @@ export function CommunityForum({
                         <AuthorChip
                           name={comment.author_name}
                           userId={comment.user_id}
+                          equippedTitle={comment.author_equipped_title}
                         />
                         <span className="text-xs text-zinc-500">
                           {formatDate(comment.created_at)}
@@ -924,7 +935,11 @@ export function CommunityForum({
                       {post.content}
                     </p>
                     <div className="mt-3 flex justify-center">
-                      <AuthorChip name={post.author_name} userId={post.user_id} />
+                      <AuthorChip
+                        name={post.author_name}
+                        userId={post.user_id}
+                        equippedTitle={post.author_equipped_title}
+                      />
                     </div>
                   </motion.button>
                 ))}

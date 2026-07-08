@@ -39,6 +39,7 @@ export function buildLocalizedForumPosts(
       content: pickLocalizedText(seed.content, seedLocale),
       created_at: createdAt,
       author_name: resolveSeedAuthorName(seed.author, seedLocale),
+      author_equipped_title: null,
       comment_count: seed.comments?.length ?? 0,
     };
   });
@@ -68,6 +69,7 @@ export function buildLocalizedForumComments(
       postCreatedAt + comment.offsetHours * 3_600_000
     ).toISOString(),
     author_name: resolveSeedAuthorName(comment.author, seedLocale),
+    author_equipped_title: null,
   }));
 }
 
@@ -89,6 +91,7 @@ export function buildLocalizedGameComments(
     content: pickLocalizedText(seed.content, seedLocale),
     created_at: new Date(now - seed.offsetHours * 3_600_000).toISOString(),
     author_name: resolveSeedAuthorName(seed.author, seedLocale),
+    author_equipped_title: null,
   }));
 }
 

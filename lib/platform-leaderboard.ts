@@ -2,12 +2,15 @@ export const ONLINE_THRESHOLD_MS = 5 * 60 * 1000;
 export const LEADERBOARD_POLL_MS = 10_000;
 export const ACTIVITY_PULSE_MS = 30_000;
 export const ACTIVITY_PULSE_SECONDS = 30;
+export const LEADERBOARD_TOP_LIMIT = 50;
+export const LEADERBOARD_PAGE_SIZE = 10;
 
 export type ActivityStatsRow = {
   user_id: string;
   total_online_time: number;
   total_play_time: number;
   total_donated: number;
+  night_online_time?: number;
   last_active_at: string;
 };
 
@@ -16,6 +19,7 @@ export type PlatformLeaderboardEntry = {
   userId: string;
   displayName: string;
   avatarUrl: string | null;
+  equippedTitle: import("@/lib/titles").EquippedTitle | null;
   value: number;
   lastActiveAt: string;
   isOnline: boolean;
@@ -37,13 +41,20 @@ export function isUserOnline(lastActiveAt: string, now = Date.now()): boolean {
 
 export function formatDurationSeconds(seconds: number, locale: string): string {
   const hours = Math.max(0, Math.floor(seconds / 3600));
+  const minutes = Math.floor((seconds % 3600) / 60);
 
   if (locale.startsWith("zh")) {
-    return `${hours} 小時`;
+    return minutes > 0 ? `${hours} 小時 ${minutes} 分` : `${hours} 小時`;
   }
 
   if (locale === "ja") {
-    return `${hours}時間`;
+    return minutes > 0 ? `${hours}時間${minutes}分` : `${hours}時間`;
+  }
+
+  if (minutes > 0) {
+    return hours === 1
+      ? `1 hr ${minutes} min`
+      : `${hours} hrs ${minutes} min`;
   }
 
   return hours === 1 ? "1 hr" : `${hours} hrs`;

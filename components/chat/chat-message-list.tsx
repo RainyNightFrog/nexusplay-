@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { Loader2, Undo2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ChatMessage } from "@/lib/chat";
+import { UserBadge } from "@/components/UserBadge";
 import { cn } from "@/lib/utils";
 
 function formatChatTime(value: string) {
@@ -28,6 +29,8 @@ type ChatMessageListProps = {
   loading: boolean;
   canRecall: (message: ChatMessage) => boolean;
   onRecall: (messageId: string) => void;
+  onAuthorClick?: (message: ChatMessage) => void;
+  scrollToLatestKey?: number;
 };
 
 export function ChatMessageList({
@@ -35,12 +38,40 @@ export function ChatMessageList({
   loading,
   canRecall,
   onRecall,
+  onAuthorClick,
+  scrollToLatestKey = 0,
 }: ChatMessageListProps) {
   const t = useTranslations("chat");
   const bottomRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const prevMessageCountRef = useRef(0);
+  const pendingLatestScrollRef = useRef(false);
+
+  const scrollToBottom = (behavior: ScrollBehavior = "auto") => {
+    const container = containerRef.current;
+    if (!container) return;
+    container.scrollTo({ top: container.scrollHeight, behavior });
+  };
 
   useEffect(() => {
+    pendingLatestScrollRef.current = true;
+  }, [scrollToLatestKey]);
+
+  useEffect(() => {
+    if (!pendingLatestScrollRef.current || loading || messages.length === 0) return;
+    pendingLatestScrollRef.current = false;
+    requestAnimationFrame(() => {
+      scrollToBottom("auto");
+    });
+  }, [scrollToLatestKey, loading, messages.length]);
+
+  useEffect(() => {
+    if (loading) return;
+
+    const prevCount = prevMessageCountRef.current;
+    prevMessageCountRef.current = messages.length;
+    if (messages.length <= prevCount) return;
+
     const container = containerRef.current;
     if (!container) return;
 
@@ -48,9 +79,11 @@ export function ChatMessageList({
       container.scrollHeight - container.scrollTop - container.clientHeight < 120;
 
     if (nearBottom) {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+      requestAnimationFrame(() => {
+        scrollToBottom("smooth");
+      });
     }
-  }, [messages.length]);
+  }, [loading, messages.length]);
 
   if (loading && messages.length === 0) {
     return (
@@ -88,13 +121,18 @@ export function ChatMessageList({
               message.is_own ? "flex-row-reverse" : "flex-row"
             )}
           >
-            <div
+            <button
+              type="button"
+              onClick={() => onAuthorClick?.(message)}
+              disabled={!onAuthorClick}
               className={cn(
-                "flex size-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold uppercase",
+                "flex size-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold uppercase transition-opacity",
                 message.is_creator
                   ? "bg-gradient-to-br from-violet-500/30 to-cyan-500/30 text-cyan-100 ring-1 ring-cyan-400/20"
-                  : "bg-white/8 text-zinc-300"
+                  : "bg-white/8 text-zinc-300",
+                onAuthorClick && "cursor-pointer hover:opacity-80"
               )}
+              aria-label={message.author_name}
             >
               {message.author_avatar_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -106,7 +144,7 @@ export function ChatMessageList({
               ) : (
                 message.author_name.slice(0, 1)
               )}
-            </div>
+            </button>
 
             <div
               className={cn(
@@ -120,9 +158,27 @@ export function ChatMessageList({
                   message.is_own && "flex-row-reverse"
                 )}
               >
-                <span className="font-medium text-zinc-400">
-                  {message.is_own ? t("you") : message.author_name}
-                </span>
+                {onAuthorClick ? (
+                  <button
+                    type="button"
+                    onClick={() => onAuthorClick(message)}
+                    className="text-left"
+                  >
+                    <UserBadge
+                      username={message.is_own ? t("you") : message.author_name}
+                      title={message.author_equipped_title}
+                      usernameClassName="text-zinc-400 hover:text-cyan-300"
+                      titleClassName="text-[9px]"
+                    />
+                  </button>
+                ) : (
+                  <UserBadge
+                    username={message.is_own ? t("you") : message.author_name}
+                    title={message.author_equipped_title}
+                    usernameClassName="text-zinc-400"
+                    titleClassName="text-[9px]"
+                  />
+                )}
                 {message.is_creator && !message.is_own && (
                   <span className="rounded-full bg-violet-500/15 px-1.5 py-0.5 text-[9px] text-violet-300">
                     {t("creatorBadge")}

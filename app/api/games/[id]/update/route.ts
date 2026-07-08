@@ -13,6 +13,7 @@ import {
 import { deleteGameAndAssets } from "@/lib/game-delete-server";
 import { parseMonetizationFromFormData, resolveApprovalStatusAfterCreatorUpdate } from "@/lib/game-publish";
 import { triggerNewGameFollowerNotify } from "@/lib/creator-follow-notify";
+import { onCreatorGameWentLive } from "@/lib/achievement-unlock-service";
 import { isGamePubliclyLive } from "@/lib/game-live-service";
 import { GAME_GENRES } from "@/lib/game-metadata";
 import {
@@ -380,6 +381,7 @@ export async function PATCH(
           creatorId: updated.creator_id,
           gameTitle: updated.title,
         });
+        void onCreatorGameWentLive(createServerSupabase(), updated.creator_id);
       }
 
       return NextResponse.json({ game: updated });

@@ -1,10 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   isUserOnline,
+  LEADERBOARD_TOP_LIMIT,
   type ActivityStatsRow,
   type PlatformLeaderboardEntry,
   type PlatformLeaderboardsResponse,
 } from "@/lib/platform-leaderboard";
+import { resolveEquippedTitles } from "@/lib/equipped-title-service";
 import {
   getVirtualPlatformLeaderboardEntries,
   mergePlatformLeaderboardEntries,
@@ -16,7 +18,8 @@ type ProfileRow = {
   avatar_url: string | null;
 };
 
-const LEADERBOARD_LIMIT = 10;
+const LEADERBOARD_LIMIT = LEADERBOARD_TOP_LIMIT;
+const FETCH_POOL_SIZE = 80;
 
 async function ensureActivityStatsBackfill(
   supabase: SupabaseClient
@@ -27,9 +30,29 @@ async function ensureActivityStatsBackfill(
   }
 }
 
+async function listAmbientBotUserIds(
+  supabase: SupabaseClient
+): Promise<Set<string>> {
+  const { data, error } = await supabase.auth.admin.listUsers({
+    page: 1,
+    perPage: 1000,
+  });
+
+  if (error) {
+    return new Set();
+  }
+
+  return new Set(
+    (data.users ?? [])
+      .filter((user) => user.email?.endsWith("@nexusplay.local"))
+      .map((user) => user.id)
+  );
+}
+
 async function fetchTopByColumn(
   supabase: SupabaseClient,
-  column: "total_online_time" | "total_play_time" | "total_donated"
+  column: "total_online_time" | "total_play_time" | "total_donated",
+  excludeUserIds: Set<string>
 ): Promise<ActivityStatsRow[]> {
   let query = supabase
     .from("user_activity_stats")
@@ -39,23 +62,30 @@ async function fetchTopByColumn(
 
   if (column === "total_donated") {
     query = query.gt("total_donated", 0);
+  } else if (column === "total_online_time") {
+    query = query.gt("total_online_time", 0);
+  } else {
+    query = query.gt("total_play_time", 0);
   }
 
   const { data, error } = await query
     .order(column, { ascending: false })
     .order("last_active_at", { ascending: false })
-    .limit(LEADERBOARD_LIMIT);
+    .limit(FETCH_POOL_SIZE);
 
   if (error) {
     throw new Error(`讀取排行榜失敗：${error.message}`);
   }
 
-  return (data ?? []) as ActivityStatsRow[];
+  return ((data ?? []) as ActivityStatsRow[])
+    .filter((row) => !excludeUserIds.has(row.user_id))
+    .slice(0, LEADERBOARD_LIMIT);
 }
 
 function mapEntries(
   rows: ActivityStatsRow[],
   profiles: Map<string, ProfileRow>,
+  titleMap: Map<string, import("@/lib/titles").EquippedTitle | null>,
   valueKey: "total_online_time" | "total_play_time" | "total_donated",
   currentUserId?: string | null
 ): PlatformLeaderboardEntry[] {
@@ -73,6 +103,7 @@ function mapEntries(
       userId: row.user_id,
       displayName: profile?.display_name?.trim() || "匿名玩家",
       avatarUrl: profile?.avatar_url ?? null,
+      equippedTitle: titleMap.get(row.user_id) ?? null,
       value,
       lastActiveAt: row.last_active_at,
       isOnline: isUserOnline(row.last_active_at, now),
@@ -108,10 +139,12 @@ export async function getPlatformLeaderboards(
 ): Promise<PlatformLeaderboardsResponse> {
   await ensureActivityStatsBackfill(supabase);
 
+  const ambientBotIds = await listAmbientBotUserIds(supabase);
+
   const [onlineRows, playRows, donatedRows] = await Promise.all([
-    fetchTopByColumn(supabase, "total_online_time"),
-    fetchTopByColumn(supabase, "total_play_time"),
-    fetchTopByColumn(supabase, "total_donated"),
+    fetchTopByColumn(supabase, "total_online_time", ambientBotIds),
+    fetchTopByColumn(supabase, "total_play_time", ambientBotIds),
+    fetchTopByColumn(supabase, "total_donated", ambientBotIds),
   ]);
 
   const userIds = [
@@ -121,22 +154,39 @@ export async function getPlatformLeaderboards(
   ];
 
   const profiles = await loadProfiles(supabase, userIds);
+  const titleMap = await resolveEquippedTitles(supabase, userIds);
   const virtual = getVirtualPlatformLeaderboardEntries(currentUserId);
+
+  const realOnline = mapEntries(
+    onlineRows,
+    profiles,
+    titleMap,
+    "total_online_time",
+    currentUserId
+  );
+  const realPlayTime = mapEntries(
+    playRows,
+    profiles,
+    titleMap,
+    "total_play_time",
+    currentUserId
+  );
 
   return {
     online: mergePlatformLeaderboardEntries(
-      mapEntries(onlineRows, profiles, "total_online_time", currentUserId),
+      realOnline,
       virtual.online,
       currentUserId
     ),
     playTime: mergePlatformLeaderboardEntries(
-      mapEntries(playRows, profiles, "total_play_time", currentUserId),
+      realPlayTime,
       virtual.playTime,
       currentUserId
     ),
     donated: mapEntries(
       donatedRows,
       profiles,
+      titleMap,
       "total_donated",
       currentUserId
     ),

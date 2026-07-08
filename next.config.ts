@@ -49,6 +49,11 @@ const nextConfig: NextConfig = {
         hostname: "api.dicebear.com",
         pathname: "/9.x/**",
       },
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+        pathname: "/**",
+      },
     ],
   },
 };

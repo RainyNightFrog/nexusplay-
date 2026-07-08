@@ -12,6 +12,7 @@ import {
 } from "@/lib/tip-receipt";
 import { sendTipReceiptEmailSafe } from "@/lib/tip-receipt-email";
 import { notifyCreatorOfTip } from "@/lib/creator-tip-notify";
+import { recordTipDonationAndCheckBigTipper } from "@/lib/achievement-unlock-service";
 import { verifyCustomerPaymentMethod } from "@/lib/stripe-customer-service";
 import {
   createStripeCustomer,
@@ -409,6 +410,18 @@ export async function finalizeTipPayment(paymentIntentId: string) {
     amountUsd: Number(tip.amount_usd),
     creatorNetUsd: Number(tip.creator_net_usd),
   });
+
+  if (tip.payer_id) {
+    try {
+      await recordTipDonationAndCheckBigTipper(
+        supabase,
+        tip.payer_id as string,
+        Number(tip.amount_usd)
+      );
+    } catch (error) {
+      console.error("[achievements] big_tipper check failed:", error);
+    }
+  }
 
   return {
     ok: true,

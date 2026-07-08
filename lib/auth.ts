@@ -1,3 +1,5 @@
+import type { EquippedTitle } from "@/lib/titles";
+
 export type UserRole = "player" | "creator";
 
 export type UserProfile = {
@@ -14,6 +16,8 @@ export type UserProfile = {
   support_email: string | null;
   profile_public: boolean;
   show_in_leaderboard: boolean;
+  equipped_title_id: string | null;
+  equipped_title: EquippedTitle | null;
 };
 
 export function getInitials(name: string) {

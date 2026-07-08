@@ -1,3 +1,5 @@
+import type { EquippedTitle } from "@/lib/titles";
+
 export type ChatChannel = "world" | "creator";
 
 export type ChatMessageRecord = {
@@ -12,8 +14,11 @@ export type ChatMessageRecord = {
 export type ChatMessage = ChatMessageRecord & {
   author_name: string;
   author_avatar_url: string | null;
+  author_equipped_title: EquippedTitle | null;
   is_creator: boolean;
   is_own: boolean;
+  is_virtual: boolean;
+  virtual_player_id: string | null;
 };
 
 export const VALID_CHAT_CHANNELS: ChatChannel[] = ["world", "creator"];

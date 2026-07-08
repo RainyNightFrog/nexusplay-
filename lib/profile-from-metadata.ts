@@ -42,5 +42,7 @@ export function profileFromUserMetadata(user: User): UserProfile {
     support_email: null,
     profile_public: readBoolean(metadata.profile_public, true),
     show_in_leaderboard: readBoolean(metadata.show_in_leaderboard, true),
+    equipped_title_id: null,
+    equipped_title: null,
   };
 }

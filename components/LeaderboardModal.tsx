@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Crown, Loader2, Medal, RefreshCw, Trophy } from "lucide-react";
+import { Crown, ChevronLeft, ChevronRight, Loader2, Medal, RefreshCw, Trophy } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Dialog,
@@ -16,9 +16,11 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/use-auth";
 import { getInitials } from "@/lib/auth";
+import { UserBadge } from "@/components/UserBadge";
 import {
   formatDonationAmount,
   formatDurationSeconds,
+  LEADERBOARD_PAGE_SIZE,
   LEADERBOARD_POLL_MS,
   type PlatformLeaderboardEntry,
   type PlatformLeaderboardsResponse,
@@ -142,14 +144,16 @@ function LeaderboardCard({
 
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <p
-            className={cn(
-              "max-w-full truncate font-medium text-zinc-100",
-              isTopThree ? "text-base sm:text-lg" : "text-sm sm:text-base"
+          <UserBadge
+            username={entry.displayName}
+            title={entry.equippedTitle}
+            usernameClassName={cn(
+              "max-w-full truncate",
+              isTopThree ? "text-base sm:text-lg" : "text-sm sm:text-base",
+              "text-zinc-100"
             )}
-          >
-            {entry.displayName}
-          </p>
+            titleClassName="text-[10px] sm:text-xs"
+          />
           <OnlineIndicator isOnline={entry.isOnline} />
           {entry.isMe && (
             <span className="shrink-0 rounded-full bg-cyan-500/15 px-2.5 py-0.5 text-xs font-semibold text-cyan-300 sm:text-sm">
@@ -254,6 +258,98 @@ function LeaderboardList({
   );
 }
 
+function LeaderboardPagination({
+  page,
+  totalPages,
+  totalEntries,
+  onPageChange,
+}: {
+  page: number;
+  totalPages: number;
+  totalEntries: number;
+  onPageChange: (page: number) => void;
+}) {
+  const t = useTranslations("leaderboard");
+
+  if (totalEntries === 0) return null;
+
+  return (
+    <div className="flex shrink-0 items-center justify-between gap-3 border-t border-white/8 bg-zinc-950/80 px-4 py-2.5">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="h-9 gap-1 border-white/10 bg-white/5 px-3 text-sm text-zinc-300 hover:text-white"
+        disabled={page <= 1}
+        onClick={() => onPageChange(page - 1)}
+      >
+        <ChevronLeft className="size-4" />
+        {t("pagePrev")}
+      </Button>
+      <span className="text-sm tabular-nums text-zinc-500">
+        {t("pageInfo", { current: page, total: totalPages })}
+      </span>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="h-9 gap-1 border-white/10 bg-white/5 px-3 text-sm text-zinc-300 hover:text-white"
+        disabled={page >= totalPages}
+        onClick={() => onPageChange(page + 1)}
+      >
+        {t("pageNext")}
+        <ChevronRight className="size-4" />
+      </Button>
+    </div>
+  );
+}
+
+function LeaderboardTabPanel({
+  entries,
+  tab,
+  locale,
+  loading,
+  fetchError,
+  animateKey,
+  page,
+  onPageChange,
+}: {
+  entries: PlatformLeaderboardEntry[];
+  tab: LeaderboardTab;
+  locale: string;
+  loading: boolean;
+  fetchError: boolean;
+  animateKey: string;
+  page: number;
+  onPageChange: (page: number) => void;
+}) {
+  const totalPages = Math.max(1, Math.ceil(entries.length / LEADERBOARD_PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const start = (safePage - 1) * LEADERBOARD_PAGE_SIZE;
+  const pageEntries = entries.slice(start, start + LEADERBOARD_PAGE_SIZE);
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-2.5 [scrollbar-gutter:stable]">
+        <LeaderboardList
+          entries={pageEntries}
+          tab={tab}
+          locale={locale}
+          loading={loading}
+          fetchError={fetchError}
+          animateKey={animateKey}
+        />
+      </div>
+      <LeaderboardPagination
+        page={safePage}
+        totalPages={totalPages}
+        totalEntries={entries.length}
+        onPageChange={onPageChange}
+      />
+    </div>
+  );
+}
+
 export function LeaderboardNavButton({ className }: { className?: string }) {
   const t = useTranslations("leaderboard");
   const locale = useLocale();
@@ -265,7 +361,16 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
   const [fetchError, setFetchError] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [animateKey, setAnimateKey] = useState("initial");
+  const [pageByTab, setPageByTab] = useState<Record<LeaderboardTab, number>>({
+    online: 1,
+    playTime: 1,
+    donated: 1,
+  });
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const setTabPage = useCallback((tab: LeaderboardTab, page: number) => {
+    setPageByTab((prev) => ({ ...prev, [tab]: page }));
+  }, []);
 
   const fetchLeaderboards = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -423,35 +528,41 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
                 </Button>
               </div>
 
-              <div className="h-[420px] max-h-[420px] overflow-y-auto overscroll-contain [scrollbar-gutter:stable] px-3 py-2.5">
-                <TabsContent value="online" keepMounted={false} className="mt-0 outline-none">
-                  <LeaderboardList
+              <div className="flex h-[460px] max-h-[460px] flex-col">
+                <TabsContent value="online" keepMounted={false} className="mt-0 flex min-h-0 flex-1 flex-col outline-none">
+                  <LeaderboardTabPanel
                     entries={onlineEntries}
                     tab="online"
                     locale={locale}
                     loading={loading}
                     fetchError={fetchError}
                     animateKey={animateKey}
+                    page={pageByTab.online}
+                    onPageChange={(page) => setTabPage("online", page)}
                   />
                 </TabsContent>
-                <TabsContent value="playTime" keepMounted={false} className="mt-0 outline-none">
-                  <LeaderboardList
+                <TabsContent value="playTime" keepMounted={false} className="mt-0 flex min-h-0 flex-1 flex-col outline-none">
+                  <LeaderboardTabPanel
                     entries={playTimeEntries}
                     tab="playTime"
                     locale={locale}
                     loading={loading}
                     fetchError={fetchError}
                     animateKey={animateKey}
+                    page={pageByTab.playTime}
+                    onPageChange={(page) => setTabPage("playTime", page)}
                   />
                 </TabsContent>
-                <TabsContent value="donated" keepMounted={false} className="mt-0 outline-none">
-                  <LeaderboardList
+                <TabsContent value="donated" keepMounted={false} className="mt-0 flex min-h-0 flex-1 flex-col outline-none">
+                  <LeaderboardTabPanel
                     entries={donatedEntries}
                     tab="donated"
                     locale={locale}
                     loading={loading}
                     fetchError={fetchError}
                     animateKey={animateKey}
+                    page={pageByTab.donated}
+                    onPageChange={(page) => setTabPage("donated", page)}
                   />
                 </TabsContent>
               </div>

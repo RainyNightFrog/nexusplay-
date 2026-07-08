@@ -32,6 +32,7 @@ export type ForumCommentRecord = {
 
 export type ForumPost = ForumPostRecord & {
   author_name: string;
+  author_equipped_title: import("@/lib/titles").EquippedTitle | null;
   comment_count?: number;
 };
 
@@ -41,6 +42,7 @@ export type ForumPostWithGame = ForumPost & {
 
 export type ForumComment = ForumCommentRecord & {
   author_name: string;
+  author_equipped_title: import("@/lib/titles").EquippedTitle | null;
 };
 
 export const FORUM_CATEGORIES: {

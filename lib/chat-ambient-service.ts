@@ -17,7 +17,7 @@ import {
 } from "@/lib/virtual-players";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-const WORLD_DIALOGUE_CHANCE = 0;
+const WORLD_DIALOGUE_CHANCE = 0.38;
 const REPLY_GAP_MS_MIN = 18_000;
 const REPLY_GAP_MS_MAX = 75_000;
 

@@ -1,0 +1,40 @@
+import { NextResponse } from "next/server";
+import { getChatPlayerPublicProfile } from "@/lib/chat-player-profile-service";
+import { createAuthServerClient } from "@/lib/supabase/server-auth";
+import { createServerSupabase } from "@/lib/supabase-server";
+
+export async function GET(request: Request) {
+  try {
+    const authClient = await createAuthServerClient();
+    const {
+      data: { user },
+    } = await authClient.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "請先登入" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get("userId")?.trim() || null;
+    const virtualPlayerId = searchParams.get("virtualPlayerId")?.trim() || null;
+
+    if (!userId && !virtualPlayerId) {
+      return NextResponse.json({ error: "缺少玩家識別" }, { status: 400 });
+    }
+
+    const profile = await getChatPlayerPublicProfile(createServerSupabase(), {
+      userId,
+      virtualPlayerId,
+    });
+
+    if (!profile) {
+      return NextResponse.json({ error: "找不到此玩家" }, { status: 404 });
+    }
+
+    return NextResponse.json({ profile });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "讀取玩家資料失敗";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}

@@ -78,3 +78,21 @@ export function ambientBotEmail(playerId: string) {
 export function ambientCreatorBotEmail(playerId: string) {
   return `ambient.creator.${playerId}@nexusplay.local`;
 }
+
+export function getVirtualPlayerById(playerId: string) {
+  return VIRTUAL_PLAYERS.find((player) => player.id === playerId) ?? null;
+}
+
+export function parseAmbientPlayerIdFromEmail(
+  email: string | null | undefined
+): string | null {
+  if (!email?.endsWith("@nexusplay.local")) return null;
+  const localPart = email.split("@")[0] ?? "";
+  if (localPart.startsWith("ambient.creator.")) {
+    return localPart.slice("ambient.creator.".length) || null;
+  }
+  if (localPart.startsWith("ambient.")) {
+    return localPart.slice("ambient.".length) || null;
+  }
+  return null;
+}

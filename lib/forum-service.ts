@@ -12,6 +12,7 @@ import {
   buildLocalizedForumComments,
   buildLocalizedForumPosts,
 } from "@/lib/forum-seed-builder";
+import { resolveEquippedTitles } from "@/lib/equipped-title-service";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -48,19 +49,45 @@ export async function getForumPostCount(gameId: number): Promise<number> {
   return posts.length;
 }
 
-async function resolveAuthorNames(userIds: string[]) {
+function mapPosts(
+  records: ForumPostRecord[],
+  nameMap: Map<string, string>,
+  titleMap: Map<string, import("@/lib/titles").EquippedTitle | null>,
+  commentCounts: Map<number, number> = new Map()
+): ForumPost[] {
+  return records.map((record) => ({
+    ...record,
+    author_name: nameMap.get(record.user_id) ?? formatForumAuthor(record.user_id),
+    author_equipped_title: titleMap.get(record.user_id) ?? null,
+    comment_count: commentCounts.get(record.id) ?? 0,
+  }));
+}
+
+function mapComments(
+  records: ForumCommentRecord[],
+  nameMap: Map<string, string>,
+  titleMap: Map<string, import("@/lib/titles").EquippedTitle | null>
+): ForumComment[] {
+  return records.map((record) => ({
+    ...record,
+    author_name: nameMap.get(record.user_id) ?? formatForumAuthor(record.user_id),
+    author_equipped_title: titleMap.get(record.user_id) ?? null,
+  }));
+}
+
+async function resolveAuthorDisplay(userIds: string[]) {
   const supabase = createServerSupabase();
   const uniqueIds = [...new Set(userIds.filter(Boolean))];
   const nameMap = new Map<string, string>();
 
   if (uniqueIds.length === 0) {
-    return nameMap;
+    return { nameMap, titleMap: new Map<string, import("@/lib/titles").EquippedTitle | null>() };
   }
 
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("id, display_name")
-    .in("id", uniqueIds);
+  const [{ data: profiles }, titleMap] = await Promise.all([
+    supabase.from("profiles").select("id, display_name").in("id", uniqueIds),
+    resolveEquippedTitles(supabase, uniqueIds),
+  ]);
 
   for (const userId of uniqueIds) {
     const profile = profiles?.find((row) => row.id === userId);
@@ -70,29 +97,7 @@ async function resolveAuthorNames(userIds: string[]) {
     );
   }
 
-  return nameMap;
-}
-
-function mapPosts(
-  records: ForumPostRecord[],
-  nameMap: Map<string, string>,
-  commentCounts: Map<number, number> = new Map()
-): ForumPost[] {
-  return records.map((record) => ({
-    ...record,
-    author_name: nameMap.get(record.user_id) ?? formatForumAuthor(record.user_id),
-    comment_count: commentCounts.get(record.id) ?? 0,
-  }));
-}
-
-function mapComments(
-  records: ForumCommentRecord[],
-  nameMap: Map<string, string>
-): ForumComment[] {
-  return records.map((record) => ({
-    ...record,
-    author_name: nameMap.get(record.user_id) ?? formatForumAuthor(record.user_id),
-  }));
+  return { nameMap, titleMap };
 }
 
 export async function getForumPostsByGameId(
@@ -126,12 +131,14 @@ export async function getForumPostsByGameId(
     return buildLocalizedForumPosts(gameId, gameTitle, locale);
   }
 
-  const nameMap = await resolveAuthorNames(records.map((row) => row.user_id));
+  const { nameMap, titleMap } = await resolveAuthorDisplay(
+    records.map((row) => row.user_id)
+  );
   const commentCounts = await attachCommentCounts(
     supabase,
     records.map((row) => row.id)
   );
-  return mapPosts(records, nameMap, commentCounts);
+  return mapPosts(records, nameMap, titleMap, commentCounts);
 }
 
 export async function getAllForumPosts(
@@ -166,7 +173,7 @@ export async function getAllForumPosts(
   const dbRecords = error ? [] : ((records ?? []) as ForumPostRecord[]);
 
   if (dbRecords.length > 0) {
-    const nameMap = await resolveAuthorNames(
+    const { nameMap, titleMap } = await resolveAuthorDisplay(
       dbRecords.map((row) => row.user_id)
     );
     const commentCounts = await attachCommentCounts(
@@ -175,7 +182,7 @@ export async function getAllForumPosts(
     );
 
     for (const record of dbRecords) {
-      const mapped = mapPosts([record], nameMap, commentCounts)[0];
+      const mapped = mapPosts([record], nameMap, titleMap, commentCounts)[0];
       if (!mapped) continue;
       allPosts.push({
         ...mapped,
@@ -219,9 +226,9 @@ export async function getForumPostById(
   if (!data) return null;
 
   const record = data as ForumPostRecord;
-  const nameMap = await resolveAuthorNames([record.user_id]);
+  const { nameMap, titleMap } = await resolveAuthorDisplay([record.user_id]);
   const commentCounts = await attachCommentCounts(supabase, [record.id]);
-  return mapPosts([record], nameMap, commentCounts)[0] ?? null;
+  return mapPosts([record], nameMap, titleMap, commentCounts)[0] ?? null;
 }
 
 export async function getForumCommentsByPostId(
@@ -261,8 +268,10 @@ export async function getForumCommentsByPostId(
   }
 
   const records = (data ?? []) as ForumCommentRecord[];
-  const nameMap = await resolveAuthorNames(records.map((row) => row.user_id));
-  return mapComments(records, nameMap);
+  const { nameMap, titleMap } = await resolveAuthorDisplay(
+    records.map((row) => row.user_id)
+  );
+  return mapComments(records, nameMap, titleMap);
 }
 
 export async function createForumPost(
@@ -297,8 +306,8 @@ export async function createForumPost(
   }
 
   const record = data as ForumPostRecord;
-  const nameMap = await resolveAuthorNames([record.user_id]);
-  return mapPosts([record], nameMap, new Map([[record.id, 0]]))[0]!;
+  const { nameMap, titleMap } = await resolveAuthorDisplay([record.user_id]);
+  return mapPosts([record], nameMap, titleMap, new Map([[record.id, 0]]))[0]!;
 }
 
 export async function createForumComment(
@@ -325,8 +334,8 @@ export async function createForumComment(
   }
 
   const record = data as ForumCommentRecord;
-  const nameMap = await resolveAuthorNames([record.user_id]);
-  return mapComments([record], nameMap)[0]!;
+  const { nameMap, titleMap } = await resolveAuthorDisplay([record.user_id]);
+  return mapComments([record], nameMap, titleMap)[0]!;
 }
 
 export async function forumPostBelongsToGame(

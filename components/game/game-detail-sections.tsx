@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import type { GameComment, GameDevlogEntry } from "@/lib/game-page-content";
 import { isSupabaseImage } from "@/lib/games";
 import { useApiError } from "@/hooks/use-api-error";
+import { UserBadge } from "@/components/UserBadge";
 import { cn } from "@/lib/utils";
 
 type GameDetailSectionsProps = {
@@ -358,9 +359,12 @@ export function GameDetailSections({
                     className="rounded-xl border border-white/8 bg-zinc-950/30 px-4 py-3"
                   >
                     <div className="flex flex-wrap items-center justify-center gap-2 text-center">
-                      <span className="text-sm font-medium text-zinc-200">
-                        {comment.author_name}
-                      </span>
+                      <UserBadge
+                        username={comment.author_name}
+                        title={comment.author_equipped_title}
+                        usernameClassName="text-sm text-zinc-200"
+                        titleClassName="text-[10px]"
+                      />
                       <span className="text-xs text-zinc-500">
                         {formatRelativeTime(comment.created_at, tc)}
                       </span>

@@ -381,6 +381,9 @@ export const FORUM_POST_SEEDS: Record<string, ForumPostSeedDef[]> = {
     {
       category: "speedrun",
       createdAtOffsetDays: 2,
+      author: player(8),
+      title: loc(
+        "量子崩壞 狂熱難度全 Perfect 可能嗎？",
         "量子崩坏 狂热难度全 Perfect 可能吗？",
         "Quantum Collapse Maniac — full Perfect even possible?"
       ),
