@@ -9,7 +9,8 @@ export type AppSettings = {
   showMatureContent: boolean;
 };
 
-export const APP_SETTINGS_STORAGE_KEY = "nexusplay-app-settings";
+export const APP_SETTINGS_STORAGE_KEY = "rainynightfrog-app-settings";
+const LEGACY_APP_SETTINGS_STORAGE_KEY = "nexusplay-app-settings";
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
   language: "zh-Hant",
@@ -19,6 +20,25 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   gameAutoplay: false,
   showMatureContent: true,
 };
+
+export function readAppSettingsRaw(): string | null {
+  if (typeof window === "undefined") return null;
+
+  const current = window.localStorage.getItem(APP_SETTINGS_STORAGE_KEY);
+  if (current) return current;
+
+  const legacy = window.localStorage.getItem(LEGACY_APP_SETTINGS_STORAGE_KEY);
+  if (!legacy) return null;
+
+  try {
+    window.localStorage.setItem(APP_SETTINGS_STORAGE_KEY, legacy);
+    window.localStorage.removeItem(LEGACY_APP_SETTINGS_STORAGE_KEY);
+  } catch {
+    // ignore quota errors
+  }
+
+  return legacy;
+}
 
 export function parseAppSettings(raw: string | null): AppSettings {
   if (!raw) return { ...DEFAULT_APP_SETTINGS };

@@ -1,4 +1,4 @@
-/** NexusPlay 全站統一滾軸樣式（主站 globals.css 與 iframe 嵌入共用） */
+/** RainyNightFrog 全站統一滾軸樣式（主站 globals.css 與 iframe 嵌入共用） */
 export const NEXUS_SCROLLBAR_CSS = `
 *{scrollbar-width:thin;scrollbar-color:rgba(34,211,238,.55) rgba(255,255,255,.06)}
 *::-webkit-scrollbar{width:8px;height:8px}

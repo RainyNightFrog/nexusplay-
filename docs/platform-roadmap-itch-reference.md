@@ -1,4 +1,4 @@
-# NexusPlay 平台策略與 itch.io 參考備忘
+# RainyNightFrog 平台策略與 itch.io 參考備忘
 
 > 永久記錄：2026-07-06 agent 對話整理。日後擴展平台、上線金流、調整費率時請先查閱本文。
 
@@ -33,7 +33,7 @@ PAYMENT_PROCESSOR_FEE_FIXED_USD = 0.3
 
 ### Phase A — 現階段必做（已實作或進行中）
 
-| 功能 | itch.io | NexusPlay |
+| 功能 | itch.io | RainyNightFrog |
 |------|---------|-----------|
 | 帳戶設定 sidebar 分組 | ✓ | `/settings/*` |
 | 改密碼 | ✓ | `/settings/security` |
@@ -472,4 +472,4 @@ Migration: `npm run db:payout-withdrawals`
 ## 參考連結
 
 - itch.io Open Revenue Sharing：創作者自選 0–100%，預設 10%
-- NexusPlay 差異：平台決定全站費率，早期 0% 吸創作者
+- RainyNightFrog 差異：平台決定全站費率，早期 0% 吸創作者

@@ -32,22 +32,22 @@ export function buildPlatformOpmlOutlines(): OpmlOutline[] {
   const baseUrl = getSiteUrl();
   const outlines: OpmlOutline[] = [
     {
-      text: "NexusPlay — New Games (RSS)",
+      text: "RainyNightFrog — New Games (RSS)",
       xmlUrl: `${baseUrl}/feed.xml`,
       htmlUrl: baseUrl,
     },
     {
-      text: "NexusPlay — New Games (Atom)",
+      text: "RainyNightFrog — New Games (Atom)",
       xmlUrl: `${baseUrl}${platformGamesAtomFeedPath()}`,
       htmlUrl: baseUrl,
     },
     {
-      text: "NexusPlay — Forum (RSS)",
+      text: "RainyNightFrog — Forum (RSS)",
       xmlUrl: `${baseUrl}/feed/forum.xml`,
       htmlUrl: `${baseUrl}/community`,
     },
     {
-      text: "NexusPlay — Forum (Atom)",
+      text: "RainyNightFrog — Forum (Atom)",
       xmlUrl: `${baseUrl}/feed/forum.xml?format=atom`,
       htmlUrl: `${baseUrl}/community`,
     },
@@ -55,12 +55,12 @@ export function buildPlatformOpmlOutlines(): OpmlOutline[] {
 
   for (const category of GAME_GENRES) {
     outlines.push({
-      text: `NexusPlay — ${category} (RSS)`,
+      text: `RainyNightFrog — ${category} (RSS)`,
       xmlUrl: `${baseUrl}${categoryFeedPath(category)}`,
       htmlUrl: `${baseUrl}/?category=${encodeURIComponent(category)}`,
     });
     outlines.push({
-      text: `NexusPlay — ${category} (Atom)`,
+      text: `RainyNightFrog — ${category} (Atom)`,
       xmlUrl: `${baseUrl}${categoryAtomFeedPath(category)}`,
       htmlUrl: `${baseUrl}/?category=${encodeURIComponent(category)}`,
     });
@@ -76,7 +76,7 @@ export function buildOpmlDocument(outlines: OpmlOutline[]) {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <opml version="2.0">
   <head>
-    <title>NexusPlay Feeds</title>
+    <title>RainyNightFrog Feeds</title>
     <dateCreated>${now}</dateCreated>
     <dateModified>${now}</dateModified>
   </head>

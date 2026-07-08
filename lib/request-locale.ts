@@ -11,7 +11,9 @@ export async function resolveRequestLocale(
     return queryLocale;
   }
 
-  const headerLocale = request.headers.get("x-nexusplay-locale");
+  const headerLocale =
+    request.headers.get("x-rainynightfrog-locale") ??
+    request.headers.get("x-nexusplay-locale");
   if (headerLocale && hasLocale(locales, headerLocale)) {
     return headerLocale;
   }

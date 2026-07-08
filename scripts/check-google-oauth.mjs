@@ -93,13 +93,13 @@ async function main() {
   const results = [];
 
   console.log("\n══════════════════════════════════════════");
-  console.log("  NexusPlay · Google 登入完整檢查");
+  console.log("  RainyNightFrog · Google 登入完整檢查");
   console.log("══════════════════════════════════════════\n");
 
   // Code / pages
   results.push(["設定頁 /auth/setup-google", "手動"]);
   results.push(["登入頁 Google 按鈕", "OK（程式已部署）"]);
-  results.push(["NexusPlay SDK + 雲端存檔", "OK（程式已部署）"]);
+  results.push(["RainyNightFrog SDK + 雲端存檔", "OK（程式已部署）"]);
 
   // OAuth live test
   const auth = await checkAuthProviders();

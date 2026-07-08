@@ -108,7 +108,7 @@ async function main() {
 
   console.log("");
   console.log("══════════════════════════════════════════════════════════");
-  console.log("  NexusPlay · 一鍵完成 Supabase Google 設定");
+  console.log("  RainyNightFrog · 一鍵完成 Supabase Google 設定");
   console.log("══════════════════════════════════════════════════════════");
   console.log("");
   console.log("Google 後台仍需你登入一次建立 OAuth 用戶端（無法代勞）。");

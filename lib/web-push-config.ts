@@ -9,5 +9,5 @@ export function getVapidPublicKey() {
 }
 
 export function getVapidSubject() {
-  return process.env.VAPID_SUBJECT?.trim() ?? "mailto:support@nexusplay.app";
+  return process.env.VAPID_SUBJECT?.trim() ?? "mailto:support@rainynightfrog.com";
 }

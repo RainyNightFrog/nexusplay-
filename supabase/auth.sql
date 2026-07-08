@@ -1,5 +1,5 @@
 -- ============================================================
--- NexusPlay Auth：profiles 表與註冊觸發器
+-- RainyNightFrog Auth：profiles 表與註冊觸發器
 -- 請在 Supabase Dashboard → SQL Editor 中執行
 -- ============================================================
 

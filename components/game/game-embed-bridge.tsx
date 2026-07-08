@@ -6,15 +6,18 @@ import { GameLeaveConfirmDialog } from "@/components/game/game-leave-confirm-dia
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "@/i18n/navigation";
 import {
-  NEXUSPLAY_AUTH_MESSAGE,
-  NEXUSPLAY_LEAVE_CONFIRM_REQUEST,
-  NEXUSPLAY_LEAVE_CONFIRM_RESPONSE,
-  NEXUSPLAY_LEAVE_MESSAGE,
-  NEXUSPLAY_READY_MESSAGE,
-  NEXUSPLAY_RESIZE_MESSAGE,
-  type NexusPlayAuthUser,
-  type NexusPlayLeaveConfirmRequest,
-} from "@/lib/nexusplay-embed-sdk";
+  LEGACY_NEXUSPLAY_LEAVE_CONFIRM_REQUEST,
+  LEGACY_NEXUSPLAY_LEAVE_MESSAGE,
+  LEGACY_NEXUSPLAY_READY_MESSAGE,
+  RAINYNIGHTFROG_AUTH_MESSAGE,
+  RAINYNIGHTFROG_LEAVE_CONFIRM_REQUEST,
+  RAINYNIGHTFROG_LEAVE_CONFIRM_RESPONSE,
+  RAINYNIGHTFROG_LEAVE_MESSAGE,
+  RAINYNIGHTFROG_READY_MESSAGE,
+  RAINYNIGHTFROG_RESIZE_MESSAGE,
+  type RainyNightFrogAuthUser,
+  type RainyNightFrogLeaveConfirmRequest,
+} from "@/lib/rainynightfrog-embed-sdk";
 
 type GameEmbedBridgeProps = {
   iframeRef: RefObject<HTMLIFrameElement | null>;
@@ -31,7 +34,7 @@ function buildAuthPayload(
   profile: ReturnType<typeof useAuth>["profile"],
   gameId: string,
   creatorId?: string | null
-): NexusPlayAuthUser | null {
+): RainyNightFrogAuthUser | null {
   if (!profile) return null;
   const isOwner = Boolean(creatorId && profile.id === creatorId);
   return {
@@ -61,7 +64,7 @@ export function GameEmbedBridge({
 
     iframe.contentWindow.postMessage(
       {
-        type: NEXUSPLAY_AUTH_MESSAGE,
+        type: RAINYNIGHTFROG_AUTH_MESSAGE,
         user: buildAuthPayload(profile, gameId, creatorId),
         isOwner: Boolean(creatorId && profile?.id === creatorId),
         editUrl:
@@ -80,7 +83,7 @@ export function GameEmbedBridge({
     const rect = iframe.getBoundingClientRect();
     iframe.contentWindow.postMessage(
       {
-        type: NEXUSPLAY_RESIZE_MESSAGE,
+        type: RAINYNIGHTFROG_RESIZE_MESSAGE,
         width: Math.round(rect.width),
         height: Math.round(rect.height),
         expanded,
@@ -97,7 +100,7 @@ export function GameEmbedBridge({
       const iframe = iframeRef.current;
       iframe?.contentWindow?.postMessage(
         {
-          type: NEXUSPLAY_LEAVE_CONFIRM_RESPONSE,
+          type: RAINYNIGHTFROG_LEAVE_CONFIRM_RESPONSE,
           requestId: pending.requestId,
           confirmed,
         },
@@ -127,8 +130,11 @@ export function GameEmbedBridge({
         requestId?: string;
       };
 
-      if (data?.type === NEXUSPLAY_LEAVE_CONFIRM_REQUEST) {
-        const request = data as NexusPlayLeaveConfirmRequest;
+      if (
+        data?.type === RAINYNIGHTFROG_LEAVE_CONFIRM_REQUEST ||
+        data?.type === LEGACY_NEXUSPLAY_LEAVE_CONFIRM_REQUEST
+      ) {
+        const request = data as RainyNightFrogLeaveConfirmRequest;
         if (!request.requestId) return;
         const pending = { requestId: request.requestId };
         leaveConfirmRef.current = pending;
@@ -136,7 +142,10 @@ export function GameEmbedBridge({
         return;
       }
 
-      if (data?.type === NEXUSPLAY_LEAVE_MESSAGE) {
+      if (
+        data?.type === RAINYNIGHTFROG_LEAVE_MESSAGE ||
+        data?.type === LEGACY_NEXUSPLAY_LEAVE_MESSAGE
+      ) {
         if (window.history.length > 1) {
           router.back();
         } else {
@@ -145,7 +154,12 @@ export function GameEmbedBridge({
         return;
       }
 
-      if (data?.type !== NEXUSPLAY_READY_MESSAGE) return;
+      if (
+        data?.type !== RAINYNIGHTFROG_READY_MESSAGE &&
+        data?.type !== LEGACY_NEXUSPLAY_READY_MESSAGE
+      ) {
+        return;
+      }
       if (String(data.gameId ?? "") !== gameId) return;
       postAuth();
       postResize();

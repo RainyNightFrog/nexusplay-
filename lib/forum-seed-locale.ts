@@ -22,17 +22,17 @@ export type SeedAuthorRef =
   | { kind: "player"; index: number }
   | {
       kind: "official";
-      key: "nexusplay-support" | "neontowers" | "eliteroyal-art";
+      key: "rainynightfrog-support" | "neontowers" | "eliteroyal-art";
     };
 
 const OFFICIAL_AUTHOR_NAMES: Record<
   Extract<SeedAuthorRef, { kind: "official" }>["key"],
   LocalizedText
 > = {
-  "nexusplay-support": {
-    "zh-HK": "NexusPlay 客服",
-    "zh-CN": "NexusPlay 客服",
-    en: "NexusPlay Support",
+  "rainynightfrog-support": {
+    "zh-HK": "RainyNightFrog 客服",
+    "zh-CN": "RainyNightFrog 客服",
+    en: "RainyNightFrog Support",
   },
   neontowers: {
     "zh-HK": "NeonTowers 官方",

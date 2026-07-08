@@ -1,5 +1,5 @@
 -- ============================================================
--- NexusPlay 使用者頭像 Storage：avatars bucket
+-- RainyNightFrog 使用者頭像 Storage：avatars bucket
 -- ============================================================
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)

@@ -1,5 +1,5 @@
 -- ============================================================
--- NexusPlay 成就擴充 + 進度目標欄位
+-- RainyNightFrog 成就擴充 + 進度目標欄位
 -- 請在 achievements-titles.sql 之後執行
 -- 或執行：npm run db:achievements-expand
 -- ============================================================
@@ -29,8 +29,8 @@ values
   ('creator_3_games', '多產創作者', '發布 3 款公開遊戲，創意源源不絕。', '🚀', 'creator', 'epic', 120, 3),
   ('creator_first_tip', '第一桶金', '收到玩家的第一筆打賞支持。', '💎', 'creator', 'rare', 50, 1),
   ('creator_community', '社群之聲', '你的作品累計收到 10 則玩家評論。', '📣', 'creator', 'rare', 45, 10),
-  ('online_10h', '線上常客', '累計上線達 10 小時，NexusPlay 是你第二個家。', '🌐', 'special', 'rare', 55, 36000),
-  ('veteran_30d', '資深玩家', '加入 NexusPlay 滿 30 天，見證平台成長。', '🎖️', 'special', 'epic', 90, 30),
+  ('online_10h', '線上常客', '累計上線達 10 小時，RainyNightFrog 是你第二個家。', '🌐', 'special', 'rare', 55, 36000),
+  ('veteran_30d', '資深玩家', '加入 RainyNightFrog 滿 30 天，見證平台成長。', '🎖️', 'special', 'epic', 90, 30),
   ('profile_complete', '完美檔案', '填寫完整的個人資料（名稱、網站或社群帳號）。', '✨', 'special', 'common', 20, 1),
   ('donation_starter', '小小支持者', '完成第一筆打賞，向創作者表達感謝。', '🎁', 'social', 'common', 20, 1),
   ('playtime_50h', '傳奇肝帝', '累計遊玩達 50 小時，真正的硬核玩家。', '👑', 'gameplay', 'legendary', 150, 180000)

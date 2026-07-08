@@ -64,7 +64,7 @@ export function buildRssFeedXml(items: RssFeedItem[], channel: RssChannelConfig)
     <description>${escapeXml(channel.description)}</description>
     <language>${escapeXml(language)}</language>
     <lastBuildDate>${now}</lastBuildDate>
-    <generator>NexusPlay</generator>
+    <generator>RainyNightFrog</generator>
 ${itemXml}
   </channel>
 </rss>`;
@@ -102,7 +102,7 @@ export function buildAtomFeedXml(items: RssFeedItem[], channel: RssChannelConfig
 ${hubXml}  <link href="${escapeXml(selfUrl)}" rel="self" />
   <id>${escapeXml(feedId)}</id>
   <updated>${new Date(updatedSource).toISOString()}</updated>
-  <generator>NexusPlay</generator>
+  <generator>RainyNightFrog</generator>
 ${entryXml}
 </feed>`;
 }
@@ -210,16 +210,16 @@ export async function listCreatorRssFeedItems(
 
 export function gamesRssChannel(): RssChannelConfig {
   return {
-    title: "NexusPlay — New Games",
-    description: "Latest public games published on NexusPlay.",
+    title: "RainyNightFrog — New Games",
+    description: "Latest public games published on RainyNightFrog.",
   };
 }
 
 export function forumRssChannel(): RssChannelConfig {
   const baseUrl = getSiteUrl();
   return {
-    title: "NexusPlay — Community Forum",
-    description: "Latest forum discussions across NexusPlay games.",
+    title: "RainyNightFrog — Community Forum",
+    description: "Latest forum discussions across RainyNightFrog games.",
     link: `${baseUrl}/community`,
   };
 }
@@ -235,8 +235,8 @@ export function forumAtomFeedPath() {
 export function creatorRssChannel(displayName: string, creatorId: string): RssChannelConfig {
   const baseUrl = getSiteUrl();
   return {
-    title: `${displayName} — NexusPlay Games`,
-    description: `Public games by ${displayName} on NexusPlay.`,
+    title: `${displayName} — RainyNightFrog Games`,
+    description: `Public games by ${displayName} on RainyNightFrog.`,
     link: `${baseUrl}/creator/${creatorId}`,
   };
 }
@@ -252,7 +252,7 @@ export function creatorAtomFeedPath(creatorId: string) {
 export function singleGameFeedChannel(gameTitle: string, gameId: number): RssChannelConfig {
   const baseUrl = getSiteUrl();
   return {
-    title: `${gameTitle} — NexusPlay Updates`,
+    title: `${gameTitle} — RainyNightFrog Updates`,
     description: `Devlogs and forum discussions for ${gameTitle}.`,
     link: `${baseUrl}/game/${gameId}`,
   };
@@ -358,8 +358,8 @@ export async function listCategoryGameFeedItems(
 export function categoryRssChannel(category: GameGenre): RssChannelConfig {
   const baseUrl = getSiteUrl();
   return {
-    title: `NexusPlay — ${category}`,
-    description: `Latest ${category} games on NexusPlay.`,
+    title: `RainyNightFrog — ${category}`,
+    description: `Latest ${category} games on RainyNightFrog.`,
     link: `${baseUrl}/?category=${encodeURIComponent(category)}`,
   };
 }

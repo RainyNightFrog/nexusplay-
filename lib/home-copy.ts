@@ -32,7 +32,7 @@ export const HOME_COPY = {
   viewAllCategories: "\u67e5\u770b\u5168\u90e8\u5206\u985e",
   uploadNewGame: "\u4e0a\u50b3\u65b0\u904a\u6232",
   communityRules: "\u793e\u7fa4\u5b88\u5247",
-  footer: "\u00a9 2026 NexusPlay \u00b7 \u4fdd\u7559\u6240\u6709\u6b0a\u5229",
+  footer: "\u00a9 2026 RainyNightFrog \u00b7 \u4fdd\u7559\u6240\u6709\u6b0a\u5229",
 } as const;
 
 import { FILTER_CATEGORIES } from "./games";

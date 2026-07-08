@@ -66,7 +66,7 @@ export default function DataSettingsPage() {
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = url;
-      anchor.download = `nexusplay-export-${profile?.id.slice(0, 8) ?? "data"}.json`;
+      anchor.download = `rainynightfrog-export-${profile?.id.slice(0, 8) ?? "data"}.json`;
       anchor.click();
       URL.revokeObjectURL(url);
       showToast(t("exportDone"));

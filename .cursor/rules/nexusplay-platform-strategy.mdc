@@ -1,9 +1,9 @@
 ---
-description: NexusPlay platform fee, monetization, and roadmap decisions
+description: RainyNightFrog platform fee, monetization, and roadmap decisions
 alwaysApply: true
 ---
 
-# NexusPlay Platform Strategy
+# RainyNightFrog Platform Strategy
 
 - **Platform fee**: Start at **0%** (`PLANNED_PLATFORM_FEE_PERCENT` in `lib/tip-fee-policy.ts`). Grow platform first; future reference rate is 5% with 30-day notice.
 - **Grandfather**: Lock fee in `games.platform_fee_percent` when tips are first enabled. Games locked at 0% stay at 0% after site-wide increases.

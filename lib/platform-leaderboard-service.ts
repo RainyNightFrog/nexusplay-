@@ -7,6 +7,7 @@ import {
   type PlatformLeaderboardsResponse,
 } from "@/lib/platform-leaderboard";
 import { resolveEquippedTitles } from "@/lib/equipped-title-service";
+import { isAmbientLocalEmail } from "@/lib/ambient-local-email";
 import {
   getVirtualPlatformLeaderboardEntries,
   mergePlatformLeaderboardEntries,
@@ -44,7 +45,7 @@ async function listAmbientBotUserIds(
 
   return new Set(
     (data.users ?? [])
-      .filter((user) => user.email?.endsWith("@nexusplay.local"))
+      .filter((user) => isAmbientLocalEmail(user.email))
       .map((user) => user.id)
   );
 }

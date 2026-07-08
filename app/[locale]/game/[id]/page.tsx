@@ -364,7 +364,7 @@ function GamePageContent() {
       try {
         await navigator.share({
           title: game.title,
-          text: `${game.title} · NexusPlay`,
+          text: `${game.title} · RainyNightFrog`,
           url,
         });
         showToast(tc("shareSuccess"));

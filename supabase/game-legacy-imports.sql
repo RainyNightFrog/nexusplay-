@@ -24,7 +24,7 @@ create index if not exists game_legacy_imports_used_by_idx
   where used_by is not null;
 
 comment on table public.game_legacy_imports is
-  '創作者為舊平台玩家建立的一次性遷移碼；玩家登入 NexusPlay 後兌換';
+  '創作者為舊平台玩家建立的一次性遷移碼；玩家登入 RainyNightFrog 後兌換';
 
 alter table public.game_legacy_imports enable row level security;
 

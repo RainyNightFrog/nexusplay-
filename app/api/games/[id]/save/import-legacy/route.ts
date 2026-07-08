@@ -7,7 +7,7 @@ import {
   validateSavePayload,
 } from "@/lib/game-save";
 import { redeemLegacyImportCode } from "@/lib/legacy-import";
-import { mergeGameSaves } from "@/lib/nexusplay-save-merge";
+import { mergeGameSaves } from "@/lib/rainynightfrog-save-merge";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
 
@@ -19,7 +19,7 @@ async function authorizePlayerForGame(gameId: number) {
 
   if (!user) {
     return {
-      error: NextResponse.json({ error: "請先登入 NexusPlay 帳號" }, { status: 401 }),
+      error: NextResponse.json({ error: "請先登入 RainyNightFrog 帳號" }, { status: 401 }),
     };
   }
 

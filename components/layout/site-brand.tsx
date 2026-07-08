@@ -13,7 +13,7 @@ export function SiteBrand({ className, showLabel = true }: SiteBrandProps) {
   return (
     <Link
       href="/"
-      aria-label="NexusPlay"
+      aria-label="RainyNightFrog"
       className={cn(
         "flex shrink-0 items-center gap-2.5 rounded-lg outline-none",
         "transition-transform hover:scale-[1.03] active:scale-[0.98]",
@@ -26,7 +26,7 @@ export function SiteBrand({ className, showLabel = true }: SiteBrandProps) {
       </div>
       {showLabel && (
         <span className="hidden bg-gradient-to-r from-white via-cyan-100 to-violet-200 bg-clip-text text-lg font-bold tracking-tight text-transparent sm:block">
-          NexusPlay
+          RainyNightFrog
         </span>
       )}
     </Link>

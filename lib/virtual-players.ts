@@ -71,12 +71,14 @@ export const VIRTUAL_PLAYERS_BY_LOCALE: Record<
   en: VIRTUAL_PLAYERS.filter((player) => player.locale === "en"),
 };
 
+import { ambientLocalDomain, isAmbientLocalEmail } from "@/lib/ambient-local-email";
+
 export function ambientBotEmail(playerId: string) {
-  return `ambient.${playerId}@nexusplay.local`;
+  return `ambient.${playerId}@${ambientLocalDomain()}`;
 }
 
 export function ambientCreatorBotEmail(playerId: string) {
-  return `ambient.creator.${playerId}@nexusplay.local`;
+  return `ambient.creator.${playerId}@${ambientLocalDomain()}`;
 }
 
 export function getVirtualPlayerById(playerId: string) {
@@ -86,7 +88,7 @@ export function getVirtualPlayerById(playerId: string) {
 export function parseAmbientPlayerIdFromEmail(
   email: string | null | undefined
 ): string | null {
-  if (!email?.endsWith("@nexusplay.local")) return null;
+  if (!email || !isAmbientLocalEmail(email)) return null;
   const localPart = email.split("@")[0] ?? "";
   if (localPart.startsWith("ambient.creator.")) {
     return localPart.slice("ambient.creator.".length) || null;

@@ -14,6 +14,7 @@ import {
   applyAppSettings,
   DEFAULT_APP_SETTINGS,
   parseAppSettings,
+  readAppSettingsRaw,
   type AppSettings,
 } from "@/lib/app-settings";
 
@@ -31,9 +32,7 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const stored = parseAppSettings(
-      window.localStorage.getItem(APP_SETTINGS_STORAGE_KEY)
-    );
+    const stored = parseAppSettings(readAppSettingsRaw());
     setSettings(stored);
     applyAppSettings(stored);
     setReady(true);

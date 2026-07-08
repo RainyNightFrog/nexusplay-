@@ -75,7 +75,7 @@ export default async function Image({ params }: Props) {
                 marginBottom: 16,
               }}
             >
-              NexusPlay Creator
+              RainyNightFrog Creator
             </div>
             <div style={{ fontSize: 64, fontWeight: 700, lineHeight: 1.05, maxWidth: 760 }}>
               {name}

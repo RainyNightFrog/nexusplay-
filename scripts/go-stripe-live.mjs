@@ -1,5 +1,5 @@
 /**
- * NexusPlay 切換 Stripe Live 真實收款
+ * RainyNightFrog 切換 Stripe Live 真實收款
  *
  * 用法（擇一）：
  *   1. 先在 .env.local 貼好 pk_live_ / sk_live_，再執行：
@@ -131,7 +131,7 @@ if (found) {
   endpoint = await stripe.webhookEndpoints.create({
     url: webhookUrl,
     enabled_events: WEBHOOK_EVENTS,
-    description: "NexusPlay tips + Connect (live)",
+    description: "RainyNightFrog tips + Connect (live)",
   });
   console.log("✓ 已建立 Live Webhook");
 }

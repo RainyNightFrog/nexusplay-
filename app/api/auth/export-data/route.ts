@@ -86,7 +86,7 @@ export async function GET() {
       creator_payouts: payouts ?? [],
     };
 
-    const filename = `nexusplay-export-${user.id.slice(0, 8)}.json`;
+    const filename = `rainynightfrog-export-${user.id.slice(0, 8)}.json`;
 
     return new NextResponse(JSON.stringify(exportPayload, null, 2), {
       status: 200,

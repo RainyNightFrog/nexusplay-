@@ -36,7 +36,7 @@ export function AdminShell({ title, description, children }: AdminShellProps) {
             <Shield className="size-4 text-white" />
           </div>
           <span className="hidden truncate text-sm font-semibold text-white sm:inline">
-            NexusPlay Admin
+            RainyNightFrog Admin
           </span>
         </div>
 

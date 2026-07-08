@@ -10,6 +10,7 @@ import { pickRandom, pickWithoutRepeat } from "@/lib/chat-ambient-pick";
 import type { ChatChannel } from "@/lib/chat";
 import { CHAT_LIMITS } from "@/lib/chat";
 import { createServerSupabase } from "@/lib/supabase-server";
+import { ambientEmailAliases, isAmbientLocalEmail } from "@/lib/ambient-local-email";
 import {
   ambientBotEmail,
   ambientCreatorBotEmail,
@@ -132,7 +133,7 @@ async function listAmbientBotUsers(supabase: SupabaseClient) {
 
   const byEmail = new Map<string, string>();
   for (const user of data.users ?? []) {
-    if (user.email?.endsWith("@nexusplay.local")) {
+    if (user.email && isAmbientLocalEmail(user.email)) {
       byEmail.set(user.email, user.id);
     }
   }
@@ -173,12 +174,18 @@ async function ensureAmbientPlayer(
   cache: Map<string, string>,
   options?: { asCreator?: boolean }
 ): Promise<string> {
-  const email = options?.asCreator
-    ? ambientCreatorBotEmail(player.id)
-    : ambientBotEmail(player.id);
-  const cached = cache.get(email);
+  const localPart = options?.asCreator
+    ? `ambient.creator.${player.id}`
+    : `ambient.${player.id}`;
+  const [email, legacyEmail] = ambientEmailAliases(localPart);
+  const cached =
+    cache.get(email) ??
+    cache.get(legacyEmail) ??
+    null;
   if (cached) {
     await syncAmbientPlayerProfile(supabase, cached, player, options);
+    cache.set(email, cached);
+    cache.set(legacyEmail, cached);
     return cached;
   }
 
@@ -196,9 +203,10 @@ async function ensureAmbientPlayer(
 
   if (error) {
     const refreshed = await listAmbientBotUsers(supabase);
-    const existing = refreshed.get(email);
+    const existing = refreshed.get(email) ?? refreshed.get(legacyEmail);
     if (existing) {
       cache.set(email, existing);
+      cache.set(legacyEmail, existing);
       return existing;
     }
     throw new Error(error.message);
@@ -219,6 +227,7 @@ async function ensureAmbientPlayer(
   }
 
   cache.set(email, userId);
+  cache.set(legacyEmail, userId);
   return userId;
 }
 

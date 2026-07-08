@@ -407,7 +407,7 @@ export default function UploadPage() {
         setSubmitStatus
       );
 
-      console.log("[NexusPlay] 遊戲上傳成功:", game);
+      console.log("[RainyNightFrog] 遊戲上傳成功:", game);
 
       clearPersistedGameUploadDraft();
 
@@ -441,7 +441,7 @@ export default function UploadPage() {
     } catch (error) {
       const raw = error instanceof Error ? error.message : null;
       const message = translateApiError(raw) ?? raw ?? t("uploadFailed");
-      console.error("[NexusPlay] 遊戲上傳失敗:", error);
+      console.error("[RainyNightFrog] 遊戲上傳失敗:", error);
       showToast("error", t("uploadFailed"), message);
     } finally {
       setIsSubmitting(false);

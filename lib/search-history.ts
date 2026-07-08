@@ -1,11 +1,31 @@
-const STORAGE_KEY = "nexusplay-search-history";
+const STORAGE_KEY = "rainynightfrog-search-history";
+const LEGACY_STORAGE_KEY = "nexusplay-search-history";
 const MAX_ITEMS = 8;
+
+function readRawHistory(): string | null {
+  if (typeof window === "undefined") return null;
+
+  const current = window.localStorage.getItem(STORAGE_KEY);
+  if (current) return current;
+
+  const legacy = window.localStorage.getItem(LEGACY_STORAGE_KEY);
+  if (!legacy) return null;
+
+  try {
+    window.localStorage.setItem(STORAGE_KEY, legacy);
+    window.localStorage.removeItem(LEGACY_STORAGE_KEY);
+  } catch {
+    // ignore quota errors
+  }
+
+  return legacy;
+}
 
 export function readSearchHistory(): string[] {
   if (typeof window === "undefined") return [];
 
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = readRawHistory();
     if (!raw) return [];
 
     const parsed = JSON.parse(raw) as unknown;
@@ -35,6 +55,7 @@ export function addSearchHistory(query: string) {
 
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    window.localStorage.removeItem(LEGACY_STORAGE_KEY);
   } catch {
     // ignore quota errors
   }
@@ -45,6 +66,7 @@ export function clearSearchHistory() {
 
   try {
     window.localStorage.removeItem(STORAGE_KEY);
+    window.localStorage.removeItem(LEGACY_STORAGE_KEY);
   } catch {
     // ignore
   }
@@ -62,6 +84,7 @@ export function removeSearchHistoryItem(query: string) {
 
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    window.localStorage.removeItem(LEGACY_STORAGE_KEY);
   } catch {
     // ignore
   }

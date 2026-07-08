@@ -83,22 +83,22 @@ function main() {
 
   console.log("");
   console.log("═══════════════════════════════════════════════════════════");
-  console.log("  NexusPlay · Google 登入設定助手（只需 3 步）");
+  console.log("  RainyNightFrog · Google 登入設定助手（只需 3 步）");
   console.log("═══════════════════════════════════════════════════════════");
   console.log("");
-  console.log("【重要】請在 Google Cloud 右上角選「NexusPlay」新專案，");
+  console.log("【重要】請在 Google Cloud 右上角選「RainyNightFrog」新專案，");
   console.log("       不要用 My Project 111111。");
   console.log("");
   console.log("── 步驟 1：OAuth 同意畫面（解決「尚未設定 Google 驗證平台」）──");
   console.log("  ① 使用者類型 → 外部 (External)");
-  console.log("  ② 應用程式名稱 → NexusPlay");
+  console.log("  ② 應用程式名稱 → RainyNightFrog");
   console.log("  ③ 支援 Email + 開發人員 Email → 填你的 Gmail");
   console.log("  ④ 範圍 → 直接略過");
   console.log("  ⑤ 測試使用者 → 加入你的 Gmail（必做！）");
   console.log("");
   console.log("── 步驟 2：建立 OAuth 用戶端 ──");
   console.log("  類型：網頁應用程式");
-  console.log("  名稱：NexusPlay Supabase");
+  console.log("  名稱：RainyNightFrog Supabase");
   console.log("  已授權的重新導向 URI（複製下面這一行）：");
   console.log("");
   console.log(`  ${googleRedirectUri}`);

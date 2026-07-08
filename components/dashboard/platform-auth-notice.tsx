@@ -5,22 +5,22 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 const BASIC_SDK_SNIPPET = `// 玩家登入由平台處理，遊戲內無需自建登入 UI
-const user = await NexusPlay.waitForAuth();
+const user = await RainyNightFrog.waitForAuth();
 if (user) {
-  const save = await NexusPlay.loadSave();
+  const save = await RainyNightFrog.loadSave();
   // 還原 save ...
 }
-await NexusPlay.saveSave({ level: 1, coins: 100 });`;
+await RainyNightFrog.saveSave({ level: 1, coins: 100 });`;
 
 const MERGE_SDK_SNIPPET = `// 訪客可玩；登入後合併本機 + 雲端並上傳
-await NexusPlay.waitForAuth();
-const save = await NexusPlay.loadSaveMerged("my-game-save");
-// 或：NexusPlay.loadSaveMerged(() => readYourOldLocalSave())`;
+await RainyNightFrog.waitForAuth();
+const save = await RainyNightFrog.loadSaveMerged("my-game-save");
+// 或：RainyNightFrog.loadSaveMerged(() => readYourOldLocalSave())`;
 
 const IMPORT_SDK_SNIPPET = `// 舊平台玩家：登入後輸入創作者提供的遷移碼
-await NexusPlay.waitForAuth();
-const save = await NexusPlay.importLegacySave(playerEnteredCode);
-// 成功後 save 已寫入 NexusPlay 雲端`;
+await RainyNightFrog.waitForAuth();
+const save = await RainyNightFrog.importLegacySave(playerEnteredCode);
+// 成功後 save 已寫入 RainyNightFrog 雲端`;
 
 type PlatformAuthNoticeProps = {
   className?: string;

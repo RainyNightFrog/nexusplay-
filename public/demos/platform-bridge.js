@@ -1,13 +1,23 @@
 /**
- * NexusPlay 平台橋接：雲端存檔 + 排行榜 + 本地備份
+ * RainyNightFrog 平台橋接：雲端存檔 + 排行榜 + 本地備份
  * 供 /demos/*.html 嵌入使用
  */
 (function () {
-  var AUTH_TYPE = "nexusplay:auth";
-  var LEAVE_TYPE = "nexusplay:leave";
-  var LEAVE_CONFIRM_REQUEST = "nexusplay:leave-confirm-request";
-  var LEAVE_CONFIRM_RESPONSE = "nexusplay:leave-confirm-response";
-  var READY_TYPE = "nexusplay:ready";
+  var AUTH_TYPES = ["rainynightfrog:auth", "nexusplay:auth"];
+  var LEAVE_TYPES = ["rainynightfrog:leave", "nexusplay:leave"];
+  var LEAVE_CONFIRM_REQUEST_TYPES = [
+    "rainynightfrog:leave-confirm-request",
+    "nexusplay:leave-confirm-request",
+  ];
+  var LEAVE_CONFIRM_RESPONSE_TYPES = [
+    "rainynightfrog:leave-confirm-response",
+    "nexusplay:leave-confirm-response",
+  ];
+  var READY_TYPES = ["rainynightfrog:ready", "nexusplay:ready"];
+  var RESIZE_TYPES = ["rainynightfrog:resize", "nexusplay:resize"];
+  var LEAVE_CONFIRM_REQUEST = LEAVE_CONFIRM_REQUEST_TYPES[0];
+  var LEAVE_TYPE = LEAVE_TYPES[0];
+  var READY_TYPE = READY_TYPES[0];
 
   var SCROLLBAR_CSS =
     "*{scrollbar-width:thin;scrollbar-color:rgba(34,211,238,.55) rgba(255,255,255,.06)}" +
@@ -50,6 +60,7 @@
     if (gid && !isNaN(parseInt(gid, 10))) return parseInt(gid, 10);
     var embedMatch = location.pathname.match(/\/api\/games\/(\d+)\/embed/);
     if (embedMatch) return parseInt(embedMatch[1], 10);
+    if (window.RainyNightFrog && window.RainyNightFrog.gameId) return window.RainyNightFrog.gameId;
     if (window.NexusPlay && window.NexusPlay.gameId) return window.NexusPlay.gameId;
     return null;
   }
@@ -65,7 +76,15 @@
   var LEAVE_CONFIRM_MESSAGE =
     "\u904a\u6232\u9032\u884c\u4e2d\uff0c\u78ba\u5b9a\u8981\u96e2\u958b\u55ce\uff1f\u76ee\u524d\u9032\u5ea6\u53ef\u80fd\u5c1a\u672a\u4fdd\u5b58\u3002";
 
+  function includesType(list, type) {
+    return list.indexOf(type) !== -1;
+  }
+
   function localKey(suffix) {
+    return "rainynightfrog:" + slug + ":" + suffix;
+  }
+
+  function legacyLocalKey(suffix) {
     return "nexusplay:" + slug + ":" + suffix;
   }
 
@@ -80,7 +99,7 @@
   window.addEventListener("message", function (e) {
     if (e.origin !== location.origin) return;
     var d = e.data;
-    if (!d || d.type !== AUTH_TYPE) return;
+    if (!d || !includesType(AUTH_TYPES, d.type)) return;
     user = d.user || null;
     if (d.editUrl) {
       ownerEditUrl = d.editUrl;
@@ -95,7 +114,7 @@
   window.addEventListener("message", function (e) {
     if (e.origin !== location.origin) return;
     var d = e.data;
-    if (!d || d.type !== "nexusplay:resize") return;
+    if (!d || !includesType(RESIZE_TYPES, d.type)) return;
     document.documentElement.style.setProperty("--np-embed-width", (d.width || 0) + "px");
     document.documentElement.style.setProperty("--np-embed-height", (d.height || 0) + "px");
     document.documentElement.classList.toggle("np-embed-expanded", !!d.expanded);
@@ -110,7 +129,7 @@
   window.addEventListener("message", function (e) {
     if (e.origin !== location.origin) return;
     var d = e.data;
-    if (!d || d.type !== LEAVE_CONFIRM_RESPONSE) return;
+    if (!d || !includesType(LEAVE_CONFIRM_RESPONSE_TYPES, d.type)) return;
     if (!pendingLeaveConfirm || d.requestId !== pendingLeaveConfirm.id) return;
     var resolve = pendingLeaveConfirm.resolve;
     pendingLeaveConfirm = null;
@@ -248,18 +267,23 @@
     });
   }
 
-  function readLocal(key) {
+  function readLocal(suffix) {
     try {
-      var raw = localStorage.getItem(key);
-      return raw ? JSON.parse(raw) : null;
+      var keys = [localKey(suffix), legacyLocalKey(suffix)];
+      for (var i = 0; i < keys.length; i++) {
+        var raw = localStorage.getItem(keys[i]);
+        if (raw) return JSON.parse(raw);
+      }
+      return null;
     } catch (_e) {
       return null;
     }
   }
 
-  function writeLocal(key, value) {
+  function writeLocal(suffix, value) {
     try {
-      localStorage.setItem(key, JSON.stringify(value));
+      localStorage.setItem(localKey(suffix), JSON.stringify(value));
+      localStorage.removeItem(legacyLocalKey(suffix));
     } catch (_e) {}
   }
 
@@ -268,6 +292,9 @@
   }
 
   function mergeProgress(local, cloud) {
+    if (window.RainyNightFrog && window.RainyNightFrog.mergeSaves) {
+      return window.RainyNightFrog.mergeSaves(local, cloud);
+    }
     if (window.NexusPlay && window.NexusPlay.mergeSaves) {
       return window.NexusPlay.mergeSaves(local, cloud);
     }
@@ -288,6 +315,13 @@
 
   async function cloudLoadSave() {
     if (!gameId) return null;
+    if (window.RainyNightFrog && window.RainyNightFrog.loadSave) {
+      try {
+        return await window.RainyNightFrog.loadSave();
+      } catch (_e) {
+        return null;
+      }
+    }
     if (window.NexusPlay && window.NexusPlay.loadSave) {
       try {
         return await window.NexusPlay.loadSave();
@@ -304,6 +338,13 @@
 
   async function cloudSaveSave(payload) {
     if (!gameId) return null;
+    if (window.RainyNightFrog && window.RainyNightFrog.saveSave) {
+      try {
+        return await window.RainyNightFrog.saveSave(payload);
+      } catch (_e) {
+        return null;
+      }
+    }
     if (window.NexusPlay && window.NexusPlay.saveSave) {
       try {
         return await window.NexusPlay.saveSave(payload);

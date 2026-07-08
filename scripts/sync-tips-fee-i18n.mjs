@@ -13,7 +13,7 @@ const NEW_KEYS = {
     "Each time a player tips, one transaction is created. Platform and payment fees are deducted from that transaction.",
   tipsFeePlatformTitle: "Platform fee (planned {percent}% per tip)",
   tipsFeePlatformDesc:
-    "NexusPlay plans to charge {percent}% per tip to run servers and develop features. Rate may change before launch.",
+    "RainyNightFrog plans to charge {percent}% per tip to run servers and develop features. Rate may change before launch.",
   tipsFeePaymentTitle: "Payment processor fee (per tip)",
   tipsFeePaymentDesc:
     "Charged by Stripe/PayPal, typically ~{percent}% + ${fixed} USD, separate from the platform fee.",
@@ -24,7 +24,7 @@ const NEW_KEYS = {
     "e.g. ${tip} tip → platform −${platform}, processor −${processor} → you ~${net}",
   tipsFeePlatformCompareTitle: "Industry context",
   tipsFeePlatformCompareDesc:
-    "Some platforms let creators choose their revenue share (0–100%); payment processor fees are separate. NexusPlay currently plans a fixed {percent}% default; adjustable sharing may come later.",
+    "Some platforms let creators choose their revenue share (0–100%); payment processor fees are separate. RainyNightFrog currently plans a fixed {percent}% default; adjustable sharing may come later.",
   tipsFeePlayerBriefTitle: "What players see",
   tipsFeePlayerBriefDesc:
     "Tips are voluntary — games remain fully playable without paying. The exact amount is shown before checkout. Tips support creators; they are not product purchases.",

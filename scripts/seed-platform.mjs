@@ -234,7 +234,7 @@ async function ensureSeedUser(admin, email, displayName) {
 
   const { data, error } = await admin.auth.admin.createUser({
     email,
-    password: "SeedPass_NexusPlay_2026!",
+    password: "SeedPass_RainyNightFrog_2026!",
     email_confirm: true,
     user_metadata: { display_name: displayName, role: "player" },
   });
@@ -266,7 +266,7 @@ async function main() {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  console.log("🎮 NexusPlay 平台種子資料寫入中…\n");
+  console.log("🎮 RainyNightFrog 平台種子資料寫入中…\n");
 
   // 1. 追加新遊戲（不碰 VOID GACHA）
   for (const game of NEW_GAMES) {

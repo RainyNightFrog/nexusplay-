@@ -68,7 +68,7 @@ if (found) {
   endpoint = await stripe.webhookEndpoints.create({
     url: webhookUrl,
     enabled_events: WEBHOOK_EVENTS,
-    description: "NexusPlay tips + Connect",
+    description: "RainyNightFrog tips + Connect",
   });
   console.log(`✓ 已建立 Webhook: ${webhookUrl}`);
 }

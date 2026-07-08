@@ -1,4 +1,4 @@
-import { buildNexusPlayEmbedSdkScript } from "@/lib/nexusplay-embed-sdk";
+import { buildRainyNightFrogEmbedSdkScript } from "@/lib/rainynightfrog-embed-sdk";
 import { NEXUS_SCROLLBAR_STYLE_TAG } from "@/lib/nexus-scrollbar-css";
 
 function ensureScrollbarStyle(html: string) {
@@ -52,7 +52,7 @@ html.void-portal-embed #portal-google-hint{
 html.void-portal-embed #portal-google-hint a{color:#7dd3fc!important;text-decoration:underline!important}
 </style>`;
 
-const VOID_EMBED_GOOGLE_HINT = `<p id="portal-google-hint" class="auth-hint auth-setup-hint">此遊戲建議使用平台帳號（遊戲頁上方登入 Google / Email）與 <code>NexusPlay.loadSave()</code> 雲端存檔；若需 void-gacha 原生 Google 登入請<a href="https://void-gacha.com/" target="_blank" rel="noopener noreferrer">前往官網</a>。</p>`;
+const VOID_EMBED_GOOGLE_HINT = `<p id="portal-google-hint" class="auth-hint auth-setup-hint">此遊戲建議使用平台帳號（遊戲頁上方登入 Google / Email）與 <code>RainyNightFrog.loadSave()</code> 雲端存檔；若需 void-gacha 原生 Google 登入請<a href="https://void-gacha.com/" target="_blank" rel="noopener noreferrer">前往官網</a>。</p>`;
 
 function isVoidGachaHtml(html: string) {
   return (
@@ -79,12 +79,16 @@ html.in-game .screen.active{flex:1!important;min-height:0!important;width:100%!i
 </style>`;
 
 export function patchHtmlForPlatformEmbed(html: string) {
-  if (!html.includes("<html") || html.includes('id="nexusplay-embed-sdk"')) {
+  if (
+    !html.includes("<html") ||
+    html.includes('id="rainynightfrog-embed-sdk"') ||
+    html.includes('id="nexusplay-embed-sdk"')
+  ) {
     return html;
   }
 
   let out = html;
-  const sdk = buildNexusPlayEmbedSdkScript();
+  const sdk = buildRainyNightFrogEmbedSdkScript();
 
   if (out.includes("<head>")) {
     out = out.replace("<head>", `<head>${sdk}`);

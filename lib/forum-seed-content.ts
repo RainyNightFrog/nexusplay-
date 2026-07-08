@@ -80,7 +80,7 @@ export const FORUM_POST_SEEDS: Record<string, ForumPostSeedDef[]> = {
       ),
       comments: [
         {
-          author: { kind: "official", key: "nexusplay-support" },
+          author: { kind: "official", key: "rainynightfrog-support" },
           content: loc(
             "已收錄至 v1.2.4 修復清單，感謝回報！臨時解法可縮放至 90% 顯示。",
             "已收录至 v1.2.4 修复清单，感谢回报！临时解法可缩放至 90% 显示。",

@@ -1,5 +1,5 @@
 -- ============================================================
--- NexusPlay 人流統計 — analytics_events 表
+-- RainyNightFrog 人流統計 — analytics_events 表
 -- 請在 Supabase Dashboard → SQL Editor 中執行
 -- 或執行：npm run db:analytics
 -- ============================================================

@@ -87,7 +87,7 @@ function buildOpenGraph({
       url,
       title,
       description,
-      siteName: "NexusPlay",
+      siteName: "RainyNightFrog",
       images,
     },
     twitter: {

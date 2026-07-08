@@ -19,7 +19,7 @@ export function buildTipReceiptEmailContent(receipt: TipReceipt) {
 
   const html = `
     <div style="font-family:sans-serif;line-height:1.6;color:#111;">
-      <h2 style="margin:0 0 12px;">NexusPlay 打賞收據</h2>
+      <h2 style="margin:0 0 12px;">RainyNightFrog 打賞收據</h2>
       <p>感謝你支持創作者！</p>
       <table style="border-collapse:collapse;margin:16px 0;">
         <tr><td style="padding:4px 12px 4px 0;color:#666;">遊戲</td><td>${escapeHtml(receipt.gameTitle)}</td></tr>
@@ -33,7 +33,7 @@ export function buildTipReceiptEmailContent(receipt: TipReceipt) {
   `.trim();
 
   const text = [
-    "NexusPlay 打賞收據",
+    "RainyNightFrog 打賞收據",
     `遊戲：${receipt.gameTitle}`,
     `金額：$${receipt.amountUsd.toFixed(2)} USD`,
     `時間：${new Date(receipt.createdAt).toLocaleString()}`,

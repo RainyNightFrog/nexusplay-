@@ -31,8 +31,8 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
   title: {
-    default: "NexusPlay",
-    template: "%s · NexusPlay",
+    default: "RainyNightFrog",
+    template: "%s · RainyNightFrog",
   },
   description: "Web game platform for play and upload",
   alternates: {
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: "website",
-    siteName: "NexusPlay",
+    siteName: "RainyNightFrog",
     locale: "zh_HK",
   },
   twitter: {

@@ -1,5 +1,5 @@
 -- ============================================================
--- NexusPlay 成就與稱號系統 (Gamification)
+-- RainyNightFrog 成就與稱號系統 (Gamification)
 -- 請在 Supabase Dashboard → SQL Editor 中執行
 -- 或執行：npm run db:achievements
 -- ============================================================

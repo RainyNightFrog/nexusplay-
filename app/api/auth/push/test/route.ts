@@ -25,7 +25,7 @@ export async function POST() {
     }
 
     const sent = await sendWebPushToUser(user.id, {
-      title: "NexusPlay",
+      title: "RainyNightFrog",
       body: "推播測試成功 — 通知設定運作正常。",
       url: "/notifications",
     });

@@ -1,9 +1,10 @@
-/** 注入至 iframe 內 HTML 的 NexusPlay 平台 SDK（統一身份 + 雲端存檔） */
-export function buildNexusPlayEmbedSdkScript() {
-  return `<script id="nexusplay-embed-sdk">
+/** 注入至 iframe 內 HTML 的 RainyNightFrog 平台 SDK（統一身份 + 雲端存檔） */
+export function buildRainyNightFrogEmbedSdkScript() {
+  return `<script id="rainynightfrog-embed-sdk">
 (function(){
-  var AUTH_TYPE='nexusplay:auth';
-  var READY_TYPE='nexusplay:ready';
+  var AUTH_TYPES=['rainynightfrog:auth','nexusplay:auth'];
+  var READY_TYPE='rainynightfrog:ready';
+  var LEGACY_READY_TYPE='nexusplay:ready';
   var match=location.pathname.match(/\\/api\\/games\\/(\\d+)\\/embed/);
   var gameId=match?parseInt(match[1],10):null;
   if(!gameId){
@@ -24,7 +25,7 @@ export function buildNexusPlayEmbedSdkScript() {
   window.addEventListener('message',function(e){
     if(e.origin!==location.origin)return;
     var d=e.data;
-    if(!d||d.type!==AUTH_TYPE)return;
+    if(!d||AUTH_TYPES.indexOf(d.type)===-1)return;
     user=d.user||null;
     if(d.editUrl){
       ownerEditUrl=d.editUrl;
@@ -41,7 +42,7 @@ export function buildNexusPlayEmbedSdkScript() {
     return new Promise(function(resolve,reject){
       if(authSettled)return resolve(user===undefined?null:user);
       var timer=setTimeout(function(){
-        reject(new Error('NexusPlay auth timeout'));
+        reject(new Error('RainyNightFrog auth timeout'));
       },ms);
       authWaiters.push(function(u){
         clearTimeout(timer);
@@ -78,7 +79,7 @@ export function buildNexusPlayEmbedSdkScript() {
     }catch(_e){return null;}
   }
 
-  window.NexusPlay={
+  var api={
     gameId:gameId,
     getUser:function(){
       if(!authSettled)return null;
@@ -90,7 +91,7 @@ export function buildNexusPlayEmbedSdkScript() {
     waitForAuth:waitForAuth,
     mergeSaves:mergeSaves,
     loadSave:async function(){
-      if(!gameId)throw new Error('NexusPlay: missing gameId');
+      if(!gameId)throw new Error('RainyNightFrog: missing gameId');
       var res=await fetch('/api/games/'+gameId+'/save',{credentials:'same-origin'});
       if(res.status===401)return null;
       if(!res.ok){
@@ -103,22 +104,22 @@ export function buildNexusPlayEmbedSdkScript() {
     loadSaveMerged:async function(localKey){
       var local=readLocalSave(localKey);
       var cloud=null;
-      try{cloud=await window.NexusPlay.loadSave();}catch(_e){}
+      try{cloud=await api.loadSave();}catch(_e){}
       var merged=mergeSaves(local,cloud);
       if(merged&&user){
-        try{await window.NexusPlay.saveSave(merged);}catch(_e){}
+        try{await api.saveSave(merged);}catch(_e){}
       }
       return merged;
     },
     saveSave:async function(payload){
-      if(!gameId)throw new Error('NexusPlay: missing gameId');
+      if(!gameId)throw new Error('RainyNightFrog: missing gameId');
       var res=await fetch('/api/games/'+gameId+'/save',{
         method:'PUT',
         credentials:'same-origin',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({save:payload})
       });
-      if(res.status===401)throw new Error('NexusPlay: login required');
+      if(res.status===401)throw new Error('RainyNightFrog: login required');
       if(!res.ok){
         var err=await res.json().catch(function(){return {};});
         throw new Error(err.error||('saveSave failed: '+res.status));
@@ -127,7 +128,7 @@ export function buildNexusPlayEmbedSdkScript() {
       return data.save??null;
     },
     importLegacySave:async function(code){
-      if(!gameId)throw new Error('NexusPlay: missing gameId');
+      if(!gameId)throw new Error('RainyNightFrog: missing gameId');
       var res=await fetch('/api/games/'+gameId+'/save/import-legacy',{
         method:'POST',
         credentials:'same-origin',
@@ -140,14 +141,18 @@ export function buildNexusPlayEmbedSdkScript() {
     }
   };
 
+  window.RainyNightFrog=api;
+  window.NexusPlay=api;
+
   try{
     window.parent.postMessage({type:READY_TYPE,gameId:gameId},location.origin);
+    window.parent.postMessage({type:LEGACY_READY_TYPE,gameId:gameId},location.origin);
   }catch(_e){}
 
   window.addEventListener('message',function(e){
     if(e.origin!==location.origin)return;
     var d=e.data;
-    if(!d||d.type!=='nexusplay:resize')return;
+    if(!d||d.type!=='rainynightfrog:resize'&&d.type!=='nexusplay:resize')return;
     document.documentElement.style.setProperty('--np-embed-width',(d.width||0)+'px');
     document.documentElement.style.setProperty('--np-embed-height',(d.height||0)+'px');
     document.documentElement.classList.toggle('np-embed-expanded',!!d.expanded);
@@ -157,30 +162,65 @@ export function buildNexusPlayEmbedSdkScript() {
 </script>`;
 }
 
-export type NexusPlayAuthUser = {
+/** @deprecated Use buildRainyNightFrogEmbedSdkScript */
+export const buildNexusPlayEmbedSdkScript = buildRainyNightFrogEmbedSdkScript;
+
+export type RainyNightFrogAuthUser = {
   id: string;
   displayName: string;
   isOwner?: boolean;
   editUrl?: string | null;
 };
 
-export const NEXUSPLAY_AUTH_MESSAGE = "nexusplay:auth";
-export const NEXUSPLAY_READY_MESSAGE = "nexusplay:ready";
-export const NEXUSPLAY_RESIZE_MESSAGE = "nexusplay:resize";
-export const NEXUSPLAY_LEAVE_MESSAGE = "nexusplay:leave";
-export const NEXUSPLAY_LEAVE_CONFIRM_REQUEST =
-  "nexusplay:leave-confirm-request";
+/** @deprecated Use RainyNightFrogAuthUser */
+export type NexusPlayAuthUser = RainyNightFrogAuthUser;
+
+export const RAINYNIGHTFROG_AUTH_MESSAGE = "rainynightfrog:auth";
+export const RAINYNIGHTFROG_READY_MESSAGE = "rainynightfrog:ready";
+export const RAINYNIGHTFROG_RESIZE_MESSAGE = "rainynightfrog:resize";
+export const RAINYNIGHTFROG_LEAVE_MESSAGE = "rainynightfrog:leave";
+export const RAINYNIGHTFROG_LEAVE_CONFIRM_REQUEST =
+  "rainynightfrog:leave-confirm-request";
+export const RAINYNIGHTFROG_LEAVE_CONFIRM_RESPONSE =
+  "rainynightfrog:leave-confirm-response";
+
+/** @deprecated Use RAINYNIGHTFROG_AUTH_MESSAGE */
+export const NEXUSPLAY_AUTH_MESSAGE = RAINYNIGHTFROG_AUTH_MESSAGE;
+/** @deprecated Use RAINYNIGHTFROG_READY_MESSAGE */
+export const NEXUSPLAY_READY_MESSAGE = RAINYNIGHTFROG_READY_MESSAGE;
+/** @deprecated Use RAINYNIGHTFROG_RESIZE_MESSAGE */
+export const NEXUSPLAY_RESIZE_MESSAGE = RAINYNIGHTFROG_RESIZE_MESSAGE;
+/** @deprecated Use RAINYNIGHTFROG_LEAVE_MESSAGE */
+export const NEXUSPLAY_LEAVE_MESSAGE = RAINYNIGHTFROG_LEAVE_MESSAGE;
+/** @deprecated Use RAINYNIGHTFROG_LEAVE_CONFIRM_REQUEST */
+export const NEXUSPLAY_LEAVE_CONFIRM_REQUEST = RAINYNIGHTFROG_LEAVE_CONFIRM_REQUEST;
+/** @deprecated Use RAINYNIGHTFROG_LEAVE_CONFIRM_RESPONSE */
 export const NEXUSPLAY_LEAVE_CONFIRM_RESPONSE =
+  RAINYNIGHTFROG_LEAVE_CONFIRM_RESPONSE;
+
+export const LEGACY_NEXUSPLAY_AUTH_MESSAGE = "nexusplay:auth";
+export const LEGACY_NEXUSPLAY_READY_MESSAGE = "nexusplay:ready";
+export const LEGACY_NEXUSPLAY_RESIZE_MESSAGE = "nexusplay:resize";
+export const LEGACY_NEXUSPLAY_LEAVE_MESSAGE = "nexusplay:leave";
+export const LEGACY_NEXUSPLAY_LEAVE_CONFIRM_REQUEST =
+  "nexusplay:leave-confirm-request";
+export const LEGACY_NEXUSPLAY_LEAVE_CONFIRM_RESPONSE =
   "nexusplay:leave-confirm-response";
 
-export type NexusPlayLeaveConfirmRequest = {
-  type: typeof NEXUSPLAY_LEAVE_CONFIRM_REQUEST;
+export type RainyNightFrogLeaveConfirmRequest = {
+  type: typeof RAINYNIGHTFROG_LEAVE_CONFIRM_REQUEST;
   requestId: string;
   message?: string;
 };
 
-export type NexusPlayLeaveConfirmResponse = {
-  type: typeof NEXUSPLAY_LEAVE_CONFIRM_RESPONSE;
+export type RainyNightFrogLeaveConfirmResponse = {
+  type: typeof RAINYNIGHTFROG_LEAVE_CONFIRM_RESPONSE;
   requestId: string;
   confirmed: boolean;
 };
+
+/** @deprecated Use RainyNightFrogLeaveConfirmRequest */
+export type NexusPlayLeaveConfirmRequest = RainyNightFrogLeaveConfirmRequest;
+
+/** @deprecated Use RainyNightFrogLeaveConfirmResponse */
+export type NexusPlayLeaveConfirmResponse = RainyNightFrogLeaveConfirmResponse;

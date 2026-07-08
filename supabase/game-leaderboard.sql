@@ -20,7 +20,7 @@ create index if not exists game_leaderboard_game_score_idx
   on public.game_leaderboard (game_id, score desc);
 
 comment on table public.game_leaderboard is
-  'NexusPlay 平台遊戲排行榜：每位玩家每款遊戲保留最高分';
+  'RainyNightFrog 平台遊戲排行榜：每位玩家每款遊戲保留最高分';
 
 alter table public.game_leaderboard enable row level security;
 

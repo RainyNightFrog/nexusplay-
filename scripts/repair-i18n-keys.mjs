@@ -76,7 +76,7 @@ const EN_OVERRIDES = {
   "legal.navPrivacy": "Privacy Policy",
   "legal.privacyTitle": "Privacy Policy",
   "legal.privacyP1":
-    "NexusPlay collects account data (email, display name), uploaded game content, play and analytics events, and tip/payout records to operate the platform.",
+    "RainyNightFrog collects account data (email, display name), uploaded game content, play and analytics events, and tip/payout records to operate the platform.",
   "legal.privacyP2":
     "Billing addresses are used for receipts and compliance; payment card data is processed by Stripe and full card numbers are not stored on our servers.",
   "legal.privacyP3":

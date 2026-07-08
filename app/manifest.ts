@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "NexusPlay",
-    short_name: "NexusPlay",
+    name: "RainyNightFrog",
+    short_name: "RainyNightFrog",
     description: "Web game platform for play and upload",
     start_url: "/",
     display: "standalone",

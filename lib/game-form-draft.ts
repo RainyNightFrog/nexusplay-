@@ -9,8 +9,10 @@ import {
 } from "@/lib/game-metadata";
 import { DEFAULT_PUBLISH_STATUS, normalizePublishStatus } from "@/lib/game-publish";
 
-const EDIT_DRAFT_PREFIX = "nexusplay-game-edit-draft:";
-const UPLOAD_DRAFT_KEY = "nexusplay-game-upload-draft";
+const EDIT_DRAFT_PREFIX = "rainynightfrog-game-edit-draft:";
+const LEGACY_EDIT_DRAFT_PREFIX = "nexusplay-game-edit-draft:";
+const UPLOAD_DRAFT_KEY = "rainynightfrog-game-upload-draft";
+const LEGACY_UPLOAD_DRAFT_KEY = "nexusplay-game-upload-draft";
 
 export type PersistedGameFormState = {
   title: string;
@@ -147,11 +149,18 @@ function parseDraft(raw: unknown): GameFormDraftPayload | null {
   };
 }
 
-function readDraft(storageKey: string): GameFormDraftPayload | null {
+function readDraft(storageKey: string, legacyKey?: string): GameFormDraftPayload | null {
   if (typeof window === "undefined") return null;
 
   try {
-    const raw = window.localStorage.getItem(storageKey);
+    let raw = window.localStorage.getItem(storageKey);
+    if (!raw && legacyKey) {
+      raw = window.localStorage.getItem(legacyKey);
+      if (raw) {
+        window.localStorage.setItem(storageKey, raw);
+        window.localStorage.removeItem(legacyKey);
+      }
+    }
     if (!raw) return null;
     return parseDraft(JSON.parse(raw));
   } catch {
@@ -183,8 +192,12 @@ export function editDraftKey(gameId: number) {
   return `${EDIT_DRAFT_PREFIX}${gameId}`;
 }
 
+function legacyEditDraftKey(gameId: number) {
+  return `${LEGACY_EDIT_DRAFT_PREFIX}${gameId}`;
+}
+
 export function readGameEditDraft(gameId: number) {
-  return readDraft(editDraftKey(gameId));
+  return readDraft(editDraftKey(gameId), legacyEditDraftKey(gameId));
 }
 
 export function writeGameEditDraft(
@@ -199,7 +212,7 @@ export function clearGameEditDraft(gameId: number) {
 }
 
 export function readGameUploadDraft() {
-  return readDraft(UPLOAD_DRAFT_KEY);
+  return readDraft(UPLOAD_DRAFT_KEY, LEGACY_UPLOAD_DRAFT_KEY);
 }
 
 export function writeGameUploadDraft(

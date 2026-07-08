@@ -124,7 +124,7 @@ async function main() {
 
   console.log("");
   console.log("══════════════════════════════════════════════════════════");
-  console.log("  NexusPlay · 修正 Supabase Redirect URLs");
+  console.log("  RainyNightFrog · 修正 Supabase Redirect URLs");
   console.log("══════════════════════════════════════════════════════════");
   console.log("");
   console.log("正確應為以下 4 行（每行一條，不可黏在一起）：");

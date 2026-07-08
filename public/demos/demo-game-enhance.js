@@ -1,5 +1,5 @@
 /**
- * NexusPlay demo 遊戲共用增強：流暢度、畫布、排行榜
+ * RainyNightFrog demo 遊戲共用增強：流暢度、畫布、排行榜
  */
 (function (global) {
   "use strict";

@@ -15,7 +15,7 @@ export default async function Image({ params }: Props) {
   const gameId = Number.parseInt(id, 10);
   const game = Number.isFinite(gameId) ? await getPublicGameById(gameId) : null;
 
-  const title = game?.title ?? "NexusPlay";
+  const title = game?.title ?? "RainyNightFrog";
   const subtitle = game?.creator ? `by ${game.creator}` : "Web Game";
   const coverUrl =
     game?.image?.startsWith("http://") || game?.image?.startsWith("https://")
@@ -78,7 +78,7 @@ export default async function Image({ params }: Props) {
               marginBottom: 16,
             }}
           >
-            NexusPlay
+            RainyNightFrog
           </div>
           <div style={{ fontSize: 64, fontWeight: 700, lineHeight: 1.05, maxWidth: 900 }}>
             {title}

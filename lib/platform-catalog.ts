@@ -34,7 +34,7 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
   {
     slug: "void-gacha",
     title: VOID_GACHA_TITLE,
-    creator: "NexusPlay Studio",
+    creator: "RainyNightFrog Studio",
     categories: ["益智", "動作"],
     description:
       "踏入虛空深淵，以神秘虛擬卡牌編織命運。在霓虹與虛無交織的抽卡宇宙中，收集稀有卡牌、構築核心卡組，挑戰無盡深淵。",
@@ -123,7 +123,7 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
   {
     slug: "neon-abyss-runner",
     title: "Neon Abyss: Void Runner",
-    creator: "NexusPlay Studio",
+    creator: "RainyNightFrog Studio",
     categories: ["動作", "平台跳躍"],
     description:
       "在霓虹深淵中疾馳穿越三線虛空航道！閃避脈衝雷射與浮游地雷，蓄力虛空衝刺突破死局，收集能量核心疊加連擊倍率。每五波深淵領主降臨——唯有最頂尖的駕駛員能衝破虛無，刷新排行榜傳說。",
@@ -173,7 +173,7 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
   {
     slug: "void-relay",
     title: "Void Relay: Card Descent",
-    creator: "NexusPlay Studio",
+    creator: "RainyNightFrog Studio",
     categories: ["卡牌對戰", "益智"],
     description:
       "墜入虛空深淵的 Roguelike 卡牌征途！20 種虛空卡牌、敵人意圖預判、每層三選一強化卡組。第五層深淵領主守關，一路廝殺至第十五層深淵之底——每次下墜都是全新命運。",

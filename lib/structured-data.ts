@@ -11,7 +11,7 @@ export function buildWebSiteJsonLd(locale: string): JsonLdObject {
   return {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    name: "NexusPlay",
+    name: "RainyNightFrog",
     url: absoluteUrl(locale, "/"),
     potentialAction: {
       "@type": "SearchAction",
@@ -100,7 +100,7 @@ export function buildOrganizationJsonLd(): JsonLdObject {
   return {
     "@context": "https://schema.org",
     "@type": "Organization",
-    name: "NexusPlay",
+    name: "RainyNightFrog",
     url: getSiteUrl(),
   };
 }

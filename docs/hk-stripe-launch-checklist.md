@@ -1,4 +1,4 @@
-# NexusPlay 香港 Stripe 上線清單
+# RainyNightFrog 香港 Stripe 上線清單
 
 > 營運／合規步驟。程式功能已就緒，上線前請逐項確認。
 
@@ -38,7 +38,7 @@
 - [ ] 註冊 [Resend](https://resend.com)，驗證寄件域名
 - [ ] 設定環境變數：
   - `RESEND_API_KEY=re_...`
-  - `EMAIL_FROM=NexusPlay <receipts@your-domain.com>`
+  - `EMAIL_FROM=RainyNightFrog <receipts@your-domain.com>`
 - [ ] 測試一筆 live 打賞，確認收到 HTML 收據
 
 ## 5. 上線前功能自測
@@ -72,7 +72,7 @@ SUPABASE_SERVICE_ROLE_KEY=...
 
 # 建議
 RESEND_API_KEY=re_...
-EMAIL_FROM=NexusPlay <receipts@your-domain.com>
+EMAIL_FROM=RainyNightFrog <receipts@your-domain.com>
 NEXT_PUBLIC_SITE_URL=https://your-domain
 STRIPE_CONNECT_COUNTRY=HK
 ```

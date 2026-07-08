@@ -1,5 +1,5 @@
 /**
- * NexusPlay Stripe 設定檢查 — 執行：npm run check:stripe
+ * RainyNightFrog Stripe 設定檢查 — 執行：npm run check:stripe
  * 不會輸出完整 secret，只顯示是否已設定與下一步。
  */
 import { readFileSync, existsSync } from "node:fs";
@@ -58,7 +58,7 @@ const siteUrl = (env.NEXT_PUBLIC_SITE_URL ?? "https://nexusplay-five.vercel.app"
 );
 const webhookUrl = `${siteUrl}/api/webhooks/stripe`;
 
-console.log("\n=== NexusPlay Stripe 設定檢查 ===\n");
+console.log("\n=== RainyNightFrog Stripe 設定檢查 ===\n");
 
 for (const key of STRIPE_KEYS) {
   const value = env[key];

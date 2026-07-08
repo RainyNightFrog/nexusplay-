@@ -1,5 +1,5 @@
 self.addEventListener("push", (event) => {
-  let payload = { title: "NexusPlay", body: "", url: "/" };
+  let payload = { title: "RainyNightFrog", body: "", url: "/" };
 
   try {
     payload = { ...payload, ...(event.data?.json() ?? {}) };

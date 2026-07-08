@@ -78,7 +78,7 @@ export default function SetupGooglePage() {
         <li className="rounded-xl border border-white/10 bg-white/5 p-4">
           <p className="font-medium text-white">① Google OAuth 同意畫面</p>
           <p className="mt-1 text-zinc-400">
-            外部 → 名稱 NexusPlay → 測試使用者加入你的 Gmail
+            外部 → 名稱 RainyNightFrog → 測試使用者加入你的 Gmail
           </p>
           <a
             href={LINKS.googleConsent}

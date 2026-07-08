@@ -4,17 +4,17 @@ import path from "node:path";
 const messagesDir = path.join(process.cwd(), "messages");
 
 const commonExtras = {
-  "zh-HK": { newListing: "新上架", defaultCreator: "NexusPlay 創作者" },
-  "zh-CN": { newListing: "新上架", defaultCreator: "NexusPlay 创作者" },
-  en: { newListing: "New", defaultCreator: "NexusPlay Creator" },
-  ja: { newListing: "新着", defaultCreator: "NexusPlay クリエイター" },
-  ko: { newListing: "신규", defaultCreator: "NexusPlay 크리에이터" },
-  es: { newListing: "Nuevo", defaultCreator: "Creador de NexusPlay" },
-  fr: { newListing: "Nouveau", defaultCreator: "Créateur NexusPlay" },
-  de: { newListing: "Neu", defaultCreator: "NexusPlay-Ersteller" },
-  pt: { newListing: "Novo", defaultCreator: "Criador NexusPlay" },
-  th: { newListing: "ใหม่", defaultCreator: "ครีเอเตอร์ NexusPlay" },
-  vi: { newListing: "Mới", defaultCreator: "Nhà sáng tạo NexusPlay" },
+  "zh-HK": { newListing: "新上架", defaultCreator: "RainyNightFrog 創作者" },
+  "zh-CN": { newListing: "新上架", defaultCreator: "RainyNightFrog 创作者" },
+  en: { newListing: "New", defaultCreator: "RainyNightFrog Creator" },
+  ja: { newListing: "新着", defaultCreator: "RainyNightFrog クリエイター" },
+  ko: { newListing: "신규", defaultCreator: "RainyNightFrog 크리에이터" },
+  es: { newListing: "Nuevo", defaultCreator: "Creador de RainyNightFrog" },
+  fr: { newListing: "Nouveau", defaultCreator: "Créateur RainyNightFrog" },
+  de: { newListing: "Neu", defaultCreator: "RainyNightFrog-Ersteller" },
+  pt: { newListing: "Novo", defaultCreator: "Criador RainyNightFrog" },
+  th: { newListing: "ใหม่", defaultCreator: "ครีเอเตอร์ RainyNightFrog" },
+  vi: { newListing: "Mới", defaultCreator: "Nhà sáng tạo RainyNightFrog" },
 };
 
 const apiByLocale = {
