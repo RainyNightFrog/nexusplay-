@@ -227,6 +227,11 @@ export function CommunityForum({
         ? "/api/community/forum/posts"
         : `/api/games/${gameId}/forum/posts`;
       const response = await fetch(url);
+      const contentType = response.headers.get("content-type") ?? "";
+      if (!contentType.includes("application/json")) {
+        throw new Error("invalid response");
+      }
+
       const data = (await response.json()) as {
         posts?: ForumPostWithGame[];
         error?: string;

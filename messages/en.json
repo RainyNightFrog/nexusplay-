@@ -400,6 +400,10 @@
     "tipClose": "Close",
     "tipCheckoutFailed": "Could not start tip checkout",
     "tipLegalLink": "Payments & Tips Policy",
+    "leaveConfirmTitle": "Leave this game?",
+    "leaveConfirmDescription": "Your game is in progress. Unsaved progress may be lost.",
+    "leaveConfirmStay": "Keep playing",
+    "leaveConfirmLeave": "Leave game",
     "tipPayButton": "Confirm payment",
     "tipReceiptTitle": "Tip receipt",
     "tipReceiptBilling": "Billing address",
@@ -1508,7 +1512,12 @@
     "loading": "Loading…",
     "retentionHint": "Chat history is kept for 7 days",
     "loginRequired": "Sign in to chat",
+    "goLogin": "Go to sign in",
     "creatorReadOnly": "Only creators can post here; you can still read messages",
-    "emojiPicker": "Insert emoji"
+    "emojiPicker": "Insert emoji",
+    "readFailed": "Failed to load chat messages",
+    "sendFailed": "Failed to send message",
+    "recallFailed": "Failed to recall message",
+    "connectionFailed": "Cannot reach chat service. Please refresh the page."
   }
 }

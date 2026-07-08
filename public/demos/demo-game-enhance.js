@@ -29,6 +29,9 @@
     canvas.style.width = "100%";
     canvas.style.height = "100%";
     var ctx = canvas.getContext("2d");
+    if (!ctx) {
+      return { ctx: null, dpr: dpr, w: w, h: h };
+    }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.imageSmoothingEnabled = true;
     return { ctx: ctx, dpr: dpr, w: w, h: h };
@@ -154,8 +157,10 @@
       if (!btn) return;
       btn.addEventListener("click", function () {
         if (options.beforeLeave && options.beforeLeave() === false) return;
-        if (!pb.leaveToPlatform({ confirm: true, message: message })) return;
-        if (options.stopGame) options.stopGame();
+        pb.leaveToPlatform({ confirm: true, message: message }).then(function (left) {
+          if (!left) return;
+          if (options.stopGame) options.stopGame();
+        });
       });
     });
 

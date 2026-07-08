@@ -192,12 +192,47 @@ export async function getAllForumPosts(): Promise<ForumPostWithGame[]> {
     return [];
   }
 
+  const gameTitleMap = new Map(games.map((game) => [game.id, game.title]));
+  const gameIds = games.map((game) => game.id);
+  const { data: records, error } = await supabase
+    .from("forum_posts")
+    .select("*")
+    .in("game_id", gameIds)
+    .order("created_at", { ascending: false });
+
+  const postsByGame = new Map<number, ForumPostRecord[]>();
+  for (const row of (records ?? []) as ForumPostRecord[]) {
+    const existing = postsByGame.get(row.game_id) ?? [];
+    existing.push(row);
+    postsByGame.set(row.game_id, existing);
+  }
+
   const allPosts: ForumPostWithGame[] = [];
+  const dbRecords = error ? [] : ((records ?? []) as ForumPostRecord[]);
+
+  if (dbRecords.length > 0) {
+    const nameMap = await resolveAuthorNames(
+      dbRecords.map((row) => row.user_id)
+    );
+    const commentCounts = await attachCommentCounts(
+      supabase,
+      dbRecords.map((row) => row.id)
+    );
+
+    for (const record of dbRecords) {
+      const mapped = mapPosts([record], nameMap, commentCounts)[0];
+      if (!mapped) continue;
+      allPosts.push({
+        ...mapped,
+        game_title: gameTitleMap.get(record.game_id) ?? "",
+      });
+    }
+  }
 
   for (const game of games) {
-    const posts = await getForumPostsByGameId(game.id);
+    if ((postsByGame.get(game.id) ?? []).length > 0) continue;
     allPosts.push(
-      ...posts.map((post) => ({
+      ...buildSeedPosts(game.id, game.title).map((post) => ({
         ...post,
         game_title: game.title,
       }))

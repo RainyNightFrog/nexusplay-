@@ -155,3 +155,19 @@ export const NEXUSPLAY_AUTH_MESSAGE = "nexusplay:auth";
 export const NEXUSPLAY_READY_MESSAGE = "nexusplay:ready";
 export const NEXUSPLAY_RESIZE_MESSAGE = "nexusplay:resize";
 export const NEXUSPLAY_LEAVE_MESSAGE = "nexusplay:leave";
+export const NEXUSPLAY_LEAVE_CONFIRM_REQUEST =
+  "nexusplay:leave-confirm-request";
+export const NEXUSPLAY_LEAVE_CONFIRM_RESPONSE =
+  "nexusplay:leave-confirm-response";
+
+export type NexusPlayLeaveConfirmRequest = {
+  type: typeof NEXUSPLAY_LEAVE_CONFIRM_REQUEST;
+  requestId: string;
+  message?: string;
+};
+
+export type NexusPlayLeaveConfirmResponse = {
+  type: typeof NEXUSPLAY_LEAVE_CONFIRM_RESPONSE;
+  requestId: string;
+  confirmed: boolean;
+};

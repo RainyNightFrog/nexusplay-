@@ -993,14 +993,23 @@
   }
 
   function quitToMenu(confirmFirst) {
-    if (confirmFirst && gameActive && !confirm('確定返回？目前進度可能尚未保存。')) return;
+    if (confirmFirst && gameActive) {
+      PlatformBridge.confirmLeave('確定返回？目前進度可能尚未保存。').then(function (ok) {
+        if (!ok) return;
+        resetSession();
+        showScreen('menu');
+      });
+      return;
+    }
     resetSession();
     showScreen('menu');
   }
 
   function leavePlatform() {
-    if (!PlatformBridge.leaveToPlatform({ confirm: true })) return;
-    resetSession();
+    PlatformBridge.leaveToPlatform({ confirm: true }).then(function (left) {
+      if (!left) return;
+      resetSession();
+    });
   }
 
   document.querySelectorAll('.diff-btn').forEach(function (btn) {

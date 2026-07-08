@@ -1,10 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import type { ChatChannel, ChatMessage } from "@/lib/chat";
 import { CHAT_LIMITS } from "@/lib/chat";
 import { createClient } from "@/lib/supabase/client";
+
+async function parseJsonResponse<T>(response: Response): Promise<T> {
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) {
+    throw new Error("invalid response");
+  }
+  return (await response.json()) as T;
+}
 
 function mergeMessages(existing: ChatMessage[], incoming: ChatMessage[]) {
   const map = new Map<string, ChatMessage>();
@@ -16,11 +25,22 @@ function mergeMessages(existing: ChatMessage[], incoming: ChatMessage[]) {
 }
 
 export function useChatMessages(channel: ChatChannel, enabled: boolean) {
+  const t = useTranslations("chat");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
+
+  const formatError = useCallback(
+    (err: unknown, fallback: string) => {
+      if (err instanceof Error && err.message === "invalid response") {
+        return t("connectionFailed");
+      }
+      return err instanceof Error ? err.message : fallback;
+    },
+    [t]
+  );
 
   const loadMessages = useCallback(async () => {
     if (!enabled) return;
@@ -31,22 +51,22 @@ export function useChatMessages(channel: ChatChannel, enabled: boolean) {
       const response = await fetch(
         `/api/chat/messages?channel=${encodeURIComponent(channel)}`
       );
-      const data = (await response.json()) as {
+      const data = await parseJsonResponse<{
         messages?: ChatMessage[];
         error?: string;
-      };
+      }>(response);
 
       if (!response.ok) {
-        throw new Error(data.error ?? "讀取聊天記錄失敗");
+        throw new Error(data.error ?? t("readFailed"));
       }
 
       setMessages(data.messages ?? []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "讀取聊天記錄失敗");
+      setError(formatError(err, t("readFailed")));
     } finally {
       setLoading(false);
     }
-  }, [channel, enabled]);
+  }, [channel, enabled, formatError, t]);
 
   useEffect(() => {
     if (!enabled) {
@@ -98,13 +118,13 @@ export function useChatMessages(channel: ChatChannel, enabled: boolean) {
           body: JSON.stringify({ channel, content }),
         });
 
-        const data = (await response.json()) as {
+        const data = await parseJsonResponse<{
           message?: ChatMessage;
           error?: string;
-        };
+        }>(response);
 
         if (!response.ok) {
-          throw new Error(data.error ?? "發送失敗");
+          throw new Error(data.error ?? t("sendFailed"));
         }
 
         if (data.message) {
@@ -115,13 +135,13 @@ export function useChatMessages(channel: ChatChannel, enabled: boolean) {
 
         return true;
       } catch (err) {
-        setError(err instanceof Error ? err.message : "發送失敗");
+        setError(formatError(err, t("sendFailed")));
         return false;
       } finally {
         setSending(false);
       }
     },
-    [channel, enabled, loadMessages]
+    [channel, enabled, formatError, loadMessages, t]
   );
 
   const recallMessage = useCallback(async (messageId: string) => {
@@ -131,13 +151,13 @@ export function useChatMessages(channel: ChatChannel, enabled: boolean) {
         method: "PATCH",
       });
 
-      const data = (await response.json()) as {
+      const data = await parseJsonResponse<{
         message?: ChatMessage;
         error?: string;
-      };
+      }>(response);
 
       if (!response.ok) {
-        throw new Error(data.error ?? "回收失敗");
+        throw new Error(data.error ?? t("recallFailed"));
       }
 
       if (data.message) {
@@ -148,10 +168,10 @@ export function useChatMessages(channel: ChatChannel, enabled: boolean) {
 
       return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "回收失敗");
+      setError(formatError(err, t("recallFailed")));
       return false;
     }
-  }, []);
+  }, [formatError, t]);
 
   const canRecall = useCallback((message: ChatMessage) => {
     if (!message.is_own || message.recalled_at) return false;

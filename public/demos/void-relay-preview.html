@@ -213,7 +213,21 @@
       0%,100% { border-color: rgba(248,113,113,0.45); }
       50% { border-color: rgba(251,191,36,0.65); }
     }
-    .fighter.enemy { border-color: rgba(248,113,113,0.35); }
+    .fighter.enemy {
+      border-color: rgba(248,113,113,0.35);
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .fighter.enemy .hp-bar-wrap,
+    .fighter.enemy .hp-text,
+    .fighter.enemy .intent-box {
+      width: 100%;
+    }
+    .fighter.enemy .status-row {
+      justify-content: center;
+    }
     .fighter.player { border-color: rgba(34,211,238,0.3); }
     .fighter.hit { animation: hitShake 0.35s ease; }
     @keyframes hitShake {
@@ -225,6 +239,28 @@
     }
     .fighter-name { font-size: 0.78rem; font-weight: 700; color: #e8e0f8; margin-bottom: 0.35rem; word-break: break-word; }
     .fighter-name.boss { color: #fbbf24; text-shadow: 0 0 12px rgba(251,191,36,0.5); }
+    .fighter-meta {
+      display: flex; gap: 0.45rem; justify-content: center; flex-wrap: wrap;
+      width: 100%; margin-bottom: 0.35rem;
+    }
+    .fighter-stat {
+      flex: 1; min-width: 4.2rem; max-width: 5.5rem;
+      text-align: center; padding: 0.22rem 0.45rem; border-radius: 8px;
+      background: rgba(0,0,0,0.35); border: 1px solid rgba(167,139,250,0.16);
+    }
+    .fighter.enemy .fighter-stat {
+      border-color: rgba(248,113,113,0.22);
+      background: rgba(248,113,113,0.06);
+    }
+    .fighter-stat .label {
+      display: block; font-size: 0.58rem; color: #7c6a9a;
+      letter-spacing: 0.08em; margin-bottom: 0.08rem;
+    }
+    .fighter-stat b {
+      display: block; font-size: 0.88rem; font-variant-numeric: tabular-nums;
+      color: #c4b5fd;
+    }
+    .fighter.enemy .fighter-stat b { color: #fca5a5; }
     .hp-bar-wrap { height: 10px; background: rgba(255,255,255,0.08); border-radius: 5px; overflow: hidden; margin-bottom: 0.3rem; }
     .hp-fill {
       height: 100%; border-radius: 5px; transition: width 0.35s ease;
@@ -232,7 +268,7 @@
       box-shadow: 0 0 8px rgba(139,92,246,0.5);
     }
     .fighter.enemy .hp-fill { background: linear-gradient(90deg, #dc2626, #f87171); box-shadow: 0 0 8px rgba(248,113,113,0.4); }
-    .hp-text { font-size: 0.68rem; color: #9ca3af; margin-bottom: 0.35rem; }
+    .hp-text { font-size: 0.68rem; color: #9ca3af; margin-bottom: 0.35rem; text-align: center; }
     .status-row { display: flex; flex-wrap: wrap; gap: 0.28rem; min-height: 1.2rem; max-height: 3.6em; overflow-y: auto; }
     .status-pill {
       font-size: 0.62rem; padding: 0.15rem 0.45rem; border-radius: 999px;
@@ -248,6 +284,7 @@
       margin-top: 0.4rem; padding: 0.38rem 0.45rem; border-radius: 8px;
       background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.25);
       font-size: 0.7rem; color: #fca5a5; line-height: 1.35;
+      text-align: center;
       transition: background 0.28s ease, border-color 0.28s ease, color 0.28s ease, transform 0.28s ease;
     }
     .intent-box.intent-change {
@@ -293,8 +330,8 @@
       border: 2px solid rgba(167,139,250,0.45);
       cursor: pointer; position: relative; overflow: hidden;
       transition: box-shadow 0.2s, border-color 0.2s, filter 0.2s;
-      display: grid; grid-template-rows: auto 1fr auto auto;
-      padding: 0.5rem 0.45rem 0;
+      display: grid; grid-template-rows: auto auto 1fr auto auto;
+      padding: 0.35rem 0.45rem 0;
       box-shadow: 0 6px 22px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
       will-change: transform, opacity;
     }
@@ -328,19 +365,37 @@
       border-color: rgba(251,191,36,0.5);
       background: linear-gradient(165deg, rgba(42,32,12,0.98), rgba(18,12,6,0.99));
     }
+    .card-header {
+      display: flex; justify-content: flex-end; align-items: center;
+      min-height: 1.35rem; position: relative; z-index: 2;
+    }
     .card-cost {
-      position: absolute; top: -9px; left: -9px; width: 30px; height: 30px;
+      position: relative; top: auto; left: auto;
+      width: 24px; height: 24px; flex-shrink: 0;
       border-radius: 50%; background: linear-gradient(135deg, #7c3aed, #a78bfa);
-      color: #fff; font-size: 0.88rem; font-weight: 800;
+      color: #fff; font-size: 0.78rem; font-weight: 800;
       display: flex; align-items: center; justify-content: center;
-      border: 2px solid #1a0a2e; box-shadow: 0 0 12px rgba(139,92,246,0.6);
+      border: 2px solid rgba(26,10,46,0.95); box-shadow: 0 0 8px rgba(139,92,246,0.45);
+    }
+    .battle-card.skill .card-cost {
+      background: linear-gradient(135deg, #0891b2, #22d3ee);
+      box-shadow: 0 0 8px rgba(34,211,238,0.35);
+    }
+    .battle-card.attack .card-cost {
+      background: linear-gradient(135deg, #dc2626, #f87171);
+      box-shadow: 0 0 8px rgba(248,113,113,0.35);
+    }
+    .battle-card.power .card-cost {
+      background: linear-gradient(135deg, #d97706, #fbbf24);
+      box-shadow: 0 0 8px rgba(251,191,36,0.35);
     }
     .card-name {
-      font-size: 0.92rem; font-weight: 800; color: #fff; line-height: 1.2;
-      margin: 0.35rem 0.5rem 0.2rem 0; letter-spacing: 0.03em;
+      font-size: 0.88rem; font-weight: 800; color: #fff; line-height: 1.25;
+      margin: 0 0 0.15rem; letter-spacing: 0.02em;
       text-shadow: 0 1px 3px rgba(0,0,0,0.65);
-      min-height: 2.1em;
-      display: flex; align-items: center;
+      min-height: 2.15em;
+      display: flex; align-items: center; justify-content: center;
+      text-align: center; padding: 0 0.15rem;
     }
     .card-icon {
       font-size: 2.5rem; text-align: center;
@@ -590,6 +645,10 @@
           </div>
           <div class="fighter enemy" id="enemyFighter">
             <div class="fighter-name" id="enemyName">深淵爬行者</div>
+            <div class="fighter-meta">
+              <div class="fighter-stat"><span class="label">等級</span><b id="enemyLevel">Lv.1</b></div>
+              <div class="fighter-stat"><span class="label">能量</span><b id="enemyEnergy">2</b></div>
+            </div>
             <div class="hp-bar-wrap"><div class="hp-fill" id="enemyHpFill" style="width:100%"></div></div>
             <div class="hp-text" id="enemyHpText">30 / 30</div>
             <div class="status-row" id="enemyStatus"></div>
@@ -1049,6 +1108,18 @@
       return normals[(f - 1) % normals.length];
     }
 
+    function enemyLevelValue(f, et) {
+      return f + (et.boss ? 3 : 0);
+    }
+
+    function enemyBaseEnergy(et) {
+      return et.boss ? 3 : 2;
+    }
+
+    function enemyEnergyDisplay() {
+      return enemy.energy + (enemy.strength || 0);
+    }
+
     function spawnEnemy(f) {
       const typeKey = floorEnemyType(f);
       const et = ENEMY_TYPES[typeKey];
@@ -1056,6 +1127,8 @@
       const hp = Math.floor(et.hpBase * scale * config.hpMul * (et.boss ? 1 : 1));
       enemy = {
         typeKey, name: et.name, icon: et.icon, boss: !!et.boss,
+        level: enemyLevelValue(f, et),
+        energy: enemyBaseEnergy(et),
         hp, maxHp: hp, block: 0, strength: 0, enraged: false,
         status: {}, patterns: et.patterns.slice(), patternIdx: 0,
         intent: null,
@@ -1307,7 +1380,7 @@
     }
 
     function cardHtml(def, withRibbon) {
-      return '<span class="card-cost">' + def.cost + '</span>' +
+      return '<div class="card-header"><span class="card-cost">' + def.cost + '</span></div>' +
         '<div class="card-name">' + def.name + '</div>' +
         '<div class="card-icon">' + def.icon + '</div>' +
         '<div class="card-desc">' + def.desc + '</div>' +
@@ -1472,6 +1545,8 @@
       const nameEl = $('enemyName');
       nameEl.textContent = enemy.icon + ' ' + enemy.name;
       nameEl.className = 'fighter-name' + (enemy.boss ? ' boss' : '');
+      $('enemyLevel').textContent = 'Lv.' + enemy.level;
+      $('enemyEnergy').textContent = enemyEnergyDisplay();
       $('enemyFighter').classList.toggle('enraged', !!enemy.enraged);
       renderIntent();
     }
@@ -1703,7 +1778,7 @@
     $('btnHelp').onclick = () => { helpFromGame = false; showScreen('help'); };
     $('btnHelpBack').onclick = closeHelp;
     $('btnHelpClose').onclick = closeHelp;
-    $('btnLeaveMenu').onclick = () => PlatformBridge.leaveToPlatform({ confirm: true });
+    $('btnLeaveMenu').onclick = () => { PlatformBridge.leaveToPlatform({ confirm: true }); };
     $('btnEndTurn').onclick = endPlayerTurn;
     $('btnRetry').onclick = () => { $('resultOverlay').classList.remove('show'); startGame(); };
     $('btnMenu').onclick = () => { $('resultOverlay').classList.remove('show'); showScreen('menu'); };
@@ -1720,8 +1795,11 @@
       showScreen('help');
     };
     $('btnQuit').onclick = () => {
-      if (!gameActive || !confirm('確定放棄本局？進度可能尚未保存。')) return;
-      endRun(false);
+      if (!gameActive) return;
+      PlatformBridge.confirmLeave('確定放棄本局？進度可能尚未保存。').then(function (ok) {
+        if (!ok) return;
+        endRun(false);
+      });
     };
     DemoEnhance.setupLeaveGuard({
       getActive: () => gameActive,

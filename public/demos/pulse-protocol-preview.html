@@ -126,12 +126,15 @@
       transition: width 0.15s linear;
     }
     .canvas-wrap {
-      position: relative; flex: 1 1 auto; min-height: min(48vh, 520px); width: 100%;
+      position: relative; flex: 1 1 auto; min-height: 0; width: 100%;
       display: flex; align-items: center; justify-content: center;
       border-radius: 10px; overflow: hidden;
       border: 1px solid rgba(0,229,255,0.25);
       box-shadow: 0 0 40px rgba(255,45,149,0.1), inset 0 0 30px rgba(0,0,0,0.35);
       background: #080818;
+    }
+    html:not(.np-embed-mode) .canvas-wrap {
+      min-height: min(48vh, 520px);
     }
     #gameCanvas {
       display: block; touch-action: none;
@@ -549,8 +552,22 @@
     if (!canvas) return { w: 360, h: 480 };
     var wrap = canvas.parentElement;
     var rect = wrap ? wrap.getBoundingClientRect() : { width: 0, height: 0 };
-    var maxW = rect.width > 20 ? rect.width : Math.min(520, window.innerWidth - 28);
-    var maxH = rect.height > 20 ? rect.height : Math.min(640, window.innerHeight * 0.52);
+    var rootStyle = getComputedStyle(document.documentElement);
+    var embedW = parseInt(rootStyle.getPropertyValue('--np-embed-width'), 10) || 0;
+    var embedH = parseInt(rootStyle.getPropertyValue('--np-embed-height'), 10) || 0;
+    var compact = document.documentElement.classList.contains('np-embed-compact');
+    var minW = compact ? 220 : CANVAS_MIN_W;
+    var minH = compact ? 280 : CANVAS_MIN_H;
+    var maxW = rect.width > 20
+      ? rect.width
+      : embedW > 20
+        ? embedW - 12
+        : Math.min(520, window.innerWidth - 28);
+    var maxH = rect.height > 20
+      ? rect.height
+      : embedH > 20
+        ? Math.max(180, embedH * 0.52)
+        : Math.min(640, window.innerHeight * 0.52);
     var w = maxW;
     var h = w / CANVAS_ASPECT;
     if (h > maxH) {
@@ -558,8 +575,8 @@
       w = h * CANVAS_ASPECT;
     }
     return {
-      w: Math.floor(Math.max(CANVAS_MIN_W, w)),
-      h: Math.floor(Math.max(CANVAS_MIN_H, h)),
+      w: Math.floor(Math.max(minW, w)),
+      h: Math.floor(Math.max(minH, h)),
     };
   }
 
@@ -567,6 +584,7 @@
     if (!canvas) return;
     var size = computeCanvasSize();
     var info = DemoEnhance.resizeCanvas(canvas, size.w, size.h);
+    if (!info.ctx) return;
     ctx = info.ctx;
     cw = info.w;
     ch = info.h;
@@ -875,6 +893,7 @@
   }
 
   function render() {
+    if (!ctx) return;
     drawBackground();
     drawBeatPulse(lastDt);
     drawNotes();
@@ -1057,7 +1076,9 @@
     $('btnPlay').onclick = startGame;
     $('btnHelp').onclick = function () { showScreen('helpScreen'); };
     $('btnHelpClose').onclick = function () { showScreen('titleScreen'); };
-    $('btnLeave').onclick = function () { PlatformBridge.leaveToPlatform({ confirm: true }); };
+    $('btnLeave').onclick = function () {
+      PlatformBridge.leaveToPlatform({ confirm: true });
+    };
     $('btnPause').onclick = function () {
       if (!running) return;
       paused = !paused;
@@ -1130,6 +1151,13 @@
     window.addEventListener('resize', function () {
       if (!$('gameScreen').classList.contains('active')) return;
       layoutGameCanvas();
+    });
+    window.addEventListener('message', function (e) {
+      if (e.origin !== location.origin) return;
+      var d = e.data;
+      if (!d || d.type !== 'nexusplay:resize') return;
+      if (!$('gameScreen').classList.contains('active')) return;
+      requestAnimationFrame(function () { layoutGameCanvas(); });
     });
   }
 

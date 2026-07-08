@@ -6,7 +6,7 @@ import {
 } from "@/lib/forum";
 import { createForumPost, getForumPostsByGameId } from "@/lib/forum-service";
 import { triggerForumWebSubPing } from "@/lib/websub-service";
-import { sanitizePlainText } from "@/lib/sanitize";
+import { sanitizePlainText } from "@/lib/sanitize-plain";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 
 function parseGameId(raw: string) {

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { CHAT_LIMITS, isValidChatChannel } from "@/lib/chat";
 import { createChatMessage, listChatMessages } from "@/lib/chat-service";
-import { sanitizePlainText } from "@/lib/sanitize";
+import { sanitizePlainText } from "@/lib/sanitize-plain";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 
 export async function GET(request: Request) {

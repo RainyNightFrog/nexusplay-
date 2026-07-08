@@ -1,21 +1,29 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
+import { GameLeaveConfirmDialog } from "@/components/game/game-leave-confirm-dialog";
 import { useAuth } from "@/hooks/use-auth";
+import { useRouter } from "@/i18n/navigation";
 import {
   NEXUSPLAY_AUTH_MESSAGE,
+  NEXUSPLAY_LEAVE_CONFIRM_REQUEST,
+  NEXUSPLAY_LEAVE_CONFIRM_RESPONSE,
   NEXUSPLAY_LEAVE_MESSAGE,
   NEXUSPLAY_READY_MESSAGE,
   NEXUSPLAY_RESIZE_MESSAGE,
   type NexusPlayAuthUser,
+  type NexusPlayLeaveConfirmRequest,
 } from "@/lib/nexusplay-embed-sdk";
-import { useRouter } from "@/i18n/navigation";
 
 type GameEmbedBridgeProps = {
   iframeRef: RefObject<HTMLIFrameElement | null>;
   gameId: string;
   expanded?: boolean;
+};
+
+type PendingLeaveConfirm = {
+  requestId: string;
 };
 
 function buildAuthPayload(
@@ -35,6 +43,10 @@ export function GameEmbedBridge({
 }: GameEmbedBridgeProps) {
   const { profile, loading } = useAuth();
   const router = useRouter();
+  const [leaveConfirm, setLeaveConfirm] = useState<PendingLeaveConfirm | null>(
+    null
+  );
+  const leaveConfirmRef = useRef<PendingLeaveConfirm | null>(null);
 
   const postAuth = useCallback(() => {
     const iframe = iframeRef.current;
@@ -65,10 +77,53 @@ export function GameEmbedBridge({
     );
   }, [iframeRef, expanded]);
 
+  const respondLeaveConfirm = useCallback(
+    (confirmed: boolean) => {
+      const pending = leaveConfirmRef.current;
+      if (!pending) return;
+
+      const iframe = iframeRef.current;
+      iframe?.contentWindow?.postMessage(
+        {
+          type: NEXUSPLAY_LEAVE_CONFIRM_RESPONSE,
+          requestId: pending.requestId,
+          confirmed,
+        },
+        window.location.origin
+      );
+
+      leaveConfirmRef.current = null;
+      setLeaveConfirm(null);
+    },
+    [iframeRef]
+  );
+
+  const handleStay = useCallback(() => {
+    respondLeaveConfirm(false);
+  }, [respondLeaveConfirm]);
+
+  const handleLeave = useCallback(() => {
+    respondLeaveConfirm(true);
+  }, [respondLeaveConfirm]);
+
   useEffect(() => {
     function onMessage(event: MessageEvent) {
       if (event.origin !== window.location.origin) return;
-      const data = event.data as { type?: string; gameId?: number };
+      const data = event.data as {
+        type?: string;
+        gameId?: number;
+        requestId?: string;
+      };
+
+      if (data?.type === NEXUSPLAY_LEAVE_CONFIRM_REQUEST) {
+        const request = data as NexusPlayLeaveConfirmRequest;
+        if (!request.requestId) return;
+        const pending = { requestId: request.requestId };
+        leaveConfirmRef.current = pending;
+        setLeaveConfirm(pending);
+        return;
+      }
+
       if (data?.type === NEXUSPLAY_LEAVE_MESSAGE) {
         if (window.history.length > 1) {
           router.back();
@@ -77,6 +132,7 @@ export function GameEmbedBridge({
         }
         return;
       }
+
       if (data?.type !== NEXUSPLAY_READY_MESSAGE) return;
       if (String(data.gameId ?? "") !== gameId) return;
       postAuth();
@@ -109,5 +165,24 @@ export function GameEmbedBridge({
     return () => observer.disconnect();
   }, [iframeRef, postResize, expanded]);
 
-  return null;
+  useEffect(() => {
+    if (!leaveConfirm) return;
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        respondLeaveConfirm(false);
+      }
+    }
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [leaveConfirm, respondLeaveConfirm]);
+
+  return (
+    <GameLeaveConfirmDialog
+      open={Boolean(leaveConfirm)}
+      onStay={handleStay}
+      onLeave={handleLeave}
+    />
+  );
 }

@@ -400,6 +400,10 @@
     "tipClose": "關閉",
     "tipCheckoutFailed": "無法建立打賞",
     "tipLegalLink": "付款與打賞政策",
+    "leaveConfirmTitle": "確定要離開遊戲？",
+    "leaveConfirmDescription": "遊戲進行中，目前進度可能尚未保存。",
+    "leaveConfirmStay": "繼續遊玩",
+    "leaveConfirmLeave": "離開遊戲",
     "tipPayButton": "確認付款",
     "tipReceiptTitle": "打賞收據",
     "tipReceiptBilling": "帳單地址",
@@ -1509,7 +1513,12 @@
     "loading": "載入中…",
     "retentionHint": "聊天記錄保留 7 天",
     "loginRequired": "登入後即可聊天",
+    "goLogin": "前往登入",
     "creatorReadOnly": "僅創作者可在此頻道發言，你仍可瀏覽訊息",
-    "emojiPicker": "插入表情"
+    "emojiPicker": "插入表情",
+    "readFailed": "讀取聊天記錄失敗",
+    "sendFailed": "發送失敗",
+    "recallFailed": "回收失敗",
+    "connectionFailed": "無法連線聊天服務，請重新整理頁面"
   }
 }

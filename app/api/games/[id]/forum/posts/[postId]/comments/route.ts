@@ -4,9 +4,8 @@ import {
   forumPostBelongsToGame,
   getForumCommentsByPostId,
 } from "@/lib/forum-service";
-import { notifyForumPostAuthorOfReply } from "@/lib/forum-reply-notify";
 import { FORUM_LIMITS } from "@/lib/forum";
-import { sanitizePlainText } from "@/lib/sanitize";
+import { sanitizePlainText } from "@/lib/sanitize-plain";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 
 function parseId(raw: string) {
@@ -88,6 +87,7 @@ export async function POST(
       authClient
     );
 
+    const { notifyForumPostAuthorOfReply } = await import("@/lib/forum-reply-notify");
     void notifyForumPostAuthorOfReply({
       postId: numericPostId,
       gameId,

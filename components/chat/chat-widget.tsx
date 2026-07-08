@@ -12,8 +12,10 @@ import {
 import { useTranslations } from "next-intl";
 import { ChatInput } from "@/components/chat/chat-input";
 import { ChatMessageList } from "@/components/chat/chat-message-list";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/use-auth";
+import { Link } from "@/i18n/navigation";
 import { useChatMessages } from "@/hooks/use-chat-messages";
 import type { ChatChannel } from "@/lib/chat";
 import { cn } from "@/lib/utils";
@@ -63,7 +65,7 @@ function ChatChannelPanel({
 
 export function ChatWidget() {
   const t = useTranslations("chat");
-  const { profile, isCreator } = useAuth();
+  const { profile, isCreator, loading } = useAuth();
   const [open, setOpen] = useState(false);
   const [channel, setChannel] = useState<ChatChannel>("world");
   const [minimized, setMinimized] = useState(false);
@@ -86,8 +88,6 @@ export function ChatWidget() {
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
   }, [open]);
-
-  if (!profile) return null;
 
   return (
     <div className="pointer-events-none fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3">
@@ -144,46 +144,72 @@ export function ChatWidget() {
 
             {!minimized && (
               <>
-                <Tabs
-                  value={channel}
-                  onValueChange={(value) => setChannel(value as ChatChannel)}
-                  className="flex min-h-0 flex-1 flex-col gap-0"
-                >
-                  <TabsList className="mx-3 mt-3 h-9 w-auto self-stretch rounded-xl border border-white/8 bg-zinc-900/60 p-1">
-                    <TabsTrigger
-                      value="world"
-                      className="flex-1 gap-1.5 rounded-lg text-xs data-active:bg-cyan-500/15 data-active:text-cyan-200"
+                {loading ? (
+                  <div className="flex flex-1 items-center justify-center px-6 py-12 text-sm text-zinc-500">
+                    {t("loading")}
+                  </div>
+                ) : !profile ? (
+                  <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 py-10 text-center">
+                    <div className="flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500/15 to-violet-500/15 text-cyan-300">
+                      <MessageCircle className="size-6" />
+                    </div>
+                    <p className="text-sm text-zinc-300">{t("loginRequired")}</p>
+                    <Button
+                      nativeButton={false}
+                      render={<Link href="/auth" />}
+                      className="gap-2 bg-gradient-to-r from-cyan-600 to-violet-600 text-white hover:from-cyan-500 hover:to-violet-500"
                     >
-                      <Globe className="size-3.5" />
-                      {t("channelWorld")}
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="creator"
-                      className="flex-1 gap-1.5 rounded-lg text-xs data-active:bg-violet-500/15 data-active:text-violet-200"
+                      {t("goLogin")}
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <Tabs
+                      value={channel}
+                      onValueChange={(value) =>
+                        setChannel(value as ChatChannel)
+                      }
+                      className="flex min-h-0 flex-1 flex-col gap-0"
                     >
-                      <Sparkles className="size-3.5" />
-                      {t("channelCreator")}
-                    </TabsTrigger>
-                  </TabsList>
+                      <TabsList className="mx-3 mt-3 h-9 w-auto self-stretch rounded-xl border border-white/8 bg-zinc-900/60 p-1">
+                        <TabsTrigger
+                          value="world"
+                          className="flex-1 gap-1.5 rounded-lg text-xs data-active:bg-cyan-500/15 data-active:text-cyan-200"
+                        >
+                          <Globe className="size-3.5" />
+                          {t("channelWorld")}
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value="creator"
+                          className="flex-1 gap-1.5 rounded-lg text-xs data-active:bg-violet-500/15 data-active:text-violet-200"
+                        >
+                          <Sparkles className="size-3.5" />
+                          {t("channelCreator")}
+                        </TabsTrigger>
+                      </TabsList>
 
-                  <ChatChannelPanel
-                    channel="world"
-                    active={channel === "world"}
-                    draft={drafts.world}
-                    onDraftChange={(value) => updateDraft("world", value)}
-                  />
-                  <ChatChannelPanel
-                    channel="creator"
-                    active={channel === "creator"}
-                    readOnly={!isCreator}
-                    draft={drafts.creator}
-                    onDraftChange={(value) => updateDraft("creator", value)}
-                  />
-                </Tabs>
+                      <ChatChannelPanel
+                        channel="world"
+                        active={channel === "world"}
+                        draft={drafts.world}
+                        onDraftChange={(value) => updateDraft("world", value)}
+                      />
+                      <ChatChannelPanel
+                        channel="creator"
+                        active={channel === "creator"}
+                        readOnly={!isCreator}
+                        draft={drafts.creator}
+                        onDraftChange={(value) =>
+                          updateDraft("creator", value)
+                        }
+                      />
+                    </Tabs>
 
-                <div className="border-t border-white/5 px-3 py-2 text-center text-[10px] text-zinc-600">
-                  {t("retentionHint")}
-                </div>
+                    <div className="border-t border-white/5 px-3 py-2 text-center text-[10px] text-zinc-600">
+                      {t("retentionHint")}
+                    </div>
+                  </>
+                )}
               </>
             )}
           </motion.div>

@@ -5,6 +5,8 @@
 (function () {
   var AUTH_TYPE = "nexusplay:auth";
   var LEAVE_TYPE = "nexusplay:leave";
+  var LEAVE_CONFIRM_REQUEST = "nexusplay:leave-confirm-request";
+  var LEAVE_CONFIRM_RESPONSE = "nexusplay:leave-confirm-response";
   var READY_TYPE = "nexusplay:ready";
 
   var SCROLLBAR_CSS =
@@ -58,6 +60,7 @@
   var authSettled = false;
   var authWaiters = [];
   var gameSessionActive = false;
+  var pendingLeaveConfirm = null;
   var LEAVE_CONFIRM_MESSAGE =
     "\u904a\u6232\u9032\u884c\u4e2d\uff0c\u78ba\u5b9a\u8981\u96e2\u958b\u55ce\uff1f\u76ee\u524d\u9032\u5ea6\u53ef\u80fd\u5c1a\u672a\u4fdd\u5b58\u3002";
 
@@ -95,6 +98,133 @@
     );
     window.dispatchEvent(new Event("resize"));
   });
+
+  window.addEventListener("message", function (e) {
+    if (e.origin !== location.origin) return;
+    var d = e.data;
+    if (!d || d.type !== LEAVE_CONFIRM_RESPONSE) return;
+    if (!pendingLeaveConfirm || d.requestId !== pendingLeaveConfirm.id) return;
+    var resolve = pendingLeaveConfirm.resolve;
+    pendingLeaveConfirm = null;
+    resolve(!!d.confirmed);
+  });
+
+  function requestParentLeaveConfirm(message) {
+    return new Promise(function (resolve) {
+      var requestId =
+        "leave-" + Date.now() + "-" + Math.random().toString(36).slice(2);
+      pendingLeaveConfirm = { id: requestId, resolve: resolve };
+      try {
+        window.parent.postMessage(
+          {
+            type: LEAVE_CONFIRM_REQUEST,
+            requestId: requestId,
+            message: message,
+          },
+          location.origin
+        );
+      } catch (_e) {
+        pendingLeaveConfirm = null;
+        resolve(showCustomConfirm(message));
+        return;
+      }
+      setTimeout(function () {
+        if (pendingLeaveConfirm && pendingLeaveConfirm.id === requestId) {
+          pendingLeaveConfirm = null;
+          resolve(showCustomConfirm(message));
+        }
+      }, 30000);
+    });
+  }
+
+  function showCustomConfirm(message) {
+    return new Promise(function (resolve) {
+      injectConfirmStyles();
+      var overlay = document.createElement("div");
+      overlay.className = "np-leave-overlay";
+      overlay.innerHTML =
+        '<div class="np-leave-dialog" role="alertdialog" aria-modal="true">' +
+        '<div class="np-leave-header">' +
+        '<div class="np-leave-icon" aria-hidden="true">!</div>' +
+        '<div><p class="np-leave-title">\u78ba\u5b9a\u8981\u96e2\u958b\u904a\u6232\uff1f</p>' +
+        '<p class="np-leave-message">' +
+        escapeHtml(message) +
+        "</p></div></div>" +
+        '<div class="np-leave-actions">' +
+        '<button type="button" class="np-leave-btn np-leave-btn-stay">\u7e7c\u7e8c\u904a\u73a9</button>' +
+        '<button type="button" class="np-leave-btn np-leave-btn-leave">\u96e2\u958b\u904a\u6232</button>' +
+        "</div></div>";
+
+      function cleanup(result) {
+        overlay.remove();
+        document.removeEventListener("keydown", onKeyDown);
+        resolve(result);
+      }
+
+      function onKeyDown(event) {
+        if (event.key === "Escape") cleanup(false);
+      }
+
+      overlay.querySelector(".np-leave-btn-stay").onclick = function () {
+        cleanup(false);
+      };
+      overlay.querySelector(".np-leave-btn-leave").onclick = function () {
+        cleanup(true);
+      };
+      overlay.onclick = function (event) {
+        if (event.target === overlay) cleanup(false);
+      };
+
+      document.addEventListener("keydown", onKeyDown);
+      document.body.appendChild(overlay);
+    });
+  }
+
+  function injectConfirmStyles() {
+    if (document.getElementById("np-leave-confirm-styles")) return;
+    var style = document.createElement("style");
+    style.id = "np-leave-confirm-styles";
+    style.textContent =
+      ".np-leave-overlay{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:1rem;background:rgba(0,0,0,.78);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}" +
+      ".np-leave-dialog{width:min(100%,24rem);overflow:hidden;border-radius:1rem;border:1px solid rgba(255,255,255,.1);background:rgba(9,9,11,.96);box-shadow:0 24px 64px rgba(0,0,0,.55)}" +
+      ".np-leave-header{display:flex;gap:.75rem;padding:1rem 1.25rem;border-bottom:1px solid rgba(255,255,255,.08);background:linear-gradient(90deg,rgba(6,182,212,.1),transparent,rgba(139,92,246,.1))}" +
+      ".np-leave-icon{flex-shrink:0;width:2.5rem;height:2.5rem;display:flex;align-items:center;justify-content:center;border-radius:.75rem;background:linear-gradient(135deg,rgba(245,158,11,.2),rgba(244,63,94,.2));color:#fcd34d;font-weight:800;font-size:1.1rem}" +
+      ".np-leave-title{margin:0;font-size:1rem;font-weight:700;color:#f4f4f5}" +
+      ".np-leave-message{margin:.35rem 0 0;font-size:.875rem;line-height:1.5;color:#a1a1aa}" +
+      ".np-leave-actions{display:flex;flex-direction:column-reverse;gap:.5rem;padding:1rem 1.25rem}" +
+      "@media(min-width:480px){.np-leave-actions{flex-direction:row;justify-content:flex-end}}" +
+      ".np-leave-btn{cursor:pointer;border-radius:.65rem;padding:.55rem 1rem;font-size:.875rem;font-weight:600;border:1px solid transparent}" +
+      ".np-leave-btn-stay{border-color:rgba(255,255,255,.1);background:rgba(24,24,27,.85);color:#e4e4e7}" +
+      ".np-leave-btn-stay:hover{background:rgba(39,39,42,.95)}" +
+      ".np-leave-btn-leave{background:linear-gradient(90deg,#0891b2,#7c3aed);color:#fff}" +
+      ".np-leave-btn-leave:hover{background:linear-gradient(90deg,#06b6d4,#8b5cf6)}";
+    document.head.appendChild(style);
+  }
+
+  function confirmLeave(message) {
+    message = message || LEAVE_CONFIRM_MESSAGE;
+    if (window.parent !== window) {
+      return requestParentLeaveConfirm(message);
+    }
+    return showCustomConfirm(message);
+  }
+
+  function executeLeave() {
+    gameSessionActive = false;
+    try {
+      if (window.parent !== window) {
+        window.parent.postMessage({ type: LEAVE_TYPE }, location.origin);
+        return true;
+      }
+    } catch (_e) {}
+    if (window.history.length > 1) {
+      window.history.back();
+      return true;
+    }
+    var localeMatch = location.pathname.match(/^\/([a-z]{2}(-[A-Z]{2})?)\//);
+    window.location.href = localeMatch ? "/" + localeMatch[1] : "/";
+    return true;
+  }
 
   function waitForAuth(ms) {
     ms = ms || 6000;
@@ -289,8 +419,8 @@
       "html.np-embed-mode .screen.active{height:100%;max-height:100%;min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}" +
       "html.np-embed-mode #game.active,html.np-embed-mode #gameScreen.active{justify-content:flex-start;padding:.25rem .35rem .4rem}" +
       "html.np-embed-mode .game-shell,html.np-embed-mode .game-wrap{max-height:none;width:100%;overflow:visible}" +
-      "html.np-embed-mode html.in-game #gameScreen.active{overflow:hidden;display:flex;flex-direction:column}" +
-      "html.np-embed-mode html.in-game .game-wrap{flex:1;min-height:0;overflow:hidden}" +
+      "html.np-embed-mode html.in-game #gameScreen.active,html.np-embed-mode.in-game #gameScreen.active{overflow:hidden;display:flex;flex-direction:column}" +
+      "html.np-embed-mode html.in-game .game-wrap,html.np-embed-mode.in-game .game-wrap{flex:1;min-height:0;overflow:hidden}" +
       "html.np-embed-compact .game-toolbar{margin-bottom:.25rem}" +
       "html.np-embed-compact .tool-btn{padding:.28rem .5rem;font-size:.66rem}" +
       "html.np-embed-compact .battle-top{margin-bottom:.3rem}" +
@@ -309,6 +439,11 @@
       "html.np-embed-compact .battle-actions{margin-bottom:.3rem}" +
       "html.np-embed-compact .battle-actions button{padding:.42rem .7rem;font-size:.72rem}" +
       "html.np-embed-compact .top-bar{font-size:.66rem;padding:.32rem .4rem;gap:.22rem;margin-bottom:.28rem}" +
+      "html.np-embed-compact .hud-bar{margin-bottom:.22rem;padding:.32rem .4rem;font-size:.62rem}" +
+      "html.np-embed-compact .hud-stat b{font-size:.88rem}" +
+      "html.np-embed-compact .game-toolbar{margin-bottom:.2rem}" +
+      "html.np-embed-compact .lane-keys{margin-top:.2rem;font-size:.62rem}" +
+      "html.np-embed-compact .canvas-wrap{min-height:0}" +
       "html.np-embed-compact .top-stat b{font-size:.92rem}" +
       "html.np-embed-compact .tower-bar,html.np-embed-compact .tactical-bar,html.np-embed-compact .action-bar{margin-bottom:.25rem}" +
       "html.np-embed-compact .threat-bar{margin-bottom:.22rem;font-size:.62rem}" +
@@ -433,26 +568,17 @@
     getLeaveConfirmMessage: function () {
       return LEAVE_CONFIRM_MESSAGE;
     },
+    confirmLeave: confirmLeave,
     leaveToPlatform: function (options) {
       options = options || {};
       if (options.confirm !== false && gameSessionActive && !options.force) {
         var msg = options.message || LEAVE_CONFIRM_MESSAGE;
-        if (!window.confirm(msg)) return false;
+        return confirmLeave(msg).then(function (confirmed) {
+          if (!confirmed) return false;
+          return executeLeave();
+        });
       }
-      gameSessionActive = false;
-      try {
-        if (window.parent !== window) {
-          window.parent.postMessage({ type: LEAVE_TYPE }, location.origin);
-          return true;
-        }
-      } catch (_e) {}
-      if (window.history.length > 1) {
-        window.history.back();
-        return true;
-      }
-      var localeMatch = location.pathname.match(/^\/([a-z]{2}(-[A-Z]{2})?)\//);
-      window.location.href = localeMatch ? "/" + localeMatch[1] : "/";
-      return true;
+      return executeLeave();
     },
     setSaveHint: function (el, synced, userLoggedIn) {
       if (!el) return;

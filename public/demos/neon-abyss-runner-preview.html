@@ -80,6 +80,18 @@
     .help-box ul { padding-left: 1.2rem; }
     .help-box li { margin-bottom: 0.28rem; }
     .help-box strong { color: #22d3ee; }
+    .settings-box { text-align: left; margin: 0.5rem 0 0.25rem; }
+    .settings-group { margin-bottom: 1rem; }
+    .settings-label {
+      display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+      font-size: 0.78rem; color: #94a3b8; letter-spacing: 0.06em; margin-bottom: 0.45rem;
+    }
+    .settings-label b { color: #22d3ee; font-size: 0.82rem; letter-spacing: 0.04em; }
+    .settings-options { display: flex; gap: 0.45rem; flex-wrap: wrap; }
+    .settings-options button {
+      flex: 1; min-width: 4.5rem; padding: 0.48rem 0.65rem; font-size: 0.78rem;
+    }
+    .settings-hint { font-size: 0.72rem; color: #64748b; line-height: 1.55; margin-top: 0.35rem; }
     #gameScreen { padding: 0; }
     #gameScreen.active {
       justify-content: center; align-items: center;
@@ -190,6 +202,7 @@
       </div>
       <div class="btn-row">
         <button class="primary" id="btnStart">▶ 開始疾馳</button>
+        <button id="btnSettings">⚙ 設定</button>
         <button id="btnHelp">遊戲說明</button>
         <button id="btnLeaderboard">🏆 排行榜</button>
         <button id="btnLeaveMenu">← 離開平台</button>
@@ -233,6 +246,11 @@
           <li><strong>生命值：</strong> 共 3 點，撞擊障礙扣除 1 點</li>
           <li><strong>評級：</strong> S ≥ 50000 · A ≥ 30000 · B ≥ 15000 · C ≥ 5000 · D 以下</li>
         </ul>
+        <h3>⚙️ 設定</h3>
+        <ul>
+          <li>主選單或遊戲中按 <strong>⚙ 設定</strong> 可調整鍵盤移動幅度與換道平滑度</li>
+          <li><strong>移動幅度「小」：</strong> 每次按鍵只換一條線道，需完成換道後才能再移動，適合覺得操作太靈敏的玩家</li>
+        </ul>
         <h3>⚙️ 難度</h3>
         <ul>
           <li><strong>休閒：</strong> 較慢速度、較低生成率，適合入門</li>
@@ -241,6 +259,45 @@
         </ul>
       </div>
       <div class="btn-row"><button class="primary" id="btnHelpBack">返回主選單</button></div>
+    </div>
+  </div>
+
+  <div id="settings" class="screen">
+    <div class="panel">
+      <div class="help-screen-header" style="display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:.75rem;">
+        <h1 style="margin:0!important;flex:1;text-align:left!important;font-size:1.1rem!important;">遊戲設定</h1>
+        <button type="button" class="help-close-btn" id="btnSettingsClose" style="cursor:pointer;border:1px solid rgba(34,211,238,.5);background:rgba(34,211,238,.12);color:#67e8f9;padding:.45rem .9rem;font-size:.78rem;font-weight:700;border-radius:6px;">✕ 關閉</button>
+      </div>
+      <div class="settings-box">
+        <div class="settings-group">
+          <div class="settings-label">
+            <span>鍵盤移動幅度</span>
+            <b id="moveRangeLabel">小</b>
+          </div>
+          <div class="settings-options" id="moveRangeGroup">
+            <button type="button" class="setting-btn selected" data-move-range="small">小</button>
+            <button type="button" class="setting-btn" data-move-range="medium">中</button>
+            <button type="button" class="setting-btn" data-move-range="large">大</button>
+          </div>
+          <p class="settings-hint">幅度越小，每次按鍵換道越穩、越不易一次跳過多條線道。覺得移動太靈敏時請選「小」。</p>
+        </div>
+        <div class="settings-group">
+          <div class="settings-label">
+            <span>換道平滑度</span>
+            <b id="laneSmoothLabel">標準</b>
+          </div>
+          <div class="settings-options" id="laneSmoothGroup">
+            <button type="button" class="setting-btn" data-lane-smooth="slow">慢</button>
+            <button type="button" class="setting-btn selected" data-lane-smooth="medium">標準</button>
+            <button type="button" class="setting-btn" data-lane-smooth="fast">快</button>
+          </div>
+          <p class="settings-hint">控制切換線道時的滑行速度，不影響單次移動距離。</p>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="primary" id="btnSettingsSave">儲存設定</button>
+        <button id="btnSettingsBack">返回主選單</button>
+      </div>
     </div>
   </div>
 
@@ -269,6 +326,7 @@
       </div>
       <div class="toolbar">
         <button class="tool-btn" id="btnPause">⏸ 暫停</button>
+        <button class="tool-btn" id="btnGameSettings">⚙ 設定</button>
         <button class="tool-btn" id="btnGameLb">🏆 排行</button>
         <button class="tool-btn" id="btnGameHelp">❓ 說明</button>
         <button class="tool-btn" id="btnQuit">🏠 主選單</button>
@@ -317,7 +375,22 @@
   const W = 960, H = 600;
   const LANES = [W * 0.25, W * 0.5, W * 0.75];
   const PLAYER_Y = H * 0.82;
-  const LANE_SWITCH_MS = 140;
+  const SETTINGS_STORAGE_KEY = 'nexusplay:neon-abyss-runner:settings';
+
+  const MOVE_RANGE_PRESETS = {
+    small:  { debounce: 320, requireSettled: true,  label: '小' },
+    medium: { debounce: 170, requireSettled: false, label: '中' },
+    large:  { debounce: 90,  requireSettled: false, label: '大' },
+  };
+
+  const LANE_SMOOTH_PRESETS = {
+    slow:   { switchMs: 220, label: '慢' },
+    medium: { switchMs: 140, label: '標準' },
+    fast:   { switchMs: 95,  label: '快' },
+  };
+
+  const MOVE_RANGE_LABELS = { small: '小', medium: '中', large: '大' };
+  const LANE_SMOOTH_LABELS = { slow: '慢', medium: '標準', fast: '快' };
 
   const DIFF = {
     easy:   { scroll: 220, spawn: 1.35, orbRate: 0.55, comboDecay: 0.00018, scoreMul: 1.0,  label: '休閒' },
@@ -334,7 +407,20 @@
   ];
 
   const $ = (id) => document.getElementById(id);
-  const screens = { menu: $('menu'), help: $('help'), leaderboard: $('leaderboardScreen'), game: $('gameScreen'), gameover: $('gameover') };
+  const screens = {
+    menu: $('menu'),
+    help: $('help'),
+    settings: $('settings'),
+    leaderboard: $('leaderboardScreen'),
+    game: $('gameScreen'),
+    gameover: $('gameover'),
+  };
+
+  let settings = { moveRange: 'small', laneSmooth: 'medium' };
+  let laneSwitchMs = LANE_SMOOTH_PRESETS.medium.switchMs;
+  let lastLaneInputAt = 0;
+  let settingsFromGame = false;
+  let settingsSnapshot = null;
 
   let difficulty = 'easy', cfg = DIFF.easy;
   let canvas, ctx, gameLoopCtrl, paused = false, running = false;
@@ -361,6 +447,49 @@
       if (s >= GRADE_THRESH[i].min) return GRADE_THRESH[i].g;
     }
     return 'D';
+  }
+
+  function getMovePreset() {
+    return MOVE_RANGE_PRESETS[settings.moveRange] || MOVE_RANGE_PRESETS.small;
+  }
+
+  function applyMoveSettings() {
+    const smooth = LANE_SMOOTH_PRESETS[settings.laneSmooth] || LANE_SMOOTH_PRESETS.medium;
+    laneSwitchMs = smooth.switchMs;
+    const moveLabel = $('moveRangeLabel');
+    const smoothLabel = $('laneSmoothLabel');
+    if (moveLabel) moveLabel.textContent = MOVE_RANGE_LABELS[settings.moveRange] || '小';
+    if (smoothLabel) smoothLabel.textContent = LANE_SMOOTH_LABELS[settings.laneSmooth] || '標準';
+    document.querySelectorAll('[data-move-range]').forEach((btn) => {
+      btn.classList.toggle('selected', btn.dataset.moveRange === settings.moveRange);
+    });
+    document.querySelectorAll('[data-lane-smooth]').forEach((btn) => {
+      btn.classList.toggle('selected', btn.dataset.laneSmooth === settings.laneSmooth);
+    });
+  }
+
+  function loadSettings(fromProgress) {
+    if (fromProgress && typeof fromProgress === 'object') {
+      if (fromProgress.moveRange && MOVE_RANGE_PRESETS[fromProgress.moveRange]) settings.moveRange = fromProgress.moveRange;
+      if (fromProgress.laneSmooth && LANE_SMOOTH_PRESETS[fromProgress.laneSmooth]) settings.laneSmooth = fromProgress.laneSmooth;
+    } else {
+      try {
+        const stored = localStorage.getItem(SETTINGS_STORAGE_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed.moveRange && MOVE_RANGE_PRESETS[parsed.moveRange]) settings.moveRange = parsed.moveRange;
+          if (parsed.laneSmooth && LANE_SMOOTH_PRESETS[parsed.laneSmooth]) settings.laneSmooth = parsed.laneSmooth;
+        }
+      } catch (_e) {}
+    }
+    applyMoveSettings();
+  }
+
+  function saveSettings() {
+    try {
+      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+    } catch (_e) {}
+    applyMoveSettings();
   }
 
   function applyProgress(p) {
@@ -561,11 +690,16 @@
   }
 
   function moveLane(dir) {
+    const preset = getMovePreset();
+    const now = performance.now();
+    if (now - lastLaneInputAt < preset.debounce) return;
+    if (preset.requireSettled && laneT < 1) return;
     const next = targetLane + dir;
     if (next < 0 || next > 2 || next === targetLane) return;
     targetLane = next;
     laneT = 0;
     player.tilt = dir * 0.35;
+    lastLaneInputAt = now;
   }
 
   function collectOrb(o) {
@@ -622,7 +756,7 @@
     scrollY = (scrollY + scroll * dt * 0.06) % 80;
 
     if (laneT < 1) {
-      laneT = Math.min(1, laneT + dt / LANE_SWITCH_MS);
+      laneT = Math.min(1, laneT + dt / laneSwitchMs);
       const ease = laneT < 0.5 ? 2 * laneT * laneT : 1 - Math.pow(-2 * laneT + 2, 2) / 2;
       const from = laneX(currentLane), to = laneX(targetLane);
       player.x = from + (to - from) * ease;
@@ -985,6 +1119,7 @@
     const result = await PlatformBridge.saveProgress({
       bestScore, bestWave, bestCombo, bestGrade,
       difficulty,
+      settings,
       _incrementGames: true,
     });
     PlatformBridge.setSaveHint($('goSaveHint'), result.synced, !!PlatformBridge.getUser());
@@ -1044,6 +1179,52 @@
     showScreen('menu');
   }
 
+  function openSettings(fromGame) {
+    settingsFromGame = !!fromGame;
+    settingsSnapshot = { ...settings };
+    if (fromGame && running && !paused) togglePause();
+    applyMoveSettings();
+    showScreen('settings');
+  }
+
+  function closeSettings(save) {
+    if (save) {
+      saveSettings();
+      PlatformBridge.saveProgress({
+        bestScore, bestWave, bestCombo, bestGrade,
+        difficulty,
+        settings,
+      });
+    } else if (settingsSnapshot) {
+      settings = { ...settingsSnapshot };
+      applyMoveSettings();
+    }
+    settingsSnapshot = null;
+    if (settingsFromGame) {
+      settingsFromGame = false;
+      paused = false;
+      $('btnPause').textContent = '⏸ 暫停';
+      showScreen('game');
+      if (running) gameLoopCtrl.start();
+      return;
+    }
+    showScreen('menu');
+  }
+
+  document.querySelectorAll('[data-move-range]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      settings.moveRange = btn.dataset.moveRange || 'small';
+      applyMoveSettings();
+    });
+  });
+
+  document.querySelectorAll('[data-lane-smooth]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      settings.laneSmooth = btn.dataset.laneSmooth || 'medium';
+      applyMoveSettings();
+    });
+  });
+
   document.querySelectorAll('.diff-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.diff-btn').forEach((b) => b.classList.remove('selected'));
@@ -1054,6 +1235,11 @@
 
   $('btnStart').onclick = startGame;
   $('btnRetry').onclick = startGame;
+  $('btnSettings').onclick = () => openSettings(false);
+  $('btnGameSettings').onclick = () => openSettings(true);
+  $('btnSettingsSave').onclick = () => closeSettings(true);
+  $('btnSettingsBack').onclick = () => closeSettings(true);
+  $('btnSettingsClose').onclick = () => closeSettings(false);
   $('btnHelp').onclick = () => { helpFromGame = false; showScreen('help'); };
   $('btnHelpBack').onclick = closeHelp;
   $('btnHelpClose').onclick = closeHelp;
@@ -1064,8 +1250,8 @@
   };
   $('btnQuit').onclick = quitToMenu;
   $('btnGoMenu').onclick = quitToMenu;
-  $('btnLeaveMenu').onclick = () => PlatformBridge.leaveToPlatform({ confirm: true });
-  $('btnLeaveGo').onclick = () => PlatformBridge.leaveToPlatform({ confirm: true });
+  $('btnLeaveMenu').onclick = () => { PlatformBridge.leaveToPlatform({ confirm: true }); };
+  $('btnLeaveGo').onclick = () => { PlatformBridge.leaveToPlatform({ confirm: true }); };
   DemoEnhance.setupLeaveGuard({
     getActive: () => running,
     button: $('btnLeaveGame'),
@@ -1102,8 +1288,14 @@
 
   window.addEventListener('keydown', (e) => {
     keys[e.code] = true;
-    if (e.code === 'KeyA' || e.code === 'ArrowLeft') moveLane(-1);
-    if (e.code === 'KeyD' || e.code === 'ArrowRight') moveLane(1);
+    if (e.code === 'KeyA' || e.code === 'ArrowLeft') {
+      if (e.repeat) return;
+      moveLane(-1);
+    }
+    if (e.code === 'KeyD' || e.code === 'ArrowRight') {
+      if (e.repeat) return;
+      moveLane(1);
+    }
     if (e.code === 'Space') {
       e.preventDefault();
       if (screens.game.classList.contains('active') && !paused) tryDash();
@@ -1136,6 +1328,7 @@
 
   PlatformBridge.init().then((p) => {
     applyProgress(p);
+    loadSettings(p && p.settings);
     PlatformBridge.setSaveHint($('saveHint'), false, !!PlatformBridge.getUser());
   });
 })();
