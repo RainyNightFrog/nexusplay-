@@ -117,6 +117,7 @@ export function AnnouncementMarquee({ uploadHref }: AnnouncementMarqueeProps) {
   const t = useTranslations("home");
   const [games, setGames] = useState<Game[]>([]);
   const [feedSeed, setFeedSeed] = useState(0);
+  const [mounted, setMounted] = useState(false);
 
   const formatGameLabel = useCallback(
     (templateKey: GamePickTemplateKey, title: string) =>
@@ -135,6 +136,10 @@ export function AnnouncementMarquee({ uploadHref }: AnnouncementMarqueeProps) {
 
     return mergeMarqueeFeed(announcements, gameItems);
   }, [feedSeed, formatGameLabel, games, t, uploadHref]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const trackSegments = useMemo(() => {
     if (feedItems.length === 0) {
@@ -174,6 +179,20 @@ export function AnnouncementMarquee({ uploadHref }: AnnouncementMarqueeProps) {
 
     return () => window.clearInterval(timer);
   }, []);
+
+  if (!mounted) {
+    return (
+      <section
+        className="nexus-announcement-marquee relative mb-8 w-full overflow-hidden"
+        aria-hidden="true"
+      >
+        <div className="nexus-announcement-marquee-border absolute inset-x-0 top-0 h-px" />
+        <div className="nexus-announcement-marquee-border absolute inset-x-0 bottom-0 h-px" />
+        <div className="nexus-announcement-marquee-bg absolute inset-0" />
+        <div className="relative py-3 sm:py-3.5" />
+      </section>
+    );
+  }
 
   return (
     <section

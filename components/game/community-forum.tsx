@@ -697,14 +697,6 @@ export function CommunityForum({
               <div className="p-5 text-center sm:p-6">
                 <div className="flex flex-wrap items-center justify-center gap-2">
                   <CategoryBadge category={selectedPost.category} />
-                  {isSeedForumPostId(selectedPost.id) && (
-                    <Badge
-                      variant="outline"
-                      className="border-amber-400/30 bg-amber-500/10 text-[11px] text-amber-200"
-                    >
-                      {t("seedPostBadge")}
-                    </Badge>
-                  )}
                   {isHub && selectedPost.game_title && (
                     <Link
                       href={`/game/${selectedPost.game_id}/forum`}
@@ -1147,14 +1139,6 @@ export function CommunityForum({
                   >
                     <div className="flex flex-wrap items-center justify-center gap-2">
                       <CategoryBadge category={post.category} />
-                      {isSeedForumPostId(post.id) && (
-                        <Badge
-                          variant="outline"
-                          className="border-amber-400/30 bg-amber-500/10 text-[11px] text-amber-200"
-                        >
-                          {t("seedPostBadge")}
-                        </Badge>
-                      )}
                       {isHub && post.game_title && (
                         <span className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] text-zinc-400">
                           <Gamepad2 className="size-3" />

@@ -277,7 +277,36 @@
     "followingViewAll": "팔로잉 관리",
     "heroLine1": "Thousands of browser games, zero downloads, zero waiting",
     "heroLine2": "Creators upload with ease, players enjoy without limits",
-    "heroLine3": "This is your gateway to the esports universe!!!"
+    "heroLine3": "This is your gateway to the esports universe!!!",
+    "announcements": {
+      "label": "Announcements",
+      "launch": "RainyNightFrog is live! Thousands of browser games — zero downloads, play instantly",
+      "upload": "Creator hub is open: upload a ZIP game and publish to the homepage in one click",
+      "community": "Join the community forum to share tips, devlogs, and game strategies",
+      "feeds": "Subscribe via RSS / Atom and never miss new releases or forum updates",
+      "featured": "Platform star games are trending: VOID GACHA · CoreDefense · CyberFortune",
+      "multilingual": "11 interface languages supported — switch anytime from the top-right menu",
+      "leaderboard": "Climb the favorites and playtime leaderboards to unlock exclusive titles",
+      "achievements": "Complete achievements and collect titles to showcase on your profile",
+      "forumRules": "Read the community rules before posting — help keep discussions friendly",
+      "followCreators": "Follow your favorite creators to get notified when they release new games",
+      "zeroDownload": "Pure browser gaming: no downloads, play instantly on any device",
+      "starGames": "Platform stars are trending: VOID GACHA · CoreDefense · CyberFortune",
+      "gameHot": "🔥 Hot pick · {title} — play now",
+      "gameRecommend": "✦ Today's pick · {title}",
+      "gamePlayNow": "🎮 Play now · {title} — tap to enter",
+      "gameTrending": "⚡ Trending · {title} is blowing up"
+    },
+    "socialNavLabel": "Official social links",
+    "socialX": "RainyNightFrog on X",
+    "socialGithub": "RainyNightFrog on GitHub",
+    "socialDiscord": "RainyNightFrog on Discord",
+    "socialInstagram": "RainyNightFrog on Instagram",
+    "socialYoutube": "RainyNightFrog official website",
+    "socialFacebook": "RainyNightFrog official website",
+    "socialBilibili": "RainyNightFrog official website",
+    "socialDouyin": "RainyNightFrog official website",
+    "socialTiktok": "RainyNightFrog official website"
   },
   "game": {
     "communityForum": "커뮤니티 포럼",
@@ -347,7 +376,8 @@
     "leaveConfirmLeave": "게임 나가기",
     "tipSpendingHint": "책임감 있게 팁을 주시고 감당할 수 있는 만큼만 지출하십시오.",
     "gameFeedJsonHide": "미리보기 숨기기",
-    "gameFeedSubscribeHint": "이 게임에 대한 개발자 블로그 및 포럼 게시물을 구독하세요."
+    "gameFeedSubscribeHint": "이 게임에 대한 개발자 블로그 및 포럼 게시물을 구독하세요.",
+    "tipCreatorPayoutNotReady": "The creator has not finished Stripe payout setup. Tips are unavailable for now. Creators: go to Settings → Payout to connect Stripe."
   },
   "dashboard": {
     "uploadGame": "게임 업로드",
@@ -675,7 +705,9 @@
     "emojiCategoryCommon": "공통",
     "emojiCategoryGaming": "게임",
     "emojiCategorySymbols": "기호",
-    "emojiCategoryMood": "기분"
+    "emojiCategoryMood": "기분",
+    "tipsFeeLiveBanner": "Tips · Live",
+    "tipsFeeDisclosureIntroLive": "All fees apply per individual tip, not as a lump sum on monthly totals. Real charges are processed by Stripe; net amounts below reflect processor fees."
   },
   "auth": {
     "callbackFailed": "로그인 인증 실패, 다시 시도해 주세요",
@@ -911,7 +943,8 @@
     "searchPlaceholder": "스레드, 콘텐츠, 작성자 검색…",
     "searchNoResults": "일치하는 스레드 없음",
     "searchNoResultsHint": "다른 키워드를 사용하거나 필터를 삭제해 보세요.",
-    "seedPlayerProfile": "이것은 데모 계정입니다. 플레이어 프로필을 사용할 수 없습니다."
+    "seedPlayerProfile": "이것은 데모 계정입니다. 플레이어 프로필을 사용할 수 없습니다.",
+    "seedPostBadge": "Demo"
   },
   "rules": {
     "title": "커뮤니티 규칙",
@@ -1028,7 +1061,11 @@
       "networkError": "네트워크 오류입니다. 나중에 다시 시도해 주세요.",
       "databaseUnavailable": "데이터 서비스를 일시적으로 사용할 수 없습니다. 나중에 다시 시도해 주세요.",
       "legacyImportsTableMissing": "레거시 가져오기 테이블이 설정되지 않았습니다. 게임 플랫폼에서 npm run db:legacy-imports를 실행한 다음 이 페이지를 새로 고치세요.",
-      "zipMissingIndex": "zip 根目錄需包含 index.html（或 index.htm）"
+      "zipMissingIndex": "zip 根目錄需包含 index.html（或 index.htm）",
+      "creatorPayoutNotReady": "The creator has not finished payout setup. Tips are unavailable for now.",
+      "creatorStripeNotConnected": "The creator has not connected Stripe yet.",
+      "loginRequiredTip": "Please sign in to send a tip",
+      "selfTipNotAllowed": "You cannot tip your own game"
     }
   },
   "admin": {
@@ -1293,7 +1330,11 @@
     "privacyP1": "RainyNightFrog는 플랫폼 운영을 위해 계정 데이터(이메일, 표시 이름), 업로드된 게임 콘텐츠, 플레이 및 분석 이벤트, 팁/지불 기록을 수집합니다.",
     "privacyP2": "청구서 수신 주소는 영수증 및 규정 준수를 위해 사용됩니다. 결제 카드 데이터는 Stripe에 의해 처리되며 전체 카드 번호는 당사 서버에 저장되지 않습니다.",
     "privacyP3": "데이터 및 계정에서 개인 데이터를 내보내거나 계정을 삭제할 수 있습니다. 내보내기에는 팁 영수증 및 거래 내역이 포함됩니다.",
-    "privacyP4": "당사는 서비스 개선을 위해 쿠키와 분석을 사용할 수 있습니다. Google Analytics가 활성화된 경우 브라우저 설정에서 추적을 제한할 수 있습니다."
+    "privacyP4": "당사는 서비스 개선을 위해 쿠키와 분석을 사용할 수 있습니다. Google Analytics가 활성화된 경우 브라우저 설정에서 추적을 제한할 수 있습니다.",
+    "paymentsP6Live": "Tips are processed by Stripe. Sandbox/test mode does not charge real money; live keys create real charges. You cannot tip your own games.",
+    "paymentsP8": "RainyNightFrog routes voluntary tips to creators via Stripe Connect marketplace. The platform currently charges 0% service fee. This is not tax or legal advice.",
+    "paymentsP9": "Creators are responsible for their own tax obligations. Tips are voluntary support, not purchases of games or digital goods. Disputes and refunds follow Stripe and platform policy.",
+    "paymentsLiveNotice": "Payments are enabled. Test keys use Stripe sandbox; live keys create real charges."
   },
   "accountSettings": {
     "navGroupAccount": "계정",

@@ -277,7 +277,36 @@
     "followingViewAll": "Quản lý theo dõi",
     "heroLine1": "Thousands of browser games, zero downloads, zero waiting",
     "heroLine2": "Creators upload with ease, players enjoy without limits",
-    "heroLine3": "This is your gateway to the esports universe!!!"
+    "heroLine3": "This is your gateway to the esports universe!!!",
+    "announcements": {
+      "label": "Announcements",
+      "launch": "RainyNightFrog is live! Thousands of browser games — zero downloads, play instantly",
+      "upload": "Creator hub is open: upload a ZIP game and publish to the homepage in one click",
+      "community": "Join the community forum to share tips, devlogs, and game strategies",
+      "feeds": "Subscribe via RSS / Atom and never miss new releases or forum updates",
+      "featured": "Platform star games are trending: VOID GACHA · CoreDefense · CyberFortune",
+      "multilingual": "11 interface languages supported — switch anytime from the top-right menu",
+      "leaderboard": "Climb the favorites and playtime leaderboards to unlock exclusive titles",
+      "achievements": "Complete achievements and collect titles to showcase on your profile",
+      "forumRules": "Read the community rules before posting — help keep discussions friendly",
+      "followCreators": "Follow your favorite creators to get notified when they release new games",
+      "zeroDownload": "Pure browser gaming: no downloads, play instantly on any device",
+      "starGames": "Platform stars are trending: VOID GACHA · CoreDefense · CyberFortune",
+      "gameHot": "🔥 Hot pick · {title} — play now",
+      "gameRecommend": "✦ Today's pick · {title}",
+      "gamePlayNow": "🎮 Play now · {title} — tap to enter",
+      "gameTrending": "⚡ Trending · {title} is blowing up"
+    },
+    "socialNavLabel": "Official social links",
+    "socialX": "RainyNightFrog on X",
+    "socialGithub": "RainyNightFrog on GitHub",
+    "socialDiscord": "RainyNightFrog on Discord",
+    "socialInstagram": "RainyNightFrog on Instagram",
+    "socialYoutube": "RainyNightFrog official website",
+    "socialFacebook": "RainyNightFrog official website",
+    "socialBilibili": "RainyNightFrog official website",
+    "socialDouyin": "RainyNightFrog official website",
+    "socialTiktok": "RainyNightFrog official website"
   },
   "game": {
     "communityForum": "Diễn đàn cộng đồng",
@@ -347,7 +376,8 @@
     "leaveConfirmLeave": "Rời khỏi trò chơi",
     "tipSpendingHint": "Hãy tip một cách có trách nhiệm và chỉ chi tiêu những gì bạn có thể đủ khả năng.",
     "gameFeedJsonHide": "Ẩn bản xem trước",
-    "gameFeedSubscribeHint": "Đăng ký các nhật ký phát triển và bài đăng trên diễn đàn cho trò chơi này"
+    "gameFeedSubscribeHint": "Đăng ký các nhật ký phát triển và bài đăng trên diễn đàn cho trò chơi này",
+    "tipCreatorPayoutNotReady": "The creator has not finished Stripe payout setup. Tips are unavailable for now. Creators: go to Settings → Payout to connect Stripe."
   },
   "dashboard": {
     "uploadGame": "Tải game lên",
@@ -675,7 +705,9 @@
     "emojiCategoryCommon": "chung",
     "emojiCategoryGaming": "Chơi game",
     "emojiCategorySymbols": "Biểu tượng",
-    "emojiCategoryMood": "tâm trạng"
+    "emojiCategoryMood": "tâm trạng",
+    "tipsFeeLiveBanner": "Tips · Live",
+    "tipsFeeDisclosureIntroLive": "All fees apply per individual tip, not as a lump sum on monthly totals. Real charges are processed by Stripe; net amounts below reflect processor fees."
   },
   "auth": {
     "callbackFailed": "Xác minh đăng nhập thất bại, vui lòng thử lại",
@@ -911,7 +943,8 @@
     "searchPlaceholder": "Tìm kiếm chủ đề, nội dung hoặc tác giả…",
     "searchNoResults": "Không có chủ đề phù hợp",
     "searchNoResultsHint": "Hãy thử các từ khóa khác hoặc xóa bộ lọc",
-    "seedPlayerProfile": "Đây là tài khoản demo - hồ sơ người chơi không có sẵn."
+    "seedPlayerProfile": "Đây là tài khoản demo - hồ sơ người chơi không có sẵn.",
+    "seedPostBadge": "Demo"
   },
   "rules": {
     "title": "Quy tắc cộng đồng",
@@ -1028,7 +1061,11 @@
       "networkError": "Lỗi mạng, vui lòng thử lại sau",
       "databaseUnavailable": "Dịch vụ dữ liệu tạm thời không khả dụng. Vui lòng thử lại sau.",
       "legacyImportsTableMissing": "Bảng nhập kế thừa chưa được thiết lập. Chạy npm run db:legacy-imports trong game-platform, sau đó làm mới trang này.",
-      "zipMissingIndex": "zip 根目錄需包含index.html(或index.htm)"
+      "zipMissingIndex": "zip 根目錄需包含index.html(或index.htm)",
+      "creatorPayoutNotReady": "The creator has not finished payout setup. Tips are unavailable for now.",
+      "creatorStripeNotConnected": "The creator has not connected Stripe yet.",
+      "loginRequiredTip": "Please sign in to send a tip",
+      "selfTipNotAllowed": "You cannot tip your own game"
     }
   },
   "admin": {
@@ -1293,7 +1330,11 @@
     "privacyP1": "RainyNightFrog thu thập dữ liệu tài khoản (email, tên hiển thị), nội dung trò chơi đã tải lên, các sự kiện chơi và phân tích cũng như hồ sơ tiền boa/thanh toán để vận hành nền tảng.",
     "privacyP2": "Địa chỉ thanh toán được sử dụng để nhận và tuân thủ; dữ liệu thẻ thanh toán được Stripe xử lý và số thẻ đầy đủ không được lưu trữ trên máy chủ của chúng tôi.",
     "privacyP3": "Bạn có thể xuất dữ liệu cá nhân hoặc xóa tài khoản của mình trong Dữ liệu & tài khoản. Xuất khẩu bao gồm biên lai tiền boa và lịch sử giao dịch.",
-    "privacyP4": "Chúng tôi có thể sử dụng cookie và phân tích để cải thiện dịch vụ; nếu Google Analytics được bật, bạn có thể giới hạn việc theo dõi trong cài đặt trình duyệt của mình."
+    "privacyP4": "Chúng tôi có thể sử dụng cookie và phân tích để cải thiện dịch vụ; nếu Google Analytics được bật, bạn có thể giới hạn việc theo dõi trong cài đặt trình duyệt của mình.",
+    "paymentsP6Live": "Tips are processed by Stripe. Sandbox/test mode does not charge real money; live keys create real charges. You cannot tip your own games.",
+    "paymentsP8": "RainyNightFrog routes voluntary tips to creators via Stripe Connect marketplace. The platform currently charges 0% service fee. This is not tax or legal advice.",
+    "paymentsP9": "Creators are responsible for their own tax obligations. Tips are voluntary support, not purchases of games or digital goods. Disputes and refunds follow Stripe and platform policy.",
+    "paymentsLiveNotice": "Payments are enabled. Test keys use Stripe sandbox; live keys create real charges."
   },
   "accountSettings": {
     "navGroupAccount": "Tài khoản",

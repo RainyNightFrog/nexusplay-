@@ -69,7 +69,9 @@
     "db:achievements-expand": "node scripts/run-achievements-expand.mjs",
     "db:achievements-titles-expand": "node scripts/run-achievements-titles-expand.mjs",
     "db:assign-admin": "node scripts/assign-admin.mjs",
-    "setup:production-auth": "node scripts/configure-production-auth.mjs"
+    "setup:production-auth": "node scripts/configure-production-auth.mjs",
+    "setup:resend-domain": "node scripts/setup-resend-domain.mjs",
+    "check:resend-domain": "node scripts/setup-resend-domain.mjs --check"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

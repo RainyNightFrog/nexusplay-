@@ -1,4 +1,5 @@
 import { useTranslations } from "next-intl";
+import { SiteSocialLinks } from "@/components/layout/site-social-links";
 import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +28,25 @@ export function SiteFooter({ className }: { className?: string }) {
       )}
     >
       <div className="mx-auto max-w-7xl px-4 text-center sm:px-6 lg:px-8">
+        <SiteSocialLinks
+          navLabel={th("socialNavLabel")}
+          labels={{
+            x: th("socialX"),
+            github: th("socialGithub"),
+            discord: th("socialDiscord"),
+            instagram: th("socialInstagram"),
+            tiktok: th("socialTiktok"),
+            youtube: th("socialYoutube"),
+            facebook: th("socialFacebook"),
+            bilibili: th("socialBilibili"),
+            douyin: th("socialDouyin"),
+          }}
+          className="mb-6"
+        />
+        <div
+          className="mx-auto mb-6 h-px max-w-xs bg-gradient-to-r from-transparent via-white/10 to-transparent"
+          aria-hidden
+        />
         <nav
           aria-label={t("footerNavLabel")}
           className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-xs"

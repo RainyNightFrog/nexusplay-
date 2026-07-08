@@ -1,3 +1,5 @@
+import { ambientLocalDomain, isAmbientLocalEmail } from "@/lib/ambient-local-email";
+
 export type VirtualPlayerLocale = "zh-HK" | "zh-CN" | "en";
 
 export type VirtualPlayer = {
@@ -70,8 +72,6 @@ export const VIRTUAL_PLAYERS_BY_LOCALE: Record<
   "zh-CN": VIRTUAL_PLAYERS.filter((player) => player.locale === "zh-CN"),
   en: VIRTUAL_PLAYERS.filter((player) => player.locale === "en"),
 };
-
-import { ambientLocalDomain, isAmbientLocalEmail } from "@/lib/ambient-local-email";
 
 export function ambientBotEmail(playerId: string) {
   return `ambient.${playerId}@${ambientLocalDomain()}`;

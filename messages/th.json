@@ -277,7 +277,36 @@
     "followingViewAll": "จัดการการติดตาม",
     "heroLine1": "Thousands of browser games, zero downloads, zero waiting",
     "heroLine2": "Creators upload with ease, players enjoy without limits",
-    "heroLine3": "This is your gateway to the esports universe!!!"
+    "heroLine3": "This is your gateway to the esports universe!!!",
+    "announcements": {
+      "label": "Announcements",
+      "launch": "RainyNightFrog is live! Thousands of browser games — zero downloads, play instantly",
+      "upload": "Creator hub is open: upload a ZIP game and publish to the homepage in one click",
+      "community": "Join the community forum to share tips, devlogs, and game strategies",
+      "feeds": "Subscribe via RSS / Atom and never miss new releases or forum updates",
+      "featured": "Platform star games are trending: VOID GACHA · CoreDefense · CyberFortune",
+      "multilingual": "11 interface languages supported — switch anytime from the top-right menu",
+      "leaderboard": "Climb the favorites and playtime leaderboards to unlock exclusive titles",
+      "achievements": "Complete achievements and collect titles to showcase on your profile",
+      "forumRules": "Read the community rules before posting — help keep discussions friendly",
+      "followCreators": "Follow your favorite creators to get notified when they release new games",
+      "zeroDownload": "Pure browser gaming: no downloads, play instantly on any device",
+      "starGames": "Platform stars are trending: VOID GACHA · CoreDefense · CyberFortune",
+      "gameHot": "🔥 Hot pick · {title} — play now",
+      "gameRecommend": "✦ Today's pick · {title}",
+      "gamePlayNow": "🎮 Play now · {title} — tap to enter",
+      "gameTrending": "⚡ Trending · {title} is blowing up"
+    },
+    "socialNavLabel": "Official social links",
+    "socialX": "RainyNightFrog on X",
+    "socialGithub": "RainyNightFrog on GitHub",
+    "socialDiscord": "RainyNightFrog on Discord",
+    "socialInstagram": "RainyNightFrog on Instagram",
+    "socialYoutube": "RainyNightFrog official website",
+    "socialFacebook": "RainyNightFrog official website",
+    "socialBilibili": "RainyNightFrog official website",
+    "socialDouyin": "RainyNightFrog official website",
+    "socialTiktok": "RainyNightFrog official website"
   },
   "game": {
     "communityForum": "ฟอรั่มชุมชน",
@@ -347,7 +376,8 @@
     "leaveConfirmLeave": "ออกจากเกม",
     "tipSpendingHint": "โปรดให้ทิปอย่างรับผิดชอบและใช้เท่าที่คุณสามารถจ่ายได้เท่านั้น",
     "gameFeedJsonHide": "ซ่อนตัวอย่าง",
-    "gameFeedSubscribeHint": "สมัครสมาชิก devlogs และโพสต์ฟอรั่มสำหรับเกมนี้"
+    "gameFeedSubscribeHint": "สมัครสมาชิก devlogs และโพสต์ฟอรั่มสำหรับเกมนี้",
+    "tipCreatorPayoutNotReady": "The creator has not finished Stripe payout setup. Tips are unavailable for now. Creators: go to Settings → Payout to connect Stripe."
   },
   "dashboard": {
     "uploadGame": "อัปโหลดเกม",
@@ -675,7 +705,9 @@
     "emojiCategoryCommon": "ทั่วไป",
     "emojiCategoryGaming": "การเล่นเกม",
     "emojiCategorySymbols": "สัญลักษณ์",
-    "emojiCategoryMood": "อารมณ์"
+    "emojiCategoryMood": "อารมณ์",
+    "tipsFeeLiveBanner": "Tips · Live",
+    "tipsFeeDisclosureIntroLive": "All fees apply per individual tip, not as a lump sum on monthly totals. Real charges are processed by Stripe; net amounts below reflect processor fees."
   },
   "auth": {
     "callbackFailed": "ยืนยันการเข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่",
@@ -911,7 +943,8 @@
     "searchPlaceholder": "ค้นหากระทู้ เนื้อหา หรือผู้เขียน...",
     "searchNoResults": "ไม่มีเธรดที่ตรงกัน",
     "searchNoResultsHint": "ลองใช้คำหลักอื่นหรือล้างตัวกรอง",
-    "seedPlayerProfile": "นี่คือบัญชีทดลอง — โปรไฟล์ผู้เล่นไม่พร้อมใช้งาน"
+    "seedPlayerProfile": "นี่คือบัญชีทดลอง — โปรไฟล์ผู้เล่นไม่พร้อมใช้งาน",
+    "seedPostBadge": "Demo"
   },
   "rules": {
     "title": "กฎชุมชน",
@@ -1028,7 +1061,11 @@
       "networkError": "เครือข่ายเกิดข้อผิดพลาด โปรดลองอีกครั้งในภายหลัง",
       "databaseUnavailable": "บริการข้อมูลไม่สามารถใช้งานได้ชั่วคราว โปรดลองอีกครั้งในภายหลัง",
       "legacyImportsTableMissing": "ไม่ได้ตั้งค่าตารางการนำเข้าแบบเดิม เรียกใช้ npm run db:legacy-imports ในแพลตฟอร์มเกม จากนั้นรีเฟรชหน้านี้",
-      "zipMissingIndex": "zip 根目錄需包含 index.html (หรือดัชนี.htm)"
+      "zipMissingIndex": "zip 根目錄需包含 index.html (หรือดัชนี.htm)",
+      "creatorPayoutNotReady": "The creator has not finished payout setup. Tips are unavailable for now.",
+      "creatorStripeNotConnected": "The creator has not connected Stripe yet.",
+      "loginRequiredTip": "Please sign in to send a tip",
+      "selfTipNotAllowed": "You cannot tip your own game"
     }
   },
   "admin": {
@@ -1293,7 +1330,11 @@
     "privacyP1": "RainyNightFrog รวบรวมข้อมูลบัญชี (อีเมล ชื่อที่แสดง) เนื้อหาเกมที่อัปโหลด การเล่นและกิจกรรมการวิเคราะห์ และบันทึกเคล็ดลับ/การจ่ายเงินเพื่อใช้งานแพลตฟอร์ม",
     "privacyP2": "ที่อยู่สำหรับการเรียกเก็บเงินใช้สำหรับการรับและการปฏิบัติตามข้อกำหนด ข้อมูลบัตรชำระเงินได้รับการประมวลผลโดย Stripe และหมายเลขบัตรเต็มจะไม่ถูกจัดเก็บบนเซิร์ฟเวอร์ของเรา",
     "privacyP3": "คุณสามารถส่งออกข้อมูลส่วนบุคคลหรือลบบัญชีของคุณภายใต้ข้อมูลและบัญชี การส่งออกรวมถึงใบเสร็จรับเงินทิปและประวัติการทำธุรกรรม",
-    "privacyP4": "เราอาจใช้คุกกี้และการวิเคราะห์เพื่อปรับปรุงบริการ หากเปิดใช้งาน Google Analytics คุณสามารถจำกัดการติดตามได้ในการตั้งค่าเบราว์เซอร์ของคุณ"
+    "privacyP4": "เราอาจใช้คุกกี้และการวิเคราะห์เพื่อปรับปรุงบริการ หากเปิดใช้งาน Google Analytics คุณสามารถจำกัดการติดตามได้ในการตั้งค่าเบราว์เซอร์ของคุณ",
+    "paymentsP6Live": "Tips are processed by Stripe. Sandbox/test mode does not charge real money; live keys create real charges. You cannot tip your own games.",
+    "paymentsP8": "RainyNightFrog routes voluntary tips to creators via Stripe Connect marketplace. The platform currently charges 0% service fee. This is not tax or legal advice.",
+    "paymentsP9": "Creators are responsible for their own tax obligations. Tips are voluntary support, not purchases of games or digital goods. Disputes and refunds follow Stripe and platform policy.",
+    "paymentsLiveNotice": "Payments are enabled. Test keys use Stripe sandbox; live keys create real charges."
   },
   "accountSettings": {
     "navGroupAccount": "บัญชี",

@@ -277,7 +277,36 @@
     "followingViewAll": "Gerenciar seguidores",
     "heroLine1": "Thousands of browser games, zero downloads, zero waiting",
     "heroLine2": "Creators upload with ease, players enjoy without limits",
-    "heroLine3": "This is your gateway to the esports universe!!!"
+    "heroLine3": "This is your gateway to the esports universe!!!",
+    "announcements": {
+      "label": "Announcements",
+      "launch": "RainyNightFrog is live! Thousands of browser games — zero downloads, play instantly",
+      "upload": "Creator hub is open: upload a ZIP game and publish to the homepage in one click",
+      "community": "Join the community forum to share tips, devlogs, and game strategies",
+      "feeds": "Subscribe via RSS / Atom and never miss new releases or forum updates",
+      "featured": "Platform star games are trending: VOID GACHA · CoreDefense · CyberFortune",
+      "multilingual": "11 interface languages supported — switch anytime from the top-right menu",
+      "leaderboard": "Climb the favorites and playtime leaderboards to unlock exclusive titles",
+      "achievements": "Complete achievements and collect titles to showcase on your profile",
+      "forumRules": "Read the community rules before posting — help keep discussions friendly",
+      "followCreators": "Follow your favorite creators to get notified when they release new games",
+      "zeroDownload": "Pure browser gaming: no downloads, play instantly on any device",
+      "starGames": "Platform stars are trending: VOID GACHA · CoreDefense · CyberFortune",
+      "gameHot": "🔥 Hot pick · {title} — play now",
+      "gameRecommend": "✦ Today's pick · {title}",
+      "gamePlayNow": "🎮 Play now · {title} — tap to enter",
+      "gameTrending": "⚡ Trending · {title} is blowing up"
+    },
+    "socialNavLabel": "Official social links",
+    "socialX": "RainyNightFrog on X",
+    "socialGithub": "RainyNightFrog on GitHub",
+    "socialDiscord": "RainyNightFrog on Discord",
+    "socialInstagram": "RainyNightFrog on Instagram",
+    "socialYoutube": "RainyNightFrog official website",
+    "socialFacebook": "RainyNightFrog official website",
+    "socialBilibili": "RainyNightFrog official website",
+    "socialDouyin": "RainyNightFrog official website",
+    "socialTiktok": "RainyNightFrog official website"
   },
   "game": {
     "communityForum": "Fórum da comunidade",
@@ -347,7 +376,8 @@
     "leaveConfirmLeave": "Sair do jogo",
     "tipSpendingHint": "Por favor, dê gorjetas com responsabilidade e gaste apenas o que você pode pagar.",
     "gameFeedJsonHide": "Ocultar visualização",
-    "gameFeedSubscribeHint": "Inscreva-se nos devlogs e nas postagens do fórum deste jogo"
+    "gameFeedSubscribeHint": "Inscreva-se nos devlogs e nas postagens do fórum deste jogo",
+    "tipCreatorPayoutNotReady": "The creator has not finished Stripe payout setup. Tips are unavailable for now. Creators: go to Settings → Payout to connect Stripe."
   },
   "dashboard": {
     "uploadGame": "Enviar jogo",
@@ -675,7 +705,9 @@
     "emojiCategoryCommon": "Comum",
     "emojiCategoryGaming": "Jogos",
     "emojiCategorySymbols": "Símbolos",
-    "emojiCategoryMood": "Humor"
+    "emojiCategoryMood": "Humor",
+    "tipsFeeLiveBanner": "Tips · Live",
+    "tipsFeeDisclosureIntroLive": "All fees apply per individual tip, not as a lump sum on monthly totals. Real charges are processed by Stripe; net amounts below reflect processor fees."
   },
   "auth": {
     "callbackFailed": "Falha na verificação de login, tente novamente",
@@ -911,7 +943,8 @@
     "searchPlaceholder": "Pesquise tópicos, conteúdo ou autores…",
     "searchNoResults": "Não há tópicos correspondentes",
     "searchNoResultsHint": "Experimente palavras-chave diferentes ou limpe filtros",
-    "seedPlayerProfile": "Esta é uma conta demo – o perfil do jogador não está disponível."
+    "seedPlayerProfile": "Esta é uma conta demo – o perfil do jogador não está disponível.",
+    "seedPostBadge": "Demo"
   },
   "rules": {
     "title": "Regras da comunidade",
@@ -1028,7 +1061,11 @@
       "networkError": "Erro de rede, tente novamente mais tarde",
       "databaseUnavailable": "O serviço de dados está temporariamente indisponível. Por favor, tente novamente mais tarde.",
       "legacyImportsTableMissing": "A tabela de importação legada não está configurada. Execute npm run db:legacy-imports na plataforma do jogo e atualize esta página.",
-      "zipMissingIndex": "zip que contém index.html(ou index.htm)"
+      "zipMissingIndex": "zip que contém index.html(ou index.htm)",
+      "creatorPayoutNotReady": "The creator has not finished payout setup. Tips are unavailable for now.",
+      "creatorStripeNotConnected": "The creator has not connected Stripe yet.",
+      "loginRequiredTip": "Please sign in to send a tip",
+      "selfTipNotAllowed": "You cannot tip your own game"
     }
   },
   "admin": {
@@ -1293,7 +1330,11 @@
     "privacyP1": "RainyNightFrog coleta dados da conta (e-mail, nome de exibição), conteúdo de jogo carregado, eventos de jogo e análise e registros de gorjetas/pagamentos para operar a plataforma.",
     "privacyP2": "Os endereços de cobrança são usados para recebimentos e conformidade; os dados do cartão de pagamento são processados ​​pela Stripe e os números completos dos cartões não são armazenados em nossos servidores.",
     "privacyP3": "Você pode exportar dados pessoais ou excluir sua conta em Dados e conta. As exportações incluem recibos de gorjetas e histórico de transações.",
-    "privacyP4": "Podemos usar cookies e análises para melhorar o serviço; se o Google Analytics estiver ativado, você poderá limitar o rastreamento nas configurações do seu navegador."
+    "privacyP4": "Podemos usar cookies e análises para melhorar o serviço; se o Google Analytics estiver ativado, você poderá limitar o rastreamento nas configurações do seu navegador.",
+    "paymentsP6Live": "Tips are processed by Stripe. Sandbox/test mode does not charge real money; live keys create real charges. You cannot tip your own games.",
+    "paymentsP8": "RainyNightFrog routes voluntary tips to creators via Stripe Connect marketplace. The platform currently charges 0% service fee. This is not tax or legal advice.",
+    "paymentsP9": "Creators are responsible for their own tax obligations. Tips are voluntary support, not purchases of games or digital goods. Disputes and refunds follow Stripe and platform policy.",
+    "paymentsLiveNotice": "Payments are enabled. Test keys use Stripe sandbox; live keys create real charges."
   },
   "accountSettings": {
     "navGroupAccount": "Conta",

@@ -293,7 +293,17 @@
       "gameRecommend": "✦ 今日精选 · {title}",
       "gamePlayNow": "🎮 马上体验 · {title} — 点击进入",
       "gameTrending": "⚡ 人气飙升 · {title} 正在热玩"
-    }
+    },
+    "socialNavLabel": "Official social links",
+    "socialX": "RainyNightFrog on X",
+    "socialGithub": "RainyNightFrog on GitHub",
+    "socialDiscord": "RainyNightFrog on Discord",
+    "socialInstagram": "RainyNightFrog on Instagram",
+    "socialYoutube": "RainyNightFrog official website",
+    "socialFacebook": "RainyNightFrog official website",
+    "socialBilibili": "RainyNightFrog official website",
+    "socialDouyin": "RainyNightFrog official website",
+    "socialTiktok": "RainyNightFrog official website"
   },
   "game": {
     "communityForum": "社区讨论区",
@@ -363,7 +373,8 @@
     "leaveConfirmTitle": "确定要离开游戏？",
     "leaveConfirmDescription": "游戏进行中，目前进度可能尚未保存。",
     "leaveConfirmStay": "继续游玩",
-    "leaveConfirmLeave": "离开游戏"
+    "leaveConfirmLeave": "离开游戏",
+    "tipCreatorPayoutNotReady": "The creator has not finished Stripe payout setup. Tips are unavailable for now. Creators: go to Settings → Payout to connect Stripe."
   },
   "dashboard": {
     "uploadGame": "上传游戏",
@@ -1041,7 +1052,11 @@
       "networkError": "网路连线失败，请稍后再试",
       "databaseUnavailable": "资料服务暂时无法使用，请稍后再试",
       "legacyImportsTableMissing": "迁移码资料表尚未建立。请在 game-platform 目录执行 npm run db:legacy-imports，完成后重新整理此页。",
-      "zipMissingIndex": "zip 根目錄需包含 index.html（或 index.htm）"
+      "zipMissingIndex": "zip 根目錄需包含 index.html（或 index.htm）",
+      "creatorPayoutNotReady": "The creator has not finished payout setup. Tips are unavailable for now.",
+      "creatorStripeNotConnected": "The creator has not connected Stripe yet.",
+      "loginRequiredTip": "Please sign in to send a tip",
+      "selfTipNotAllowed": "You cannot tip your own game"
     }
   },
   "admin": {
@@ -1306,7 +1321,11 @@
     "privacyP1": "RainyNightFrog 收集帐户资料（电邮、显示名称）、游戏上传内容、游玩与分析事件，以及打赏／提领相关交易纪录，以提供平台服务。",
     "privacyP2": "帐单地址仅用于收据与合规用途；付款卡资料由 Stripe 等第三方金流商处理，平台不储存完整卡号。",
     "privacyP3": "你可于「资料与帐户」汇出个人资料，或申请删除帐户。打赏收据与交易纪录亦包含在汇出范围内。",
-    "privacyP4": "我们可能使用 Cookie 与分析工具改善体验；若整合 Google Analytics，将遵循其政策并可于浏览器设定中限制追踪。"
+    "privacyP4": "我们可能使用 Cookie 与分析工具改善体验；若整合 Google Analytics，将遵循其政策并可于浏览器设定中限制追踪。",
+    "paymentsP6Live": "Tips are processed by Stripe. Sandbox/test mode does not charge real money; live keys create real charges. You cannot tip your own games.",
+    "paymentsP8": "RainyNightFrog routes voluntary tips to creators via Stripe Connect marketplace. The platform currently charges 0% service fee. This is not tax or legal advice.",
+    "paymentsP9": "Creators are responsible for their own tax obligations. Tips are voluntary support, not purchases of games or digital goods. Disputes and refunds follow Stripe and platform policy.",
+    "paymentsLiveNotice": "Payments are enabled. Test keys use Stripe sandbox; live keys create real charges."
   },
   "accountSettings": {
     "navGroupAccount": "帐户",
