@@ -30,6 +30,13 @@ function canRun(key: "seed" | "post", channel: ChatChannel, cooldownMs: number) 
   return true;
 }
 
+function shouldSimulateAmbientCron() {
+  if (process.env.NODE_ENV === "development") return true;
+  // Vercel Cron 僅在 production 部署執行；preview / 本機 next start 需由讀取 API 模擬
+  if (process.env.VERCEL_ENV === "production") return false;
+  return true;
+}
+
 async function countRecentMessages(channel: ChatChannel) {
   const supabase = createServerSupabase();
   const { count, error } = await supabase
@@ -72,7 +79,7 @@ export async function maintainAmbientChat(channel: ChatChannel) {
     return;
   }
 
-  if (process.env.NODE_ENV !== "development") return;
+  if (!shouldSimulateAmbientCron()) return;
 
   const interval = DEV_POST_INTERVAL_MS[channel];
   const age = await latestMessageAgeMs(channel);

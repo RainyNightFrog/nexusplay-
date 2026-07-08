@@ -7,6 +7,31 @@ import type { ChatChannel, ChatMessage } from "@/lib/chat";
 import { CHAT_LIMITS } from "@/lib/chat";
 import { createClient } from "@/lib/supabase/client";
 
+/** 輪詢間隔：本機開發時觸發 maintainAmbientChat；亦作 Realtime 後備 */
+export const CHAT_POLL_INTERVAL_MS = 60_000;
+
+/** 對非當前分頁的頻道背景輪詢，確保世界／創作者頻道虛擬發言在本機也能觸發 */
+export function useAmbientChatBackgroundPoll(
+  channels: ChatChannel[],
+  enabled: boolean
+) {
+  const channelsKey = channels.join(",");
+
+  useEffect(() => {
+    if (!enabled || !channelsKey) return;
+
+    const targetChannels = channelsKey.split(",") as ChatChannel[];
+    const poll = () => {
+      for (const channel of targetChannels) {
+        void fetch(`/api/chat/messages?channel=${encodeURIComponent(channel)}`);
+      }
+    };
+
+    const timer = window.setInterval(poll, CHAT_POLL_INTERVAL_MS);
+    return () => window.clearInterval(timer);
+  }, [channelsKey, enabled]);
+}
+
 async function parseJsonResponse<T>(response: Response): Promise<T> {
   const contentType = response.headers.get("content-type") ?? "";
   if (!contentType.includes("application/json")) {
@@ -42,31 +67,34 @@ export function useChatMessages(channel: ChatChannel, enabled: boolean) {
     [t]
   );
 
-  const loadMessages = useCallback(async () => {
-    if (!enabled) return;
+  const loadMessages = useCallback(
+    async (options?: { silent?: boolean }) => {
+      if (!enabled) return;
 
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(
-        `/api/chat/messages?channel=${encodeURIComponent(channel)}`
-      );
-      const data = await parseJsonResponse<{
-        messages?: ChatMessage[];
-        error?: string;
-      }>(response);
+      if (!options?.silent) setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch(
+          `/api/chat/messages?channel=${encodeURIComponent(channel)}`
+        );
+        const data = await parseJsonResponse<{
+          messages?: ChatMessage[];
+          error?: string;
+        }>(response);
 
-      if (!response.ok) {
-        throw new Error(data.error ?? t("readFailed"));
+        if (!response.ok) {
+          throw new Error(data.error ?? t("readFailed"));
+        }
+
+        setMessages(data.messages ?? []);
+      } catch (err) {
+        setError(formatError(err, t("readFailed")));
+      } finally {
+        if (!options?.silent) setLoading(false);
       }
-
-      setMessages(data.messages ?? []);
-    } catch (err) {
-      setError(formatError(err, t("readFailed")));
-    } finally {
-      setLoading(false);
-    }
-  }, [channel, enabled, formatError, t]);
+    },
+    [channel, enabled, formatError, t]
+  );
 
   useEffect(() => {
     if (!enabled) {
@@ -75,6 +103,16 @@ export function useChatMessages(channel: ChatChannel, enabled: boolean) {
     }
 
     void loadMessages();
+  }, [enabled, loadMessages]);
+
+  useEffect(() => {
+    if (!enabled) return;
+
+    const timer = window.setInterval(() => {
+      void loadMessages({ silent: true });
+    }, CHAT_POLL_INTERVAL_MS);
+
+    return () => window.clearInterval(timer);
   }, [enabled, loadMessages]);
 
   useEffect(() => {

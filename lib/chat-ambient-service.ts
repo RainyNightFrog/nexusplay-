@@ -24,7 +24,7 @@ const WORLD_DIALOGUE_CHANCE = 0.5;
 const CREATOR_DIALOGUE_CHANCE = 0.38;
 const REPLY_GAP_MS_MIN = 18_000;
 const REPLY_GAP_MS_MAX = 75_000;
-const RECENT_CONTENT_LIMIT = 100;
+const RECENT_CONTENT_LIMIT = 200;
 
 type AmbientPostResult = {
   channel: ChatChannel;

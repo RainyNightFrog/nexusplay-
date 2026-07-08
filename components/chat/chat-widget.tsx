@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Globe,
@@ -23,7 +23,10 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "@/i18n/navigation";
-import { useChatMessages } from "@/hooks/use-chat-messages";
+import {
+  useAmbientChatBackgroundPoll,
+  useChatMessages,
+} from "@/hooks/use-chat-messages";
 import type { ChatChannel, ChatMessage } from "@/lib/chat";
 import type { EquippedTitle } from "@/lib/titles";
 
@@ -93,6 +96,15 @@ export function ChatWidget() {
   const [playerCardOpen, setPlayerCardOpen] = useState(false);
   const [dmTargetId, setDmTargetId] = useState<string | null>(null);
   const [scrollToLatestKey, setScrollToLatestKey] = useState(0);
+
+  const backgroundAmbientChannels = useMemo((): ChatChannel[] => {
+    if (!open || !profile) return [];
+    if (channel === "contacts") return ["world", "creator"];
+    if (channel === "world") return ["creator"];
+    return ["world"];
+  }, [channel, open, profile]);
+
+  useAmbientChatBackgroundPoll(backgroundAmbientChannels, open && !!profile);
 
   function updateDraft(targetChannel: ChatChannel, value: string) {
     setDrafts((prev) => ({ ...prev, [targetChannel]: value }));
