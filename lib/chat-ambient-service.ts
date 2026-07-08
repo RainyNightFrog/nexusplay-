@@ -1,11 +1,14 @@
 import {
   AMBIENT_CHAT_DIALOGUES,
   AMBIENT_CHAT_SINGLES,
+  AMBIENT_CREATOR_DIALOGUES,
   AMBIENT_CREATOR_SINGLES,
   type AmbientChatDialogue,
   type AmbientChatSingle,
 } from "@/lib/chat-ambient-content";
+import { pickRandom, pickWithoutRepeat } from "@/lib/chat-ambient-pick";
 import type { ChatChannel } from "@/lib/chat";
+import { CHAT_LIMITS } from "@/lib/chat";
 import { createServerSupabase } from "@/lib/supabase-server";
 import {
   ambientBotEmail,
@@ -17,9 +20,11 @@ import {
 } from "@/lib/virtual-players";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-const WORLD_DIALOGUE_CHANCE = 0.38;
+const WORLD_DIALOGUE_CHANCE = 0.5;
+const CREATOR_DIALOGUE_CHANCE = 0.38;
 const REPLY_GAP_MS_MIN = 18_000;
 const REPLY_GAP_MS_MAX = 75_000;
+const RECENT_CONTENT_LIMIT = 100;
 
 type AmbientPostResult = {
   channel: ChatChannel;
@@ -29,8 +34,36 @@ type AmbientPostResult = {
   messages: string[];
 };
 
-function pickRandom<T>(items: T[]): T {
-  return items[Math.floor(Math.random() * items.length)]!;
+function historyCutoffIso() {
+  return new Date(
+    Date.now() - CHAT_LIMITS.historyDays * 86_400_000
+  ).toISOString();
+}
+
+async function getRecentChannelContents(
+  supabase: SupabaseClient,
+  channel: ChatChannel,
+  seed?: Set<string>
+): Promise<Set<string>> {
+  const recent = new Set(seed ?? []);
+  const { data, error } = await supabase
+    .from("chat_messages")
+    .select("content")
+    .eq("channel", channel)
+    .gte("created_at", historyCutoffIso())
+    .is("recalled_at", null)
+    .order("created_at", { ascending: false })
+    .limit(RECENT_CONTENT_LIMIT);
+
+  if (error) throw new Error(error.message);
+  for (const row of data ?? []) {
+    recent.add(row.content as string);
+  }
+  return recent;
+}
+
+function trackPosted(recent: Set<string>, messages: string[]) {
+  for (const message of messages) recent.add(message);
 }
 
 function pickLocale(): VirtualPlayerLocale {
@@ -40,25 +73,47 @@ function pickLocale(): VirtualPlayerLocale {
   return "en";
 }
 
-function pickWorldSingle(locale?: VirtualPlayerLocale): AmbientChatSingle {
+function pickWorldSingle(
+  locale: VirtualPlayerLocale | undefined,
+  recent: Set<string>
+): AmbientChatSingle {
   const pool = locale
     ? AMBIENT_CHAT_SINGLES.filter((line) => line.locale === locale)
     : AMBIENT_CHAT_SINGLES;
-  return pickRandom(pool);
+  return pickWithoutRepeat(pool, recent, (line) => line.content);
 }
 
-function pickCreatorSingle(locale?: VirtualPlayerLocale): AmbientChatSingle {
+function pickCreatorSingle(
+  locale: VirtualPlayerLocale | undefined,
+  recent: Set<string>
+): AmbientChatSingle {
   const pool = locale
     ? AMBIENT_CREATOR_SINGLES.filter((line) => line.locale === locale)
     : AMBIENT_CREATOR_SINGLES;
-  return pickRandom(pool);
+  return pickWithoutRepeat(pool, recent, (line) => line.content);
 }
 
-function pickDialogue(locale?: VirtualPlayerLocale): AmbientChatDialogue {
-  const pool = locale
-    ? AMBIENT_CHAT_DIALOGUES.filter((line) => line.locale === locale)
-    : AMBIENT_CHAT_DIALOGUES;
-  return pickRandom(pool);
+function pickDialogue(
+  pool: AmbientChatDialogue[],
+  locale: VirtualPlayerLocale | undefined,
+  recent: Set<string>
+): AmbientChatDialogue {
+  const filtered = locale ? pool.filter((line) => line.locale === locale) : pool;
+  return pickWithoutRepeat(filtered, recent, (line) => line.lines);
+}
+
+function pickWorldDialogue(
+  locale: VirtualPlayerLocale | undefined,
+  recent: Set<string>
+) {
+  return pickDialogue(AMBIENT_CHAT_DIALOGUES, locale, recent);
+}
+
+function pickCreatorDialogue(
+  locale: VirtualPlayerLocale | undefined,
+  recent: Set<string>
+) {
+  return pickDialogue(AMBIENT_CREATOR_DIALOGUES, locale, recent);
 }
 
 function pickPlayer(locale: VirtualPlayerLocale, excludeId?: string): VirtualPlayer {
@@ -154,15 +209,20 @@ async function insertAmbientMessage(
 }
 
 export async function postAmbientWorldChat(
-  options?: { at?: Date }
+  options?: { at?: Date; recentContents?: Set<string> }
 ): Promise<AmbientPostResult> {
   const supabase = createServerSupabase();
   const botCache = await listAmbientBotUsers(supabase);
+  const recent = await getRecentChannelContents(
+    supabase,
+    "world",
+    options?.recentContents
+  );
   const locale = pickLocale();
   const postedAt = options?.at ?? new Date();
 
   if (Math.random() < WORLD_DIALOGUE_CHANCE) {
-    const dialogue = pickDialogue(locale);
+    const dialogue = pickWorldDialogue(locale, recent);
     const firstPlayer = pickPlayer(dialogue.locale);
     const secondPlayer = pickPlayer(dialogue.locale, firstPlayer.id);
     const gap =
@@ -193,6 +253,8 @@ export async function postAmbientWorldChat(
       secondAt
     );
 
+    trackPosted(recent, [...dialogue.lines]);
+
     return {
       channel: "world",
       posted: 2,
@@ -202,10 +264,12 @@ export async function postAmbientWorldChat(
     };
   }
 
-  const single = pickWorldSingle(locale);
+  const single = pickWorldSingle(locale, recent);
   const player = pickPlayer(single.locale);
   const userId = await ensureAmbientPlayer(supabase, player, botCache);
   await insertAmbientMessage(supabase, "world", userId, single.content, postedAt);
+
+  trackPosted(recent, [single.content]);
 
   return {
     channel: "world",
@@ -216,15 +280,67 @@ export async function postAmbientWorldChat(
   };
 }
 
-/** 創作者頻道：每次 cron 只發一句 */
+/** 創作者頻道：單句或對答 */
 export async function postAmbientCreatorChat(
-  options?: { at?: Date }
+  options?: { at?: Date; recentContents?: Set<string> }
 ): Promise<AmbientPostResult> {
   const supabase = createServerSupabase();
   const botCache = await listAmbientBotUsers(supabase);
+  const recent = await getRecentChannelContents(
+    supabase,
+    "creator",
+    options?.recentContents
+  );
   const locale = pickLocale();
   const postedAt = options?.at ?? new Date();
-  const single = pickCreatorSingle(locale);
+
+  if (Math.random() < CREATOR_DIALOGUE_CHANCE) {
+    const dialogue = pickCreatorDialogue(locale, recent);
+    const firstPlayer = pickPlayer(dialogue.locale);
+    const secondPlayer = pickPlayer(dialogue.locale, firstPlayer.id);
+    const gap =
+      REPLY_GAP_MS_MIN +
+      Math.floor(Math.random() * (REPLY_GAP_MS_MAX - REPLY_GAP_MS_MIN));
+    const secondAt = postedAt;
+    const firstAt = new Date(secondAt.getTime() - gap);
+
+    const firstUserId = await ensureAmbientPlayer(supabase, firstPlayer, botCache, {
+      asCreator: true,
+    });
+    const secondUserId = await ensureAmbientPlayer(
+      supabase,
+      secondPlayer,
+      botCache,
+      { asCreator: true }
+    );
+
+    await insertAmbientMessage(
+      supabase,
+      "creator",
+      firstUserId,
+      dialogue.lines[0],
+      firstAt
+    );
+    await insertAmbientMessage(
+      supabase,
+      "creator",
+      secondUserId,
+      dialogue.lines[1],
+      secondAt
+    );
+
+    trackPosted(recent, [...dialogue.lines]);
+
+    return {
+      channel: "creator",
+      posted: 2,
+      type: "dialogue",
+      players: [firstPlayer.displayName, secondPlayer.displayName],
+      messages: [...dialogue.lines],
+    };
+  }
+
+  const single = pickCreatorSingle(locale, recent);
   const player = pickPlayer(single.locale);
   const userId = await ensureAmbientPlayer(supabase, player, botCache, {
     asCreator: true,
@@ -237,6 +353,8 @@ export async function postAmbientCreatorChat(
     single.content,
     postedAt
   );
+
+  trackPosted(recent, [single.content]);
 
   return {
     channel: "creator",
@@ -267,12 +385,16 @@ export async function ensureAllAmbientPlayers() {
 }
 
 /** 灌入近期聊天記錄，讓世界頻道一打開就有對話感 */
-export async function bootstrapAmbientWorldChat(messageCount = 8) {
+export async function bootstrapAmbientWorldChat(messageCount = 14) {
+  const supabase = createServerSupabase();
+  const recent = await getRecentChannelContents(supabase, "world");
   const results: AmbientPostResult[] = [];
   for (let index = 0; index < messageCount; index += 1) {
-    const minutesAgo = (messageCount - index) * 4 + Math.random() * 2.5;
+    const minutesAgo = (messageCount - index) * 3 + Math.random() * 2;
     const at = new Date(Date.now() - minutesAgo * 60_000);
-    results.push(await postAmbientWorldChat({ at }));
+    const result = await postAmbientWorldChat({ at, recentContents: recent });
+    trackPosted(recent, result.messages);
+    results.push(result);
   }
   return {
     posted: results.reduce((sum, row) => sum + row.posted, 0),
@@ -280,12 +402,16 @@ export async function bootstrapAmbientWorldChat(messageCount = 8) {
   };
 }
 
-export async function bootstrapAmbientCreatorChat(messageCount = 4) {
+export async function bootstrapAmbientCreatorChat(messageCount = 8) {
+  const supabase = createServerSupabase();
+  const recent = await getRecentChannelContents(supabase, "creator");
   const results: AmbientPostResult[] = [];
   for (let index = 0; index < messageCount; index += 1) {
-    const minutesAgo = (messageCount - index) * 35 + Math.random() * 10;
+    const minutesAgo = (messageCount - index) * 28 + Math.random() * 8;
     const at = new Date(Date.now() - minutesAgo * 60_000);
-    results.push(await postAmbientCreatorChat({ at }));
+    const result = await postAmbientCreatorChat({ at, recentContents: recent });
+    trackPosted(recent, result.messages);
+    results.push(result);
   }
   return {
     posted: results.reduce((sum, row) => sum + row.posted, 0),

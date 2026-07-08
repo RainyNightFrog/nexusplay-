@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { cleanupExpiredChatMessages } from "@/lib/chat-service";
+import { cleanupExpiredVirtualDmMessages } from "@/lib/virtual-dm-service";
 import { verifyCronSecret } from "@/lib/cron-auth";
 import { getPlatformModeStatus } from "@/lib/platform-mode";
 
@@ -8,9 +9,13 @@ export async function GET(request: Request) {
   if (authError) return authError;
 
   try {
-    const result = await cleanupExpiredChatMessages();
+    const [channelChat, virtualDm] = await Promise.all([
+      cleanupExpiredChatMessages(),
+      cleanupExpiredVirtualDmMessages(),
+    ]);
     return NextResponse.json({
-      ...result,
+      channelChat,
+      virtualDm,
       ...getPlatformModeStatus(),
     });
   } catch (error) {

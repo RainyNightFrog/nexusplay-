@@ -11,6 +11,7 @@ import {
   MessageCircle,
   Trophy,
   UserRound,
+  Users,
   Wallet,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
@@ -26,7 +27,7 @@ import { UserBadge } from "@/components/UserBadge";
 import { useChatPlayerProfile } from "@/hooks/use-chat-player-profile";
 import type { ChatMessage } from "@/lib/chat";
 import type { EquippedTitle } from "@/lib/titles";
-import { getVirtualPlayerById } from "@/lib/virtual-players";
+import { formatCountryName } from "@/lib/request-geo";
 import {
   formatDonationAmount,
   formatDurationSeconds,
@@ -88,6 +89,24 @@ export function leaderboardEntryToPlayerPreview(
   };
 }
 
+export function virtualPlayerToPlayerPreview(player: {
+  id: string;
+  displayName: string;
+  avatarUrl: string | null;
+  equippedTitle?: EquippedTitle | null;
+}): ChatPlayerPreview {
+  return {
+    userId: "",
+    displayName: player.displayName,
+    avatarUrl: player.avatarUrl,
+    equippedTitle: player.equippedTitle ?? null,
+    isCreator: false,
+    isVirtual: true,
+    virtualPlayerId: player.id,
+    isOwn: false,
+  };
+}
+
 export function forumAuthorToPlayerPreview(
   name: string,
   userId: string,
@@ -105,12 +124,6 @@ export function forumAuthorToPlayerPreview(
     isOwn: options?.isOwn ?? false,
   };
 }
-
-const LOCALE_LABELS: Record<string, string> = {
-  "zh-HK": "繁體粵語",
-  "zh-CN": "簡體中文",
-  en: "English",
-};
 
 function formatLastActive(value: string | null, locale: string) {
   if (!value) return "—";
@@ -184,14 +197,14 @@ export function ChatPlayerCard({
   if (!player) return null;
 
   const displayName = player.isOwn ? t("you") : player.displayName;
-  const virtualPlayer = player.virtualPlayerId
-    ? getVirtualPlayerById(player.virtualPlayerId)
-    : null;
   const detail = profile;
   const avatarUrl = detail?.avatarUrl ?? player.avatarUrl;
   const equippedTitle = player.equippedTitle ?? detail?.equippedTitle ?? null;
   const isCreator = detail?.isCreator ?? player.isCreator;
   const isVirtual = detail?.isVirtual ?? player.isVirtual;
+  const countryLabel = detail?.countryCode
+    ? formatCountryName(detail.countryCode, locale)
+    : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -268,10 +281,9 @@ export function ChatPlayerCard({
                   </span>
                 )}
               </div>
-              {virtualPlayer && (
+              {countryLabel && (
                 <p className="mt-1.5 text-xs text-zinc-500 sm:text-sm">
-                  {t("playerCardLocale")}：
-                  {LOCALE_LABELS[virtualPlayer.locale] ?? virtualPlayer.locale}
+                  {t("playerCardRegion")}：{countryLabel}
                 </p>
               )}
             </div>
@@ -334,9 +346,9 @@ export function ChatPlayerCard({
                 />
                 {detail.isCreator && (
                   <StatItem
-                    icon={<Wallet className="size-3.5 shrink-0" />}
-                    label={t("playerCardTipsReceived")}
-                    value={String(detail.tipsReceivedCount)}
+                    icon={<Users className="size-3.5 shrink-0" />}
+                    label={t("playerCardFollowers")}
+                    value={String(detail.followerCount)}
                   />
                 )}
                 {detail.isCreator && (

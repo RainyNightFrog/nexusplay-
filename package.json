@@ -47,6 +47,7 @@
     "db:forum": "node scripts/run-forum.mjs",
     "db:chat": "node scripts/run-chat.mjs",
     "db:chat-contacts": "node scripts/run-chat-contacts.mjs",
+    "db:chat-contacts-retention": "node scripts/run-chat-contacts-retention.mjs",
     "db:chat-ambient-users": "npx tsx scripts/run-chat-ambient-users.ts",
     "db:chat-ambient-bootstrap": "npx tsx scripts/run-chat-ambient-users.ts --bootstrap",
     "chat:ambient": "node scripts/run-chat-ambient.mjs",

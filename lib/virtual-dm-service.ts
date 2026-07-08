@@ -1,10 +1,16 @@
 import { pickVirtualDmReply } from "@/lib/virtual-dm-replies";
 import type { VirtualContactSummary, VirtualDmMessage } from "@/lib/virtual-dm";
+import { VIRTUAL_DM_LIMITS } from "@/lib/virtual-dm";
 import { getVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
 import { getVirtualPlayerById } from "@/lib/virtual-players";
+import { createServerSupabase } from "@/lib/supabase-server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-const DM_LIMIT = 80;
+function dmHistoryCutoffIso() {
+  return new Date(
+    Date.now() - VIRTUAL_DM_LIMITS.historyDays * 86_400_000
+  ).toISOString();
+}
 
 type DmRow = {
   id: string;
@@ -27,10 +33,12 @@ export async function listVirtualContacts(
   supabase: SupabaseClient,
   userId: string
 ): Promise<VirtualContactSummary[]> {
+  const cutoff = dmHistoryCutoffIso();
   const { data: recent, error } = await supabase
     .from("chat_virtual_dm_messages")
     .select("virtual_player_id, content, created_at, sender")
     .eq("user_id", userId)
+    .gte("created_at", cutoff)
     .order("created_at", { ascending: false })
     .limit(500);
 
@@ -92,13 +100,15 @@ export async function listVirtualDmMessages(
     throw new Error("找不到此虛擬玩家");
   }
 
+  const cutoff = dmHistoryCutoffIso();
   const { data, error } = await supabase
     .from("chat_virtual_dm_messages")
     .select("id, virtual_player_id, sender, content, created_at")
     .eq("user_id", userId)
     .eq("virtual_player_id", virtualPlayerId)
+    .gte("created_at", cutoff)
     .order("created_at", { ascending: true })
-    .limit(DM_LIMIT);
+    .limit(VIRTUAL_DM_LIMITS.pageSize);
 
   if (error) {
     if (isMissingDmTable(error)) return [];
@@ -129,7 +139,7 @@ export async function sendVirtualDmMessage(
   if (!trimmed) {
     throw new Error("訊息不可為空");
   }
-  if (trimmed.length > 500) {
+  if (trimmed.length > VIRTUAL_DM_LIMITS.content) {
     throw new Error("訊息過長");
   }
 
@@ -168,4 +178,18 @@ export async function sendVirtualDmMessage(
   }
 
   return listVirtualDmMessages(supabase, userId, virtualPlayerId);
+}
+
+export async function cleanupExpiredVirtualDmMessages() {
+  const supabase = createServerSupabase();
+  const cutoff = dmHistoryCutoffIso();
+
+  const { data, error } = await supabase
+    .from("chat_virtual_dm_messages")
+    .delete()
+    .lt("created_at", cutoff)
+    .select("id");
+
+  if (error) throw new Error(error.message);
+  return { deleted: data?.length ?? 0, cutoff };
 }

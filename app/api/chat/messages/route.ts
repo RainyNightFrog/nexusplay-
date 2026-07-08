@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { CHAT_LIMITS, isValidChatChannel } from "@/lib/chat";
+import { maintainAmbientChat } from "@/lib/chat-ambient-maintain";
 import { createChatMessage, listChatMessages } from "@/lib/chat-service";
 import { sanitizePlainText } from "@/lib/sanitize-plain";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
@@ -21,6 +22,12 @@ export async function GET(request: Request) {
 
     if (!isValidChatChannel(channel)) {
       return NextResponse.json({ error: "無效的聊天頻道" }, { status: 400 });
+    }
+
+    try {
+      await maintainAmbientChat(channel);
+    } catch {
+      // 虛擬聊天維護失敗不應阻擋讀取既有訊息
     }
 
     const messages = await listChatMessages(channel, user.id, { before });

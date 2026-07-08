@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   AtSign,
@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { formatCountryName } from "@/lib/request-geo";
 import { getInitials } from "@/lib/auth";
 import { useAuth } from "@/hooks/use-auth";
 import { useApiError } from "@/hooks/use-api-error";
@@ -38,6 +39,7 @@ import { cn } from "@/lib/utils";
 
 export default function ProfilePage() {
   const t = useTranslations("profile");
+  const locale = useLocale();
   const { translateApiError } = useApiError();
   const tNav = useTranslations("nav");
   const tCommon = useTranslations("common");
@@ -46,6 +48,7 @@ export default function ProfilePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [email, setEmail] = useState<string | null>(null);
+  const [countryCode, setCountryCode] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState("");
   const [website, setWebsite] = useState("");
   const [twitter, setTwitter] = useState("");
@@ -81,10 +84,14 @@ export default function ProfilePage() {
 
     fetch("/api/auth/profile")
       .then((response) => response.json())
-      .then((data: { email?: string | null }) => {
+      .then((data: { email?: string | null; countryCode?: string | null }) => {
         setEmail(data.email ?? null);
+        setCountryCode(data.countryCode ?? null);
       })
-      .catch(() => setEmail(null));
+      .catch(() => {
+        setEmail(null);
+        setCountryCode(null);
+      });
   }, [loading, profile, router]);
 
   useEffect(() => {
@@ -186,6 +193,9 @@ export default function ProfilePage() {
   }
 
   const initials = getInitials(displayName || profile.display_name);
+  const regionLabel = countryCode
+    ? formatCountryName(countryCode, locale)
+    : t("regionUnknown");
 
   return (
     <AccountShell title={t("title")} description={t("description")}>
@@ -347,6 +357,22 @@ export default function ProfilePage() {
                   </span>
                 </div>
                 <p className="text-xs text-zinc-600">{t("emailHint")}</p>
+              </div>
+
+              <div className={accountFieldClassName}>
+                <Label htmlFor="region" className={accountLabelClassName}>
+                  {t("region")}
+                </Label>
+                <div
+                  className={cn(
+                    accountInputClassName,
+                    "flex items-center justify-center gap-2 text-zinc-300"
+                  )}
+                >
+                  <Globe className="size-4 shrink-0 text-cyan-400" />
+                  <span id="region">{regionLabel}</span>
+                </div>
+                <p className="text-xs text-zinc-600">{t("regionHint")}</p>
               </div>
 
               <div

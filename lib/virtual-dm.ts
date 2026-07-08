@@ -6,6 +6,12 @@ export type VirtualDmMessage = {
   created_at: string;
 };
 
+export const VIRTUAL_DM_LIMITS = {
+  content: 500,
+  historyDays: 90,
+  pageSize: 80,
+} as const;
+
 export type VirtualContactSummary = {
   id: string;
   displayName: string;

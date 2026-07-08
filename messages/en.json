@@ -825,6 +825,9 @@
     "equippedTitleHint": "This title appears across chat, forums, leaderboards, and the rest of the site",
     "noEquippedTitle": "No title equipped",
     "changeTitle": "Change title",
+    "region": "Region",
+    "regionHint": "Detected from your IP address and shown on your player profile card",
+    "regionUnknown": "Unable to detect",
     "settingsHint": "For appearance, notifications, and system preferences, go to"
   },
   "settings": {
@@ -1612,13 +1615,14 @@
     "contactsEmptyHint": "Click a player name in World or Creators to start a DM",
     "contactsEmptyThread": "Say hi to start chatting",
     "contactsTyping": "Typing…",
+    "contactsRetentionHint": "DM history is kept for 3 months",
     "contactsLoadFailed": "Failed to load contacts",
     "playerCardTitle": "Player profile",
     "playerCardVirtual": "Virtual player",
     "playerCardReal": "Platform player",
     "playerCardDm": "Direct message",
     "playerCardViewProfile": "View my profile",
-    "playerCardLocale": "Language",
+    "playerCardRegion": "Region",
     "playerCardLoadFailed": "Failed to load player profile",
     "playerCardOnlineTime": "Online time",
     "playerCardPlayTime": "Play time",
@@ -1627,7 +1631,7 @@
     "playerCardAchievementCount": "{count}",
     "playerCardForumPosts": "Forum posts",
     "playerCardDonated": "Tips given",
-    "playerCardTipsReceived": "Tips received",
+    "playerCardFollowers": "Followers",
     "playerCardPublishedGames": "Published games",
     "playerCardRecentAchievements": "Recent achievements"
   }

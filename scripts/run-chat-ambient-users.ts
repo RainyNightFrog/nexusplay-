@@ -32,8 +32,8 @@ async function main() {
   }
 
   if (bootstrap) {
-    const world = await bootstrapAmbientWorldChat(8);
-    const creator = await bootstrapAmbientCreatorChat(4);
+    const world = await bootstrapAmbientWorldChat(14);
+    const creator = await bootstrapAmbientCreatorChat(8);
     console.log(`✓ 世界頻道灌入 ${world.posted} 則（${world.rounds} 輪）`);
     console.log(`✓ 創作者頻道灌入 ${creator.posted} 則（${creator.rounds} 輪）`);
   }

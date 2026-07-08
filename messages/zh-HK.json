@@ -825,6 +825,9 @@
     "equippedTitleHint": "此稱號會顯示於聊天、討論區、排行榜等全站位置",
     "noEquippedTitle": "尚未佩戴稱號",
     "changeTitle": "更換稱號",
+    "region": "區域",
+    "regionHint": "根據你的 IP 位址自動偵測，會顯示於玩家資料卡",
+    "regionUnknown": "無法偵測",
     "settingsHint": "外觀、通知與系統偏好請至"
   },
   "settings": {
@@ -1612,13 +1615,14 @@
     "contactsEmptyHint": "在世界或創作者頻道點擊玩家名稱，即可發起私訊",
     "contactsEmptyThread": "打個招呼開始聊天吧",
     "contactsTyping": "對方正在輸入…",
+    "contactsRetentionHint": "私訊記錄保留 3 個月",
     "contactsLoadFailed": "載入通訊錄失敗",
     "playerCardTitle": "玩家資料",
     "playerCardVirtual": "虛擬玩家",
     "playerCardReal": "平台玩家",
     "playerCardDm": "私訊",
     "playerCardViewProfile": "查看我的檔案",
-    "playerCardLocale": "語言區域",
+    "playerCardRegion": "區域",
     "playerCardLoadFailed": "載入玩家資料失敗",
     "playerCardOnlineTime": "在線時長",
     "playerCardPlayTime": "遊玩時長",
@@ -1627,7 +1631,7 @@
     "playerCardAchievementCount": "{count} 個",
     "playerCardForumPosts": "論壇發文",
     "playerCardDonated": "打賞支出",
-    "playerCardTipsReceived": "收到打賞",
+    "playerCardFollowers": "追蹤者",
     "playerCardPublishedGames": "發佈作品",
     "playerCardRecentAchievements": "近期成就"
   }

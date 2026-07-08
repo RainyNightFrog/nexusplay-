@@ -69,12 +69,14 @@ function VirtualDmThread({
   avatarUrl,
   equippedTitle,
   onBack,
+  onProfileClick,
 }: {
   playerId: string;
   displayName: string;
   avatarUrl: string;
   equippedTitle?: EquippedTitle | null;
   onBack: () => void;
+  onProfileClick: () => void;
 }) {
   const t = useTranslations("chat");
   const [draft, setDraft] = useState("");
@@ -91,7 +93,12 @@ function VirtualDmThread({
         >
           <ArrowLeft className="size-4" />
         </button>
-        <div className="relative size-8 shrink-0 overflow-hidden rounded-full ring-1 ring-white/10">
+        <button
+          type="button"
+          onClick={onProfileClick}
+          className="relative size-8 shrink-0 overflow-hidden rounded-full ring-1 ring-white/10 transition-opacity hover:opacity-85"
+          aria-label={displayName}
+        >
           <Image
             src={avatarUrl}
             alt={displayName}
@@ -99,8 +106,12 @@ function VirtualDmThread({
             className="object-cover"
             unoptimized
           />
-        </div>
-        <div className="min-w-0">
+        </button>
+        <button
+          type="button"
+          onClick={onProfileClick}
+          className="min-w-0 flex-1 text-left transition-opacity hover:opacity-85"
+        >
           <UserBadge
             username={displayName}
             title={equippedTitle}
@@ -110,7 +121,7 @@ function VirtualDmThread({
             titleClassName="text-[9px]"
           />
           <p className="text-[10px] text-zinc-500">{t("contactsVirtualHint")}</p>
-        </div>
+        </button>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
@@ -182,10 +193,17 @@ export function ChatContactsPanel({
   active,
   initialPlayerId,
   onInitialPlayerConsumed,
+  onPlayerProfileClick,
 }: {
   active: boolean;
   initialPlayerId?: string | null;
   onInitialPlayerConsumed?: () => void;
+  onPlayerProfileClick?: (contact: {
+    id: string;
+    displayName: string;
+    avatarUrl: string;
+    equippedTitle?: EquippedTitle | null;
+  }) => void;
 }) {
   const t = useTranslations("chat");
   const { contacts, loading, error, reload } = useVirtualContacts(active);
@@ -230,6 +248,14 @@ export function ChatContactsPanel({
           setSelectedId(null);
           void reload();
         }}
+        onProfileClick={() =>
+          onPlayerProfileClick?.({
+            id: selectedPlayer.id,
+            displayName: selectedPlayer.displayName,
+            avatarUrl: selectedPlayer.avatarUrl,
+            equippedTitle: selectedPlayer.equippedTitle ?? null,
+          })
+        }
       />
     );
   }

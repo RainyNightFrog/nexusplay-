@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
   Filter,
@@ -210,7 +210,9 @@ export function CommunityForum({
   );
   const [playerPreview, setPlayerPreview] = useState<ChatPlayerPreview | null>(null);
   const [playerCardOpen, setPlayerCardOpen] = useState(false);
-  const threadTopRef = useRef<HTMLDivElement>(null);
+  const threadViewRef = useRef<HTMLDivElement>(null);
+  const threadScrollTimersRef = useRef<number[]>([]);
+  const [threadBodyReady, setThreadBodyReady] = useState(false);
   const [comments, setComments] = useState<ForumComment[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
 
@@ -338,6 +340,71 @@ export function CommunityForum({
     }
   }, [isHub, games, composeGameId]);
 
+  const THREAD_HEADER_OFFSET = 80;
+
+  const clearThreadScrollTimers = useCallback(() => {
+    for (const timer of threadScrollTimersRef.current) {
+      window.clearTimeout(timer);
+    }
+    threadScrollTimersRef.current = [];
+  }, []);
+
+  const pinThreadToViewportTop = useCallback(() => {
+    const element = threadViewRef.current;
+    if (!element) return false;
+
+    const top =
+      element.getBoundingClientRect().top +
+      window.scrollY -
+      THREAD_HEADER_OFFSET;
+    const nextTop = Math.max(0, top);
+
+    window.scrollTo({ top: nextTop, left: 0, behavior: "auto" });
+    document.documentElement.scrollTop = nextTop;
+    document.body.scrollTop = nextTop;
+    return true;
+  }, []);
+
+  const scheduleThreadPin = useCallback(() => {
+    clearThreadScrollTimers();
+    pinThreadToViewportTop();
+    threadScrollTimersRef.current = [0, 48, 120, 280, 480].map((delay) =>
+      window.setTimeout(pinThreadToViewportTop, delay)
+    );
+    return clearThreadScrollTimers;
+  }, [clearThreadScrollTimers, pinThreadToViewportTop]);
+
+  const enterThreadView = useCallback(
+    (post: ForumPostWithGame) => {
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+
+      clearThreadScrollTimers();
+      setThreadBodyReady(false);
+      flushSync(() => {
+        setSelectedPost(post);
+      });
+      scheduleThreadPin();
+      threadScrollTimersRef.current.push(
+        window.setTimeout(() => {
+          setThreadBodyReady(true);
+        }, 160)
+      );
+    },
+    [clearThreadScrollTimers, scheduleThreadPin]
+  );
+
+  const exitThreadView = useCallback(() => {
+    clearThreadScrollTimers();
+    setThreadBodyReady(false);
+    setSelectedPost(null);
+  }, [clearThreadScrollTimers]);
+
+  useEffect(() => {
+    return () => clearThreadScrollTimers();
+  }, [clearThreadScrollTimers]);
+
   useEffect(() => {
     loadPosts();
   }, [loadPosts]);
@@ -350,19 +417,24 @@ export function CommunityForum({
     }
   }, [selectedPost, loadComments]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!selectedPost) return;
-
-    const timer = window.setTimeout(() => {
-      threadTopRef.current?.scrollIntoView({ behavior: "auto", block: "start" });
-    }, 50);
-
-    return () => window.clearTimeout(timer);
+    const previousOverflowAnchor = document.documentElement.style.overflowAnchor;
+    document.documentElement.style.overflowAnchor = "none";
+    return () => {
+      document.documentElement.style.overflowAnchor = previousOverflowAnchor;
+    };
   }, [selectedPost?.id]);
 
-  const openPost = useCallback((post: ForumPostWithGame) => {
-    setSelectedPost(post);
-  }, []);
+  useLayoutEffect(() => {
+    if (!selectedPost || !threadBodyReady) return;
+    return scheduleThreadPin();
+  }, [selectedPost?.id, threadBodyReady, scheduleThreadPin]);
+
+  useLayoutEffect(() => {
+    if (!selectedPost || !threadBodyReady || commentsLoading) return;
+    return scheduleThreadPin();
+  }, [selectedPost?.id, threadBodyReady, commentsLoading, scheduleThreadPin]);
 
   const handleCreatePost = async () => {
     if (!profile) {
@@ -424,7 +496,7 @@ export function CommunityForum({
       setNewTitle("");
       setNewCategory("general");
       setNewContent("");
-      setSelectedPost(createdPost);
+      enterThreadView(createdPost);
       onToast(t("postSuccess"));
     } catch {
       onToast(t("postFailed"));
@@ -508,6 +580,7 @@ export function CommunityForum({
 
   return (
     <div className="p-5 text-center sm:p-8">
+      {!selectedPost && (
       <div className="mb-6 flex flex-col items-center gap-4 border-b border-white/8 pb-6">
         <div>
           <h3 className="flex items-center justify-center gap-2 text-xl font-bold text-white">
@@ -536,24 +609,20 @@ export function CommunityForum({
           </p>
         </div>
       </div>
+      )}
 
-      <AnimatePresence mode="wait">
-        {selectedPost ? (
-          <motion.div
-            ref={threadTopRef}
-            key={`thread-${selectedPost.id}`}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.22 }}
-            className="scroll-mt-24 space-y-5"
+      {selectedPost ? (
+        <div
+          ref={threadViewRef}
+          key={`thread-${selectedPost.id}`}
+          className="scroll-mt-20 space-y-5"
+        >
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={exitThreadView}
+            className="mx-auto gap-1.5 text-zinc-400 hover:text-violet-300"
           >
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSelectedPost(null)}
-              className="mx-auto gap-1.5 text-zinc-400 hover:text-violet-300"
-            >
               <ArrowLeft className="size-4" />
               {t("backToList")}
             </Button>
@@ -607,7 +676,8 @@ export function CommunityForum({
               </div>
             </article>
 
-            <section className="space-y-4">
+            {threadBodyReady ? (
+            <section className="space-y-4 [overflow-anchor:none]">
               <h5 className="flex items-center justify-center gap-2 text-sm font-semibold text-zinc-300">
                 <span className="size-1.5 rounded-full bg-violet-400" />
                 {t("comments", { count: comments.length })}
@@ -621,12 +691,9 @@ export function CommunityForum({
                 </div>
               ) : comments.length > 0 ? (
                 <div className="space-y-3">
-                  {comments.map((comment, index) => (
-                    <motion.div
+                  {comments.map((comment) => (
+                    <div
                       key={comment.id}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.03 }}
                       className="rounded-xl border border-white/8 bg-zinc-900/50 p-4 text-center"
                     >
                       <div className="flex flex-col items-center gap-3">
@@ -652,7 +719,7 @@ export function CommunityForum({
                       <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-zinc-400">
                         {comment.content}
                       </p>
-                    </motion.div>
+                    </div>
                   ))}
                 </div>
               ) : (
@@ -664,7 +731,7 @@ export function CommunityForum({
               <div
                 className={cn(
                   "rounded-2xl border border-white/10 bg-zinc-950/60 p-4",
-                  "ring-1 ring-inset ring-white/5"
+                  "ring-1 ring-inset ring-white/5 [overflow-anchor:none]"
                 )}
               >
                 {profile ? (
@@ -718,16 +785,14 @@ export function CommunityForum({
                 )}
               </div>
             </section>
-          </motion.div>
-        ) : (
-          <motion.div
-            key="post-list"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="space-y-4"
-          >
+            ) : (
+              <div className="flex justify-center py-8">
+                <Loader2 className="size-6 animate-spin text-violet-400" />
+              </div>
+            )}
+        </div>
+      ) : (
+        <div key="post-list" className="space-y-4">
             {!authLoading && profile && (
               <section
                 className={cn(
@@ -976,14 +1041,14 @@ export function CommunityForum({
               </div>
             ) : filteredPosts.length > 0 ? (
               <div className="space-y-3">
-                {filteredPosts.map((post, index) => (
-                  <motion.button
+                {filteredPosts.map((post) => (
+                  <button
                     key={post.id}
                     type="button"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.03 }}
-                    onClick={() => openPost(post)}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      enterThreadView(post);
+                    }}
                     className={cn(
                       "group w-full overflow-hidden rounded-xl border border-white/10",
                       "border-l-4 bg-zinc-900/50 p-4 text-center transition-all duration-200",
@@ -1032,7 +1097,7 @@ export function CommunityForum({
                         }
                       />
                     </div>
-                  </motion.button>
+                  </button>
                 ))}
               </div>
             ) : (
@@ -1062,9 +1127,8 @@ export function CommunityForum({
                 )}
               </div>
             )}
-          </motion.div>
-        )}
-      </AnimatePresence>
+        </div>
+      )}
 
       <ChatPlayerCard
         player={playerPreview}

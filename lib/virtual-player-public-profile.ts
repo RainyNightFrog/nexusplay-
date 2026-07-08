@@ -28,7 +28,7 @@ export type VirtualPlayerSocialStats = {
   achievementCount: number;
   achievementHighlights: string[];
   donatedTotal: number;
-  tipsReceivedCount: number;
+  followerCount: number;
   publishedGames: number;
   website: string | null;
 };
@@ -60,7 +60,7 @@ export function getVirtualPlayerSocialStats(
     achievementCount,
     achievementHighlights: highlights,
     donatedTotal: (h1 % 28) * 10,
-    tipsReceivedCount: isCreator ? h2 % 18 : 0,
+    followerCount: isCreator ? 12 + (h2 % 240) : 0,
     publishedGames: isCreator ? 1 + (h3 % 4) : 0,
     website: null,
   };

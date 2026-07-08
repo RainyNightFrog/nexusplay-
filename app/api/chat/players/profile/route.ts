@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { getChatPlayerPublicProfile } from "@/lib/chat-player-profile-service";
+import {
+  getChatPlayerPublicProfile,
+  syncUserCountryFromRequest,
+} from "@/lib/chat-player-profile-service";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
 
@@ -22,7 +25,13 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "缺少玩家識別" }, { status: 400 });
     }
 
-    const profile = await getChatPlayerPublicProfile(createServerSupabase(), {
+    const supabase = createServerSupabase();
+
+    if (userId && userId === user.id) {
+      await syncUserCountryFromRequest(supabase, user.id, request);
+    }
+
+    const profile = await getChatPlayerPublicProfile(supabase, {
       userId,
       virtualPlayerId,
     });

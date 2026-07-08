@@ -4,6 +4,10 @@ import { isUserOnline } from "@/lib/platform-leaderboard";
 import { resolveEquippedTitleForUser } from "@/lib/equipped-title-service";
 import { getVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
 import { getVirtualPlayerSocialStats } from "@/lib/virtual-player-public-profile";
+import {
+  getCountryCodeFromHeaders,
+  getVirtualPlayerCountryCode,
+} from "@/lib/request-geo";
 import { getVirtualPlayerById } from "@/lib/virtual-players";
 import type { EquippedTitle } from "@/lib/titles";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -29,11 +33,12 @@ export type ChatPlayerPublicProfile = {
   achievementHighlights: ChatPlayerAchievementHighlight[];
   forumPostCount: number;
   donatedTotal: number;
-  tipsReceivedCount: number;
+  followerCount: number;
   publishedGames: number;
   onlineSeconds: number;
   playSeconds: number;
   lastActiveAt: string | null;
+  countryCode: string | null;
 };
 
 function readBoolean(value: unknown, fallback: boolean) {
@@ -42,6 +47,12 @@ function readBoolean(value: unknown, fallback: boolean) {
 
 function readOptionalString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function readCountryCode(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim().toUpperCase();
+  return /^[A-Z]{2}$/.test(normalized) ? normalized : null;
 }
 
 async function loadRealUserProfile(
@@ -64,6 +75,7 @@ async function loadRealUserProfile(
   const metadata = authData.user?.user_metadata ?? {};
   const profilePublic = readBoolean(metadata.profile_public, true);
   const website = profilePublic ? readOptionalString(metadata.website) : null;
+  const countryCode = readCountryCode(metadata.country_code);
 
   const [
     activityRes,
@@ -71,7 +83,7 @@ async function loadRealUserProfile(
     achievementCountRes,
     forumPostsRes,
     publishedGamesRes,
-    tipsReceivedRes,
+    followerCountRes,
     equippedTitle,
   ] = await Promise.all([
     supabase
@@ -102,10 +114,9 @@ async function loadRealUserProfile(
       .eq("publish_status", "public")
       .eq("status", "approved"),
     supabase
-      .from("game_tips")
+      .from("creator_follows")
       .select("id", { count: "exact", head: true })
-      .eq("creator_id", userId)
-      .eq("status", "succeeded"),
+      .eq("creator_id", userId),
     resolveEquippedTitleForUser(supabase, userId),
   ]);
 
@@ -151,11 +162,12 @@ async function loadRealUserProfile(
     achievementHighlights,
     forumPostCount: forumPostsRes.count ?? 0,
     donatedTotal: Number(activity?.total_donated ?? 0),
-    tipsReceivedCount: tipsReceivedRes.count ?? 0,
+    followerCount: followerCountRes.count ?? 0,
     publishedGames: publishedGamesRes.count ?? 0,
     onlineSeconds: activity?.total_online_time ?? 0,
     playSeconds: activity?.total_play_time ?? 0,
     lastActiveAt,
+    countryCode,
   };
 }
 
@@ -204,12 +216,39 @@ async function loadVirtualPlayerProfile(
     })),
     forumPostCount: social.forumPostCount,
     donatedTotal: social.donatedTotal,
-    tipsReceivedCount: social.tipsReceivedCount,
+    followerCount: social.followerCount,
     publishedGames: social.publishedGames,
     onlineSeconds: activity.onlineSeconds,
     playSeconds: activity.playSeconds,
     lastActiveAt: activity.lastActiveAt,
+    countryCode: getVirtualPlayerCountryCode(virtualPlayerId),
   };
+}
+
+export async function syncUserCountryFromRequest(
+  supabase: SupabaseClient,
+  userId: string,
+  request: Request
+): Promise<string | null> {
+  const countryCode = getCountryCodeFromHeaders(request.headers);
+  if (!countryCode) return null;
+
+  const { data: authData, error: authError } =
+    await supabase.auth.admin.getUserById(userId);
+  if (authError) throw new Error(authError.message);
+
+  const currentCode = readCountryCode(authData.user?.user_metadata?.country_code);
+  if (currentCode === countryCode) return countryCode;
+
+  const { error: updateError } = await supabase.auth.admin.updateUserById(userId, {
+    user_metadata: {
+      ...(authData.user?.user_metadata ?? {}),
+      country_code: countryCode,
+    },
+  });
+  if (updateError) throw new Error(updateError.message);
+
+  return countryCode;
 }
 
 export async function getChatPlayerPublicProfile(

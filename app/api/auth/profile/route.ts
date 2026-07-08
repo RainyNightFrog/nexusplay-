@@ -9,7 +9,10 @@ import {
   PROFILE_LIMITS,
   resolveRoleFromPreferences,
 } from "@/lib/profile-settings";
+import { getCountryCodeFromRequest } from "@/lib/request-geo";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
+import { createServerSupabase } from "@/lib/supabase-server";
+import { syncUserCountryFromRequest } from "@/lib/chat-player-profile-service";
 
 type ProfilePatchBody = {
   display_name?: string;
@@ -22,7 +25,7 @@ type ProfilePatchBody = {
   show_in_leaderboard?: boolean;
 };
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const supabase = await createAuthServerClient();
     const {
@@ -33,6 +36,19 @@ export async function GET() {
       return NextResponse.json({ profile: null, email: null });
     }
 
+    let countryCode =
+      typeof user.user_metadata?.country_code === "string"
+        ? user.user_metadata.country_code.trim().toUpperCase()
+        : null;
+
+    const detectedCountry = getCountryCodeFromRequest(request);
+    if (detectedCountry) {
+      if (countryCode !== detectedCountry) {
+        await syncUserCountryFromRequest(createServerSupabase(), user.id, request);
+        countryCode = detectedCountry;
+      }
+    }
+
     const profile = await resolveUserProfile(supabase, user);
     const hasPassword =
       user.identities?.some((identity) => identity.provider === "email") ?? false;
@@ -41,6 +57,7 @@ export async function GET() {
       profile,
       email: user.email ?? null,
       hasPassword,
+      countryCode,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "讀取個人資料失敗";
