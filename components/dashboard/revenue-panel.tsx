@@ -28,7 +28,10 @@ import {
   type DashboardRevenueAnalytics,
   type RevenueStatKey,
 } from "@/lib/dashboard-revenue";
+import type { RevenueTrendDays } from "@/lib/dashboard-revenue-server";
 import { cn } from "@/lib/utils";
+
+const TREND_DAY_OPTIONS: RevenueTrendDays[] = [7, 14, 30];
 
 const RevenueChart = dynamic(
   () =>
@@ -85,6 +88,8 @@ type RevenuePanelProps = {
   scopeKey: string;
   selectedGameId?: number;
   showBreakdown?: boolean;
+  trendDays?: RevenueTrendDays;
+  onTrendDaysChange?: (days: RevenueTrendDays) => void;
   unreadTipCount?: number;
   onClearUnreadTips?: () => void;
 };
@@ -96,10 +101,32 @@ export function RevenuePanel({
   scopeKey,
   selectedGameId,
   showBreakdown = true,
+  trendDays = 14,
+  onTrendDaysChange,
   unreadTipCount = 0,
   onClearUnreadTips,
 }: RevenuePanelProps) {
   const t = useTranslations("dashboard");
+
+  const formatStatHint = (
+    hintKey?: string,
+    hintParams?: Record<string, string | number>
+  ) => {
+    if (!hintKey) return null;
+    if (hintKey === "revenueStatHintLifetimeTips" && hintParams?.count != null) {
+      return t("revenueStatHintLifetimeTips", {
+        count: Number(hintParams.count),
+      });
+    }
+    if (hintKey in { revenueStatHintLifetime: 1, revenueStatHintLast7d: 1, revenueStatHintConversion: 1 }) {
+      return t(hintKey as "revenueStatHintLifetime" | "revenueStatHintLast7d" | "revenueStatHintConversion");
+    }
+    return null;
+  };
+
+  const activeBreakdownRows = data?.breakdown.filter(
+    (row) => row.tipsEnabled && row.totalAmount > 0
+  ) ?? [];
 
   useEffect(() => {
     if (unreadTipCount <= 0) return;
@@ -248,9 +275,21 @@ export function RevenuePanel({
                       <p className="mt-2 text-3xl font-bold tracking-tight text-white">
                         {stat.value}
                       </p>
-                      <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-300">
-                        <TrendingUp className="size-3.5" />
-                        {stat.change}
+                      {formatStatHint(stat.hintKey, stat.hintParams) && (
+                        <p className="mt-1 text-[11px] text-zinc-500">
+                          {formatStatHint(stat.hintKey, stat.hintParams)}
+                        </p>
+                      )}
+                      <span className="mt-2 inline-flex flex-col items-center gap-0.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-300">
+                        <span className="inline-flex items-center gap-1">
+                          <TrendingUp className="size-3.5" />
+                          {stat.change}
+                        </span>
+                        {stat.changeLabelKey && stat.change !== "—" && (
+                          <span className="text-[10px] font-normal text-emerald-400/80">
+                            {t(stat.changeLabelKey as "revenueChangeWoW")}
+                          </span>
+                        )}
                       </span>
                     </CardContent>
                   </Card>
@@ -262,13 +301,36 @@ export function RevenuePanel({
           <div className="grid gap-6 xl:grid-cols-[1.55fr_0.85fr]">
             <Card className="overflow-hidden border-white/10 bg-zinc-900/60 py-0 shadow-xl shadow-black/40 backdrop-blur-sm">
               <CardHeader className="border-b border-white/5 px-6 pt-6 pb-4 text-center">
-                <CardTitle className="flex items-center justify-center gap-2 text-xl text-white">
-                  <Wallet className="size-5 text-emerald-400" />
-                  {t("revenueChartTitle")}
-                </CardTitle>
-                <CardDescription className="text-zinc-400">
-                  {t("revenueChartDesc")}
-                </CardDescription>
+                <div className="flex flex-col items-center gap-3">
+                  <div>
+                    <CardTitle className="flex items-center justify-center gap-2 text-xl text-white">
+                      <Wallet className="size-5 text-emerald-400" />
+                      {t("revenueChartTitle")}
+                    </CardTitle>
+                    <CardDescription className="text-zinc-400">
+                      {t("revenueChartDesc", { days: trendDays })}
+                    </CardDescription>
+                  </div>
+                  {onTrendDaysChange && (
+                    <div className="inline-flex rounded-lg border border-white/10 bg-white/5 p-0.5">
+                      {TREND_DAY_OPTIONS.map((days) => (
+                        <button
+                          key={days}
+                          type="button"
+                          onClick={() => onTrendDaysChange(days)}
+                          className={cn(
+                            "rounded-md px-3 py-1 text-xs font-medium transition",
+                            trendDays === days
+                              ? "bg-emerald-500/20 text-emerald-200"
+                              : "text-zinc-400 hover:text-zinc-200"
+                          )}
+                        >
+                          {t("revenueTrendDays", { days })}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </CardHeader>
               <CardContent className="px-2 pb-4 pt-2 sm:px-6 sm:pb-6">
                 <RevenueChart key={scopeKey} data={data.trend} />
@@ -325,7 +387,8 @@ export function RevenuePanel({
             </Card>
           </div>
 
-          {showBreakdown && data.breakdown.some((row) => row.totalAmount > 0) && (
+          {activeBreakdownRows.length > 0 && (
+            showBreakdown ? (
             <Card className="overflow-hidden border-white/10 bg-zinc-900/60 py-0 shadow-xl shadow-black/40 backdrop-blur-sm">
               <CardHeader className="border-b border-white/5 px-6 pt-6 pb-4 text-center">
                 <CardTitle className="text-lg text-white">
@@ -357,9 +420,7 @@ export function RevenuePanel({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
-                    {data.breakdown
-                      .filter((row) => row.tipsEnabled && row.totalAmount > 0)
-                      .map((row) => (
+                    {activeBreakdownRows.map((row) => (
                         <tr
                           key={row.gameId}
                           className="transition-colors hover:bg-white/[0.02]"
@@ -385,6 +446,48 @@ export function RevenuePanel({
                 </table>
               </CardContent>
             </Card>
+            ) : (
+            <Card className="border-white/10 bg-zinc-900/60 py-0 shadow-xl shadow-black/40 backdrop-blur-sm">
+              <CardHeader className="border-b border-white/5 px-6 pt-6 pb-4 text-center">
+                <CardTitle className="text-lg text-white">
+                  {t("revenueGameSummaryTitle")}
+                </CardTitle>
+                <CardDescription className="text-zinc-400">
+                  {t("revenueGameSummaryDesc")}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-3 p-6 sm:grid-cols-2">
+                {activeBreakdownRows.map((row) => (
+                  <div
+                    key={row.gameId}
+                    className="rounded-xl border border-white/8 bg-zinc-950/40 p-4 text-center"
+                  >
+                    <p className="text-sm font-medium text-white">{row.title}</p>
+                    <p className="mt-3 text-2xl font-bold text-emerald-300">
+                      {formatRevenueMoney(row.totalAmount)}
+                    </p>
+                    <p className="mt-1 text-xs text-zinc-500">
+                      {t("revenueStatHintLifetime")}
+                    </p>
+                    <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                      <div className="rounded-lg bg-white/[0.03] px-2 py-2">
+                        <p className="text-zinc-500">{t("revenueBreakdownTips")}</p>
+                        <p className="mt-1 font-semibold text-zinc-200">
+                          {row.tipCount.toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="rounded-lg bg-white/[0.03] px-2 py-2">
+                        <p className="text-zinc-500">{t("revenueAvgTip")}</p>
+                        <p className="mt-1 font-semibold text-amber-300">
+                          {formatRevenueMoney(row.avgTip)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+            )
           )}
         </>
       )}

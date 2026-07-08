@@ -1,6 +1,7 @@
 import type { GameGenre } from "@/lib/game-metadata";
 import type { GamePublishStatus } from "@/lib/game-publish";
 import type { AiContentType } from "@/lib/game-metadata";
+import { MIN_SUGGESTED_TIP_USD } from "@/lib/tip-limits";
 
 export type PublishFormValidationInput = {
   mode: "upload" | "edit";
@@ -49,6 +50,11 @@ export function getPublishValidationIssues(
     }
     if (input.tipsEnabled && !input.suggestedTipAmount.trim()) {
       issues.push({ field: "suggestedTip", messageKey: "alertSuggestedTip" });
+    } else if (input.tipsEnabled && input.suggestedTipAmount.trim()) {
+      const parsed = Number.parseFloat(input.suggestedTipAmount);
+      if (!Number.isFinite(parsed) || parsed < MIN_SUGGESTED_TIP_USD) {
+        issues.push({ field: "suggestedTip", messageKey: "alertSuggestedTipMin" });
+      }
     }
     return issues;
   }
@@ -76,6 +82,11 @@ export function getPublishValidationIssues(
   }
   if (input.tipsEnabled && !input.suggestedTipAmount.trim()) {
     issues.push({ field: "suggestedTip", messageKey: "alertSuggestedTip" });
+  } else if (input.tipsEnabled && input.suggestedTipAmount.trim()) {
+    const parsed = Number.parseFloat(input.suggestedTipAmount);
+    if (!Number.isFinite(parsed) || parsed < MIN_SUGGESTED_TIP_USD) {
+      issues.push({ field: "suggestedTip", messageKey: "alertSuggestedTipMin" });
+    }
   }
 
   return issues;

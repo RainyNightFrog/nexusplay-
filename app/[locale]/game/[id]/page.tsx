@@ -15,6 +15,7 @@ import {
   Loader2,
   Maximize2,
   MessagesSquare,
+  Pencil,
   Share2,
   ThumbsUp,
   Upload,
@@ -23,7 +24,6 @@ import {
   X,
 } from "lucide-react";
 import { GameEmbedBridge } from "@/components/game/game-embed-bridge";
-import { SupporterWall } from "@/components/game/supporter-wall";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { SiteHeader } from "@/components/layout/site-header";
 import { LeaderboardNavButton } from "@/components/LeaderboardModal";
@@ -41,10 +41,10 @@ import { useEscapeKey, useScrollLock } from "@/hooks/use-scroll-lock";
 import { cn } from "@/lib/utils";
 import { trackGaEvent } from "@/components/analytics/google-analytics";
 
-const TipSupportPanel = dynamic(
+const GameSupportSection = dynamic(
   () =>
-    import("@/components/game/tip-support-panel").then(
-      (module) => module.TipSupportPanel
+    import("@/components/game/game-support-section").then(
+      (module) => module.GameSupportSection
     ),
   { ssr: false }
 );
@@ -106,6 +106,8 @@ function GamePageContent() {
   const [showEmbed, setShowEmbed] = useState(false);
   const [showFullscreen, setShowFullscreen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [supporterWallRefreshKey, setSupporterWallRefreshKey] = useState(0);
+  const [paymentMethodsRefreshKey, setPaymentMethodsRefreshKey] = useState(0);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const showToast = useCallback((message: string) => {
@@ -349,6 +351,10 @@ function GamePageContent() {
   const viewportHeight = game?.viewportHeight ?? 600;
   const playerMaxWidth = Math.min(viewportWidth, 1024);
   const showCreatorFullscreen = game?.fullscreenButton ?? true;
+  const isGameOwner = Boolean(
+    profile?.id && game?.creatorId && profile.id === game.creatorId
+  );
+  const editGameHref = game ? `/dashboard/edit/${game.id}` : "/dashboard";
 
   const handleShare = async () => {
     if (!game) return;
@@ -557,6 +563,7 @@ function GamePageContent() {
                       iframeRef={iframeRef}
                       gameId={gameId}
                       expanded={showFullscreen}
+                      creatorId={game.creatorId}
                     />
                   </>
                 ) : (
@@ -587,6 +594,18 @@ function GamePageContent() {
                     {playable ? t("startPlayHint") : t("reuploadHint")}
                   </p>
                   <div className="flex flex-wrap gap-2">
+                    {isGameOwner && (
+                      <Link
+                        href={editGameHref}
+                        className={cn(
+                          buttonVariants({ variant: "outline", size: "sm" }),
+                          "gap-1.5 border-amber-400/30 bg-amber-500/10 text-amber-100 hover:border-amber-400/50 hover:bg-amber-500/15"
+                        )}
+                      >
+                        <Pencil className="size-3.5" />
+                        {td("editGame")}
+                      </Link>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"
@@ -722,15 +741,6 @@ function GamePageContent() {
               </Link>
             </div>
 
-            <TipSupportPanel
-              gameId={game.id}
-              gameTitle={game.title}
-              tipsEnabled={game.tipsEnabled}
-              suggestedTipAmount={game.suggestedTipAmount}
-            />
-
-            <SupporterWall gameId={game.id} />
-
             <div
               className={cn(
                 "flex gap-3 rounded-2xl border border-white/10 bg-zinc-900/60 p-4",
@@ -779,6 +789,24 @@ function GamePageContent() {
             </div>
           </motion.aside>
         </div>
+
+        {game.tipsEnabled && (
+          <GameSupportSection
+            gameId={game.id}
+            gameTitle={game.title}
+            tipsEnabled={game.tipsEnabled}
+            suggestedTipAmount={game.suggestedTipAmount}
+            isGameOwner={isGameOwner}
+            refreshKey={supporterWallRefreshKey}
+            paymentMethodsRefreshKey={paymentMethodsRefreshKey}
+            onTipSuccess={() =>
+              setSupporterWallRefreshKey((key) => key + 1)
+            }
+            onPaymentMethodsChange={() =>
+              setPaymentMethodsRefreshKey((key) => key + 1)
+            }
+          />
+        )}
 
         {game && (
           <GameDetailSections

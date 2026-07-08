@@ -249,7 +249,7 @@
         <h3>⚙️ 設定</h3>
         <ul>
           <li>主選單或遊戲中按 <strong>⚙ 設定</strong> 可調整鍵盤移動幅度與換道平滑度</li>
-          <li><strong>移動幅度「小」：</strong> 每次按鍵只換一條線道，需完成換道後才能再移動，適合覺得操作太靈敏的玩家</li>
+          <li><strong>移動幅度「小」+ 平滑度「慢」：</strong> 預設組合，每次按鍵只換一條線道，需完成換道後才能再移動</li>
         </ul>
         <h3>⚙️ 難度</h3>
         <ul>
@@ -279,19 +279,19 @@
             <button type="button" class="setting-btn" data-move-range="medium">中</button>
             <button type="button" class="setting-btn" data-move-range="large">大</button>
           </div>
-          <p class="settings-hint">幅度越小，每次按鍵換道越穩、越不易一次跳過多條線道。覺得移動太靈敏時請選「小」。</p>
+          <p class="settings-hint">幅度越小，按鍵間隔越長且需等換道完成後才能再移動。覺得太靈敏請選「小」。</p>
         </div>
         <div class="settings-group">
           <div class="settings-label">
             <span>換道平滑度</span>
-            <b id="laneSmoothLabel">標準</b>
+            <b id="laneSmoothLabel">慢</b>
           </div>
           <div class="settings-options" id="laneSmoothGroup">
-            <button type="button" class="setting-btn" data-lane-smooth="slow">慢</button>
-            <button type="button" class="setting-btn selected" data-lane-smooth="medium">標準</button>
+            <button type="button" class="setting-btn selected" data-lane-smooth="slow">慢</button>
+            <button type="button" class="setting-btn" data-lane-smooth="medium">標準</button>
             <button type="button" class="setting-btn" data-lane-smooth="fast">快</button>
           </div>
-          <p class="settings-hint">控制切換線道時的滑行速度，不影響單次移動距離。</p>
+          <p class="settings-hint">控制切換線道時的滑行速度，不影響單次移動距離。覺得不夠順暢請選「慢」。</p>
         </div>
       </div>
       <div class="btn-row">
@@ -375,18 +375,18 @@
   const W = 960, H = 600;
   const LANES = [W * 0.25, W * 0.5, W * 0.75];
   const PLAYER_Y = H * 0.82;
-  const SETTINGS_STORAGE_KEY = 'nexusplay:neon-abyss-runner:settings';
+  const SETTINGS_STORAGE_KEY = 'nexusplay:neon-abyss-runner:settings:v2';
 
   const MOVE_RANGE_PRESETS = {
-    small:  { debounce: 320, requireSettled: true,  label: '小' },
-    medium: { debounce: 170, requireSettled: false, label: '中' },
-    large:  { debounce: 90,  requireSettled: false, label: '大' },
+    small:  { debounce: 500, requireSettled: true,  settleAt: 0.94, label: '小' },
+    medium: { debounce: 320, requireSettled: true,  settleAt: 0.88, label: '中' },
+    large:  { debounce: 180, requireSettled: false, settleAt: 0,    label: '大' },
   };
 
   const LANE_SMOOTH_PRESETS = {
-    slow:   { switchMs: 220, label: '慢' },
-    medium: { switchMs: 140, label: '標準' },
-    fast:   { switchMs: 95,  label: '快' },
+    slow:   { switchMs: 320, label: '慢' },
+    medium: { switchMs: 220, label: '標準' },
+    fast:   { switchMs: 155, label: '快' },
   };
 
   const MOVE_RANGE_LABELS = { small: '小', medium: '中', large: '大' };
@@ -416,8 +416,8 @@
     gameover: $('gameover'),
   };
 
-  let settings = { moveRange: 'small', laneSmooth: 'medium' };
-  let laneSwitchMs = LANE_SMOOTH_PRESETS.medium.switchMs;
+  let settings = { moveRange: 'small', laneSmooth: 'slow' };
+  let laneSwitchMs = LANE_SMOOTH_PRESETS.slow.switchMs;
   let lastLaneInputAt = 0;
   let settingsFromGame = false;
   let settingsSnapshot = null;
@@ -572,6 +572,7 @@
     waveTarget = 10; waveDuration = 16000;
     shake = 0; scrollY = 0; bgPhase = 0; bossActive = false; invuln = 0;
     paused = false; running = true;
+    lastLaneInputAt = 0;
     PlatformBridge.setGameSessionActive(true);
     $('btnPause').textContent = '⏸ 暫停';
     setupWave();
@@ -693,12 +694,12 @@
     const preset = getMovePreset();
     const now = performance.now();
     if (now - lastLaneInputAt < preset.debounce) return;
-    if (preset.requireSettled && laneT < 1) return;
+    if (preset.requireSettled && laneT < (preset.settleAt || 1)) return;
     const next = targetLane + dir;
     if (next < 0 || next > 2 || next === targetLane) return;
     targetLane = next;
     laneT = 0;
-    player.tilt = dir * 0.35;
+    player.tilt = dir * 0.22;
     lastLaneInputAt = now;
   }
 
@@ -757,14 +758,19 @@
 
     if (laneT < 1) {
       laneT = Math.min(1, laneT + dt / laneSwitchMs);
-      const ease = laneT < 0.5 ? 2 * laneT * laneT : 1 - Math.pow(-2 * laneT + 2, 2) / 2;
+      const ease = 1 - Math.pow(1 - laneT, 3);
       const from = laneX(currentLane), to = laneX(targetLane);
       player.x = from + (to - from) * ease;
-      if (laneT >= 1) { currentLane = targetLane; player.lane = currentLane; player.tilt *= 0.5; }
+      if (laneT >= 1) {
+        currentLane = targetLane;
+        player.lane = currentLane;
+        player.x = laneX(currentLane);
+        player.tilt *= 0.5;
+      }
     } else {
+      player.x = laneX(currentLane);
       player.tilt *= 0.92;
     }
-    player.x = laneX(currentLane) + (player.x - laneX(currentLane)) * (laneT < 1 ? 1 : 0.15);
 
     if (dashActive) {
       dashTimer -= dt;
@@ -1317,7 +1323,7 @@
     if (!running) return;
     const dx = e.changedTouches[0].clientX - touchStartX;
     const dy = e.changedTouches[0].clientY - touchStartY;
-    if (Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy)) {
+    if (Math.abs(dx) > 48 && Math.abs(dx) > Math.abs(dy)) {
       moveLane(dx > 0 ? 1 : -1);
     } else if (Math.abs(dx) < 20 && Math.abs(dy) < 20) {
       tryDash();

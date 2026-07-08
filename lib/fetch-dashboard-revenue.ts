@@ -1,15 +1,17 @@
 import type { AnalyticsScope } from "@/lib/dashboard-analytics";
 import { ALL_GAMES_SCOPE } from "@/lib/dashboard-analytics";
+import type { RevenueTrendDays } from "@/lib/dashboard-revenue-server";
 import type { DashboardRevenueAnalytics } from "@/lib/dashboard-revenue-types";
 
 export async function fetchDashboardRevenue(
-  scope: AnalyticsScope
+  scope: AnalyticsScope,
+  trendDays: RevenueTrendDays = 14
 ): Promise<DashboardRevenueAnalytics> {
   const scopeParam =
     scope === ALL_GAMES_SCOPE ? "all" : String(scope);
 
   const response = await fetch(
-    `/api/dashboard/revenue?scope=${encodeURIComponent(scopeParam)}`,
+    `/api/dashboard/revenue?scope=${encodeURIComponent(scopeParam)}&trendDays=${trendDays}`,
     { credentials: "same-origin" }
   );
 

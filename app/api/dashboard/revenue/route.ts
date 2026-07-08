@@ -36,8 +36,10 @@ export async function GET(request: Request) {
     }
 
     const scope = new URL(request.url).searchParams.get("scope");
+    const trendDays = new URL(request.url).searchParams.get("trendDays");
     const result = await loadDashboardRevenueForRequest(
       scope,
+      trendDays,
       (games ?? []) as CreatorGameRecord[]
     );
 

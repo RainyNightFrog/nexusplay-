@@ -41,6 +41,7 @@ export async function listGameSupporters(
   );
 
   return tips.map((tip) => ({
+    // 所有成功打賞皆顯示於支持者牆；public_anonymous 僅控制是否公開名稱
     displayName: tip.public_anonymous
       ? "__anonymous__"
       : payerMap.get(tip.payer_id as string) ?? "Supporter",

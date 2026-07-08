@@ -11,6 +11,7 @@ export function buildNexusPlayEmbedSdkScript() {
     if(gidParam&&!isNaN(parseInt(gidParam,10)))gameId=parseInt(gidParam,10);
   }
   var user=undefined;
+  var ownerEditUrl=null;
   var authWaiters=[];
   var authSettled=false;
 
@@ -25,6 +26,13 @@ export function buildNexusPlayEmbedSdkScript() {
     var d=e.data;
     if(!d||d.type!==AUTH_TYPE)return;
     user=d.user||null;
+    if(d.editUrl){
+      ownerEditUrl=d.editUrl;
+    }else if(user&&user.editUrl){
+      ownerEditUrl=user.editUrl;
+    }else{
+      ownerEditUrl=null;
+    }
     resolveAuth();
   });
 
@@ -75,6 +83,9 @@ export function buildNexusPlayEmbedSdkScript() {
     getUser:function(){
       if(!authSettled)return null;
       return user?Object.assign({},user):null;
+    },
+    getOwnerEditUrl:function(){
+      return ownerEditUrl;
     },
     waitForAuth:waitForAuth,
     mergeSaves:mergeSaves,
@@ -149,6 +160,8 @@ export function buildNexusPlayEmbedSdkScript() {
 export type NexusPlayAuthUser = {
   id: string;
   displayName: string;
+  isOwner?: boolean;
+  editUrl?: string | null;
 };
 
 export const NEXUSPLAY_AUTH_MESSAGE = "nexusplay:auth";

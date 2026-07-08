@@ -58,6 +58,7 @@ import {
 import { fetchDashboardAnalytics } from "@/lib/fetch-dashboard-analytics";
 import { fetchDashboardRevenue } from "@/lib/fetch-dashboard-revenue";
 import type { DashboardRevenueAnalytics } from "@/lib/dashboard-revenue";
+import type { RevenueTrendDays } from "@/lib/dashboard-revenue-server";
 import { RevenuePanel } from "@/components/dashboard/revenue-panel";
 import {
   fetchCreatorGames,
@@ -166,6 +167,7 @@ export default function CreatorDashboardPage() {
   const [revenue, setRevenue] = useState<DashboardRevenueAnalytics | null>(
     null
   );
+  const [revenueTrendDays, setRevenueTrendDays] = useState<RevenueTrendDays>(14);
   const [revenueLoading, setRevenueLoading] = useState(true);
   const [revenueError, setRevenueError] = useState<string | null>(null);
   const [unreadTipCount, setUnreadTipCount] = useState(0);
@@ -208,7 +210,7 @@ export default function CreatorDashboardPage() {
     setRevenueLoading(true);
     setRevenueError(null);
 
-    fetchDashboardRevenue(analyticsScope)
+    fetchDashboardRevenue(analyticsScope, revenueTrendDays)
       .then((data) => {
         if (!cancelled) setRevenue(data);
       })
@@ -224,7 +226,7 @@ export default function CreatorDashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [analyticsScope, gamesLoading, games.length, resolveDashboardError]);
+  }, [analyticsScope, revenueTrendDays, gamesLoading, games.length, resolveDashboardError]);
 
   useEffect(() => {
     if (gamesLoading) return;
@@ -596,6 +598,8 @@ export default function CreatorDashboardPage() {
           scopeKey={scopeSelectValue}
           selectedGameId={selectedGame?.id}
           showBreakdown={analyticsScope === ALL_GAMES_SCOPE}
+          trendDays={revenueTrendDays}
+          onTrendDaysChange={setRevenueTrendDays}
           unreadTipCount={unreadTipCount}
           onClearUnreadTips={() => setUnreadTipCount(0)}
         />

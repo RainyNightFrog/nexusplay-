@@ -33,7 +33,7 @@ function parseHighlightRange(value: string | null): HighlightTimeRange {
   return "week";
 }
 
-async function fetchCreatorAnalyticsEvents(
+export async function fetchCreatorAnalyticsEvents(
   gameIds: number[]
 ): Promise<AnalyticsEventRow[]> {
   if (gameIds.length === 0) return [];

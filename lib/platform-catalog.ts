@@ -506,6 +506,28 @@ export const FORUM_SEED_POSTS: Record<string, SeedForumPost[]> = {
 };
 
 export const SEED_GAME_COMMENTS: Record<string, SeedGameComment[]> = {
+  [VOID_GACHA_TITLE]: [
+    {
+      authorName: "虛空旅人",
+      content: "抽卡動畫和霓虹 UI 質感一流，已加入收藏。",
+      offsetHours: 4,
+    },
+    {
+      authorName: "深淵抽卡師",
+      content: "共鳴流卡組湊齊之後深淵關卡順很多，微交易介面也算清楚。",
+      offsetHours: 18,
+    },
+    {
+      authorName: "零號玩家",
+      content: "活動池保底機制很友善，新手不用硬課也能慢慢組出核心牌組。",
+      offsetHours: 36,
+    },
+    {
+      authorName: "卡牌收藏家",
+      content: "SSR 虛空卡的特效細節拉滿，每次抽卡都很有儀式感。",
+      offsetHours: 72,
+    },
+  ],
   "CoreDefense: Mindustry X": [
     {
       authorName: "塔防愛好者",
@@ -517,6 +539,21 @@ export const SEED_GAME_COMMENTS: Record<string, SeedGameComment[]> = {
       content: "畫面雖然是 demo 但手感已經很完整了，期待正式版。",
       offsetHours: 5,
     },
+    {
+      authorName: "鋼鐵工程師",
+      content: "輸送帶環形供彈設計太爽了，看工廠全速運轉莫名療癒。",
+      offsetHours: 14,
+    },
+    {
+      authorName: "防線指揮官",
+      content: "第 12 關雙向進攻壓力很大，但核心裂變升級後逆轉超有成就感。",
+      offsetHours: 28,
+    },
+    {
+      authorName: "物流達人",
+      content: "建議新手先熟悉銅→鋼→穿甲彈藥鏈，後面波次會輕鬆很多。",
+      offsetHours: 52,
+    },
   ],
   "CyberFortune 012": [
     {
@@ -524,12 +561,20 @@ export const SEED_GAME_COMMENTS: Record<string, SeedGameComment[]> = {
       content: "連擊系統很上癮，排行榜讓我想一直刷分。",
       offsetHours: 3,
     },
-  ],
-  [VOID_GACHA_TITLE]: [
     {
-      authorName: "虛空旅人",
-      content: "抽卡動畫和霓虹 UI 質感一流，已加入收藏。",
-      offsetHours: 4,
+      authorName: "賽博牌神",
+      content: "012 矩陣全餐打法看懂之後勝率明顯提升，策略深度比想像中高。",
+      offsetHours: 11,
+    },
+    {
+      authorName: "UI收藏家",
+      content: "霓虹 HUD 和概率曲線動畫質感滿分，光介面就能看很久。",
+      offsetHours: 22,
+    },
+    {
+      authorName: "夜城玩家",
+      content: "休閒難度很適合入門，深淵模式才真的考驗算牌節奏。",
+      offsetHours: 40,
     },
   ],
   "Neon Abyss: Void Runner": [
@@ -538,12 +583,42 @@ export const SEED_GAME_COMMENTS: Record<string, SeedGameComment[]> = {
       content: "三線切換手感很順，衝刺冷卻抓好了能玩很久！",
       offsetHours: 2,
     },
+    {
+      authorName: "疾馳駕駛員",
+      content: "設定裡可以調移動幅度，覺得太靈敏的話選「小」會好很多。",
+      offsetHours: 9,
+    },
+    {
+      authorName: "霓虹獵人",
+      content: "連擊倍率疊到 ×5 分數暴漲，能量球一定要穩穩接。",
+      offsetHours: 20,
+    },
+    {
+      authorName: "虛空車神",
+      content: "每 5 波 BOSS 節奏設計很棒，三重雷射那關練完走位超有進步感。",
+      offsetHours: 48,
+    },
   ],
   "Signal Breach: ICE Protocol": [
     {
       authorName: "邏輯駭客",
       content: "12 關難度曲線設計得很好，第 6 關開始真的燒腦。",
       offsetHours: 3,
+    },
+    {
+      authorName: "幽靈協議",
+      content: "ICE 巡邏路線可以預判，誘導之後繞路進核心超有駭客感。",
+      offsetHours: 12,
+    },
+    {
+      authorName: "節點行者",
+      content: "節點脈衝動畫和路徑軌跡很精緻，破解成功瞬間超療癒。",
+      offsetHours: 26,
+    },
+    {
+      authorName: "防火牆獵人",
+      content: "幽靈難度倒數壓力拉滿，連鎖破解加成設計鼓勵大膽走法。",
+      offsetHours: 55,
     },
   ],
   "Void Relay: Card Descent": [
@@ -552,6 +627,21 @@ export const SEED_GAME_COMMENTS: Record<string, SeedGameComment[]> = {
       content: "敵人意圖預判系統很讚，有種在玩 Slay the Spire 的感覺。",
       offsetHours: 5,
     },
+    {
+      authorName: "深淵卡師",
+      content: "虛空女王第三階段記得留淨化，不然腐蝕疊太快會直接崩。",
+      offsetHours: 15,
+    },
+    {
+      authorName: "深淵旅人",
+      content: "Roguelike 路線每次都不一樣，三選一強化讓每局都有新鮮感。",
+      offsetHours: 30,
+    },
+    {
+      authorName: "卡牌編年史",
+      content: "20 種卡牌機制不重複，第五層領主戰節奏緊湊又公平。",
+      offsetHours: 60,
+    },
   ],
   "Pulse Protocol: Neon Beat": [
     {
@@ -559,12 +649,42 @@ export const SEED_GAME_COMMENTS: Record<string, SeedGameComment[]> = {
       content: "四軌判定手感紮實，Fever 模式超有成就感！",
       offsetHours: 2,
     },
+    {
+      authorName: "霓虹鼓手",
+      content: "50 連擊進 Fever 畫面變金色，視覺回饋做得非常到位。",
+      offsetHours: 10,
+    },
+    {
+      authorName: "節拍狂人",
+      content: "狂熱難度 160 BPM 真的狠，但 Great 判定容錯還算合理。",
+      offsetHours: 24,
+    },
+    {
+      authorName: "SynthWave 粉",
+      content: "三首原創曲目風格各異，戴耳機玩沉浸感直接拉滿。",
+      offsetHours: 44,
+    },
   ],
   "軌道回收：環形防線": [
     {
       authorName: "塔防老手",
       content: "環形地圖比傳統方格塔防更有策略深度，推薦！",
       offsetHours: 4,
+    },
+    {
+      authorName: "軌道工程師",
+      content: "外圈電磁、內圈冰霜的佈局很經典，BOSS 進內圈前記得開新星。",
+      offsetHours: 16,
+    },
+    {
+      authorName: "資源管理員",
+      content: "前期多放回收砲塔攢資源，中期一次升滿電磁後期會輕鬆很多。",
+      offsetHours: 32,
+    },
+    {
+      authorName: "工業科幻迷",
+      content: "螺旋軌道敵潮的視覺效果很震撼，環形升級槽位設計也很聰明。",
+      offsetHours: 68,
     },
   ],
 };

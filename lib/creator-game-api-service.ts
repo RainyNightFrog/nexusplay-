@@ -3,6 +3,7 @@ import { deleteGameAndAssets } from "@/lib/game-delete-server";
 import { GAME_GENRES } from "@/lib/game-metadata";
 import { parsePublishStatus } from "@/lib/game-publish";
 import { resolvePlatformFeePercentForSave } from "@/lib/tip-fee-policy";
+import { MIN_SUGGESTED_TIP_USD } from "@/lib/tip-limits";
 import { sanitizePlainText } from "@/lib/sanitize";
 import { createServerSupabase } from "@/lib/supabase-server";
 import {
@@ -94,13 +95,13 @@ export async function patchCreatorGameJson(params: {
       const amount = params.patch.suggestedTipAmount;
       if (
         !Number.isFinite(amount) ||
-        amount < 0 ||
+        amount < MIN_SUGGESTED_TIP_USD ||
         amount > MAX_SUGGESTED_TIP
       ) {
         return {
           ok: false,
           status: 400,
-          error: `建議打賞金額須為 0 至 ${MAX_SUGGESTED_TIP.toLocaleString()} 之間`,
+          error: `建議打賞金額須為 ${MIN_SUGGESTED_TIP_USD} 至 ${MAX_SUGGESTED_TIP.toLocaleString()} 之間`,
         };
       }
       payload.suggested_tip_amount = Math.round(amount * 100) / 100;
@@ -124,10 +125,14 @@ export async function patchCreatorGameJson(params: {
       const amount = params.patch.suggestedTipAmount;
       if (
         !Number.isFinite(amount) ||
-        amount < 0 ||
+        amount < MIN_SUGGESTED_TIP_USD ||
         amount > MAX_SUGGESTED_TIP
       ) {
-        return { ok: false, status: 400, error: "建議打賞金額無效" };
+        return {
+          ok: false,
+          status: 400,
+          error: `建議打賞金額須為 ${MIN_SUGGESTED_TIP_USD} 至 ${MAX_SUGGESTED_TIP.toLocaleString()} 之間`,
+        };
       }
       payload.suggested_tip_amount = Math.round(amount * 100) / 100;
     }

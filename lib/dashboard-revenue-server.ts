@@ -1,4 +1,5 @@
 import { resolveUserProfile, hasCreatorDashboardAccess } from "@/lib/auth-profile";
+import { fetchCreatorAnalyticsEvents } from "@/lib/dashboard-analytics-server";
 import {
   buildDashboardRevenueFromTips,
   buildEmptyDashboardRevenue,
@@ -11,10 +12,19 @@ import type { CreatorGameRecord } from "@/lib/creator-games";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
 
+const TREND_DAY_OPTIONS = [7, 14, 30] as const;
+export type RevenueTrendDays = (typeof TREND_DAY_OPTIONS)[number];
+
 function parseScope(value: string | null): AnalyticsScope {
   if (!value || value === "all") return ALL_GAMES_SCOPE;
   const numeric = Number.parseInt(value, 10);
   return Number.isNaN(numeric) ? ALL_GAMES_SCOPE : numeric;
+}
+
+function parseTrendDays(value: string | null): RevenueTrendDays {
+  const numeric = Number.parseInt(value ?? "", 10);
+  if (numeric === 7 || numeric === 14 || numeric === 30) return numeric;
+  return 14;
 }
 
 async function fetchCreatorTips(
@@ -65,18 +75,31 @@ export async function getCreatorDashboardRevenue(params: {
   userId: string;
   scope: AnalyticsScope;
   games: CreatorGameRecord[];
+  trendDays?: RevenueTrendDays;
 }): Promise<DashboardRevenueAnalytics> {
-  const tips = await fetchCreatorTips(params.userId, params.games);
+  const trendDays = params.trendDays ?? 14;
+  const gameIds = params.games.map((game) => game.id);
+  const [tips, playEvents] = await Promise.all([
+    fetchCreatorTips(params.userId, params.games),
+    fetchCreatorAnalyticsEvents(gameIds),
+  ]);
 
   if (tips.length === 0) {
-    return buildEmptyDashboardRevenue(params.games, params.scope);
+    return buildEmptyDashboardRevenue(params.games, params.scope, trendDays);
   }
 
-  return buildDashboardRevenueFromTips(params.scope, params.games, tips);
+  return buildDashboardRevenueFromTips(
+    params.scope,
+    params.games,
+    tips,
+    playEvents,
+    trendDays
+  );
 }
 
 export async function loadDashboardRevenueForRequest(
   scopeParam: string | null,
+  trendDaysParam: string | null,
   games: CreatorGameRecord[]
 ) {
   const authClient = await createAuthServerClient();
@@ -94,10 +117,12 @@ export async function loadDashboardRevenueForRequest(
   }
 
   const scope = parseScope(scopeParam);
+  const trendDays = parseTrendDays(trendDaysParam);
   const revenue = await getCreatorDashboardRevenue({
     userId: user.id,
     scope,
     games,
+    trendDays,
   });
 
   return { revenue };

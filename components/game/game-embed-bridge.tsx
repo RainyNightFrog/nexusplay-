@@ -19,6 +19,7 @@ import {
 type GameEmbedBridgeProps = {
   iframeRef: RefObject<HTMLIFrameElement | null>;
   gameId: string;
+  creatorId?: string | null;
   expanded?: boolean;
 };
 
@@ -27,18 +28,24 @@ type PendingLeaveConfirm = {
 };
 
 function buildAuthPayload(
-  profile: ReturnType<typeof useAuth>["profile"]
+  profile: ReturnType<typeof useAuth>["profile"],
+  gameId: string,
+  creatorId?: string | null
 ): NexusPlayAuthUser | null {
   if (!profile) return null;
+  const isOwner = Boolean(creatorId && profile.id === creatorId);
   return {
     id: profile.id,
     displayName: profile.display_name,
+    isOwner,
+    editUrl: isOwner ? `/dashboard/edit/${gameId}` : null,
   };
 }
 
 export function GameEmbedBridge({
   iframeRef,
   gameId,
+  creatorId,
   expanded = false,
 }: GameEmbedBridgeProps) {
   const { profile, loading } = useAuth();
@@ -55,11 +62,16 @@ export function GameEmbedBridge({
     iframe.contentWindow.postMessage(
       {
         type: NEXUSPLAY_AUTH_MESSAGE,
-        user: buildAuthPayload(profile),
+        user: buildAuthPayload(profile, gameId, creatorId),
+        isOwner: Boolean(creatorId && profile?.id === creatorId),
+        editUrl:
+          creatorId && profile?.id === creatorId
+            ? `/dashboard/edit/${gameId}`
+            : null,
       },
       window.location.origin
     );
-  }, [iframeRef, profile]);
+  }, [iframeRef, profile, gameId, creatorId]);
 
   const postResize = useCallback(() => {
     const iframe = iframeRef.current;

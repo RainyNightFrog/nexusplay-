@@ -65,11 +65,35 @@ function mapComments(
 ): GameComment[] {
   return records.map((record) => ({
     ...record,
-    author_name:
-      record.user_id.startsWith(SEED_USER_PREFIX)
-        ? ""
-        : nameMap.get(record.user_id) ?? formatForumAuthor(record.user_id),
+    author_name: record.user_id.startsWith(SEED_USER_PREFIX)
+      ? formatForumAuthor(record.user_id)
+      : nameMap.get(record.user_id) ?? formatForumAuthor(record.user_id),
   }));
+}
+
+async function loadGameTitle(gameId: number) {
+  const supabase = createServerSupabase();
+  const { data: gameRow } = await supabase
+    .from("games")
+    .select("title")
+    .eq("id", gameId)
+    .maybeSingle();
+  return gameRow?.title ?? "";
+}
+
+function mergeWithSeedComments(
+  gameId: number,
+  gameTitle: string,
+  comments: GameComment[]
+): GameComment[] {
+  const seeds = buildSeedComments(gameId, gameTitle);
+  if (!seeds.length) return comments;
+
+  const merged = [...comments, ...seeds].sort(
+    (a, b) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+  return merged.slice(0, 50);
 }
 
 export async function getGameCommentsByGameId(gameId: number): Promise<GameComment[]> {
@@ -87,29 +111,22 @@ export async function getGameCommentsByGameId(gameId: number): Promise<GameComme
       error.message.includes("game_comments") &&
       error.message.includes("schema cache")
     ) {
-      const { data: gameRow } = await supabase
-        .from("games")
-        .select("title")
-        .eq("id", gameId)
-        .maybeSingle();
-      return buildSeedComments(gameId, gameRow?.title ?? "");
+      const gameTitle = await loadGameTitle(gameId);
+      return buildSeedComments(gameId, gameTitle);
     }
     throw new Error(`讀取評論失敗：${error.message}`);
   }
 
   const records = (data ?? []) as GameCommentRecord[];
+  const gameTitle = await loadGameTitle(gameId);
 
   if (records.length === 0) {
-    const { data: gameRow } = await supabase
-      .from("games")
-      .select("title")
-      .eq("id", gameId)
-      .maybeSingle();
-    return buildSeedComments(gameId, gameRow?.title ?? "");
+    return buildSeedComments(gameId, gameTitle);
   }
 
   const nameMap = await resolveAuthorNames(records.map((row) => row.user_id));
-  return mapComments(records, nameMap);
+  const realComments = mapComments(records, nameMap);
+  return mergeWithSeedComments(gameId, gameTitle, realComments);
 }
 
 export async function createGameComment(

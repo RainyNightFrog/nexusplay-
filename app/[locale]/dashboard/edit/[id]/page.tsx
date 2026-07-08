@@ -32,8 +32,8 @@ import {
   PublishMonetizationFields,
   type PublishMonetizationValues,
 } from "@/components/dashboard/publish-monetization-fields";
+import { PublishStatusFields } from "@/components/dashboard/publish-status-fields";
 import { PlatformAuthNotice } from "@/components/dashboard/platform-auth-notice";
-import { PublishRequiredHint } from "@/components/dashboard/publish-required-hint";
 import { RequiredFieldLabel } from "@/components/dashboard/required-field-label";
 import { PartnerAccessPanel } from "@/components/dashboard/partner-access-panel";
 import { LegacyImportPanel } from "@/components/dashboard/legacy-import-panel";
@@ -826,8 +826,6 @@ export default function EditGamePage() {
               lockedPlatformFeePercent={lockedPlatformFeePercent}
             />
 
-            <PublishRequiredHint publishStatus={monetization.publishStatus} />
-
             {validationMessages.length > 0 && (
               <div className="rounded-xl border border-rose-400/25 bg-rose-500/10 px-4 py-3 text-center text-xs text-rose-200">
                 <p className="font-medium">{t("validationSummary")}</p>
@@ -842,7 +840,16 @@ export default function EditGamePage() {
             <PlatformAuthNotice />
             {!Number.isNaN(gameId) && <LegacyImportPanel gameId={String(gameId)} />}
 
-            <div className="flex flex-col gap-3 border-t border-white/5 pt-6 sm:flex-row">
+            <div className="border-t border-white/5 pt-6">
+              <PublishStatusFields
+                value={monetization.publishStatus}
+                onChange={(publishStatus) =>
+                  setMonetization((prev) => ({ ...prev, publishStatus }))
+                }
+                disabled={isSubmitting}
+                className="mb-6"
+              />
+            <div className="flex flex-col gap-3 sm:flex-row">
               <motion.div
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
@@ -905,6 +912,7 @@ export default function EditGamePage() {
                   )}
                 </Button>
               </motion.div>
+            </div>
             </div>
           </form>
         </motion.div>

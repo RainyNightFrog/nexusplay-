@@ -12,6 +12,7 @@ export const API_ERROR_KEY_BY_MESSAGE: Record<string, string> = {
   "找不到此貼文": "postNotFound",
   "你沒有權限編輯此遊戲": "noEditPermission",
   "請輸入建議打賞金額": "suggestedTipRequired",
+  "建議打賞金額須為": "suggestedTipInvalid",
   "請輸入遊戲簡介": "descriptionRequired",
   "請選擇遊戲分類": "categoryRequired",
   "無效的遊戲分類": "invalidCategory",

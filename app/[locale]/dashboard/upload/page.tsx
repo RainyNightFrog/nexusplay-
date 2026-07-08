@@ -30,8 +30,8 @@ import {
   PublishMonetizationFields,
   type PublishMonetizationValues,
 } from "@/components/dashboard/publish-monetization-fields";
+import { PublishStatusFields } from "@/components/dashboard/publish-status-fields";
 import { PlatformAuthNotice } from "@/components/dashboard/platform-auth-notice";
-import { PublishRequiredHint } from "@/components/dashboard/publish-required-hint";
 import { RequiredFieldLabel } from "@/components/dashboard/required-field-label";
 import {
   GamePublishMetadataFields,
@@ -630,8 +630,6 @@ export default function UploadPage() {
               disabled={isSubmitting}
             />
 
-            <PublishRequiredHint publishStatus={monetization.publishStatus} />
-
             {validationMessages.length > 0 && (
               <div className="rounded-xl border border-rose-400/25 bg-rose-500/10 px-4 py-3 text-center text-xs text-rose-200">
                 <p className="font-medium">{t("validationSummary")}</p>
@@ -641,6 +639,14 @@ export default function UploadPage() {
 
             <PlatformAuthNotice />
             <div className="border-t border-white/5 pt-6">
+              <PublishStatusFields
+                value={monetization.publishStatus}
+                onChange={(publishStatus) =>
+                  setMonetization((prev) => ({ ...prev, publishStatus }))
+                }
+                disabled={isSubmitting}
+                className="mb-6"
+              />
               <Button
                 type="submit"
                 disabled={isSubmitting}

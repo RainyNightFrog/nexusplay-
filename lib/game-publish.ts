@@ -1,4 +1,5 @@
 import type { GameRecord } from "@/lib/supabase";
+import { MIN_SUGGESTED_TIP_USD } from "@/lib/tip-limits";
 
 export const GAME_PUBLISH_STATUSES = ["draft", "public"] as const;
 export type GamePublishStatus = (typeof GAME_PUBLISH_STATUSES)[number];
@@ -45,12 +46,12 @@ export function parseMonetizationFromFormData(
   const parsed = Number.parseFloat(suggestedRaw);
   if (
     !Number.isFinite(parsed) ||
-    parsed < 0 ||
+    parsed < MIN_SUGGESTED_TIP_USD ||
     parsed > MAX_SUGGESTED_TIP
   ) {
     return {
       ok: false,
-      error: `建議打賞金額須為 0 至 ${MAX_SUGGESTED_TIP.toLocaleString()} 之間的數字`,
+      error: `建議打賞金額須為 ${MIN_SUGGESTED_TIP_USD} 至 ${MAX_SUGGESTED_TIP.toLocaleString()} 之間的數字`,
     };
   }
 

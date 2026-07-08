@@ -57,6 +57,7 @@
   var slug = detectSlug();
   var gameId = detectGameId();
   var user = null;
+  var ownerEditUrl = null;
   var authSettled = false;
   var authWaiters = [];
   var gameSessionActive = false;
@@ -81,6 +82,13 @@
     var d = e.data;
     if (!d || d.type !== AUTH_TYPE) return;
     user = d.user || null;
+    if (d.editUrl) {
+      ownerEditUrl = d.editUrl;
+    } else if (user && user.editUrl) {
+      ownerEditUrl = user.editUrl;
+    } else {
+      ownerEditUrl = null;
+    }
     resolveAuth();
   });
 
@@ -460,6 +468,9 @@
     gameId: gameId,
     getUser: function () {
       return user ? Object.assign({}, user) : null;
+    },
+    getOwnerEditUrl: function () {
+      return ownerEditUrl;
     },
     waitForAuth: waitForAuth,
     betterGrade: betterGrade,

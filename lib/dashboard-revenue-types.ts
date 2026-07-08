@@ -12,6 +12,9 @@ export type RevenueStat = {
   key: RevenueStatKey;
   value: string;
   change: string;
+  hintKey?: string;
+  hintParams?: Record<string, string | number>;
+  changeLabelKey?: string;
 };
 
 export type RevenueTrendPoint = {
@@ -43,6 +46,7 @@ export type RecentTipRow = {
 export type DashboardRevenueAnalytics = {
   stats: RevenueStat[];
   trend: RevenueTrendPoint[];
+  trendDays: 7 | 14 | 30;
   breakdown: RevenueBreakdownRow[];
   recentTips: RecentTipRow[];
   tipsEnabled: boolean;
@@ -88,12 +92,34 @@ export function getDashboardRevenue(
 
   return {
     stats: [
-      { key: "revenueTotal", value: "$0.00", change: "—" },
-      { key: "revenueTipsCount", value: "0", change: "—" },
-      { key: "revenueAvgTip", value: "$0.00", change: "—" },
-      { key: "revenueConversion", value: "0.0%", change: "—" },
+      {
+        key: "revenueTotal",
+        value: "$0.00",
+        change: "—",
+        hintKey: "revenueStatHintLifetime",
+      },
+      {
+        key: "revenueTipsCount",
+        value: "0",
+        change: "—",
+        hintKey: "revenueStatHintLast7d",
+        hintParams: { count: 0 },
+      },
+      {
+        key: "revenueAvgTip",
+        value: "$0.00",
+        change: "—",
+        hintKey: "revenueStatHintLast7d",
+      },
+      {
+        key: "revenueConversion",
+        value: "0.0%",
+        change: "—",
+        hintKey: "revenueStatHintConversion",
+      },
     ],
     trend: emptyTrend,
+    trendDays: 14,
     breakdown: scopedGames.map((game) => ({
       gameId: game.id,
       title: game.title,

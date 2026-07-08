@@ -1,6 +1,7 @@
 import type { CreatorGameRecord } from "@/lib/creator-games";
 import type { AnalyticsScope } from "@/lib/dashboard-analytics";
 import { ALL_GAMES_SCOPE } from "@/lib/dashboard-analytics";
+import type { AnalyticsEventRow } from "@/lib/dashboard-analytics-builder";
 import type {
   DashboardRevenueAnalytics,
   GameRevenueCore,
@@ -41,13 +42,16 @@ function formatPeriodChange(current: number, previous: number) {
   return `${change >= 0 ? "+" : ""}${change.toFixed(1)}%`;
 }
 
-function buildTrendPoints(tips: TipRecordRow[]): RevenueTrendPoint[] {
+function buildTrendPoints(
+  tips: TipRecordRow[],
+  days: 7 | 14 | 30 = 14
+): RevenueTrendPoint[] {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   const buckets: RevenueTrendPoint[] = [];
 
-  for (let offset = 13; offset >= 0; offset -= 1) {
+  for (let offset = days - 1; offset >= 0; offset -= 1) {
     const day = new Date(today);
     day.setDate(today.getDate() - offset);
     const nextDay = new Date(day);
@@ -108,6 +112,39 @@ function relativeTimeFromDate(iso: string): Pick<
   };
 }
 
+function filterEventsByScope(
+  events: AnalyticsEventRow[],
+  scope: AnalyticsScope,
+  gameIds: Set<number>
+) {
+  return events.filter((event) => {
+    if (!event.game_id || !gameIds.has(event.game_id)) return false;
+    if (scope === ALL_GAMES_SCOPE) return true;
+    return event.game_id === scope;
+  });
+}
+
+function tipsInRange(tips: TipRecordRow[], start: Date, end: Date) {
+  return tips.filter((tip) => {
+    const created = new Date(tip.created_at);
+    return created >= start && created <= end;
+  });
+}
+
+function countPlaysInRange(
+  events: AnalyticsEventRow[],
+  scope: AnalyticsScope,
+  gameIds: Set<number>,
+  start: Date,
+  end: Date
+) {
+  return filterEventsByScope(events, scope, gameIds).filter((event) => {
+    if (event.event_type !== "game_play") return false;
+    const created = new Date(event.created_at);
+    return created >= start && created <= end;
+  }).length;
+}
+
 function filterTipsByScope(
   tips: TipRecordRow[],
   scope: AnalyticsScope,
@@ -128,48 +165,82 @@ function sumNetInRange(tips: TipRecordRow[], start: Date, end: Date) {
   }, 0);
 }
 
-function buildStats(core: GameRevenueCore, tips: TipRecordRow[]): RevenueStat[] {
+function buildStats(
+  core: GameRevenueCore,
+  tips: TipRecordRow[],
+  playEvents: AnalyticsEventRow[],
+  scope: AnalyticsScope,
+  gameIds: Set<number>
+): RevenueStat[] {
   const now = new Date();
   const currentStart = new Date(now);
   currentStart.setDate(now.getDate() - 7);
   const previousStart = new Date(now);
   previousStart.setDate(now.getDate() - 14);
 
+  const currentTips = tipsInRange(tips, currentStart, now);
+  const previousTips = tipsInRange(tips, previousStart, currentStart);
+
   const currentNet = sumNetInRange(tips, currentStart, now);
   const previousNet = sumNetInRange(tips, previousStart, currentStart);
 
-  const currentCount = tips.filter((tip) => {
-    const created = new Date(tip.created_at);
-    return created >= currentStart && created <= now;
-  }).length;
-  const previousCount = tips.filter((tip) => {
-    const created = new Date(tip.created_at);
-    return created >= previousStart && created < currentStart;
-  }).length;
+  const currentPlays = countPlaysInRange(
+    playEvents,
+    scope,
+    gameIds,
+    currentStart,
+    now
+  );
+  const previousPlays = countPlaysInRange(
+    playEvents,
+    scope,
+    gameIds,
+    previousStart,
+    currentStart
+  );
+
+  const currentConversion =
+    currentPlays > 0 ? currentTips.length / currentPlays : 0;
+  const previousConversion =
+    previousPlays > 0 ? previousTips.length / previousPlays : 0;
+
+  const currentAvg =
+    currentTips.length > 0 ? currentNet / currentTips.length : 0;
+  const previousAvg =
+    previousTips.length > 0 ? previousNet / previousTips.length : 0;
 
   return [
     {
       key: "revenueTotal",
       value: formatMoney(core.totalAmount),
       change: formatPeriodChange(currentNet, previousNet),
+      hintKey: "revenueStatHintLifetime",
+      changeLabelKey: "revenueChangeWoW",
     },
     {
       key: "revenueTipsCount",
-      value: core.tipCount.toLocaleString("en-US"),
-      change: formatPeriodChange(currentCount, previousCount),
+      value: currentTips.length.toLocaleString("en-US"),
+      change: formatPeriodChange(currentTips.length, previousTips.length),
+      hintKey: "revenueStatHintLifetimeTips",
+      hintParams: { count: core.tipCount },
+      changeLabelKey: "revenueChangeWoW",
     },
     {
       key: "revenueAvgTip",
-      value: core.avgTip > 0 ? formatMoney(core.avgTip) : "$0.00",
-      change: formatPeriodChange(
-        currentCount > 0 ? currentNet / currentCount : 0,
-        previousCount > 0 ? previousNet / previousCount : 0
-      ),
+      value: currentAvg > 0 ? formatMoney(currentAvg) : "$0.00",
+      change: formatPeriodChange(currentAvg, previousAvg),
+      hintKey: "revenueStatHintLast7d",
+      changeLabelKey: "revenueChangeWoW",
     },
     {
       key: "revenueConversion",
-      value: `${(core.conversionRate * 100).toFixed(1)}%`,
-      change: "—",
+      value: `${(currentConversion * 100).toFixed(2)}%`,
+      change: formatPeriodChange(
+        currentConversion * 100,
+        previousConversion * 100
+      ),
+      hintKey: "revenueStatHintConversion",
+      changeLabelKey: "revenueChangeWoW",
     },
   ];
 }
@@ -198,7 +269,8 @@ function buildRecentTips(
 
 function buildCoreForGames(
   scopedGames: CreatorGameRecord[],
-  tips: TipRecordRow[]
+  tips: TipRecordRow[],
+  trendDays: 7 | 14 | 30
 ): GameRevenueCore {
   const tipCount = tips.length;
   const totalAmount =
@@ -206,18 +278,13 @@ function buildCoreForGames(
       tips.reduce((sum, tip) => sum + toNumber(tip.creator_net_usd), 0) * 100
     ) / 100;
   const avgTip = tipCount > 0 ? totalAmount / tipCount : 0;
-  const totalPlays = scopedGames.reduce(
-    (sum, game) => sum + Math.max(game.plays_count, 0),
-    0
-  );
-  const conversionRate = totalPlays > 0 ? tipCount / totalPlays : 0;
 
   return {
     tipCount,
     totalAmount,
     avgTip,
-    conversionRate,
-    trend: buildTrendPoints(tips),
+    conversionRate: 0,
+    trend: buildTrendPoints(tips, trendDays),
   };
 }
 
@@ -255,7 +322,9 @@ function buildBreakdown(
 export function buildDashboardRevenueFromTips(
   scope: AnalyticsScope,
   games: CreatorGameRecord[],
-  tips: TipRecordRow[]
+  tips: TipRecordRow[],
+  playEvents: AnalyticsEventRow[] = [],
+  trendDays: 7 | 14 | 30 = 14
 ): DashboardRevenueAnalytics {
   const gamesById = new Map(games.map((game) => [game.id, game]));
   const gameIds = new Set(games.map((game) => game.id));
@@ -272,12 +341,13 @@ export function buildDashboardRevenueFromTips(
   const succeededTips = scopedTips.filter((tip) => tip.status === "succeeded");
   const previewTips = scopedTips.filter((tip) => tip.status === "preview");
 
-  const core = buildCoreForGames(scopedGames, scopedTips);
+  const core = buildCoreForGames(scopedGames, scopedTips, trendDays);
   const tipsEnabled = scopedGames.some((game) => game.tips_enabled);
 
   return {
-    stats: buildStats(core, scopedTips),
+    stats: buildStats(core, scopedTips, playEvents, scope, gameIds),
     trend: core.trend,
+    trendDays,
     breakdown: buildBreakdown(scopedGames, scopedTips, core.totalAmount),
     recentTips: buildRecentTips(scopedTips, gamesById),
     tipsEnabled,
@@ -289,24 +359,28 @@ export function buildDashboardRevenueFromTips(
 
 export function buildEmptyDashboardRevenue(
   games: CreatorGameRecord[],
-  scope: AnalyticsScope
+  scope: AnalyticsScope,
+  trendDays: 7 | 14 | 30 = 14
 ): DashboardRevenueAnalytics {
   const scopedGames =
     scope === ALL_GAMES_SCOPE
       ? games
       : games.filter((game) => game.id === scope);
 
+  const gameIds = new Set(games.map((game) => game.id));
+
   const emptyCore: GameRevenueCore = {
     tipCount: 0,
     totalAmount: 0,
     avgTip: 0,
     conversionRate: 0,
-    trend: buildTrendPoints([]),
+    trend: buildTrendPoints([], trendDays),
   };
 
   return {
-    stats: buildStats(emptyCore, []),
+    stats: buildStats(emptyCore, [], [], scope, gameIds),
     trend: emptyCore.trend,
+    trendDays,
     breakdown: buildBreakdown(scopedGames, [], 0),
     recentTips: [],
     tipsEnabled: scopedGames.some((game) => game.tips_enabled),

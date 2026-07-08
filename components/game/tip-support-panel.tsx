@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
 import { AnimatePresence, motion } from "framer-motion";
@@ -17,12 +18,14 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { TipStripePaymentForm } from "@/components/game/tip-stripe-payment-form";
 import { TipSavedCardForm } from "@/components/game/tip-saved-card-form";
+import { GamePaymentMethodsPanel } from "@/components/game/game-payment-methods-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
 import { useApiError } from "@/hooks/use-api-error";
+import { useScrollLock } from "@/hooks/use-scroll-lock";
 import {
   estimateCreatorNetFromTip,
   isPlatformFeeWaived,
@@ -52,6 +55,15 @@ type TipSupportPanelProps = {
   gameTitle: string;
   tipsEnabled?: boolean;
   suggestedTipAmount?: number | null;
+  /** 僅遊戲創作者可看費用預估 */
+  isGameOwner?: boolean;
+  /** 打賞成功後回呼（用於刷新支持者牆） */
+  onTipSuccess?: () => void;
+  /** 付款方式更新後刷新已儲存卡片 */
+  paymentMethodsRefreshKey?: number;
+  onPaymentMethodsChange?: () => void;
+  /** 嵌入合併區塊時不渲染外層卡片 */
+  embedded?: boolean;
   className?: string;
 };
 
@@ -60,6 +72,11 @@ export function TipSupportPanel({
   gameTitle,
   tipsEnabled: tipsEnabledProp = false,
   suggestedTipAmount: suggestedProp = null,
+  isGameOwner = false,
+  onTipSuccess,
+  paymentMethodsRefreshKey = 0,
+  onPaymentMethodsChange,
+  embedded = false,
   className,
 }: TipSupportPanelProps) {
   const t = useTranslations("game");
@@ -81,7 +98,14 @@ export function TipSupportPanel({
     string | null
   >(null);
   const [savedCardLabel, setSavedCardLabel] = useState("");
-  const [publicAnonymous, setPublicAnonymous] = useState(false);
+  const [showNameOnWall, setShowNameOnWall] = useState(true);
+  const [portalReady, setPortalReady] = useState(false);
+
+  useScrollLock(open);
+
+  useEffect(() => {
+    setPortalReady(true);
+  }, []);
 
   const tipsEnabled = tipInfo?.tipsEnabled ?? tipsEnabledProp;
   const suggestedTipAmount = tipInfo?.suggestedTipAmount ?? suggestedProp;
@@ -108,6 +132,12 @@ export function TipSupportPanel({
   }, [gameId, tipsEnabledProp]);
 
   useEffect(() => {
+    if (success) {
+      onTipSuccess?.();
+    }
+  }, [success, onTipSuccess]);
+
+  useEffect(() => {
     if (!open || !profile || !paymentsLive) return;
 
     fetch("/api/auth/payment-methods")
@@ -120,7 +150,7 @@ export function TipSupportPanel({
         }
       })
       .catch(() => setSavedCards([]));
-  }, [open, profile, paymentsLive]);
+  }, [open, profile, paymentsLive, paymentMethodsRefreshKey]);
 
   const parsedAmount = useMemo(() => {
     const value = Number.parseFloat(amount);
@@ -140,10 +170,10 @@ export function TipSupportPanel({
   );
 
   const presetAmounts = useMemo(() => {
-    const base = suggestedTipAmount ?? 5;
-    return Array.from(new Set([base, 3, 10, 20].filter((v) => v >= MIN_TIP_USD))).sort(
-      (a, b) => a - b
-    );
+    const base = suggestedTipAmount ?? MIN_TIP_USD;
+    return Array.from(
+      new Set([base, 3, 5, 10].filter((v) => v >= MIN_TIP_USD))
+    ).sort((a, b) => a - b);
   }, [suggestedTipAmount]);
 
   const resetModal = useCallback(() => {
@@ -157,7 +187,7 @@ export function TipSupportPanel({
     setSavedCards([]);
     setSelectedPaymentMethodId(null);
     setSavedCardLabel("");
-    setPublicAnonymous(false);
+    setShowNameOnWall(true);
     if (suggestedTipAmount != null) {
       setAmount(String(suggestedTipAmount));
     }
@@ -185,7 +215,7 @@ export function TipSupportPanel({
         body: JSON.stringify({
           amountUsd: value,
           paymentMethodId: selectedPaymentMethodId ?? undefined,
-          publicAnonymous,
+          publicAnonymous: !showNameOnWall,
         }),
       });
 
@@ -239,6 +269,13 @@ export function TipSupportPanel({
   }
 
   if (loading) {
+    if (embedded) {
+      return (
+        <div className={cn("flex justify-center py-6", className)}>
+          <Loader2 className="size-5 animate-spin text-fuchsia-400" />
+        </div>
+      );
+    }
     return (
       <div
         className={cn(
@@ -255,16 +292,10 @@ export function TipSupportPanel({
     return null;
   }
 
-  return (
+  const tipCardContent = (
     <>
-      <div
-        className={cn(
-          "rounded-2xl border border-fuchsia-400/20 bg-fuchsia-500/[0.05] p-5",
-          "shadow-[0_0_28px_rgba(217,70,239,0.08)]",
-          className
-        )}
-      >
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="text-center">
+        <div className="flex flex-wrap items-center justify-center gap-2">
           <Coins className="size-5 text-fuchsia-400" />
           <h3 className="text-sm font-semibold text-fuchsia-100">
             {t("tipSupportTitle")}
@@ -286,50 +317,79 @@ export function TipSupportPanel({
             {t("tipSuggestedAmount", { amount: suggestedTipAmount.toFixed(2) })}
           </p>
         )}
+      </div>
 
+      <div className="mt-4 flex justify-center">
         <Button
           type="button"
           onClick={() => setOpen(true)}
-          className="mt-4 w-full gap-2 bg-gradient-to-r from-fuchsia-500 to-violet-600 hover:from-fuchsia-400 hover:to-violet-500"
+          className="gap-2 px-8 bg-gradient-to-r from-fuchsia-500 to-violet-600 hover:from-fuchsia-400 hover:to-violet-500"
         >
           <Heart className="size-4" />
           {t("tipSupportButton")}
         </Button>
       </div>
+    </>
+  );
 
-      <AnimatePresence>
-        {open && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[70] bg-black/75 backdrop-blur-sm"
-              onClick={resetModal}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 16 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 16 }}
-              className={cn(
-                "fixed left-1/2 top-1/2 z-[71] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2",
-                "rounded-2xl border border-fuchsia-400/20 bg-zinc-900 p-5 shadow-2xl"
-              )}
-              onClick={(event) => event.stopPropagation()}
-            >
-              <div className="mb-4 flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="font-semibold text-white">{t("tipModalTitle")}</h3>
-                  <p className="mt-1 text-xs text-zinc-500">{gameTitle}</p>
-                </div>
+  return (
+    <>
+      {embedded ? (
+        <div className={className}>
+          {tipCardContent}
+          <GamePaymentMethodsPanel
+            onCardsChange={onPaymentMethodsChange}
+            className="mt-5 border-t border-fuchsia-400/15 pt-5"
+          />
+        </div>
+      ) : (
+        <div
+          className={cn(
+            "rounded-2xl border border-fuchsia-400/20 bg-fuchsia-500/[0.05] p-5",
+            "shadow-[0_0_28px_rgba(217,70,239,0.08)]",
+            className
+          )}
+        >
+          {tipCardContent}
+        </div>
+      )}
+
+      {portalReady &&
+        createPortal(
+          <AnimatePresence>
+            {open && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm"
+                  onClick={resetModal}
+                />
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 16 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 16 }}
+                  className={cn(
+                    "fixed left-1/2 top-1/2 z-[101] w-[calc(100%-1.5rem)] max-w-xl -translate-x-1/2 -translate-y-1/2",
+                    "max-h-[min(92vh,44rem)] overflow-y-auto",
+                    "rounded-2xl border border-fuchsia-400/20 bg-zinc-900 p-6 shadow-2xl sm:w-[calc(100%-2rem)] sm:max-w-2xl sm:p-8"
+                  )}
+                  onClick={(event) => event.stopPropagation()}
+                >
+              <div className="relative mb-4">
                 <Button
                   variant="ghost"
                   size="icon-sm"
                   onClick={resetModal}
-                  className="shrink-0 text-zinc-400"
+                  className="absolute right-0 top-0 shrink-0 text-zinc-400"
                 >
                   <X className="size-4" />
                 </Button>
+                <div className="px-8 text-center">
+                  <h3 className="font-semibold text-white">{t("tipModalTitle")}</h3>
+                  <p className="mt-1 text-xs text-zinc-500">{gameTitle}</p>
+                </div>
               </div>
 
               {success ? (
@@ -423,7 +483,7 @@ export function TipSupportPanel({
                     </div>
                   )}
 
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap justify-center gap-2">
                     {presetAmounts.map((preset) => (
                       <Button
                         key={preset}
@@ -442,11 +502,11 @@ export function TipSupportPanel({
                     ))}
                   </div>
 
-                  <div>
-                    <label className="mb-1.5 block text-xs text-zinc-400">
+                  <div className="flex flex-col items-center">
+                    <label className="mb-1.5 block text-center text-xs text-zinc-400">
                       {t("tipAmountLabel")}
                     </label>
-                    <div className="relative">
+                    <div className="relative w-36">
                       <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-fuchsia-300">
                         $
                       </span>
@@ -457,7 +517,7 @@ export function TipSupportPanel({
                         step="0.01"
                         value={amount}
                         onChange={(event) => setAmount(event.target.value)}
-                        className="border-white/10 bg-white/5 pl-7 text-zinc-100"
+                        className="border-white/10 bg-white/5 pl-7 pr-3 text-center text-zinc-100"
                       />
                     </div>
                   </div>
@@ -504,8 +564,8 @@ export function TipSupportPanel({
                     </div>
                   )}
 
-                  {parsedAmount >= MIN_TIP_USD && (
-                    <div className="rounded-xl border border-white/8 bg-zinc-950/50 p-3 text-xs text-zinc-500">
+                  {isGameOwner && parsedAmount >= MIN_TIP_USD && (
+                    <div className="rounded-xl border border-white/8 bg-zinc-950/50 p-3 text-center text-xs text-zinc-500">
                       <p className="font-medium text-zinc-300">{t("tipBreakdownTitle")}</p>
                       <p className="mt-2 font-mono text-cyan-300/90">
                         {feeWaived
@@ -531,18 +591,18 @@ export function TipSupportPanel({
 
                   <label className="flex items-start gap-3 rounded-xl border border-white/8 bg-zinc-950/40 px-3 py-3 text-left">
                     <Checkbox
-                      checked={publicAnonymous}
+                      checked={showNameOnWall}
                       onCheckedChange={(value) =>
-                        setPublicAnonymous(value === true)
+                        setShowNameOnWall(value === true)
                       }
                       className="mt-0.5 border-white/20 data-checked:border-fuchsia-500 data-checked:bg-fuchsia-500"
                     />
                     <span>
                       <span className="block text-sm text-zinc-200">
-                        {t("tipAnonymousLabel")}
+                        {t("tipShowNameOnWallLabel")}
                       </span>
                       <span className="mt-0.5 block text-xs text-zinc-500">
-                        {t("tipAnonymousDesc")}
+                        {t("tipShowNameOnWallDesc")}
                       </span>
                     </span>
                   </label>
@@ -573,9 +633,11 @@ export function TipSupportPanel({
                 </div>
               )}
             </motion.div>
-          </>
+              </>
+            )}
+          </AnimatePresence>,
+          document.body
         )}
-      </AnimatePresence>
     </>
   );
 }
