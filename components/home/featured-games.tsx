@@ -91,7 +91,7 @@ export function FeaturedGames({
   });
 
   return (
-    <section className="pb-12">
+    <section id="featured-games" className="pb-12">
       <div className="mb-8 text-center">
         <div className="mb-2 inline-flex items-center justify-center gap-2 text-sm font-medium text-amber-400">
           <Crown className="size-4" />

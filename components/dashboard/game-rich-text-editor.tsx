@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
@@ -32,6 +33,7 @@ type GameRichTextEditorProps = {
   onChange: (html: string) => void;
   disabled?: boolean;
   placeholder?: string;
+  showTitle?: boolean;
 };
 
 function ToolbarButton({
@@ -74,8 +76,12 @@ export function GameRichTextEditor({
   value,
   onChange,
   disabled,
-  placeholder = "撰寫遊戲攻略、故事背景、改版日誌…",
+  placeholder,
+  showTitle = true,
 }: GameRichTextEditorProps) {
+  const t = useTranslations("dashboard");
+  const resolvedPlaceholder = placeholder ?? t("richTextPlaceholder");
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -92,7 +98,7 @@ export function GameRichTextEditor({
         },
       }),
       Placeholder.configure({
-        placeholder,
+        placeholder: resolvedPlaceholder,
         emptyEditorClass: "is-editor-empty",
       }),
     ],
@@ -133,7 +139,7 @@ export function GameRichTextEditor({
     if (!editor) return;
 
     const previousUrl = editor.getAttributes("link").href as string | undefined;
-    const url = window.prompt("輸入連結網址", previousUrl ?? "https://");
+    const url = window.prompt(t("richTextLinkPrompt"), previousUrl ?? "https://");
 
     if (url === null) return;
 
@@ -157,10 +163,12 @@ export function GameRichTextEditor({
   return (
     <div className="space-y-2">
       <div className="space-y-1 text-center">
-        <p className="text-sm font-medium text-zinc-200">關於這款遊戲</p>
-        <p className="text-xs text-zinc-500">
-          支援富文本、連結、程式碼區塊與表情符號
-        </p>
+        {showTitle && (
+          <p className="text-sm font-medium text-zinc-200">
+            {t("metadataSectionAbout")}
+          </p>
+        )}
+        <p className="text-xs text-zinc-500">{t("richTextDesc")}</p>
       </div>
 
       <div
@@ -172,14 +180,14 @@ export function GameRichTextEditor({
       >
         <div className="flex flex-wrap items-center justify-center gap-0.5 border-b border-white/8 bg-zinc-950/80 px-2 py-1.5">
           <ToolbarButton
-            label="復原"
+            label={t("richTextUndo")}
             disabled={disabled || !editor || !editor.can().undo()}
             onClick={() => editor?.chain().focus().undo().run()}
           >
             <Undo2 className="size-3.5" />
           </ToolbarButton>
           <ToolbarButton
-            label="重做"
+            label={t("richTextRedo")}
             disabled={disabled || !editor || !editor.can().redo()}
             onClick={() => editor?.chain().focus().redo().run()}
           >
@@ -189,7 +197,7 @@ export function GameRichTextEditor({
           <ToolbarDivider />
 
           <ToolbarButton
-            label="粗體"
+            label={t("richTextBold")}
             disabled={disabled || !editor}
             active={editor?.isActive("bold")}
             onClick={() => editor?.chain().focus().toggleBold().run()}
@@ -197,7 +205,7 @@ export function GameRichTextEditor({
             <Bold className="size-3.5" />
           </ToolbarButton>
           <ToolbarButton
-            label="斜體"
+            label={t("richTextItalic")}
             disabled={disabled || !editor}
             active={editor?.isActive("italic")}
             onClick={() => editor?.chain().focus().toggleItalic().run()}
@@ -205,7 +213,7 @@ export function GameRichTextEditor({
             <Italic className="size-3.5" />
           </ToolbarButton>
           <ToolbarButton
-            label="底線"
+            label={t("richTextUnderline")}
             disabled={disabled || !editor}
             active={editor?.isActive("underline")}
             onClick={() => editor?.chain().focus().toggleUnderline().run()}
@@ -213,7 +221,7 @@ export function GameRichTextEditor({
             <UnderlineIcon className="size-3.5" />
           </ToolbarButton>
           <ToolbarButton
-            label="刪除線"
+            label={t("richTextStrike")}
             disabled={disabled || !editor}
             active={editor?.isActive("strike")}
             onClick={() => editor?.chain().focus().toggleStrike().run()}
@@ -221,7 +229,7 @@ export function GameRichTextEditor({
             <Strikethrough className="size-3.5" />
           </ToolbarButton>
           <ToolbarButton
-            label="行內程式碼"
+            label={t("richTextInlineCode")}
             disabled={disabled || !editor}
             active={editor?.isActive("code")}
             onClick={() => editor?.chain().focus().toggleCode().run()}
@@ -232,7 +240,7 @@ export function GameRichTextEditor({
           <ToolbarDivider />
 
           <ToolbarButton
-            label="大標題"
+            label={t("richTextHeading2")}
             disabled={disabled || !editor}
             active={editor?.isActive("heading", { level: 2 })}
             onClick={() =>
@@ -242,7 +250,7 @@ export function GameRichTextEditor({
             <Heading2 className="size-3.5" />
           </ToolbarButton>
           <ToolbarButton
-            label="小標題"
+            label={t("richTextHeading3")}
             disabled={disabled || !editor}
             active={editor?.isActive("heading", { level: 3 })}
             onClick={() =>
@@ -252,7 +260,7 @@ export function GameRichTextEditor({
             <Heading3 className="size-3.5" />
           </ToolbarButton>
           <ToolbarButton
-            label="項目清單"
+            label={t("richTextBulletList")}
             disabled={disabled || !editor}
             active={editor?.isActive("bulletList")}
             onClick={() => editor?.chain().focus().toggleBulletList().run()}
@@ -260,7 +268,7 @@ export function GameRichTextEditor({
             <List className="size-3.5" />
           </ToolbarButton>
           <ToolbarButton
-            label="編號清單"
+            label={t("richTextOrderedList")}
             disabled={disabled || !editor}
             active={editor?.isActive("orderedList")}
             onClick={() => editor?.chain().focus().toggleOrderedList().run()}
@@ -268,7 +276,7 @@ export function GameRichTextEditor({
             <ListOrdered className="size-3.5" />
           </ToolbarButton>
           <ToolbarButton
-            label="引用"
+            label={t("richTextQuote")}
             disabled={disabled || !editor}
             active={editor?.isActive("blockquote")}
             onClick={() => editor?.chain().focus().toggleBlockquote().run()}
@@ -276,7 +284,7 @@ export function GameRichTextEditor({
             <Quote className="size-3.5" />
           </ToolbarButton>
           <ToolbarButton
-            label="分隔線"
+            label={t("richTextHorizontalRule")}
             disabled={disabled || !editor}
             onClick={() => editor?.chain().focus().setHorizontalRule().run()}
           >
@@ -286,7 +294,7 @@ export function GameRichTextEditor({
           <ToolbarDivider />
 
           <ToolbarButton
-            label="插入連結"
+            label={t("richTextLink")}
             disabled={disabled || !editor}
             active={editor?.isActive("link")}
             onClick={setLink}
@@ -302,10 +310,12 @@ export function GameRichTextEditor({
         <EditorContent editor={editor} />
 
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/8 bg-zinc-950/60 px-3 py-2 text-[11px] text-zinc-500">
-          <span>字數 {stats.textLength}</span>
+          <span>{t("richTextCharCount", { count: stats.textLength })}</span>
           <span>
-            HTML {stats.htmlLength.toLocaleString()} /{" "}
-            {MAX_DETAILS_HTML_LENGTH.toLocaleString()}
+            {t("richTextHtmlSize", {
+              current: stats.htmlLength.toLocaleString(),
+              max: MAX_DETAILS_HTML_LENGTH.toLocaleString(),
+            })}
           </span>
         </div>
       </div>

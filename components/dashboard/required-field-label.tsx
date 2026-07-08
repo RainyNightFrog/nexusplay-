@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 type RequiredFieldLabelProps = {
@@ -15,6 +16,8 @@ export function RequiredFieldLabel({
   optional,
   className,
 }: RequiredFieldLabelProps) {
+  const t = useTranslations("dashboard");
+
   return (
     <span
       className={cn(
@@ -25,11 +28,11 @@ export function RequiredFieldLabel({
       {children}
       {required && (
         <span className="rounded-full bg-rose-500/15 px-1.5 py-0.5 text-[10px] font-medium text-rose-300">
-          必填
+          {t("fieldRequired")}
         </span>
       )}
       {optional && (
-        <span className="text-[10px] text-zinc-600">選填</span>
+        <span className="text-[10px] text-zinc-600">{t("fieldOptional")}</span>
       )}
     </span>
   );

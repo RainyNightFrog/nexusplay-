@@ -899,7 +899,10 @@ export function CommunityForum({
                       </div>
                     )}
                     <div className="space-y-2">
-                      <Label htmlFor="forum-title-inline" className="text-zinc-300">
+                      <Label
+                        htmlFor="forum-title-inline"
+                        className="block w-full text-center text-zinc-300"
+                      >
                         {t("postTitle")}
                       </Label>
                       <Input
@@ -912,7 +915,9 @@ export function CommunityForum({
                       />
                     </div>
                     <div className="space-y-2 sm:w-44">
-                      <Label className="text-zinc-300">{t("category")}</Label>
+                      <Label className="block w-full text-center text-zinc-300">
+                        {t("category")}
+                      </Label>
                       <Select
                         value={newCategory}
                         onValueChange={(value) =>
@@ -942,7 +947,10 @@ export function CommunityForum({
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="forum-content-inline" className="text-zinc-300">
+                    <Label
+                      htmlFor="forum-content-inline"
+                      className="block w-full text-center text-zinc-300"
+                    >
                       {t("content")}
                     </Label>
                     <Textarea
@@ -1096,15 +1104,22 @@ export function CommunityForum({
             ) : filteredPosts.length > 0 ? (
               <div className="space-y-3">
                 {filteredPosts.map((post) => (
-                  <button
+                  <div
                     key={post.id}
-                    type="button"
+                    role="button"
+                    tabIndex={0}
                     onClick={(event) => {
                       event.preventDefault();
                       enterThreadView(post);
                     }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        enterThreadView(post);
+                      }
+                    }}
                     className={cn(
-                      "group w-full overflow-hidden rounded-xl border border-white/10",
+                      "group w-full cursor-pointer overflow-hidden rounded-xl border border-white/10",
                       "border-l-4 bg-zinc-900/50 p-4 text-center transition-all duration-200",
                       "hover:border-violet-400/30 hover:bg-zinc-900/80 hover:shadow-lg hover:shadow-violet-500/5",
                       getForumCategoryMeta(post.category).accentClass
@@ -1152,7 +1167,7 @@ export function CommunityForum({
                         }
                       />
                     </div>
-                  </button>
+                  </div>
                 ))}
               </div>
             ) : (

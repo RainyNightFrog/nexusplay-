@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useLayoutEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -10,6 +11,7 @@ import {
   type GameGenre,
   type GameTag,
 } from "@/lib/game-metadata";
+import { useGameI18n } from "@/hooks/use-game-i18n";
 import { cn } from "@/lib/utils";
 import { RequiredFieldLabel } from "@/components/dashboard/required-field-label";
 
@@ -108,6 +110,8 @@ export function GenreTagPicker({
   genreRequired,
   genreError,
 }: GenreTagPickerProps) {
+  const t = useTranslations("dashboard");
+  const { localizedTag } = useGameI18n();
   const tagListRef = useRef<HTMLDivElement>(null);
   const tagListScrollTopRef = useRef(0);
 
@@ -139,12 +143,10 @@ export function GenreTagPicker({
         <div className="space-y-1 text-center">
           <p className="text-sm font-medium text-zinc-200">
             <RequiredFieldLabel required={genreRequired}>
-              核心分類 (Genre)
+              {t("genreCoreLabel")}
             </RequiredFieldLabel>
           </p>
-          <p className="text-xs text-zinc-500">
-            選擇最能代表你遊戲的主要類型（單選）
-          </p>
+          <p className="text-xs text-zinc-500">{t("genreCoreDesc")}</p>
         </div>
 
         <div
@@ -156,7 +158,7 @@ export function GenreTagPicker({
           {GAME_GENRES.map((item) => (
             <GenreOption
               key={item}
-              label={item}
+              label={localizedTag(item)}
               selected={genre === item}
               disabled={disabled}
               onClick={() => onGenreChange(item)}
@@ -169,7 +171,7 @@ export function GenreTagPicker({
         <div className="space-y-1">
           <div className="flex flex-wrap items-center justify-center gap-2">
             <p className="text-sm font-medium text-zinc-200">
-              子標籤 (Tags)
+              {t("tagsSubLabel")}
             </p>
             <Badge
               variant="outline"
@@ -179,14 +181,14 @@ export function GenreTagPicker({
             </Badge>
           </div>
           <p className="text-center text-xs text-zinc-500">
-            從下方選項勾選關鍵字標籤，協助玩家搜尋（選填，最多 {MAX_GAME_TAGS} 個）
+            {t("tagsSubDesc", { max: MAX_GAME_TAGS })}
           </p>
         </div>
 
         <div className="h-96 overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/40">
           <div className="h-24 shrink-0 border-b border-white/8 px-4 py-3">
             <p className="mb-2 text-center text-[11px] font-medium tracking-wide text-zinc-500 uppercase">
-              已選標籤
+              {t("tagsSelectedLabel")}
             </p>
             <div className="h-12 overflow-y-auto overscroll-contain">
               <div className="flex flex-wrap items-center justify-center gap-2">
@@ -196,11 +198,11 @@ export function GenreTagPicker({
                       key={tag}
                       className="border-violet-400/30 bg-violet-500/15 text-violet-200"
                     >
-                      {tag}
+                      {localizedTag(tag)}
                     </Badge>
                   ))
                 ) : (
-                  <span className="text-xs text-zinc-600">尚未選擇標籤</span>
+                  <span className="text-xs text-zinc-600">{t("tagsEmpty")}</span>
                 )}
               </div>
             </div>
@@ -212,9 +214,9 @@ export function GenreTagPicker({
           >
             <div className="space-y-4">
               {GAME_TAG_GROUPS.map((group) => (
-                <div key={group.label} className="space-y-2">
+                <div key={group.labelKey} className="space-y-2">
                   <p className="text-center text-xs font-semibold tracking-wide text-violet-300/90 uppercase">
-                    {group.label}
+                    {t(group.labelKey)}
                   </p>
                   <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                     {group.tags.map((item) => {
@@ -224,7 +226,7 @@ export function GenreTagPicker({
                       return (
                         <TagOption
                           key={item}
-                          label={item}
+                          label={localizedTag(item)}
                           selected={selected}
                           disabled={disabled || atLimit}
                           onToggle={() => toggleTag(item)}

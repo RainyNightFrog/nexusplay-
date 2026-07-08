@@ -48,6 +48,11 @@
   --radius-4xl: calc(var(--radius) * 2.6);
   --animate-aurora-breathe-cyan: aurora-breathe-cyan 9s ease-in-out infinite;
   --animate-aurora-breathe-violet: aurora-breathe-violet 10s ease-in-out infinite;
+  --animate-nexus-marquee: nexus-marquee-scroll 85s linear infinite;
+  --animate-nexus-marquee-border: nexus-marquee-border-flow 4s linear infinite;
+  --animate-nexus-marquee-shimmer: nexus-marquee-shimmer 3.5s ease-in-out infinite;
+  --animate-nexus-marquee-bg: nexus-marquee-bg-shift 8s ease-in-out infinite;
+  --animate-nexus-marquee-separator: nexus-marquee-separator-pulse 2.4s ease-in-out infinite;
 }
 
 :root {
@@ -121,6 +126,62 @@
   --nexus-scrollbar-track: rgba(255, 255, 255, 0.06);
   --nexus-scrollbar-thumb: rgba(34, 211, 238, 0.55);
   --nexus-scrollbar-thumb-hover: rgba(167, 139, 250, 0.95);
+}
+
+@keyframes nexus-marquee-scroll {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@keyframes nexus-marquee-border-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+@keyframes nexus-marquee-shimmer {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: translateX(-120%) skewX(-18deg);
+  }
+  50% {
+    opacity: 0.85;
+    transform: translateX(120%) skewX(-18deg);
+  }
+}
+
+@keyframes nexus-marquee-bg-shift {
+  0%,
+  100% {
+    opacity: 0.75;
+    filter: hue-rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    filter: hue-rotate(18deg);
+  }
+}
+
+@keyframes nexus-marquee-separator-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+    text-shadow: 0 0 6px rgba(34, 211, 238, 0.35);
+  }
+  50% {
+    opacity: 1;
+    text-shadow:
+      0 0 10px rgba(34, 211, 238, 0.75),
+      0 0 18px rgba(167, 139, 250, 0.45);
+  }
 }
 
 @keyframes aurora-breathe-cyan {
@@ -483,6 +544,117 @@
 
   .nexus-lang-scroll {
     scroll-behavior: smooth;
+  }
+
+  .nexus-announcement-marquee {
+    background: linear-gradient(
+      90deg,
+      rgba(3, 7, 18, 0.92) 0%,
+      rgba(15, 23, 42, 0.88) 50%,
+      rgba(3, 7, 18, 0.92) 100%
+    );
+    box-shadow:
+      inset 0 1px 0 rgba(34, 211, 238, 0.12),
+      inset 0 -1px 0 rgba(167, 139, 250, 0.12),
+      0 8px 32px rgba(34, 211, 238, 0.08),
+      0 -4px 24px rgba(167, 139, 250, 0.06);
+  }
+
+  .nexus-announcement-marquee-border {
+    background: linear-gradient(
+      90deg,
+      rgba(34, 211, 238, 0.15) 0%,
+      rgba(34, 211, 238, 0.95) 18%,
+      rgba(167, 139, 250, 0.95) 50%,
+      rgba(232, 121, 249, 0.95) 72%,
+      rgba(251, 191, 36, 0.85) 88%,
+      rgba(34, 211, 238, 0.15) 100%
+    );
+    background-size: 200% 100%;
+    animation: var(--animate-nexus-marquee-border);
+    box-shadow:
+      0 0 12px rgba(34, 211, 238, 0.45),
+      0 0 20px rgba(167, 139, 250, 0.25);
+  }
+
+  .nexus-announcement-marquee-bg {
+    background:
+      radial-gradient(
+        ellipse 40% 120% at 10% 50%,
+        rgba(34, 211, 238, 0.14) 0%,
+        transparent 70%
+      ),
+      radial-gradient(
+        ellipse 40% 120% at 90% 50%,
+        rgba(167, 139, 250, 0.14) 0%,
+        transparent 70%
+      ),
+      radial-gradient(
+        ellipse 30% 100% at 50% 50%,
+        rgba(232, 121, 249, 0.1) 0%,
+        transparent 70%
+      );
+    animation: var(--animate-nexus-marquee-bg);
+  }
+
+  .nexus-announcement-marquee-shimmer {
+    background: linear-gradient(
+      105deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.03) 42%,
+      rgba(34, 211, 238, 0.18) 50%,
+      rgba(167, 139, 250, 0.16) 58%,
+      transparent 100%
+    );
+    animation: var(--animate-nexus-marquee-shimmer);
+  }
+
+  .nexus-announcement-marquee-track {
+    animation: var(--animate-nexus-marquee);
+    will-change: transform;
+  }
+
+  .nexus-marquee-badge {
+    border: 1px solid rgba(34, 211, 238, 0.35);
+    background: linear-gradient(
+      90deg,
+      rgba(34, 211, 238, 0.2) 0%,
+      rgba(167, 139, 250, 0.22) 50%,
+      rgba(232, 121, 249, 0.18) 100%
+    );
+    color: rgb(207 250 254);
+    box-shadow:
+      0 0 14px rgba(34, 211, 238, 0.25),
+      inset 0 0 12px rgba(167, 139, 250, 0.12);
+  }
+
+  .nexus-marquee-separator {
+    background: linear-gradient(
+      180deg,
+      rgba(34, 211, 238, 0.95) 0%,
+      rgba(167, 139, 250, 0.95) 50%,
+      rgba(232, 121, 249, 0.95) 100%
+    );
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    animation: var(--animate-nexus-marquee-separator);
+  }
+
+  html[data-reduce-motion="true"] .nexus-announcement-marquee-track {
+    animation: none;
+    flex-wrap: wrap;
+    width: 100%;
+    justify-content: center;
+    gap: 0.75rem 1.5rem;
+    padding-inline: 1rem;
+  }
+
+  html[data-reduce-motion="true"] .nexus-announcement-marquee-border,
+  html[data-reduce-motion="true"] .nexus-announcement-marquee-bg,
+  html[data-reduce-motion="true"] .nexus-announcement-marquee-shimmer,
+  html[data-reduce-motion="true"] .nexus-marquee-separator {
+    animation: none;
   }
 }
 

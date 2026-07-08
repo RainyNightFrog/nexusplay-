@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Smile } from "lucide-react";
 import {
   DropdownMenu,
@@ -15,10 +16,18 @@ type GameDetailsEmojiPickerProps = {
   onPick: (emoji: string) => void;
 };
 
+const EMOJI_CATEGORY_MESSAGE_KEYS: Record<string, string> = {
+  common: "emojiCategoryCommon",
+  gaming: "emojiCategoryGaming",
+  symbols: "emojiCategorySymbols",
+  mood: "emojiCategoryMood",
+};
+
 export function GameDetailsEmojiPicker({
   disabled,
   onPick,
 }: GameDetailsEmojiPickerProps) {
+  const t = useTranslations("dashboard");
   const [open, setOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState(
     GAME_DETAILS_EMOJI_CATEGORIES[0]?.id ?? "common"
@@ -32,7 +41,7 @@ export function GameDetailsEmojiPicker({
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger
         disabled={disabled}
-        aria-label="插入表情"
+        aria-label={t("insertEmoji")}
         className="inline-flex size-8 items-center justify-center rounded-md text-zinc-400 outline-none hover:bg-white/5 hover:text-white disabled:opacity-50"
       >
         <Smile className="size-3.5" />
@@ -42,7 +51,7 @@ export function GameDetailsEmojiPicker({
         className="w-72 border-white/10 bg-zinc-950 p-3 text-zinc-100"
       >
         <p className="mb-2 text-center text-xs font-medium text-zinc-400">
-          插入表情
+          {t("insertEmoji")}
         </p>
         <div className="mb-3 flex flex-wrap justify-center gap-1">
           {GAME_DETAILS_EMOJI_CATEGORIES.map((item) => (
@@ -57,7 +66,7 @@ export function GameDetailsEmojiPicker({
                   : "text-zinc-500 hover:bg-white/5 hover:text-zinc-300"
               )}
             >
-              {item.label}
+              {t(EMOJI_CATEGORY_MESSAGE_KEYS[item.id] ?? "emojiCategoryCommon")}
             </button>
           ))}
         </div>

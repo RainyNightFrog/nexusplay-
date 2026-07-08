@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import {
@@ -34,6 +35,8 @@ export function ViewportSettingsFields({
   onChange,
   disabled,
 }: ViewportSettingsFieldsProps) {
+  const t = useTranslations("dashboard");
+
   const updateDimension = (
     key: "viewportWidth" | "viewportHeight",
     raw: string
@@ -52,17 +55,19 @@ export function ViewportSettingsFields({
   return (
     <div className="space-y-4 rounded-2xl border border-white/8 bg-zinc-950/40 p-5">
       <div className="space-y-1 text-center">
-        <p className="text-sm font-medium text-zinc-200">視窗尺寸 (Viewport)</p>
+        <p className="text-sm font-medium text-zinc-200">{t("viewportTitle")}</p>
         <p className="text-xs text-zinc-500">
-          設定嵌入播放器 iframe 的寬高比例，預設 {DEFAULT_VIEWPORT_WIDTH}×
-          {DEFAULT_VIEWPORT_HEIGHT} px
+          {t("viewportDesc", {
+            width: DEFAULT_VIEWPORT_WIDTH,
+            height: DEFAULT_VIEWPORT_HEIGHT,
+          })}
         </p>
       </div>
 
       <div className="flex flex-wrap items-center justify-center gap-3">
         <div className="space-y-1.5 text-center">
           <Label htmlFor="viewport-width" className="text-xs text-zinc-400">
-            寬度
+            {t("viewportWidth")}
           </Label>
           <div className="flex items-center gap-2">
             <input
@@ -85,7 +90,7 @@ export function ViewportSettingsFields({
 
         <div className="space-y-1.5 text-center">
           <Label htmlFor="viewport-height" className="text-xs text-zinc-400">
-            高度
+            {t("viewportHeight")}
           </Label>
           <div className="flex items-center gap-2">
             <input
@@ -117,9 +122,7 @@ export function ViewportSettingsFields({
           }
           className="border-white/20 data-checked:border-violet-400 data-checked:bg-violet-500"
         />
-        <span className="text-sm text-zinc-300">
-          支援全螢幕按鈕 — 在嵌入內容右下角顯示切換全螢幕
-        </span>
+        <span className="text-sm text-zinc-300">{t("viewportFullscreen")}</span>
       </label>
     </div>
   );

@@ -7,7 +7,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import {
   AI_CONTENT_TYPES,
-  AI_CONTENT_TYPE_LABELS,
   type AiContentType,
 } from "@/lib/game-metadata";
 import { cn } from "@/lib/utils";
@@ -75,6 +74,13 @@ export function AiDisclosureFields({
 }: AiDisclosureFieldsProps) {
   const t = useTranslations("dashboard");
 
+  const aiContentTypeLabel: Record<AiContentType, string> = {
+    graphics: t("aiContentTypeGraphics"),
+    sound: t("aiContentTypeSound"),
+    text: t("aiContentTypeText"),
+    code: t("aiContentTypeCode"),
+  };
+
   const toggleContentType = (type: AiContentType) => {
     const next = values.aiContentTypes.includes(type)
       ? values.aiContentTypes.filter((item) => item !== type)
@@ -88,16 +94,16 @@ export function AiDisclosureFields({
         <div className="flex flex-wrap items-center justify-center gap-2">
           <p className="text-sm font-medium text-zinc-200">
             <RequiredFieldLabel required={requiredForPublic}>
-              AI 生成內容誠實宣告
+              {t("aiDisclosureTitle")}
             </RequiredFieldLabel>
           </p>
           <Badge className="gap-1 border-0 bg-gradient-to-r from-cyan-500/20 to-violet-500/20 text-cyan-200">
             <Sparkles className="size-3" />
-            新的
+            {t("aiDisclosureBadgeNew")}
           </Badge>
         </div>
         <p className="text-center text-xs text-zinc-500">
-          此專案是否包含 AI 生成內容（美術、程式碼或語音）？即使經過人工編輯也請如實申報。
+          {t("aiDisclosureDesc")}
         </p>
       </div>
 
@@ -109,7 +115,7 @@ export function AiDisclosureFields({
       >
         <RadioOption
           selected={values.aiDisclosed === true}
-          label="是 — 本專案包含生成式 AI 的輸出結果"
+          label={t("aiDisclosureYes")}
           disabled={disabled}
           onClick={() =>
             onChange({ ...values, aiDisclosed: true })
@@ -117,7 +123,7 @@ export function AiDisclosureFields({
         />
         <RadioOption
           selected={values.aiDisclosed === false}
-          label="否 — 本專案不包含生成式 AI 的輸出"
+          label={t("aiDisclosureNo")}
           disabled={disabled}
           onClick={() =>
             onChange({ aiDisclosed: false, aiContentTypes: [] })
@@ -146,7 +152,7 @@ export function AiDisclosureFields({
               )}
             >
               <p className="text-center text-xs font-medium text-violet-200">
-                使用的是哪種 AI 生成內容？（必填，可多選）
+                {t("aiContentTypesPrompt")}
               </p>
               {fieldErrors?.aiContentTypes && (
                 <p className="text-center text-xs text-rose-300" role="alert">
@@ -166,7 +172,7 @@ export function AiDisclosureFields({
                       className="border-white/20 data-checked:border-violet-400 data-checked:bg-violet-500"
                     />
                     <span className="text-sm text-zinc-300">
-                      {AI_CONTENT_TYPE_LABELS[type]}
+                      {aiContentTypeLabel[type]}
                     </span>
                   </label>
                 ))}

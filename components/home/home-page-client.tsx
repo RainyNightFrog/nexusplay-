@@ -37,6 +37,7 @@ import { MobileSearchButton } from "@/components/layout/mobile-search-button";
 import { getCreatorDashboardHref } from "@/lib/creator-nav";
 import { useAuth } from "@/hooks/use-auth";
 import { FeaturedGames } from "@/components/home/featured-games";
+import { AnnouncementMarquee } from "@/components/home/announcement-marquee";
 import { HomePersonalizedSections } from "@/components/home/home-personalized-sections";
 import {
   FILTER_CATEGORIES,
@@ -403,9 +404,11 @@ export function HomePageClient() {
         </div>
       </SiteHeader>
 
+      <AnnouncementMarquee uploadHref={uploadHref} />
+
       <main className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Hero Section */}
-        <section className="relative py-16 sm:py-24 lg:py-28">
+        <section className="relative py-12 sm:py-20 lg:py-24">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}

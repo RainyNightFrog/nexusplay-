@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   DEFAULT_GAME_PUBLISH_METADATA,
   type GameGenre,
@@ -29,11 +30,13 @@ export function GamePublishMetadataFields({
   isPublicPublish = true,
   fieldErrors,
 }: GamePublishMetadataFieldsProps) {
+  const t = useTranslations("dashboard");
+
   return (
     <div className="space-y-8">
       <section id="field-genre" className="space-y-4 scroll-mt-24">
         <h2 className="text-center text-sm font-semibold uppercase tracking-wider text-cyan-400">
-          分類與標籤
+          {t("metadataSectionGenreTags")}
         </h2>
         <GenreTagPicker
           genre={genre}
@@ -48,7 +51,7 @@ export function GamePublishMetadataFields({
 
       <section className="space-y-4">
         <h2 className="text-center text-sm font-semibold uppercase tracking-wider text-violet-400">
-          嵌入選項
+          {t("metadataSectionEmbed")}
         </h2>
         <ViewportSettingsFields
           values={{
@@ -65,7 +68,7 @@ export function GamePublishMetadataFields({
 
       <section id="field-ai-disclosure" className="space-y-4 scroll-mt-24">
         <h2 className="text-center text-sm font-semibold uppercase tracking-wider text-fuchsia-400">
-          AI 內容申報
+          {t("metadataSectionAiDisclosure")}
         </h2>
         <AiDisclosureFields
           values={{
@@ -84,7 +87,7 @@ export function GamePublishMetadataFields({
 
       <section className="space-y-4">
         <h2 className="text-center text-sm font-semibold uppercase tracking-wider text-emerald-400">
-          關於這款遊戲
+          {t("metadataSectionAbout")}
         </h2>
         <GameRichTextEditor
           value={metadata.detailsHtml}
@@ -92,6 +95,7 @@ export function GamePublishMetadataFields({
             onMetadataChange({ ...metadata, detailsHtml })
           }
           disabled={disabled}
+          showTitle={false}
         />
       </section>
     </div>

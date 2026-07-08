@@ -116,11 +116,11 @@ export const GAME_TAGS = [
 export type GameTag = (typeof GAME_TAGS)[number];
 
 export const GAME_TAG_GROUPS: ReadonlyArray<{
-  label: string;
+  labelKey: string;
   tags: readonly GameTag[];
 }> = [
   {
-    label: "美術風格",
+    labelKey: "tagGroupArtStyle",
     tags: [
       "賽博朋克",
       "蒸汽龐克",
@@ -165,7 +165,7 @@ export const GAME_TAG_GROUPS: ReadonlyArray<{
     ],
   },
   {
-    label: "玩法機制",
+    labelKey: "tagGroupGameplay",
     tags: [
       "硬核",
       "Roguelike",
@@ -188,7 +188,7 @@ export const GAME_TAG_GROUPS: ReadonlyArray<{
     ],
   },
   {
-    label: "遊玩方式",
+    labelKey: "tagGroupPlayMode",
     tags: [
       "單機",
       "多人對戰",
@@ -202,7 +202,7 @@ export const GAME_TAG_GROUPS: ReadonlyArray<{
     ],
   },
   {
-    label: "視角與維度",
+    labelKey: "tagGroupPerspective",
     tags: [
       "2D",
       "3D",
@@ -214,7 +214,7 @@ export const GAME_TAG_GROUPS: ReadonlyArray<{
     ],
   },
   {
-    label: "氛圍與受眾",
+    labelKey: "tagGroupMood",
     tags: [
       "劇情豐富",
       "輕鬆治愈",
