@@ -36,10 +36,10 @@ const VOID_EMBED_BOOT_SCRIPT = `<script id="rainynightfrog-embed-boot">
   function texts(){
     var t=window.VoidI18n&&window.VoidI18n.t?function(k,f){var v=window.VoidI18n.t(k);return v&&v!==k?v:f;}:function(_k,f){return f;};
     return{
-      title:t('np_embed_expand_title','視窗過小'),
-      message:t('np_embed_expand_message','請點擊下方按鈕或頁面右下角「放大」，放大後才能繼續遊玩 VOID GACHA。'),
-      hint:t('np_embed_expand_hint','放大後將顯示完整介面與右側選單'),
-      btn:t('np_embed_expand_btn','請放大視窗')
+      title:t('rnf_embed_expand_title','視窗過小'),
+      message:t('rnf_embed_expand_message','請點擊下方按鈕或頁面右下角「放大」，放大後才能繼續遊玩 VOID GACHA。'),
+      hint:t('rnf_embed_expand_hint','放大後將顯示完整介面與右側選單'),
+      btn:t('rnf_embed_expand_btn','請放大視窗')
     };
   }
   function mountGate(gate){
