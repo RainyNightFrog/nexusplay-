@@ -10,7 +10,7 @@ const supabaseHostname = process.env.NEXT_PUBLIC_SUPABASE_URL
   : "*.supabase.co";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["web-push", "isomorphic-dompurify", "jsdom", "jszip"],
+  serverExternalPackages: ["web-push", "jszip"],
   experimental: {
     webpackMemoryOptimizations: true,
   },
