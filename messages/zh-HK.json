@@ -1322,6 +1322,7 @@
     "fileTooLarge": "檔案過大",
     "coverTooLarge": "封面圖不可超過 {size}",
     "zipTooLarge": "zip 不可超過 {size}，目前為 {current}",
+    "zipProductionTooLarge": "正式站上傳 zip 請小於 {size}（目前 {current}）。請重新打包或分次上傳。",
     "api": {
       "unknown": "發生錯誤，請稍後再試",
       "loginRequired": "請先登入",

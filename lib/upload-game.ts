@@ -1,6 +1,7 @@
 import type { GamePublishStatus } from "@/lib/game-publish";
 import type { GamePublishMetadata } from "@/lib/game-metadata";
 import { appendPublishMetadataToFormData } from "@/lib/game-metadata";
+import { readApiJson } from "@/lib/fetch-api-json";
 
 export type UploadGameInput = {
   title: string;
@@ -61,9 +62,7 @@ export async function uploadGame(
 
   onProgress?.("正在寫入資料庫...");
 
-  const payload = (await response.json()) as UploadGameResult & {
-    error?: string;
-  };
+  const payload = await readApiJson<UploadGameResult>(response);
 
   if (!response.ok) {
     throw new Error(payload.error ?? "上傳失敗，請稍後再試");

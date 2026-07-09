@@ -993,6 +993,7 @@
     "fileTooLarge": "文件过大",
     "coverTooLarge": "封面图不可超过 {size}",
     "zipTooLarge": "zip 不可超过 {size}，目前为 {current}",
+    "zipProductionTooLarge": "正式站上传 zip 请小于 {size}（目前 {current}）。请重新打包或分次上传。",
     "api": {
       "unknown": "发生错误，请稍后再试",
       "loginRequired": "请先登录",

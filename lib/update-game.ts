@@ -7,6 +7,7 @@ import {
   MAX_DEVLOG_TITLE_LENGTH,
   MAX_GALLERY_IMAGES,
 } from "@/lib/game-page-content";
+import { readApiJson } from "@/lib/fetch-api-json";
 
 export type UpdateGameInput = {
   title: string;
@@ -78,11 +79,9 @@ export async function fetchManageGame(
     credentials: "same-origin",
   });
 
-  const payload = (await response.json()) as {
-    game?: ManageGameRecord;
-    isOrphan?: boolean;
-    error?: string;
-  };
+  const payload = await readApiJson<{ game?: ManageGameRecord; isOrphan?: boolean }>(
+    response
+  );
 
   if (!response.ok) {
     throw new Error(payload.error ?? "讀取遊戲資料失敗");
@@ -147,9 +146,7 @@ export async function updateGame(
     body: formData,
   });
 
-  const payload = (await response.json()) as UpdateGameResult & {
-    error?: string;
-  };
+  const payload = await readApiJson<UpdateGameResult>(response);
 
   if (!response.ok) {
     throw new Error(payload.error ?? "更新失敗，請稍後再試");

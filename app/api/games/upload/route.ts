@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { resolveUserRole, hasCreatorDashboardAccess } from "@/lib/auth-profile";
-import { uploadCreatorGameFromFormData } from "@/lib/game-upload-service";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
+
+export const maxDuration = 60;
 
 export async function POST(request: Request) {
   try {
@@ -24,6 +25,9 @@ export async function POST(request: Request) {
     }
 
     const formData = await request.formData();
+    const { uploadCreatorGameFromFormData } = await import(
+      "@/lib/game-upload-service"
+    );
     const result = await uploadCreatorGameFromFormData({
       creatorId: user.id,
       formData,

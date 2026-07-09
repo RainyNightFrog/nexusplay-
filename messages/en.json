@@ -1322,6 +1322,7 @@
     "fileTooLarge": "File too large",
     "coverTooLarge": "Cover image cannot exceed {size}",
     "zipTooLarge": "Zip cannot exceed {size}, current size is {current}",
+    "zipProductionTooLarge": "On production, zip uploads must be under {size} (current: {current}). Rebuild a smaller zip or upload separately.",
     "api": {
       "unknown": "Something went wrong, please try again",
       "loginRequired": "Please sign in first",

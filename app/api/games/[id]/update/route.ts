@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { extractAndUploadGameBuild } from "@/lib/extract-game-zip";
 import { authorizeGameEdit } from "@/lib/game-auth";
 import { resolveUserRole, hasCreatorDashboardAccess } from "@/lib/auth-profile";
 import {
@@ -30,6 +29,7 @@ import {
   MAX_DESCRIPTION_LENGTH,
   MAX_TITLE_LENGTH,
   MAX_ZIP_BYTES,
+  PRODUCTION_UPLOAD_BYTES,
 } from "@/lib/upload-limits";
 import { MAX_DETAILS_HTML_LENGTH } from "@/lib/game-metadata";
 import { resolvePlatformFeePercentForSave } from "@/lib/tip-fee-policy";
@@ -38,6 +38,8 @@ import {
   resolveGalleryUpdate,
 } from "@/lib/game-page-upload";
 import { isZipBuffer, isZipFile } from "@/lib/zip-file-validation";
+
+export const maxDuration = 60;
 
 /** 創作者可更新的欄位；僅首次公開或遭拒後重新提交時重置審批狀態 */
 function buildCreatorUpdatePayload(
@@ -230,6 +232,17 @@ export async function PATCH(
           { status: 400 }
         );
       }
+      if (
+        process.env.VERCEL &&
+        gameZipFile.size > PRODUCTION_UPLOAD_BYTES
+      ) {
+        return NextResponse.json(
+          {
+            error: `正式站上傳 zip 請小於 ${formatMaxSize(PRODUCTION_UPLOAD_BYTES)}（目前 ${formatMaxSize(gameZipFile.size)}）。請壓縮後再試。`,
+          },
+          { status: 413 }
+        );
+      }
     }
 
     const metadataResult = parsePublishMetadataFromFormData(formData);
@@ -281,6 +294,7 @@ export async function PATCH(
             { status: 400 }
           );
         }
+        const { extractAndUploadGameBuild } = await import("@/lib/extract-game-zip");
         const buildUpload = await extractAndUploadGameBuild(supabase, zipBuffer);
         newBuildPaths = buildUpload.uploadedPaths;
         newGameUrl = buildUpload.playUrl;
