@@ -15,7 +15,15 @@ const VOID_EMBED_BOOT_SCRIPT = `<script id="nexusplay-embed-boot">
   window.VOID_BUILD_TARGET='';
   window.VOID_PORTAL_EMBED=true;
   window.VOID_API_ORIGIN='https://void-gacha.com';
-  document.documentElement.classList.add('void-portal-embed','void-in-iframe');
+  var d=document.documentElement;
+  d.classList.add('void-portal-embed','void-nexusplay-embed','void-itch-embed','void-in-iframe');
+  if(window.self!==window.top){
+    var h=window.innerHeight||720,w=window.innerWidth||960;
+    d.classList.add('np-embed-mode','void-itch-mobile-shell');
+    d.classList.toggle('np-embed-compact',h<=780);
+    d.style.setProperty('--np-embed-width',w+'px');
+    d.style.setProperty('--np-embed-height',h+'px');
+  }
 })();
 </script>`;
 
@@ -50,6 +58,43 @@ html.void-portal-embed #portal-google-hint{
   margin:12px 0 0!important;font-size:12px!important;line-height:1.5!important;color:rgba(220,230,255,.78)!important;
 }
 html.void-portal-embed #portal-google-hint a{color:#7dd3fc!important;text-decoration:underline!important}
+</style>`;
+
+/** void-gacha 嵌入：滾動與首頁排版（平台注入，無需重傳 zip 亦生效） */
+const VOID_EMBED_SCROLL_FIX_STYLE = `<style id="nexusplay-scroll-fix">
+html.void-portal-embed.void-in-iframe.void-itch-mobile-shell,
+html.void-nexusplay-embed.void-itch-mobile-shell,
+html.void-portal-embed.void-in-iframe.void-itch-mobile-shell body,
+html.void-nexusplay-embed.void-itch-mobile-shell body{height:auto!important;max-height:none!important;overflow-x:hidden!important;overflow-y:auto!important}
+html.void-portal-embed.void-in-iframe.void-itch-mobile-shell #screen-app,
+html.void-nexusplay-embed.void-itch-mobile-shell #screen-app{height:auto!important;max-height:none!important;overflow:visible!important;display:block!important}
+html.void-portal-embed.void-in-iframe.void-itch-mobile-shell #void-app-main,
+html.void-nexusplay-embed.void-itch-mobile-shell #void-app-main{overflow:visible!important;max-height:none!important;flex:none!important}
+html.void-portal-embed.void-in-iframe .gacha-view.view-panel,
+html.void-nexusplay-embed .gacha-view.view-panel{overflow:visible!important;max-height:none!important}
+html.void-portal-embed.void-in-iframe .gacha-arena,
+html.void-nexusplay-embed .gacha-arena,
+html.void-portal-embed.void-in-iframe .gacha-hub--machine,
+html.void-nexusplay-embed .gacha-hub--machine{min-height:0!important;max-height:none!important;overflow:visible!important}
+html.void-portal-embed.void-in-iframe .void-app-main>.view-panel,
+html.void-nexusplay-embed .void-app-main>.view-panel{overflow:visible!important;max-height:none!important}
+html.void-portal-embed.void-in-iframe body.void-chat-scroll-lock,
+html.void-nexusplay-embed body.void-chat-scroll-lock,
+html.void-portal-embed.void-in-iframe body.void-chat-scroll-lock #screen-app,
+html.void-nexusplay-embed body.void-chat-scroll-lock #screen-app{overflow:visible!important;height:auto!important;max-height:none!important;touch-action:auto!important}
+html.void-nexusplay-embed.np-embed-compact .home-mega-title,
+html.void-nexusplay-embed.np-embed-compact .home-marquee,
+html.void-nexusplay-embed.np-embed-compact .home-left-pillar,
+html.void-nexusplay-embed.np-embed-compact .home-bg-zones,
+html.void-nexusplay-embed.np-embed-compact .home-bg-beasts,
+html.void-nexusplay-embed.np-embed-compact .home-bg-tentacles,
+html.void-nexusplay-embed.np-embed-compact .home-bg-cards,
+html.void-nexusplay-embed.np-embed-compact .home-particles,
+html.void-nexusplay-embed.np-embed-compact .home-lightning,
+html.void-nexusplay-embed.np-embed-compact .home-quick{display:none!important}
+html.void-nexusplay-embed.np-embed-compact .home-right-rail{position:relative!important;top:auto!important;right:auto!important;width:100%;max-width:100%;flex-direction:row;flex-wrap:wrap;justify-content:center;gap:8px;margin:0 auto 6px;padding:0 4px}
+html.void-nexusplay-embed.np-embed-compact .mythic-rising-packs-row{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:8px!important;overflow:visible!important;flex-wrap:unset!important}
+html.void-nexusplay-embed.np-embed-compact .mythic-rising-packs-row .pack-tile{flex:none!important;width:100%!important;min-width:0!important;max-width:none!important;min-height:128px!important;height:auto!important;aspect-ratio:3/4.2}
 </style>`;
 
 const VOID_EMBED_GOOGLE_HINT = `<p id="portal-google-hint" class="auth-hint auth-setup-hint">此遊戲建議使用平台帳號（遊戲頁上方登入 Google / Email）與 <code>RainyNightFrog.loadSave()</code> 雲端存檔；若需 void-gacha 原生 Google 登入請<a href="https://void-gacha.com/" target="_blank" rel="noopener noreferrer">前往官網</a>。</p>`;
@@ -136,6 +181,9 @@ export function patchHtmlForPlatformEmbed(html: string) {
       }
     }
     out = applyVoidGachaPortalCdnPatch(out);
+    if (isVoidGachaHtml(out) && !out.includes('id="nexusplay-scroll-fix"') && out.includes("<head>")) {
+      out = out.replace("<head>", `<head>${VOID_EMBED_SCROLL_FIX_STYLE}`);
+    }
     return ensureScrollbarStyle(out);
   }
 
@@ -158,5 +206,10 @@ export function patchHtmlForPlatformEmbed(html: string) {
   }
 
   out = applyVoidGachaPortalCdnPatch(out);
+  if (isVoidGachaHtml(out) && !out.includes('id="nexusplay-scroll-fix"')) {
+    if (out.includes("<head>")) {
+      out = out.replace("<head>", `<head>${VOID_EMBED_SCROLL_FIX_STYLE}`);
+    }
+  }
   return ensureScrollbarStyle(out);
 }
