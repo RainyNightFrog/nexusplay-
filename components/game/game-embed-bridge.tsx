@@ -15,6 +15,8 @@ import {
   RAINYNIGHTFROG_LEAVE_MESSAGE,
   RAINYNIGHTFROG_READY_MESSAGE,
   RAINYNIGHTFROG_RESIZE_MESSAGE,
+  RAINYNIGHTFROG_EXPAND_REQUEST,
+  LEGACY_NEXUSPLAY_EXPAND_REQUEST,
   type RainyNightFrogAuthUser,
   type RainyNightFrogLeaveConfirmRequest,
 } from "@/lib/rainynightfrog-embed-sdk";
@@ -24,6 +26,7 @@ type GameEmbedBridgeProps = {
   gameId: string;
   creatorId?: string | null;
   expanded?: boolean;
+  onExpandRequest?: () => void;
 };
 
 type PendingLeaveConfirm = {
@@ -50,6 +53,7 @@ export function GameEmbedBridge({
   gameId,
   creatorId,
   expanded = false,
+  onExpandRequest,
 }: GameEmbedBridgeProps) {
   const { profile, loading } = useAuth();
   const router = useRouter();
@@ -143,6 +147,14 @@ export function GameEmbedBridge({
       }
 
       if (
+        data?.type === RAINYNIGHTFROG_EXPAND_REQUEST ||
+        data?.type === LEGACY_NEXUSPLAY_EXPAND_REQUEST
+      ) {
+        onExpandRequest?.();
+        return;
+      }
+
+      if (
         data?.type === RAINYNIGHTFROG_LEAVE_MESSAGE ||
         data?.type === LEGACY_NEXUSPLAY_LEAVE_MESSAGE
       ) {
@@ -167,7 +179,7 @@ export function GameEmbedBridge({
 
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [gameId, postAuth, postResize, router]);
+  }, [gameId, postAuth, postResize, router, onExpandRequest]);
 
   useEffect(() => {
     if (!loading) {

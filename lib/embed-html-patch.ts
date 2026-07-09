@@ -21,6 +21,7 @@ const VOID_EMBED_BOOT_SCRIPT = `<script id="nexusplay-embed-boot">
     var h=window.innerHeight||720,w=window.innerWidth||960;
     d.classList.add('np-embed-mode','void-itch-mobile-shell');
     d.classList.toggle('np-embed-compact',h<=780);
+    d.classList.toggle('np-embed-gated',h<=780);
     d.style.setProperty('--np-embed-width',w+'px');
     d.style.setProperty('--np-embed-height',h+'px');
   }
@@ -78,6 +79,12 @@ html.void-nexusplay-embed.np-embed-mode .void-chat-panel:not(.is-hidden){width:m
 html.void-nexusplay-embed.np-embed-mode .void-chat-panel:not(.is-hidden):not(.is-collapsed){--void-chat-h:min(560px,calc(var(--np-embed-height,720px) - var(--void-mobile-nav-h,58px) - 28px));height:var(--void-chat-h);min-height:min(400px,calc(var(--np-embed-height,720px) - var(--void-mobile-nav-h,58px) - 28px))}
 html.void-nexusplay-embed.np-embed-mode .side-mode-modal{max-height:min(calc(var(--np-embed-height,720px) - 12px),96dvh)!important;height:min(calc(var(--np-embed-height,720px) - 12px),96dvh)!important}
 html.void-nexusplay-embed.np-embed-mode .side-mode-body{min-height:0!important;overflow-y:auto!important}
+html.np-embed-gated #screen-app{pointer-events:none!important;filter:blur(3px) brightness(.45)}
+html.np-embed-gated .void-itch-nav-dock,html.np-embed-gated .void-chat-panel{pointer-events:none!important;opacity:.35}
+.np-embed-expand-gate{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(4,2,14,.72)}
+.np-embed-expand-gate[hidden]{display:none!important}
+.np-embed-expand-gate__panel{width:min(420px,100%);padding:22px 20px;border-radius:18px;border:1px solid rgba(78,240,255,.35);background:rgba(12,8,28,.96);text-align:center;color:#f5ecff}
+.np-embed-expand-gate__btn{margin-top:12px;min-height:44px;padding:10px 18px;border-radius:12px;border:1px solid rgba(78,240,255,.45);background:rgba(78,240,255,.15);color:#ecfeff;font-weight:700;cursor:pointer}
 </style>`;
 
 const VOID_EMBED_GOOGLE_HINT = `<p id="portal-google-hint" class="auth-hint auth-setup-hint">此遊戲建議使用平台帳號（遊戲頁上方登入 Google / Email）與 <code>RainyNightFrog.loadSave()</code> 雲端存檔；若需 void-gacha 原生 Google 登入請<a href="https://void-gacha.com/" target="_blank" rel="noopener noreferrer">前往官網</a>。</p>`;

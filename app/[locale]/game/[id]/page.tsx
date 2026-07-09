@@ -566,6 +566,7 @@ function GamePageContent() {
                       gameId={gameId}
                       expanded={showFullscreen}
                       creatorId={game.creatorId}
+                      onExpandRequest={() => setShowFullscreen(true)}
                     />
                   </>
                 ) : (
