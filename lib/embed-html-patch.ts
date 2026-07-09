@@ -125,37 +125,14 @@ const VOID_EMBED_BOOT_SCRIPT = `<script id="nexusplay-embed-boot">
 })();
 </script>`;
 
+const VOID_EMBED_EARLY_CLASS_SCRIPT = `<script id="void-portal-early">document.documentElement.classList.add('void-portal-embed','void-nexusplay-embed','void-itch-embed','void-in-iframe');</script>`;
+
 const VOID_EMBED_LAYOUT_STYLE = `<style id="nexusplay-embed-layout">
-html.void-portal-embed #screen-auth:not(.hidden){
-  display:flex!important;align-items:center!important;justify-content:center!important;
-  height:100%!important;min-height:100%!important;max-height:none!important;
-  overflow-x:hidden!important;overflow-y:auto!important;
-  padding:max(40px,env(safe-area-inset-top,0)) 12px 16px!important;
-  box-sizing:border-box!important;background:#060613!important;
-}
-html.void-portal-embed #screen-auth .auth-stage{
-  display:flex!important;flex-direction:column!important;align-items:center!important;
-  width:100%!important;max-width:min(420px,100%)!important;margin:0 auto!important;
-  min-height:0!important;height:auto!important;padding:24px 0 12px!important;gap:12px!important;
-}
-html.void-portal-embed #screen-auth .auth-wing--left,
-html.void-portal-embed #screen-auth .auth-wing--right,
-html.void-portal-embed #screen-auth .auth-preview-mount--featured,
-html.void-portal-embed #screen-auth .auth-tilt-hint{display:none!important}
-html.void-portal-embed #screen-auth .auth-center,
-html.void-portal-embed #screen-auth .auth-box{
-  width:100%!important;max-width:100%!important;margin:0!important;
-}
-html.void-portal-embed #screen-auth .auth-hero-copy{text-align:center!important;margin:0 0 8px!important}
-html.void-portal-embed #screen-auth .auth-title{font-size:clamp(1.35rem,5vw,1.85rem)!important}
-html.void-portal-embed body.auth-gate-active #screen-app,
-html.void-portal-embed body.auth-gate-active #hero-welcome{
-  visibility:hidden!important;opacity:0!important;pointer-events:none!important;
-}
-html.void-portal-embed #portal-google-hint{
-  margin:12px 0 0!important;font-size:12px!important;line-height:1.5!important;color:rgba(220,230,255,.78)!important;
-}
-html.void-portal-embed #portal-google-hint a{color:#7dd3fc!important;text-decoration:underline!important}
+html.void-portal-embed #screen-auth,
+html.void-portal-embed.void-nexusplay-embed #screen-auth,
+html.void-portal-embed.void-in-iframe #screen-auth{display:none!important}
+html.void-portal-embed #g_id_onload,
+html.void-portal-embed #btn-google{display:none!important}
 </style>`;
 
 /** void-gacha 嵌入：排版與閘道樣式（勿鎖 #screen-app fixed，全螢幕才可遊玩） */
@@ -279,9 +256,9 @@ export function patchHtmlForPlatformEmbed(html: string) {
   const sdk = buildRainyNightFrogEmbedSdkScript();
 
   if (out.includes("<head>")) {
-    out = out.replace("<head>", `<head>${sdk}`);
+    out = out.replace("<head>", `<head>${sdk}${VOID_EMBED_EARLY_CLASS_SCRIPT}`);
   } else {
-    out = out.replace(/<head[^>]*>/i, (match) => `${match}${sdk}`);
+    out = out.replace(/<head[^>]*>/i, (match) => `${match}${sdk}${VOID_EMBED_EARLY_CLASS_SCRIPT}`);
   }
 
   if (!isVoidGachaHtml(out)) {
@@ -296,9 +273,21 @@ export function patchHtmlForPlatformEmbed(html: string) {
 
   out = applyVoidEmbedBoot(out);
 
-  const critical = '<style id="void-critical-embed">';
-  if (out.includes(critical)) {
-    out = out.replace(critical, VOID_EMBED_LAYOUT_STYLE + critical);
+  const portalCritical =
+    '.hidden{display:none!important}' +
+    'html.void-portal-embed #screen-auth,html.void-nexusplay-embed #screen-auth{display:none!important}' +
+    'html.void-portal-embed #g_id_onload,html.void-nexusplay-embed #g_id_onload,html.void-portal-embed #btn-google{display:none!important}';
+  if (out.includes('id="void-critical-embed"')) {
+    out = out.replace(
+      /<style id="void-critical-embed">[\s\S]*?<\/style>/i,
+      `<style id="void-critical-embed">${portalCritical}</style>`
+    );
+    if (!out.includes('id="nexusplay-embed-layout"')) {
+      out = out.replace(
+        /<style id="void-critical-embed">/i,
+        `${VOID_EMBED_LAYOUT_STYLE}\n<style id="void-critical-embed">`
+      );
+    }
   } else if (!out.includes('id="nexusplay-embed-layout"')) {
     out = out.replace(/<head>/i, `<head>${VOID_EMBED_LAYOUT_STYLE}`);
   }
