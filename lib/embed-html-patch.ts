@@ -9,7 +9,7 @@ function ensureScrollbarStyle(html: string) {
   return html.replace(/<head[^>]*>/i, (match) => `${match}${NEXUS_SCROLLBAR_STYLE_TAG}`);
 }
 
-/** void-gacha 專用：登入頁置中（無需創作者重傳 zip 即可生效） */
+/** void-gacha 專用：同步建立放大閘道 overlay（無需重傳 zip 亦會覆寫舊 boot） */
 const VOID_EMBED_BOOT_SCRIPT = `<script id="nexusplay-embed-boot">
 (function(){
   window.VOID_BUILD_TARGET='';
@@ -17,14 +17,86 @@ const VOID_EMBED_BOOT_SCRIPT = `<script id="nexusplay-embed-boot">
   window.VOID_API_ORIGIN='https://void-gacha.com';
   var d=document.documentElement;
   d.classList.add('void-portal-embed','void-nexusplay-embed','void-itch-embed','void-in-iframe');
-  if(window.self!==window.top){
-    var h=window.innerHeight||720,w=window.innerWidth||960;
-    d.classList.add('np-embed-mode','void-itch-mobile-shell');
-    d.classList.toggle('np-embed-compact',h<=780);
-    d.classList.toggle('np-embed-gated',h<=780);
+  if(window.self===window.top)return;
+  var h=window.innerHeight||720,w=window.innerWidth||960;
+  d.classList.add('np-embed-mode');
+  function texts(){
+    var t=window.VoidI18n&&window.VoidI18n.t?function(k,f){var v=window.VoidI18n.t(k);return v&&v!==k?v:f;}:function(_k,f){return f;};
+    return{
+      title:t('np_embed_expand_title','視窗過小'),
+      message:t('np_embed_expand_message','請點擊右下角「放大」或全螢幕按鈕，放大後才能繼續遊玩 VOID GACHA。'),
+      hint:t('np_embed_expand_hint','放大後將顯示完整介面與右側選單'),
+      btn:t('np_embed_expand_btn','請放大視窗')
+    };
+  }
+  function ensureOverlay(show){
+    var gate=document.getElementById('np-embed-expand-gate');
+    if(!gate&&show){
+      var tx=texts();
+      gate=document.createElement('div');
+      gate.id='np-embed-expand-gate';
+      gate.className='np-embed-expand-gate';
+      gate.setAttribute('role','dialog');
+      gate.setAttribute('aria-modal','true');
+      gate.innerHTML='<div class="np-embed-expand-gate__panel"><p class="np-embed-expand-gate__eyebrow">VOID GACHA · RainyNightFrog</p><h2 class="np-embed-expand-gate__title"></h2><p class="np-embed-expand-gate__message"></p><p class="np-embed-expand-gate__hint"></p><button type="button" class="np-embed-expand-gate__btn"></button></div>';
+      gate.querySelector('.np-embed-expand-gate__title').textContent=tx.title;
+      gate.querySelector('.np-embed-expand-gate__message').textContent=tx.message;
+      gate.querySelector('.np-embed-expand-gate__hint').textContent=tx.hint;
+      gate.querySelector('.np-embed-expand-gate__btn').textContent=tx.btn;
+      gate.querySelector('.np-embed-expand-gate__btn').addEventListener('click',function(){
+        try{
+          ['rainynightfrog:expand-request','nexusplay:expand-request'].forEach(function(type){
+            window.parent.postMessage({type:type},location.origin);
+          });
+        }catch(_e){}
+      });
+      function mount(){(document.body||document.documentElement).appendChild(gate);}
+      if(document.body)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
+    }
+    if(gate){
+      if(show){
+        var tx2=texts();
+        gate.querySelector('.np-embed-expand-gate__title').textContent=tx2.title;
+        gate.querySelector('.np-embed-expand-gate__message').textContent=tx2.message;
+        gate.querySelector('.np-embed-expand-gate__hint').textContent=tx2.hint;
+        gate.querySelector('.np-embed-expand-gate__btn').textContent=tx2.btn;
+      }
+      gate.hidden=!show;
+    }
+  }
+  window.__voidNpSyncExpandGate=function(opts){
+    if(opts&&typeof opts==='object'){
+      if(opts.width>0)w=opts.width;
+      if(opts.height>0)h=opts.height;
+      if(opts.expanded!=null)d.classList.toggle('np-embed-expanded',!!opts.expanded);
+    }
+    var compact=h<=780;
+    var expanded=d.classList.contains('np-embed-expanded');
+    d.classList.toggle('np-embed-compact',compact);
+    d.classList.toggle('void-itch-mobile-shell',compact&&!expanded);
     d.style.setProperty('--np-embed-width',w+'px');
     d.style.setProperty('--np-embed-height',h+'px');
+    var gated=compact&&!expanded;
+    d.classList.toggle('np-embed-gated',gated);
+    ensureOverlay(gated);
+  };
+  function onResizeMsg(e){
+    if(e.origin!==location.origin)return;
+    var data=e.data;
+    if(!data||typeof data!=='object')return;
+    if(data.type!=='rainynightfrog:resize'&&data.type!=='nexusplay:resize')return;
+    window.__voidNpSyncExpandGate({width:data.width,height:data.height,expanded:data.expanded});
   }
+  window.addEventListener('message',onResizeMsg);
+  window.addEventListener('resize',function(){h=window.innerHeight||h;w=window.innerWidth||w;window.__voidNpSyncExpandGate();});
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize',function(){
+      h=Math.round(window.visualViewport.height)||h;
+      w=Math.round(window.visualViewport.width)||w;
+      window.__voidNpSyncExpandGate();
+    });
+  }
+  window.__voidNpSyncExpandGate();
 })();
 </script>`;
 
@@ -61,12 +133,8 @@ html.void-portal-embed #portal-google-hint{
 html.void-portal-embed #portal-google-hint a{color:#7dd3fc!important;text-decoration:underline!important}
 </style>`;
 
-/** void-gacha 嵌入：滾動與首頁排版（平台注入，無需重傳 zip 亦生效） */
+/** void-gacha 嵌入：排版與閘道樣式（勿鎖 #screen-app fixed，全螢幕才可遊玩） */
 const VOID_EMBED_SCROLL_FIX_STYLE = `<style id="nexusplay-scroll-fix">
-html.void-nexusplay-embed.np-embed-mode,html.void-portal-embed.void-in-iframe.np-embed-mode{height:100%!important;min-height:0!important;overflow:hidden!important}
-html.void-nexusplay-embed.np-embed-mode body,html.void-portal-embed.void-in-iframe.np-embed-mode body{height:100%!important;min-height:0!important;max-height:100%!important;overflow:hidden!important;position:relative!important}
-html.void-nexusplay-embed.np-embed-mode #screen-app,html.void-portal-embed.void-in-iframe.np-embed-mode #screen-app{position:fixed!important;inset:0!important;display:block!important;width:100%!important;height:100%!important;max-height:100%!important;min-height:0!important;overflow-x:hidden!important;overflow-y:scroll!important;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;touch-action:pan-y}
-html.void-nexusplay-embed.np-embed-mode #void-app-main,html.void-portal-embed.void-in-iframe.np-embed-mode #void-app-main{overflow:visible!important;max-height:none!important;flex:none!important;min-height:min-content}
 html.void-portal-embed.void-in-iframe .gacha-view.view-panel,html.void-nexusplay-embed .gacha-view.view-panel{overflow:visible!important;max-height:none!important}
 html.void-portal-embed.void-in-iframe .gacha-arena,html.void-nexusplay-embed .gacha-arena,html.void-portal-embed.void-in-iframe .gacha-hub--machine,html.void-nexusplay-embed .gacha-hub--machine{min-height:0!important;max-height:none!important;overflow:visible!important}
 html.void-portal-embed.void-in-iframe .void-app-main>.view-panel,html.void-nexusplay-embed .void-app-main>.view-panel{overflow:visible!important;max-height:none!important}
@@ -79,13 +147,41 @@ html.void-nexusplay-embed.np-embed-mode .void-chat-panel:not(.is-hidden){width:m
 html.void-nexusplay-embed.np-embed-mode .void-chat-panel:not(.is-hidden):not(.is-collapsed){--void-chat-h:min(560px,calc(var(--np-embed-height,720px) - var(--void-mobile-nav-h,58px) - 28px));height:var(--void-chat-h);min-height:min(400px,calc(var(--np-embed-height,720px) - var(--void-mobile-nav-h,58px) - 28px))}
 html.void-nexusplay-embed.np-embed-mode .side-mode-modal{max-height:min(calc(var(--np-embed-height,720px) - 12px),96dvh)!important;height:min(calc(var(--np-embed-height,720px) - 12px),96dvh)!important}
 html.void-nexusplay-embed.np-embed-mode .side-mode-body{min-height:0!important;overflow-y:auto!important}
-html.np-embed-gated #screen-app{pointer-events:none!important;filter:blur(3px) brightness(.45)}
-html.np-embed-gated .void-itch-nav-dock,html.np-embed-gated .void-chat-panel{pointer-events:none!important;opacity:.35}
-.np-embed-expand-gate{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(4,2,14,.72)}
+html.np-embed-gated #screen-app{filter:blur(2px) brightness(.5);pointer-events:none}
+html.np-embed-gated .void-itch-nav-dock,html.np-embed-gated .void-chat-panel,html.np-embed-gated #void-scroll-top{opacity:.2;pointer-events:none}
+html.void-nexusplay-embed.np-embed-expanded #screen-app,html.void-nexusplay-embed.np-embed-mode:not(.np-embed-gated) #screen-app{filter:none!important;pointer-events:auto!important}
+html.void-nexusplay-embed.np-embed-expanded .void-itch-nav-dock,html.void-nexusplay-embed.np-embed-expanded .void-chat-panel,html.void-nexusplay-embed.np-embed-mode:not(.np-embed-gated) .void-itch-nav-dock,html.void-nexusplay-embed.np-embed-mode:not(.np-embed-gated) .void-chat-panel{opacity:1!important;pointer-events:auto!important}
+.np-embed-expand-gate{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top,0)) 16px max(16px,env(safe-area-inset-bottom,0));background:rgba(4,2,14,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 .np-embed-expand-gate[hidden]{display:none!important}
-.np-embed-expand-gate__panel{width:min(420px,100%);padding:22px 20px;border-radius:18px;border:1px solid rgba(78,240,255,.35);background:rgba(12,8,28,.96);text-align:center;color:#f5ecff}
-.np-embed-expand-gate__btn{margin-top:12px;min-height:44px;padding:10px 18px;border-radius:12px;border:1px solid rgba(78,240,255,.45);background:rgba(78,240,255,.15);color:#ecfeff;font-weight:700;cursor:pointer}
+.np-embed-expand-gate__panel{width:min(420px,100%);padding:22px 20px 18px;border-radius:18px;border:1px solid rgba(78,240,255,.35);background:linear-gradient(160deg,rgba(12,8,28,.96),rgba(6,4,18,.98));box-shadow:0 0 28px rgba(123,63,242,.35);text-align:center}
+.np-embed-expand-gate__eyebrow{margin:0 0 8px;font-size:.72rem;letter-spacing:.14em;color:rgba(78,240,255,.85)}
+.np-embed-expand-gate__title{margin:0 0 10px;font-size:1.35rem;color:#f5ecff}
+.np-embed-expand-gate__message,.np-embed-expand-gate__hint{margin:0 0 10px;font-size:.92rem;line-height:1.55;color:rgba(230,220,255,.88)}
+.np-embed-expand-gate__hint{margin-bottom:16px;font-size:.82rem;color:rgba(180,170,210,.85)}
+.np-embed-expand-gate__btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 18px;border-radius:12px;border:1px solid rgba(78,240,255,.45);background:linear-gradient(180deg,rgba(78,240,255,.18),rgba(123,63,242,.28));color:#ecfeff;font-size:.95rem;font-weight:700;cursor:pointer}
 </style>`;
+
+function applyVoidEmbedBoot(html: string) {
+  const bootRe = /<script id="nexusplay-embed-boot">[\s\S]*?<\/script>/i;
+  if (bootRe.test(html)) {
+    return html.replace(bootRe, VOID_EMBED_BOOT_SCRIPT.trim());
+  }
+  if (html.includes("<head>")) {
+    return html.replace("<head>", `<head>${VOID_EMBED_BOOT_SCRIPT}`);
+  }
+  return html.replace(/<head[^>]*>/i, (match) => `${match}${VOID_EMBED_BOOT_SCRIPT}`);
+}
+
+function applyVoidScrollFix(html: string) {
+  const styleRe = /<style id="nexusplay-scroll-fix">[\s\S]*?<\/style>/i;
+  if (styleRe.test(html)) {
+    return html.replace(styleRe, VOID_EMBED_SCROLL_FIX_STYLE.trim());
+  }
+  if (html.includes("<head>")) {
+    return html.replace("<head>", `<head>${VOID_EMBED_SCROLL_FIX_STYLE}`);
+  }
+  return html.replace(/<head[^>]*>/i, (match) => `${match}${VOID_EMBED_SCROLL_FIX_STYLE}`);
+}
 
 const VOID_EMBED_GOOGLE_HINT = `<p id="portal-google-hint" class="auth-hint auth-setup-hint">此遊戲建議使用平台帳號（遊戲頁上方登入 Google / Email）與 <code>RainyNightFrog.loadSave()</code> 雲端存檔；若需 void-gacha 原生 Google 登入請<a href="https://void-gacha.com/" target="_blank" rel="noopener noreferrer">前往官網</a>。</p>`;
 
@@ -164,22 +260,17 @@ export function patchHtmlForPlatformEmbed(html: string) {
     out = out.replace(/<head[^>]*>/i, (match) => `${match}${sdk}`);
   }
 
-  if (!isVoidGachaHtml(out) || out.includes('id="nexusplay-embed-boot"')) {
+  if (!isVoidGachaHtml(out)) {
     if (isCoreDefenseHtml(out) && !out.includes('id="nexusplay-core-defense-layout"')) {
       if (out.includes("<head>")) {
         out = out.replace("<head>", `<head>${CORE_DEFENSE_EMBED_LAYOUT_STYLE}`);
       }
     }
     out = applyVoidGachaPortalCdnPatch(out);
-    if (isVoidGachaHtml(out) && !out.includes('id="nexusplay-scroll-fix"') && out.includes("<head>")) {
-      out = out.replace("<head>", `<head>${VOID_EMBED_SCROLL_FIX_STYLE}`);
-    }
     return ensureScrollbarStyle(out);
   }
 
-  if (out.includes("<head>")) {
-    out = out.replace("<head>", `<head>${VOID_EMBED_BOOT_SCRIPT}`);
-  }
+  out = applyVoidEmbedBoot(out);
 
   const critical = '<style id="void-critical-embed">';
   if (out.includes(critical)) {
@@ -196,10 +287,6 @@ export function patchHtmlForPlatformEmbed(html: string) {
   }
 
   out = applyVoidGachaPortalCdnPatch(out);
-  if (isVoidGachaHtml(out) && !out.includes('id="nexusplay-scroll-fix"')) {
-    if (out.includes("<head>")) {
-      out = out.replace("<head>", `<head>${VOID_EMBED_SCROLL_FIX_STYLE}`);
-    }
-  }
+  out = applyVoidScrollFix(out);
   return ensureScrollbarStyle(out);
 }

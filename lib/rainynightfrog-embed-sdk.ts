@@ -153,9 +153,13 @@ export function buildRainyNightFrogEmbedSdkScript() {
     if(e.origin!==location.origin)return;
     var d=e.data;
     if(!d||d.type!=='rainynightfrog:resize'&&d.type!=='nexusplay:resize')return;
-    document.documentElement.style.setProperty('--np-embed-width',(d.width||0)+'px');
-    document.documentElement.style.setProperty('--np-embed-height',(d.height||0)+'px');
-    document.documentElement.classList.toggle('np-embed-expanded',!!d.expanded);
+    if(typeof window.__voidNpSyncExpandGate==='function'){
+      window.__voidNpSyncExpandGate({width:d.width,height:d.height,expanded:d.expanded});
+    }else{
+      document.documentElement.style.setProperty('--np-embed-width',(d.width||0)+'px');
+      document.documentElement.style.setProperty('--np-embed-height',(d.height||0)+'px');
+      document.documentElement.classList.toggle('np-embed-expanded',!!d.expanded);
+    }
     window.dispatchEvent(new Event('resize'));
   });
 })();
