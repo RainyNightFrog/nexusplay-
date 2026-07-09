@@ -4,7 +4,7 @@ import { GAME_GENRES } from "@/lib/game-metadata";
 import { parsePublishStatus } from "@/lib/game-publish";
 import { resolvePlatformFeePercentForSave } from "@/lib/tip-fee-policy";
 import { MIN_SUGGESTED_TIP_USD } from "@/lib/tip-limits";
-import { sanitizePlainText } from "@/lib/sanitize";
+import { sanitizePlainText } from "@/lib/sanitize-plain";
 import { createServerSupabase } from "@/lib/supabase-server";
 import {
   MAX_CATEGORY_LENGTH,

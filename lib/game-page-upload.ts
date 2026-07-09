@@ -16,7 +16,7 @@ import {
   parseGalleryUrlsField,
   parseStringArray,
 } from "@/lib/game-page-content";
-import { sanitizePlainText } from "@/lib/sanitize";
+import { sanitizePlainText } from "@/lib/sanitize-plain";
 import { formatMaxSize, MAX_COVER_BYTES } from "@/lib/upload-limits";
 import type { SupabaseClient } from "@supabase/supabase-js";
 

@@ -13,7 +13,8 @@ import {
   MAX_DETAILS_HTML_LENGTH,
 } from "@/lib/game-metadata";
 import { resolveGalleryUpdate } from "@/lib/game-page-upload";
-import { sanitizePlainText, sanitizeRichHtml } from "@/lib/sanitize";
+import { sanitizePlainText } from "@/lib/sanitize-plain";
+import { sanitizeRichHtml } from "@/lib/sanitize-rich-html";
 import { createServerSupabase } from "@/lib/supabase-server";
 import {
   formatMaxSize,

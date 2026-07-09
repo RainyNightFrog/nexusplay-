@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { createServerSupabase } from "@/lib/supabase-server";
-import { sanitizePlainText } from "@/lib/sanitize";
+import { sanitizePlainText } from "@/lib/sanitize-plain";
 
 export const API_KEY_PREFIX = "np_live_";
 
