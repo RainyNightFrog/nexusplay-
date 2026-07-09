@@ -10,17 +10,29 @@ function ensureScrollbarStyle(html: string) {
 }
 
 /** void-gacha 專用：同步建立放大閘道 overlay（無需重傳 zip 亦會覆寫舊 boot） */
-const VOID_EMBED_BOOT_SCRIPT = `<script id="nexusplay-embed-boot">
+const VOID_EMBED_BOOT_SCRIPT = `<script id="rainynightfrog-embed-boot">
 (function(){
   window.VOID_BUILD_TARGET='';
   window.VOID_PORTAL_EMBED=true;
   window.VOID_API_ORIGIN='https://void-gacha.com';
   var d=document.documentElement;
-  d.classList.add('void-portal-embed','void-nexusplay-embed','void-itch-embed','void-in-iframe');
+  d.classList.add('void-portal-embed','void-rainynightfrog-embed','void-itch-embed','void-in-iframe');
   if(window.self===window.top)return;
   var h=window.innerHeight||720,w=window.innerWidth||960;
-  window.__voidNpEmbedExpanded=false;
+  var LEGACY='nexusplay';
+  var legacyType=function(kind){return LEGACY+':'+kind;};
+  window.__voidRnfEmbedExpanded=false;
   d.classList.add('np-embed-mode');
+  function isBattleSubpage(){
+    var p=(location.pathname||'').toLowerCase();
+    return p.indexOf('star-god-boss')>=0||p.indexOf('apex-arena')>=0;
+  }
+  var battleSubpage=isBattleSubpage();
+  if(battleSubpage){
+    d.classList.add('void-battle-subpage','np-embed-battle');
+    window.__voidRnfEmbedExpanded=true;
+    d.classList.add('np-embed-expanded');
+  }
   function texts(){
     var t=window.VoidI18n&&window.VoidI18n.t?function(k,f){var v=window.VoidI18n.t(k);return v&&v!==k?v:f;}:function(_k,f){return f;};
     return{
@@ -50,7 +62,7 @@ const VOID_EMBED_BOOT_SCRIPT = `<script id="nexusplay-embed-boot">
       gate.querySelector('.np-embed-expand-gate__btn').textContent=tx.btn;
       gate.querySelector('.np-embed-expand-gate__btn').addEventListener('click',function(){
         try{
-          ['rainynightfrog:expand-request','nexusplay:expand-request'].forEach(function(type){
+          ['rainynightfrog:expand-request',legacyType('expand-request')].forEach(function(type){
             window.parent.postMessage({type:type},'*');
           });
         }catch(_e){}
@@ -58,7 +70,7 @@ const VOID_EMBED_BOOT_SCRIPT = `<script id="nexusplay-embed-boot">
       gate.addEventListener('click',function(ev){
         if(ev.target===gate){
           try{
-            ['rainynightfrog:expand-request','nexusplay:expand-request'].forEach(function(type){
+            ['rainynightfrog:expand-request',legacyType('expand-request')].forEach(function(type){
               window.parent.postMessage({type:type},'*');
             });
           }catch(_e2){}
@@ -78,80 +90,87 @@ const VOID_EMBED_BOOT_SCRIPT = `<script id="nexusplay-embed-boot">
     gate.hidden=!show;
     gate.setAttribute('aria-hidden',show?'false':'true');
   }
-  window.__voidNpSyncExpandGate=function(opts){
+  window.__voidRnfSyncExpandGate=function(opts){
     if(opts&&typeof opts==='object'){
       if(opts.width>0)w=opts.width;
       if(opts.height>0)h=opts.height;
-      if(opts.expanded!=null){
-        window.__voidNpEmbedExpanded=!!opts.expanded;
-        d.classList.toggle('np-embed-expanded',window.__voidNpEmbedExpanded);
+      if(opts.expanded!=null&&!battleSubpage){
+        window.__voidRnfEmbedExpanded=!!opts.expanded;
+        d.classList.toggle('np-embed-expanded',window.__voidRnfEmbedExpanded);
       }
     }
-    var expanded=!!window.__voidNpEmbedExpanded;
+    if(battleSubpage){
+      window.__voidRnfEmbedExpanded=true;
+      d.classList.add('np-embed-expanded');
+    }
+    var expanded=!!window.__voidRnfEmbedExpanded;
     var compact=h<=780;
     d.classList.toggle('np-embed-compact',compact);
-    d.classList.toggle('void-itch-mobile-shell',compact&&!expanded);
+    d.classList.toggle('void-itch-mobile-shell',compact&&!expanded&&!battleSubpage);
     d.style.setProperty('--np-embed-width',w+'px');
     d.style.setProperty('--np-embed-height',h+'px');
-    var gated=compact&&!expanded;
+    var gated=compact&&!expanded&&!battleSubpage;
     d.classList.toggle('np-embed-gated',gated);
     ensureOverlay(gated);
   };
+  window.__voidNpSyncExpandGate=window.__voidRnfSyncExpandGate;
   function onPlatformMsg(e){
     var data=e.data;
     if(!data||typeof data!=='object')return;
-    if(data.type==='rainynightfrog:play-mode'||data.type==='nexusplay:play-mode'){
-      window.__voidNpEmbedExpanded=data.mode==='expanded';
-      window.__voidNpSyncExpandGate({expanded:window.__voidNpEmbedExpanded});
+    if(data.type==='rainynightfrog:play-mode'||data.type===legacyType('play-mode')){
+      if(!battleSubpage){
+        window.__voidRnfEmbedExpanded=data.mode==='expanded';
+      }
+      window.__voidRnfSyncExpandGate({expanded:window.__voidRnfEmbedExpanded});
       return;
     }
-    if(data.type!=='rainynightfrog:resize'&&data.type!=='nexusplay:resize')return;
-    window.__voidNpSyncExpandGate({width:data.width,height:data.height,expanded:data.expanded});
+    if(data.type!=='rainynightfrog:resize'&&data.type!==legacyType('resize'))return;
+    window.__voidRnfSyncExpandGate({width:data.width,height:data.height,expanded:data.expanded});
   }
   window.addEventListener('message',onPlatformMsg);
   window.addEventListener('resize',function(){
     h=window.innerHeight||h;
     w=window.innerWidth||w;
-    window.__voidNpSyncExpandGate();
+    window.__voidRnfSyncExpandGate();
   });
   if(window.visualViewport){
     window.visualViewport.addEventListener('resize',function(){
       h=Math.round(window.visualViewport.height)||h;
       w=Math.round(window.visualViewport.width)||w;
-      window.__voidNpSyncExpandGate();
+      window.__voidRnfSyncExpandGate();
     });
   }
-  window.__voidNpSyncExpandGate();
+  window.__voidRnfSyncExpandGate();
 })();
 </script>`;
 
-const VOID_EMBED_EARLY_CLASS_SCRIPT = `<script id="void-portal-early">document.documentElement.classList.add('void-portal-embed','void-nexusplay-embed','void-itch-embed','void-in-iframe');</script>`;
+const VOID_EMBED_EARLY_CLASS_SCRIPT = `<script id="void-portal-early">document.documentElement.classList.add('void-portal-embed','void-rainynightfrog-embed','void-itch-embed','void-in-iframe');</script>`;
 
-const VOID_EMBED_LAYOUT_STYLE = `<style id="nexusplay-embed-layout">
+const VOID_EMBED_LAYOUT_STYLE = `<style id="rainynightfrog-embed-layout">
 html.void-portal-embed #screen-auth,
-html.void-portal-embed.void-nexusplay-embed #screen-auth,
+html.void-portal-embed.void-rainynightfrog-embed #screen-auth,
 html.void-portal-embed.void-in-iframe #screen-auth{display:none!important}
 html.void-portal-embed #g_id_onload,
 html.void-portal-embed #btn-google{display:none!important}
 </style>`;
 
 /** void-gacha 嵌入：排版與閘道樣式（勿鎖 #screen-app fixed，全螢幕才可遊玩） */
-const VOID_EMBED_SCROLL_FIX_STYLE = `<style id="nexusplay-scroll-fix">
-html.void-portal-embed.void-in-iframe .gacha-view.view-panel,html.void-nexusplay-embed .gacha-view.view-panel{overflow:visible!important;max-height:none!important}
-html.void-portal-embed.void-in-iframe .gacha-arena,html.void-nexusplay-embed .gacha-arena,html.void-portal-embed.void-in-iframe .gacha-hub--machine,html.void-nexusplay-embed .gacha-hub--machine{min-height:0!important;max-height:none!important;overflow:visible!important}
-html.void-portal-embed.void-in-iframe .void-app-main>.view-panel,html.void-nexusplay-embed .void-app-main>.view-panel{overflow:visible!important;max-height:none!important}
-html.void-nexusplay-embed.np-embed-mode.void-itch-mobile-shell .home-arena:has(.home-right-rail){display:flex!important;flex-direction:column!important;gap:8px}
-html.void-nexusplay-embed.np-embed-mode.void-itch-mobile-shell .home-right-rail{position:relative!important;top:auto!important;right:auto!important;order:-1;width:100%;max-width:100%;flex-direction:row;flex-wrap:wrap;justify-content:center;gap:8px;margin:0 auto 6px;padding:0 4px;z-index:2}
-html.void-nexusplay-embed.np-embed-compact .home-mega-title,html.void-nexusplay-embed.np-embed-compact .home-marquee,html.void-nexusplay-embed.np-embed-compact .home-left-pillar,html.void-nexusplay-embed.np-embed-compact .home-bg-zones,html.void-nexusplay-embed.np-embed-compact .home-bg-beasts,html.void-nexusplay-embed.np-embed-compact .home-bg-tentacles,html.void-nexusplay-embed.np-embed-compact .home-bg-cards,html.void-nexusplay-embed.np-embed-compact .home-particles,html.void-nexusplay-embed.np-embed-compact .home-lightning,html.void-nexusplay-embed.np-embed-compact .home-quick,html.void-nexusplay-embed.np-embed-compact .home-collapse{display:none!important}
-html.void-nexusplay-embed.void-itch-mobile-shell.np-embed-compact .mythic-rising-packs-row,html.void-nexusplay-embed.np-embed-compact .mythic-rising-packs-row{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:8px!important;overflow:visible!important;flex-wrap:unset!important;scroll-snap-type:none!important}
-html.void-nexusplay-embed.np-embed-compact .mythic-rising-packs-row .pack-tile{flex:none!important;width:100%!important;min-width:0!important;max-width:none!important;min-height:128px!important;height:auto!important;aspect-ratio:3/4.2}
-html.void-nexusplay-embed.np-embed-mode.void-itch-mobile-shell:not(.np-embed-expanded) .void-chat-panel:not(.is-hidden){width:min(400px,calc(var(--np-embed-width,100vw) - 16px));max-height:calc(var(--np-embed-height,720px) - var(--void-mobile-nav-h,58px) - 20px);font-size:15px}
-html.void-nexusplay-embed.np-embed-mode.void-itch-mobile-shell:not(.np-embed-expanded) .void-chat-panel:not(.is-hidden):not(.is-collapsed){--void-chat-h:min(560px,calc(var(--np-embed-height,720px) - var(--void-mobile-nav-h,58px) - 28px));height:var(--void-chat-h);min-height:min(400px,calc(var(--np-embed-height,720px) - var(--void-mobile-nav-h,58px) - 28px))}
-html.void-nexusplay-embed.np-embed-mode .side-mode-modal{max-height:min(calc(var(--np-embed-height,720px) - 12px),96dvh)!important;height:min(calc(var(--np-embed-height,720px) - 12px),96dvh)!important}
-html.void-nexusplay-embed.np-embed-mode .side-mode-body{min-height:0!important;overflow-y:auto!important}
-html.np-embed-gated #screen-app,html.void-nexusplay-embed.np-embed-gated #screen-app{filter:none!important;pointer-events:auto!important}
+const VOID_EMBED_SCROLL_FIX_STYLE = `<style id="rainynightfrog-scroll-fix">
+html.void-portal-embed.void-in-iframe .gacha-view.view-panel,html.void-rainynightfrog-embed .gacha-view.view-panel{overflow:visible!important;max-height:none!important}
+html.void-portal-embed.void-in-iframe .gacha-arena,html.void-rainynightfrog-embed .gacha-arena,html.void-portal-embed.void-in-iframe .gacha-hub--machine,html.void-rainynightfrog-embed .gacha-hub--machine{min-height:0!important;max-height:none!important;overflow:visible!important}
+html.void-portal-embed.void-in-iframe .void-app-main>.view-panel,html.void-rainynightfrog-embed .void-app-main>.view-panel{overflow:visible!important;max-height:none!important}
+html.void-rainynightfrog-embed.np-embed-mode.void-itch-mobile-shell .home-arena:has(.home-right-rail){display:flex!important;flex-direction:column!important;gap:8px}
+html.void-rainynightfrog-embed.np-embed-mode.void-itch-mobile-shell .home-right-rail{position:relative!important;top:auto!important;right:auto!important;order:-1;width:100%;max-width:100%;flex-direction:row;flex-wrap:wrap;justify-content:center;gap:8px;margin:0 auto 6px;padding:0 4px;z-index:2}
+html.void-rainynightfrog-embed.np-embed-compact .home-mega-title,html.void-rainynightfrog-embed.np-embed-compact .home-marquee,html.void-rainynightfrog-embed.np-embed-compact .home-left-pillar,html.void-rainynightfrog-embed.np-embed-compact .home-bg-zones,html.void-rainynightfrog-embed.np-embed-compact .home-bg-beasts,html.void-rainynightfrog-embed.np-embed-compact .home-bg-tentacles,html.void-rainynightfrog-embed.np-embed-compact .home-bg-cards,html.void-rainynightfrog-embed.np-embed-compact .home-particles,html.void-rainynightfrog-embed.np-embed-compact .home-lightning,html.void-rainynightfrog-embed.np-embed-compact .home-quick,html.void-rainynightfrog-embed.np-embed-compact .home-collapse{display:none!important}
+html.void-rainynightfrog-embed.void-itch-mobile-shell.np-embed-compact .mythic-rising-packs-row,html.void-rainynightfrog-embed.np-embed-compact .mythic-rising-packs-row{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:8px!important;overflow:visible!important;flex-wrap:unset!important;scroll-snap-type:none!important}
+html.void-rainynightfrog-embed.np-embed-compact .mythic-rising-packs-row .pack-tile{flex:none!important;width:100%!important;min-width:0!important;max-width:none!important;min-height:128px!important;height:auto!important;aspect-ratio:3/4.2}
+html.void-rainynightfrog-embed.np-embed-mode.void-itch-mobile-shell:not(.np-embed-expanded) .void-chat-panel:not(.is-hidden){width:min(400px,calc(var(--np-embed-width,100vw) - 16px));max-height:calc(var(--np-embed-height,720px) - var(--void-mobile-nav-h,58px) - 20px);font-size:15px}
+html.void-rainynightfrog-embed.np-embed-mode.void-itch-mobile-shell:not(.np-embed-expanded) .void-chat-panel:not(.is-hidden):not(.is-collapsed){--void-chat-h:min(560px,calc(var(--np-embed-height,720px) - var(--void-mobile-nav-h,58px) - 28px));height:var(--void-chat-h);min-height:min(400px,calc(var(--np-embed-height,720px) - var(--void-mobile-nav-h,58px) - 28px))}
+html.void-rainynightfrog-embed.np-embed-mode .side-mode-modal{max-height:min(calc(var(--np-embed-height,720px) - 12px),96dvh)!important;height:min(calc(var(--np-embed-height,720px) - 12px),96dvh)!important}
+html.void-rainynightfrog-embed.np-embed-mode .side-mode-body{min-height:0!important;overflow-y:auto!important}
+html.np-embed-gated #screen-app,html.void-rainynightfrog-embed.np-embed-gated #screen-app{filter:none!important;pointer-events:auto!important}
 html.np-embed-gated .void-itch-nav-dock,html.np-embed-gated .void-chat-panel,html.np-embed-gated #void-scroll-top{opacity:.35}
-html.void-nexusplay-embed.np-embed-expanded .void-itch-nav-dock,html.void-nexusplay-embed.np-embed-expanded .void-chat-panel,html.void-nexusplay-embed.np-embed-mode:not(.np-embed-gated) .void-itch-nav-dock,html.void-nexusplay-embed.np-embed-mode:not(.np-embed-gated) .void-chat-panel{opacity:1!important;pointer-events:auto!important}
+html.void-rainynightfrog-embed.np-embed-expanded .void-itch-nav-dock,html.void-rainynightfrog-embed.np-embed-expanded .void-chat-panel,html.void-rainynightfrog-embed.np-embed-mode:not(.np-embed-gated) .void-itch-nav-dock,html.void-rainynightfrog-embed.np-embed-mode:not(.np-embed-gated) .void-chat-panel{opacity:1!important;pointer-events:auto!important}
 .np-embed-expand-gate{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top,0)) 16px max(16px,env(safe-area-inset-bottom,0));background:rgba(4,2,14,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);pointer-events:auto;touch-action:manipulation}
 .np-embed-expand-gate[hidden]{display:none!important}
 .np-embed-expand-gate__panel{width:min(420px,100%);padding:22px 20px 18px;border-radius:18px;border:1px solid rgba(78,240,255,.35);background:linear-gradient(160deg,rgba(12,8,28,.96),rgba(6,4,18,.98));box-shadow:0 0 28px rgba(123,63,242,.35);text-align:center}
@@ -163,7 +182,7 @@ html.void-nexusplay-embed.np-embed-expanded .void-itch-nav-dock,html.void-nexusp
 </style>`;
 
 function applyVoidEmbedBoot(html: string) {
-  const bootRe = /<script id="nexusplay-embed-boot">[\s\S]*?<\/script>/i;
+  const bootRe = /<script id="(?:rainynightfrog|nexusplay)-embed-boot">[\s\S]*?<\/script>/i;
   if (bootRe.test(html)) {
     return html.replace(bootRe, VOID_EMBED_BOOT_SCRIPT.trim());
   }
@@ -174,7 +193,7 @@ function applyVoidEmbedBoot(html: string) {
 }
 
 function applyVoidScrollFix(html: string) {
-  const styleRe = /<style id="nexusplay-scroll-fix">[\s\S]*?<\/style>/i;
+  const styleRe = /<style id="rainynightfrog-scroll-fix">[\s\S]*?<\/style>/i;
   if (styleRe.test(html)) {
     return html.replace(styleRe, VOID_EMBED_SCROLL_FIX_STYLE.trim());
   }
@@ -275,20 +294,20 @@ export function patchHtmlForPlatformEmbed(html: string) {
 
   const portalCritical =
     '.hidden{display:none!important}' +
-    'html.void-portal-embed #screen-auth,html.void-nexusplay-embed #screen-auth{display:none!important}' +
-    'html.void-portal-embed #g_id_onload,html.void-nexusplay-embed #g_id_onload,html.void-portal-embed #btn-google{display:none!important}';
+    'html.void-portal-embed #screen-auth,html.void-rainynightfrog-embed #screen-auth{display:none!important}' +
+    'html.void-portal-embed #g_id_onload,html.void-rainynightfrog-embed #g_id_onload,html.void-portal-embed #btn-google{display:none!important}';
   if (out.includes('id="void-critical-embed"')) {
     out = out.replace(
       /<style id="void-critical-embed">[\s\S]*?<\/style>/i,
       `<style id="void-critical-embed">${portalCritical}</style>`
     );
-    if (!out.includes('id="nexusplay-embed-layout"')) {
+    if (!out.includes('id="rainynightfrog-embed-layout"')) {
       out = out.replace(
         /<style id="void-critical-embed">/i,
         `${VOID_EMBED_LAYOUT_STYLE}\n<style id="void-critical-embed">`
       );
     }
-  } else if (!out.includes('id="nexusplay-embed-layout"')) {
+  } else if (!out.includes('id="rainynightfrog-embed-layout"')) {
     out = out.replace(/<head>/i, `<head>${VOID_EMBED_LAYOUT_STYLE}`);
   }
 
