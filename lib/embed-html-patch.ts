@@ -54,6 +54,39 @@ html.void-portal-embed #portal-google-hint a{color:#7dd3fc!important;text-decora
 
 const VOID_EMBED_GOOGLE_HINT = `<p id="portal-google-hint" class="auth-hint auth-setup-hint">此遊戲建議使用平台帳號（遊戲頁上方登入 Google / Email）與 <code>RainyNightFrog.loadSave()</code> 雲端存檔；若需 void-gacha 原生 Google 登入請<a href="https://void-gacha.com/" target="_blank" rel="noopener noreferrer">前往官網</a>。</p>`;
 
+const VOID_PORTAL_CDN_SCRIPT = `<script id="void-portal-cdn-art">
+(function(){
+  window.VOID_PORTAL_EMBED=window.VOID_PORTAL_EMBED!==false;
+  window.VOID_ASSET_CDN=window.VOID_ASSET_CDN||"https://void-gacha.com";
+  var CDN=String(window.VOID_ASSET_CDN).replace(/\\/$/,"");
+  function toCdnUrl(path){
+    var norm=String(path||"").replace(/^\\.\\//,"").split("?")[0];
+    if(!norm||/^(https?:|data:|blob:)/i.test(norm)) return path||"";
+    if(norm.indexOf("images/")===0||norm.indexOf("assets/")===0) return CDN+"/"+norm;
+    return path;
+  }
+  function patchResolve(){
+    var orig=window.resolveArtPath;
+    window.resolveArtPath=function(path){
+      var cdn=toCdnUrl(path);
+      if(cdn!==path) return cdn;
+      return orig?orig(path):path;
+    };
+  }
+  patchResolve();
+})();
+</script>`;
+
+function applyVoidGachaPortalCdnPatch(html: string) {
+  if (!isVoidGachaHtml(html) || html.includes('id="void-portal-cdn-art"')) {
+    return html;
+  }
+  if (html.includes("</body>")) {
+    return html.replace("</body>", `${VOID_PORTAL_CDN_SCRIPT}</body>`);
+  }
+  return `${html}${VOID_PORTAL_CDN_SCRIPT}`;
+}
+
 function isVoidGachaHtml(html: string) {
   return (
     html.includes("screen-auth") ||
@@ -102,6 +135,7 @@ export function patchHtmlForPlatformEmbed(html: string) {
         out = out.replace("<head>", `<head>${CORE_DEFENSE_EMBED_LAYOUT_STYLE}`);
       }
     }
+    out = applyVoidGachaPortalCdnPatch(out);
     return ensureScrollbarStyle(out);
   }
 
@@ -123,5 +157,6 @@ export function patchHtmlForPlatformEmbed(html: string) {
     );
   }
 
+  out = applyVoidGachaPortalCdnPatch(out);
   return ensureScrollbarStyle(out);
 }
