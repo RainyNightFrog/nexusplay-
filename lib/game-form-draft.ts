@@ -1,6 +1,8 @@
 import type { PublishMonetizationValues } from "@/components/dashboard/publish-monetization-fields";
 import {
   AI_CONTENT_TYPES,
+  clampViewportHeight,
+  clampViewportWidth,
   DEFAULT_GAME_PUBLISH_METADATA,
   GAME_GENRES,
   GAME_TAGS,
@@ -68,11 +70,11 @@ function parseMetadata(value: unknown): GamePublishMetadata {
 
   const viewportWidth =
     typeof value.viewportWidth === "number" && Number.isFinite(value.viewportWidth)
-      ? value.viewportWidth
+      ? clampViewportWidth(value.viewportWidth)
       : DEFAULT_GAME_PUBLISH_METADATA.viewportWidth;
   const viewportHeight =
     typeof value.viewportHeight === "number" && Number.isFinite(value.viewportHeight)
-      ? value.viewportHeight
+      ? clampViewportHeight(value.viewportHeight)
       : DEFAULT_GAME_PUBLISH_METADATA.viewportHeight;
 
   return {

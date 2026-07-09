@@ -343,6 +343,17 @@ export default function UploadPage() {
       );
       return;
     }
+    if (file.size > PRODUCTION_UPLOAD_BYTES) {
+      showToast(
+        "error",
+        tErrors("fileTooLarge"),
+        tErrors("zipProductionTooLarge", {
+          size: zipProductionSize,
+          current: formatMaxSize(file.size),
+        })
+      );
+      return;
+    }
 
     const structure = await validateGameZipFile(file);
     if (!structure.ok) {

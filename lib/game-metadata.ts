@@ -310,6 +310,22 @@ function parseAiContentTypes(raw: string): AiContentType[] {
   ) as AiContentType[];
 }
 
+export function clampViewportDimension(
+  value: number,
+  min: number,
+  max: number
+): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+export function clampViewportWidth(value: number): number {
+  return clampViewportDimension(value, MIN_VIEWPORT, MAX_VIEWPORT_WIDTH);
+}
+
+export function clampViewportHeight(value: number): number {
+  return clampViewportDimension(value, MIN_VIEWPORT, MAX_VIEWPORT_HEIGHT);
+}
+
 function parseViewportDimension(
   raw: FormDataEntryValue | null,
   fallback: number,
@@ -318,7 +334,7 @@ function parseViewportDimension(
 ): number {
   const value = Number.parseInt(String(raw ?? ""), 10);
   if (Number.isNaN(value)) return fallback;
-  return Math.min(max, Math.max(min, value));
+  return clampViewportDimension(value, min, max);
 }
 
 function parseAiDisclosed(raw: FormDataEntryValue | null): boolean | null {

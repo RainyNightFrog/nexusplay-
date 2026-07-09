@@ -1,9 +1,12 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import {
+  clampViewportHeight,
+  clampViewportWidth,
   DEFAULT_VIEWPORT_HEIGHT,
   DEFAULT_VIEWPORT_WIDTH,
   MAX_VIEWPORT_HEIGHT,
@@ -30,6 +33,56 @@ const inputClassName = cn(
   "focus:border-cyan-400/50 focus:shadow-[0_0_20px_rgba(34,211,238,0.25)] focus:ring-2 focus:ring-cyan-500/20"
 );
 
+function useDimensionDraft(
+  value: number,
+  clamp: (next: number) => number,
+  onCommit: (next: number) => void
+) {
+  const [draft, setDraft] = useState(() => String(value));
+
+  useEffect(() => {
+    setDraft(String(value));
+  }, [value]);
+
+  const handleChange = (raw: string) => {
+    if (raw !== "" && !/^\d+$/.test(raw)) return;
+
+    setDraft(raw);
+
+    if (raw === "") return;
+
+    const parsed = Number.parseInt(raw, 10);
+    if (!Number.isNaN(parsed)) {
+      onCommit(parsed);
+    }
+  };
+
+  const handleBlur = () => {
+    if (draft === "") {
+      setDraft(String(value));
+      return;
+    }
+
+    const parsed = Number.parseInt(draft, 10);
+    if (Number.isNaN(parsed)) {
+      setDraft(String(value));
+      return;
+    }
+
+    const clamped = clamp(parsed);
+    setDraft(String(clamped));
+    if (clamped !== value) {
+      onCommit(clamped);
+    }
+  };
+
+  return {
+    draft,
+    handleChange,
+    handleBlur,
+  };
+}
+
 export function ViewportSettingsFields({
   values,
   onChange,
@@ -37,20 +90,16 @@ export function ViewportSettingsFields({
 }: ViewportSettingsFieldsProps) {
   const t = useTranslations("dashboard");
 
-  const updateDimension = (
-    key: "viewportWidth" | "viewportHeight",
-    raw: string
-  ) => {
-    const parsed = Number.parseInt(raw, 10);
-    if (Number.isNaN(parsed)) return;
-
-    const max =
-      key === "viewportWidth" ? MAX_VIEWPORT_WIDTH : MAX_VIEWPORT_HEIGHT;
-    onChange({
-      ...values,
-      [key]: Math.min(max, Math.max(MIN_VIEWPORT, parsed)),
-    });
-  };
+  const widthInput = useDimensionDraft(
+    values.viewportWidth,
+    clampViewportWidth,
+    (viewportWidth) => onChange({ ...values, viewportWidth })
+  );
+  const heightInput = useDimensionDraft(
+    values.viewportHeight,
+    clampViewportHeight,
+    (viewportHeight) => onChange({ ...values, viewportHeight })
+  );
 
   return (
     <div className="space-y-4 rounded-2xl border border-white/8 bg-zinc-950/40 p-5">
@@ -72,14 +121,13 @@ export function ViewportSettingsFields({
           <div className="flex items-center gap-2">
             <input
               id="viewport-width"
-              type="number"
-              min={MIN_VIEWPORT}
-              max={MAX_VIEWPORT_WIDTH}
-              value={values.viewportWidth}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={widthInput.draft}
               disabled={disabled}
-              onChange={(event) =>
-                updateDimension("viewportWidth", event.target.value)
-              }
+              onChange={(event) => widthInput.handleChange(event.target.value)}
+              onBlur={widthInput.handleBlur}
               className={inputClassName}
             />
             <span className="text-xs text-zinc-500">px</span>
@@ -95,20 +143,23 @@ export function ViewportSettingsFields({
           <div className="flex items-center gap-2">
             <input
               id="viewport-height"
-              type="number"
-              min={MIN_VIEWPORT}
-              max={MAX_VIEWPORT_HEIGHT}
-              value={values.viewportHeight}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={heightInput.draft}
               disabled={disabled}
-              onChange={(event) =>
-                updateDimension("viewportHeight", event.target.value)
-              }
+              onChange={(event) => heightInput.handleChange(event.target.value)}
+              onBlur={heightInput.handleBlur}
               className={inputClassName}
             />
             <span className="text-xs text-zinc-500">px</span>
           </div>
         </div>
       </div>
+
+      <p className="text-center text-[11px] text-zinc-600">
+        {MIN_VIEWPORT}–{MAX_VIEWPORT_WIDTH} × {MIN_VIEWPORT}–{MAX_VIEWPORT_HEIGHT} px
+      </p>
 
       <label className="flex cursor-pointer items-center justify-center gap-3 rounded-xl border border-white/8 bg-zinc-900/50 px-4 py-3 transition-colors hover:border-violet-400/30">
         <Checkbox

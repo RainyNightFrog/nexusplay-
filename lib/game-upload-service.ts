@@ -22,6 +22,7 @@ import {
   MAX_DESCRIPTION_LENGTH,
   MAX_TITLE_LENGTH,
   MAX_ZIP_BYTES,
+  PRODUCTION_UPLOAD_BYTES,
 } from "@/lib/upload-limits";
 import { resolvePlatformFeePercentForSave } from "@/lib/tip-fee-policy";
 import { isZipBuffer, isZipFile } from "@/lib/zip-file-validation";
@@ -174,6 +175,16 @@ export async function uploadCreatorGameFromFormData(params: {
       ok: false,
       status: 400,
       error: `遊戲 zip 不可超過 ${formatMaxSize(MAX_ZIP_BYTES)}（目前 ${formatMaxSize(gameZipFile.size)}）`,
+    };
+  }
+  if (
+    process.env.VERCEL &&
+    gameZipFile.size > PRODUCTION_UPLOAD_BYTES
+  ) {
+    return {
+      ok: false,
+      status: 413,
+      error: `正式站上傳 zip 請小於 ${formatMaxSize(PRODUCTION_UPLOAD_BYTES)}（目前 ${formatMaxSize(gameZipFile.size)}）。請壓縮後再試。`,
     };
   }
 
