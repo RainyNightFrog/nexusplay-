@@ -4,7 +4,7 @@ import {
   getGameCommentsByGameId,
 } from "@/lib/game-comments-service";
 import { resolveRequestLocale } from "@/lib/request-locale";
-import { sanitizePlainText } from "@/lib/sanitize";
+import { sanitizePlainText } from "@/lib/sanitize-plain";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { MAX_COMMENT_LENGTH } from "@/lib/game-page-content";
 
