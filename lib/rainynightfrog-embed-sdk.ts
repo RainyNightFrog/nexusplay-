@@ -188,6 +188,7 @@ export const RAINYNIGHTFROG_LEAVE_CONFIRM_REQUEST =
 export const RAINYNIGHTFROG_LEAVE_CONFIRM_RESPONSE =
   "rainynightfrog:leave-confirm-response";
 export const RAINYNIGHTFROG_EXPAND_REQUEST = "rainynightfrog:expand-request";
+export const RAINYNIGHTFROG_PLAY_MODE_MESSAGE = "rainynightfrog:play-mode";
 
 /** @deprecated Use RAINYNIGHTFROG_AUTH_MESSAGE */
 export const NEXUSPLAY_AUTH_MESSAGE = RAINYNIGHTFROG_AUTH_MESSAGE;
@@ -205,6 +206,7 @@ export const NEXUSPLAY_LEAVE_CONFIRM_RESPONSE =
 /** @deprecated Use RAINYNIGHTFROG_EXPAND_REQUEST */
 export const NEXUSPLAY_EXPAND_REQUEST = RAINYNIGHTFROG_EXPAND_REQUEST;
 export const LEGACY_NEXUSPLAY_EXPAND_REQUEST = "nexusplay:expand-request";
+export const LEGACY_NEXUSPLAY_PLAY_MODE_MESSAGE = "nexusplay:play-mode";
 
 export const LEGACY_NEXUSPLAY_AUTH_MESSAGE = "nexusplay:auth";
 export const LEGACY_NEXUSPLAY_READY_MESSAGE = "nexusplay:ready";

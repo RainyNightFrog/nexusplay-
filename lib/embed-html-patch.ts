@@ -19,19 +19,24 @@ const VOID_EMBED_BOOT_SCRIPT = `<script id="nexusplay-embed-boot">
   d.classList.add('void-portal-embed','void-nexusplay-embed','void-itch-embed','void-in-iframe');
   if(window.self===window.top)return;
   var h=window.innerHeight||720,w=window.innerWidth||960;
+  window.__voidNpEmbedExpanded=false;
   d.classList.add('np-embed-mode');
   function texts(){
     var t=window.VoidI18n&&window.VoidI18n.t?function(k,f){var v=window.VoidI18n.t(k);return v&&v!==k?v:f;}:function(_k,f){return f;};
     return{
       title:t('np_embed_expand_title','視窗過小'),
-      message:t('np_embed_expand_message','請點擊右下角「放大」或全螢幕按鈕，放大後才能繼續遊玩 VOID GACHA。'),
+      message:t('np_embed_expand_message','請點擊下方按鈕或頁面右下角「放大」，放大後才能繼續遊玩 VOID GACHA。'),
       hint:t('np_embed_expand_hint','放大後將顯示完整介面與右側選單'),
       btn:t('np_embed_expand_btn','請放大視窗')
     };
   }
+  function mountGate(gate){
+    if(!gate||gate.parentNode)return;
+    (document.body||document.documentElement).appendChild(gate);
+  }
   function ensureOverlay(show){
     var gate=document.getElementById('np-embed-expand-gate');
-    if(!gate&&show){
+    if(!gate){
       var tx=texts();
       gate=document.createElement('div');
       gate.id='np-embed-expand-gate';
@@ -46,32 +51,44 @@ const VOID_EMBED_BOOT_SCRIPT = `<script id="nexusplay-embed-boot">
       gate.querySelector('.np-embed-expand-gate__btn').addEventListener('click',function(){
         try{
           ['rainynightfrog:expand-request','nexusplay:expand-request'].forEach(function(type){
-            window.parent.postMessage({type:type},location.origin);
+            window.parent.postMessage({type:type},'*');
           });
         }catch(_e){}
       });
-      function mount(){(document.body||document.documentElement).appendChild(gate);}
-      if(document.body)mount();else document.addEventListener('DOMContentLoaded',mount,{once:true});
+      gate.addEventListener('click',function(ev){
+        if(ev.target===gate){
+          try{
+            ['rainynightfrog:expand-request','nexusplay:expand-request'].forEach(function(type){
+              window.parent.postMessage({type:type},'*');
+            });
+          }catch(_e2){}
+        }
+      });
+      mountGate(gate);
+      if(!document.body)document.addEventListener('DOMContentLoaded',function(){mountGate(gate);},{once:true});
     }
-    if(gate){
-      if(show){
-        var tx2=texts();
-        gate.querySelector('.np-embed-expand-gate__title').textContent=tx2.title;
-        gate.querySelector('.np-embed-expand-gate__message').textContent=tx2.message;
-        gate.querySelector('.np-embed-expand-gate__hint').textContent=tx2.hint;
-        gate.querySelector('.np-embed-expand-gate__btn').textContent=tx2.btn;
-      }
-      gate.hidden=!show;
+    if(show){
+      var tx2=texts();
+      gate.querySelector('.np-embed-expand-gate__title').textContent=tx2.title;
+      gate.querySelector('.np-embed-expand-gate__message').textContent=tx2.message;
+      gate.querySelector('.np-embed-expand-gate__hint').textContent=tx2.hint;
+      gate.querySelector('.np-embed-expand-gate__btn').textContent=tx2.btn;
+      mountGate(gate);
     }
+    gate.hidden=!show;
+    gate.setAttribute('aria-hidden',show?'false':'true');
   }
   window.__voidNpSyncExpandGate=function(opts){
     if(opts&&typeof opts==='object'){
       if(opts.width>0)w=opts.width;
       if(opts.height>0)h=opts.height;
-      if(opts.expanded!=null)d.classList.toggle('np-embed-expanded',!!opts.expanded);
+      if(opts.expanded!=null){
+        window.__voidNpEmbedExpanded=!!opts.expanded;
+        d.classList.toggle('np-embed-expanded',window.__voidNpEmbedExpanded);
+      }
     }
+    var expanded=!!window.__voidNpEmbedExpanded;
     var compact=h<=780;
-    var expanded=d.classList.contains('np-embed-expanded');
     d.classList.toggle('np-embed-compact',compact);
     d.classList.toggle('void-itch-mobile-shell',compact&&!expanded);
     d.style.setProperty('--np-embed-width',w+'px');
@@ -80,15 +97,23 @@ const VOID_EMBED_BOOT_SCRIPT = `<script id="nexusplay-embed-boot">
     d.classList.toggle('np-embed-gated',gated);
     ensureOverlay(gated);
   };
-  function onResizeMsg(e){
-    if(e.origin!==location.origin)return;
+  function onPlatformMsg(e){
     var data=e.data;
     if(!data||typeof data!=='object')return;
+    if(data.type==='rainynightfrog:play-mode'||data.type==='nexusplay:play-mode'){
+      window.__voidNpEmbedExpanded=data.mode==='expanded';
+      window.__voidNpSyncExpandGate({expanded:window.__voidNpEmbedExpanded});
+      return;
+    }
     if(data.type!=='rainynightfrog:resize'&&data.type!=='nexusplay:resize')return;
     window.__voidNpSyncExpandGate({width:data.width,height:data.height,expanded:data.expanded});
   }
-  window.addEventListener('message',onResizeMsg);
-  window.addEventListener('resize',function(){h=window.innerHeight||h;w=window.innerWidth||w;window.__voidNpSyncExpandGate();});
+  window.addEventListener('message',onPlatformMsg);
+  window.addEventListener('resize',function(){
+    h=window.innerHeight||h;
+    w=window.innerWidth||w;
+    window.__voidNpSyncExpandGate();
+  });
   if(window.visualViewport){
     window.visualViewport.addEventListener('resize',function(){
       h=Math.round(window.visualViewport.height)||h;
@@ -147,11 +172,10 @@ html.void-nexusplay-embed.np-embed-mode .void-chat-panel:not(.is-hidden){width:m
 html.void-nexusplay-embed.np-embed-mode .void-chat-panel:not(.is-hidden):not(.is-collapsed){--void-chat-h:min(560px,calc(var(--np-embed-height,720px) - var(--void-mobile-nav-h,58px) - 28px));height:var(--void-chat-h);min-height:min(400px,calc(var(--np-embed-height,720px) - var(--void-mobile-nav-h,58px) - 28px))}
 html.void-nexusplay-embed.np-embed-mode .side-mode-modal{max-height:min(calc(var(--np-embed-height,720px) - 12px),96dvh)!important;height:min(calc(var(--np-embed-height,720px) - 12px),96dvh)!important}
 html.void-nexusplay-embed.np-embed-mode .side-mode-body{min-height:0!important;overflow-y:auto!important}
-html.np-embed-gated #screen-app{filter:blur(2px) brightness(.5);pointer-events:none}
-html.np-embed-gated .void-itch-nav-dock,html.np-embed-gated .void-chat-panel,html.np-embed-gated #void-scroll-top{opacity:.2;pointer-events:none}
-html.void-nexusplay-embed.np-embed-expanded #screen-app,html.void-nexusplay-embed.np-embed-mode:not(.np-embed-gated) #screen-app{filter:none!important;pointer-events:auto!important}
+html.np-embed-gated #screen-app,html.void-nexusplay-embed.np-embed-gated #screen-app{filter:none!important;pointer-events:auto!important}
+html.np-embed-gated .void-itch-nav-dock,html.np-embed-gated .void-chat-panel,html.np-embed-gated #void-scroll-top{opacity:.35}
 html.void-nexusplay-embed.np-embed-expanded .void-itch-nav-dock,html.void-nexusplay-embed.np-embed-expanded .void-chat-panel,html.void-nexusplay-embed.np-embed-mode:not(.np-embed-gated) .void-itch-nav-dock,html.void-nexusplay-embed.np-embed-mode:not(.np-embed-gated) .void-chat-panel{opacity:1!important;pointer-events:auto!important}
-.np-embed-expand-gate{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top,0)) 16px max(16px,env(safe-area-inset-bottom,0));background:rgba(4,2,14,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.np-embed-expand-gate{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top,0)) 16px max(16px,env(safe-area-inset-bottom,0));background:rgba(4,2,14,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);pointer-events:auto;touch-action:manipulation}
 .np-embed-expand-gate[hidden]{display:none!important}
 .np-embed-expand-gate__panel{width:min(420px,100%);padding:22px 20px 18px;border-radius:18px;border:1px solid rgba(78,240,255,.35);background:linear-gradient(160deg,rgba(12,8,28,.96),rgba(6,4,18,.98));box-shadow:0 0 28px rgba(123,63,242,.35);text-align:center}
 .np-embed-expand-gate__eyebrow{margin:0 0 8px;font-size:.72rem;letter-spacing:.14em;color:rgba(78,240,255,.85)}

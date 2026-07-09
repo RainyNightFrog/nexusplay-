@@ -98,7 +98,7 @@ export async function GET(
         status: 200,
         headers: {
           "Content-Type": contentType,
-          "Cache-Control": "public, max-age=300",
+          "Cache-Control": "no-store",
           "X-Content-Type-Options": "nosniff",
         },
       });

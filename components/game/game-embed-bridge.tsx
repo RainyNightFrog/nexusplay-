@@ -16,7 +16,9 @@ import {
   RAINYNIGHTFROG_READY_MESSAGE,
   RAINYNIGHTFROG_RESIZE_MESSAGE,
   RAINYNIGHTFROG_EXPAND_REQUEST,
+  RAINYNIGHTFROG_PLAY_MODE_MESSAGE,
   LEGACY_NEXUSPLAY_EXPAND_REQUEST,
+  LEGACY_NEXUSPLAY_PLAY_MODE_MESSAGE,
   type RainyNightFrogAuthUser,
   type RainyNightFrogLeaveConfirmRequest,
 } from "@/lib/rainynightfrog-embed-sdk";
@@ -80,21 +82,43 @@ export function GameEmbedBridge({
     );
   }, [iframeRef, profile, gameId, creatorId]);
 
-  const postResize = useCallback(() => {
+  const postToIframe = useCallback(
+    (payload: Record<string, unknown>) => {
+      const iframe = iframeRef.current;
+      const target = iframe?.contentWindow;
+      if (!target) return;
+      target.postMessage(payload, window.location.origin);
+    },
+    [iframeRef]
+  );
+
+  const syncIframeLayout = useCallback(() => {
     const iframe = iframeRef.current;
     if (!iframe?.contentWindow) return;
 
     const rect = iframe.getBoundingClientRect();
-    iframe.contentWindow.postMessage(
-      {
-        type: RAINYNIGHTFROG_RESIZE_MESSAGE,
-        width: Math.round(rect.width),
-        height: Math.round(rect.height),
-        expanded,
-      },
-      window.location.origin
-    );
-  }, [iframeRef, expanded]);
+    const playMode = expanded ? "expanded" : "compact";
+    const resizePayload = {
+      type: RAINYNIGHTFROG_RESIZE_MESSAGE,
+      width: Math.round(rect.width),
+      height: Math.round(rect.height),
+      expanded,
+    };
+    const playModePayload = {
+      type: RAINYNIGHTFROG_PLAY_MODE_MESSAGE,
+      mode: playMode,
+    };
+    const legacyPlayModePayload = {
+      type: LEGACY_NEXUSPLAY_PLAY_MODE_MESSAGE,
+      mode: playMode,
+    };
+
+    postToIframe(resizePayload);
+    postToIframe(playModePayload);
+    postToIframe(legacyPlayModePayload);
+  }, [iframeRef, expanded, postToIframe]);
+
+  const postResize = syncIframeLayout;
 
   const respondLeaveConfirm = useCallback(
     (confirmed: boolean) => {
@@ -191,17 +215,31 @@ export function GameEmbedBridge({
     const iframe = iframeRef.current;
     if (!iframe) return;
 
-    postResize();
+    syncIframeLayout();
+    const t1 = window.setTimeout(syncIframeLayout, 50);
+    const t2 = window.setTimeout(syncIframeLayout, 250);
+    const raf = window.requestAnimationFrame(syncIframeLayout);
 
-    if (typeof ResizeObserver === "undefined") return;
+    if (typeof ResizeObserver === "undefined") {
+      return () => {
+        window.clearTimeout(t1);
+        window.clearTimeout(t2);
+        window.cancelAnimationFrame(raf);
+      };
+    }
 
     const observer = new ResizeObserver(() => {
-      postResize();
+      syncIframeLayout();
     });
     observer.observe(iframe);
 
-    return () => observer.disconnect();
-  }, [iframeRef, postResize, expanded]);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+      window.cancelAnimationFrame(raf);
+      observer.disconnect();
+    };
+  }, [iframeRef, syncIframeLayout, expanded]);
 
   useEffect(() => {
     if (!leaveConfirm) return;
