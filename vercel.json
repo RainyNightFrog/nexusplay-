@@ -1,4 +1,12 @@
 {
+  "functions": {
+    "app/api/games/[id]/update/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/games/upload/route.ts": {
+      "maxDuration": 300
+    }
+  },
   "crons": [
     {
       "path": "/api/cron/forum-digest",

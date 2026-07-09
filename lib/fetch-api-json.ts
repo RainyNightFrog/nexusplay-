@@ -22,7 +22,8 @@ export async function readApiJson<T extends Record<string, unknown>>(
 
   if (response.status === 504 || response.status === 502) {
     return {
-      error: "伺服器處理逾時或暫時無法連線，請稍後再試。",
+      error:
+        "伺服器處理逾時或暫時無法連線。若剛上傳 zip，可能是檔案較多、解壓上傳較久，請稍後再試或聯絡平台管理員。",
     } as T & { error?: string };
   }
 

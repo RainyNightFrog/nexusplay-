@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { resolveUserRole, hasCreatorDashboardAccess } from "@/lib/auth-profile";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 export async function PATCH(
   request: Request,
