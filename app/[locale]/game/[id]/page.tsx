@@ -538,6 +538,7 @@ function GamePageContent() {
                       ref={iframeRef}
                       src={iframeSrc}
                       title={game.title}
+                      tabIndex={0}
                       className="absolute inset-0 size-full border-0"
                       sandbox={IFRAME_SANDBOX}
                       allowFullScreen
