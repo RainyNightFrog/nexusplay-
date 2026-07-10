@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { motion } from "framer-motion";
 import {
   Coins,
@@ -29,9 +29,23 @@ import {
   type RevenueStatKey,
 } from "@/lib/dashboard-revenue";
 import type { RevenueTrendDays } from "@/lib/dashboard-revenue-server";
+import { formatPlayerIdLabel } from "@/lib/player-id";
 import { cn } from "@/lib/utils";
 
 const TREND_DAY_OPTIONS: RevenueTrendDays[] = [7, 14, 30];
+
+function formatTipDateTime(value: string, locale: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleString(locale, {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
 
 const RevenueChart = dynamic(
   () =>
@@ -107,6 +121,7 @@ export function RevenuePanel({
   onClearUnreadTips,
 }: RevenuePanelProps) {
   const t = useTranslations("dashboard");
+  const locale = useLocale();
 
   const formatStatHint = (
     hintKey?: string,
@@ -134,16 +149,6 @@ export function RevenuePanel({
       .then(() => onClearUnreadTips?.())
       .catch(() => undefined);
   }, [unreadTipCount, onClearUnreadTips]);
-
-  const formatRelativeTime = (tip: DashboardRevenueAnalytics["recentTips"][0]) => {
-    if (tip.relativeTimeKey === "revenueTimeJustNow") {
-      return t("revenueTimeJustNow");
-    }
-    if (tip.relativeTimeKey === "revenueTimeHours") {
-      return t("revenueTimeHours", { count: tip.relativeTimeValue ?? 1 });
-    }
-    return t("revenueTimeDays", { count: tip.relativeTimeValue ?? 1 });
-  };
 
   if (loading && !data) {
     return (
@@ -359,11 +364,22 @@ export function RevenuePanel({
                     >
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium text-white">
-                          {tip.playerLabel}
+                          {tip.payerName ?? t("revenueRecentUnknownPlayer")}
                         </p>
                         <p className="truncate text-xs text-zinc-500">
+                          {t("revenueRecentPlayerId", {
+                            id:
+                              formatPlayerIdLabel(tip.payerPlayerNumber) ??
+                              tip.payerId.slice(0, 8),
+                          })}
+                          <span className="mx-1 text-zinc-600">·</span>
                           {tip.gameTitle}
                         </p>
+                        {tip.publicAnonymous && (
+                          <p className="mt-0.5 text-[10px] text-zinc-600">
+                            {t("revenueRecentPublicAnonymous")}
+                          </p>
+                        )}
                       </div>
                       <div className="shrink-0 text-right">
                         <p className="text-sm font-bold text-emerald-300">
@@ -375,8 +391,8 @@ export function RevenuePanel({
                               {t("revenuePreviewTipBadge")}
                             </span>
                           )}
-                          <p className="text-[11px] text-zinc-500">
-                            {formatRelativeTime(tip)}
+                          <p className="text-[11px] tabular-nums text-zinc-500">
+                            {formatTipDateTime(tip.createdAt, locale)}
                           </p>
                         </div>
                       </div>

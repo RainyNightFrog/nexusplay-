@@ -21,6 +21,8 @@ export type TipRecordRow = {
   created_at: string;
   game_title?: string;
   payer_name?: string | null;
+  payer_player_number?: number | null;
+  public_anonymous?: boolean;
 };
 
 function toNumber(value: number | string | null | undefined) {
@@ -77,39 +79,6 @@ function buildTrendPoints(
   }
 
   return buckets;
-}
-
-function anonymizePayer(name: string | null | undefined, payerId: string) {
-  if (name?.trim()) {
-    const trimmed = name.trim();
-    if (trimmed.length <= 2) return trimmed;
-    return `${trimmed.slice(0, 2)}***`;
-  }
-  return `Player ${payerId.slice(0, 4)}`;
-}
-
-function relativeTimeFromDate(iso: string): Pick<
-  RecentTipRow,
-  "relativeTimeKey" | "relativeTimeValue"
-> {
-  const created = new Date(iso).getTime();
-  const diffMs = Date.now() - created;
-  const diffHours = diffMs / (1000 * 60 * 60);
-
-  if (diffHours < 1) {
-    return { relativeTimeKey: "revenueTimeJustNow" };
-  }
-  if (diffHours < 24) {
-    return {
-      relativeTimeKey: "revenueTimeHours",
-      relativeTimeValue: Math.max(1, Math.round(diffHours)),
-    };
-  }
-
-  return {
-    relativeTimeKey: "revenueTimeDays",
-    relativeTimeValue: Math.max(1, Math.round(diffHours / 24)),
-  };
 }
 
 function filterEventsByScope(
@@ -258,12 +227,15 @@ function buildRecentTips(
     .slice(0, 8)
     .map((tip) => ({
       id: tip.id,
-      playerLabel: anonymizePayer(tip.payer_name, tip.payer_id),
+      payerName: tip.payer_name?.trim() || null,
+      payerId: tip.payer_id,
+      payerPlayerNumber: tip.payer_player_number ?? null,
       gameTitle:
         tip.game_title ?? gamesById.get(tip.game_id)?.title ?? `#${tip.game_id}`,
       amount: toNumber(tip.creator_net_usd),
       status: tip.status === "preview" ? "preview" : "live",
-      ...relativeTimeFromDate(tip.created_at),
+      createdAt: tip.created_at,
+      publicAnonymous: tip.public_anonymous === true,
     }));
 }
 

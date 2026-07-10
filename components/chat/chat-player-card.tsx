@@ -11,7 +11,6 @@ import {
   MessageCircle,
   Trophy,
   UserRound,
-  Users,
   Wallet,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
@@ -34,6 +33,7 @@ import {
   type PlatformLeaderboardEntry,
 } from "@/lib/platform-leaderboard";
 import { formatRelativeTimeFromIso } from "@/lib/format-relative-time";
+import { formatPlayerIdLabel } from "@/lib/player-id";
 import {
   isVirtualLeaderboardUserId,
   VIRTUAL_LEADERBOARD_USER_PREFIX,
@@ -176,13 +176,18 @@ export function ChatPlayerCard({
   const equippedTitle = player.equippedTitle ?? detail?.equippedTitle ?? null;
   const isCreator = detail?.isCreator ?? player.isCreator;
   const isVirtual = detail?.isVirtual ?? player.isVirtual;
-  const creatorUserId =
-    isCreator && !isVirtual
-      ? (detail?.userId ?? player.userId) || null
-      : null;
+  const followableCreatorId = (() => {
+    if (!isCreator) return null;
+    const candidate = detail?.userId ?? (isVirtual ? null : player.userId);
+    if (!candidate || isVirtualLeaderboardUserId(candidate)) return null;
+    return candidate;
+  })();
   const countryLabel = detail?.countryCode
     ? formatCountryName(detail.countryCode, locale)
     : null;
+  const playerIdLabel = isVirtual
+    ? detail?.virtualPlayerId?.toUpperCase() ?? player.virtualPlayerId?.toUpperCase() ?? null
+    : formatPlayerIdLabel(detail?.playerNumber);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -203,68 +208,103 @@ export function ChatPlayerCard({
         </DialogHeader>
 
         <div className="flex flex-col gap-3 sm:gap-4">
-          <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center sm:gap-5">
-            <div className="relative shrink-0">
-              <div
-                className={cn(
-                  "relative size-20 overflow-hidden rounded-full ring-2",
-                  isCreator
-                    ? "ring-violet-400/40"
-                    : isVirtual
-                      ? "ring-cyan-400/30"
-                      : "ring-white/10"
-                )}
-              >
-                {avatarUrl ? (
-                  <Image
-                    src={avatarUrl}
-                    alt={displayName}
-                    fill
-                    className="object-cover"
-                    unoptimized
-                  />
-                ) : (
-                  <div className="flex size-full items-center justify-center bg-white/8 text-2xl font-semibold text-zinc-300">
-                    {displayName.slice(0, 1)}
-                  </div>
+          <div className="flex w-full flex-col items-center gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+            <div className="flex flex-col items-center gap-3 sm:flex-row sm:gap-5">
+              <div className="relative shrink-0">
+                <div
+                  className={cn(
+                    "relative size-20 overflow-hidden rounded-full ring-2",
+                    isCreator
+                      ? "ring-violet-400/40"
+                      : isVirtual
+                        ? "ring-cyan-400/30"
+                        : "ring-white/10"
+                  )}
+                >
+                  {avatarUrl ? (
+                    <Image
+                      src={avatarUrl}
+                      alt={displayName}
+                      fill
+                      className="object-cover"
+                      unoptimized
+                    />
+                  ) : (
+                    <div className="flex size-full items-center justify-center bg-white/8 text-2xl font-semibold text-zinc-300">
+                      {displayName.slice(0, 1)}
+                    </div>
+                  )}
+                </div>
+                {detail?.isOnline && (
+                  <span className="absolute bottom-0.5 right-0.5 size-3.5 rounded-full border-2 border-zinc-950 bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
                 )}
               </div>
-              {detail?.isOnline && (
-                <span className="absolute bottom-0.5 right-0.5 size-3.5 rounded-full border-2 border-zinc-950 bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-              )}
+
+              <div className="flex min-w-0 flex-col items-center sm:items-start sm:text-left">
+                <UserBadge
+                  username={displayName}
+                  title={equippedTitle}
+                  layout="stacked"
+                  className="sm:items-start"
+                  usernameClassName="text-lg font-semibold text-zinc-100 sm:text-xl"
+                  titleClassName="text-sm"
+                />
+                <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5 sm:justify-start">
+                  {isCreator && (
+                    <span className="rounded-full bg-violet-500/15 px-2 py-0.5 text-xs text-violet-300">
+                      {t("creatorBadge")}
+                    </span>
+                  )}
+                  {isVirtual ? (
+                    <span className="rounded-full bg-cyan-500/15 px-2 py-0.5 text-xs text-cyan-300">
+                      {t("playerCardVirtual")}
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-white/8 px-2 py-0.5 text-xs text-zinc-400">
+                      {t("playerCardReal")}
+                    </span>
+                  )}
+                </div>
+                {countryLabel && (
+                  <p className="mt-1.5 text-xs text-zinc-500 sm:text-sm">
+                    {t("playerCardRegion")}：{countryLabel}
+                  </p>
+                )}
+                {playerIdLabel && (
+                  <p className="mt-1 font-mono text-xs text-zinc-500 sm:text-sm">
+                    {t("playerCardPlayerId")}：{playerIdLabel}
+                  </p>
+                )}
+              </div>
             </div>
 
-            <div className="flex min-w-0 flex-col items-center sm:items-start sm:text-left">
-              <UserBadge
-                username={displayName}
-                title={equippedTitle}
-                layout="stacked"
-                className="sm:items-start"
-                usernameClassName="text-lg font-semibold text-zinc-100 sm:text-xl"
-                titleClassName="text-sm"
-              />
-              <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5 sm:justify-start">
-                {isCreator && (
-                  <span className="rounded-full bg-violet-500/15 px-2 py-0.5 text-xs text-violet-300">
-                    {t("creatorBadge")}
-                  </span>
-                )}
-                {isVirtual ? (
-                  <span className="rounded-full bg-cyan-500/15 px-2 py-0.5 text-xs text-cyan-300">
-                    {t("playerCardVirtual")}
-                  </span>
-                ) : (
-                  <span className="rounded-full bg-white/8 px-2 py-0.5 text-xs text-zinc-400">
-                    {t("playerCardReal")}
-                  </span>
-                )}
+            {isCreator && (followableCreatorId || detail) && (
+              <div className="shrink-0 self-center sm:self-end sm:pb-0.5">
+                {followableCreatorId ? (
+                  <FollowCreatorButton
+                    creatorId={followableCreatorId}
+                    compact
+                    layout="stacked"
+                    align="end"
+                    showFollowerCount
+                    initialFollowerCount={detail?.followerCount}
+                  />
+                ) : detail ? (
+                  <div
+                    className={cn(
+                      "flex flex-col items-end gap-1 text-right"
+                    )}
+                  >
+                    <p className="text-xs text-zinc-500">
+                      {t("playerCardFollowersOnly")}
+                    </p>
+                    <p className="text-sm font-semibold text-zinc-200">
+                      {detail.followerCount}
+                    </p>
+                  </div>
+                ) : null}
               </div>
-              {countryLabel && (
-                <p className="mt-1.5 text-xs text-zinc-500 sm:text-sm">
-                  {t("playerCardRegion")}：{countryLabel}
-                </p>
-              )}
-            </div>
+            )}
           </div>
 
           {loading ? (
@@ -276,6 +316,20 @@ export function ChatPlayerCard({
             <p className="py-4 text-center text-sm text-rose-300 sm:text-base">{error}</p>
           ) : detail ? (
             <>
+              <div className="rounded-lg border border-white/8 bg-white/[0.02] px-3 py-2.5 text-center">
+                <p className="mb-1.5 text-xs font-medium text-zinc-400 sm:text-sm">
+                  {t("playerCardBio")}
+                </p>
+                <p
+                  className={cn(
+                    "whitespace-pre-wrap break-words text-sm leading-relaxed sm:text-base",
+                    detail.bio ? "text-zinc-200" : "text-zinc-500"
+                  )}
+                >
+                  {detail.bio || t("playerCardBioEmpty")}
+                </p>
+              </div>
+
               {detail.website && (
                 <a
                   href={detail.website}
@@ -324,13 +378,6 @@ export function ChatPlayerCard({
                 />
                 {detail.isCreator && (
                   <StatItem
-                    icon={<Users className="size-3.5 shrink-0" />}
-                    label={t("playerCardFollowers")}
-                    value={String(detail.followerCount)}
-                  />
-                )}
-                {detail.isCreator && (
-                  <StatItem
                     icon={<Gamepad2 className="size-3.5 shrink-0" />}
                     label={t("playerCardPublishedGames")}
                     value={String(detail.publishedGames)}
@@ -360,16 +407,6 @@ export function ChatPlayerCard({
           ) : null}
 
           <div className="flex w-full flex-col gap-2 sm:flex-row sm:justify-center">
-            {creatorUserId && !player.isOwn && (
-              <FollowCreatorButton
-                creatorId={creatorUserId}
-                compact
-                centered
-                showFollowerCount={false}
-                className="w-full sm:max-w-xs"
-              />
-            )}
-
             {isVirtual && player.virtualPlayerId && onDirectMessage && (
               <Button
                 type="button"
@@ -397,12 +434,12 @@ export function ChatPlayerCard({
               </Button>
             )}
 
-            {creatorUserId && !player.isOwn && (
+            {followableCreatorId && !player.isOwn && (
               <Button
                 nativeButton={false}
                 variant="outline"
                 className="h-10 flex-1 gap-2 border-white/10 bg-white/5 text-sm text-zinc-200 hover:bg-white/10 sm:max-w-xs"
-                render={<Link href={`/creator/${creatorUserId}`} />}
+                render={<Link href={`/creator/${followableCreatorId}`} />}
                 onClick={() => onOpenChange(false)}
               >
                 <UserRound className="size-4" />

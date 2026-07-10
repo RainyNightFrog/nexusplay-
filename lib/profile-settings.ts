@@ -1,5 +1,6 @@
 export const PROFILE_LIMITS = {
   displayName: 40,
+  bio: 300,
   website: 200,
   twitter: 50,
   supportEmail: 120,

@@ -4,11 +4,13 @@ export type UserRole = "player" | "creator";
 
 export type UserProfile = {
   id: string;
+  player_number: number | null;
   display_name: string;
   avatar_url: string | null;
   role: UserRole;
   is_admin: boolean;
   created_at: string;
+  bio: string | null;
   website: string | null;
   twitter: string | null;
   playing_games: boolean;

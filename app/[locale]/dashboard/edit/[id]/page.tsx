@@ -55,6 +55,7 @@ import {
 import { scrollToFirstValidationField } from "@/lib/scroll-to-validation-field";
 import {
   metadataFromGameRecord,
+  mergeGamePublishMetadata,
   type GameGenre,
   type GamePublishMetadata,
 } from "@/lib/game-metadata";
@@ -328,12 +329,13 @@ export default function EditGamePage() {
     fetchManageGame(gameId)
       .then(({ game, isOrphan: orphan }) => {
         if (cancelled) return;
+        const serverMetadata = metadataFromGameRecord(game);
         setForm({
           title: game.title,
           description: game.description,
           genre: game.category as GameGenre,
         });
-        setMetadata(metadataFromGameRecord(game));
+        setMetadata(serverMetadata);
         setExistingCoverUrl(game.cover_url);
         setExistingGalleryUrls(parseStringArray(game.gallery_urls));
         setIsOrphan(orphan);
@@ -354,7 +356,7 @@ export default function EditGamePage() {
         const draft = restoreGameEditDraft(gameId);
         if (draft) {
           setForm(draft.form);
-          setMetadata(draft.metadata);
+          setMetadata(mergeGamePublishMetadata(serverMetadata, draft.metadata));
           setMonetization(draft.monetization);
           if (draft.existingGalleryUrls) {
             setExistingGalleryUrls(draft.existingGalleryUrls);
@@ -548,6 +550,7 @@ export default function EditGamePage() {
         handleCoverClear();
       }
 
+      setMetadata(metadataFromGameRecord(game));
       clearPersistedGameEditDraft(gameId);
 
       if (isDraftSave) {

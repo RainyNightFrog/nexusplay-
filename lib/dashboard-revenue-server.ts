@@ -40,7 +40,7 @@ async function fetchCreatorTips(
   const { data: tips, error } = await supabase
     .from("game_tips")
     .select(
-      "id, game_id, payer_id, amount_usd, creator_net_usd, status, created_at"
+      "id, game_id, payer_id, amount_usd, creator_net_usd, status, created_at, public_anonymous"
     )
     .eq("creator_id", creatorId)
     .in("game_id", gameIds)
@@ -57,18 +57,33 @@ async function fetchCreatorTips(
   const payerIds = [...new Set(tips.map((tip) => tip.payer_id))];
   const { data: payers } = await supabase
     .from("profiles")
-    .select("id, display_name")
+    .select("id, display_name, player_number")
     .in("id", payerIds);
 
   const payerMap = new Map(
-    (payers ?? []).map((payer) => [payer.id, payer.display_name as string])
+    (payers ?? []).map((payer) => [
+      payer.id,
+      {
+        displayName: payer.display_name as string,
+        playerNumber:
+          typeof payer.player_number === "number"
+            ? payer.player_number
+            : payer.player_number != null
+              ? Number(payer.player_number) || null
+              : null,
+      },
+    ])
   );
 
-  return tips.map((tip) => ({
-    ...tip,
-    payer_name: payerMap.get(tip.payer_id) ?? null,
-    game_title: gameTitleMap.get(tip.game_id),
-  })) as TipRecordRow[];
+  return tips.map((tip) => {
+    const payer = payerMap.get(tip.payer_id);
+    return {
+      ...tip,
+      payer_name: payer?.displayName ?? null,
+      payer_player_number: payer?.playerNumber ?? null,
+      game_title: gameTitleMap.get(tip.game_id),
+    };
+  }) as TipRecordRow[];
 }
 
 export async function getCreatorDashboardRevenue(params: {

@@ -1,4 +1,4 @@
-import { getAmbientUserPlayerMap } from "@/lib/ambient-user-index";
+import { getAmbientUserPlayerMap, getAmbientUserIdForVirtualPlayer } from "@/lib/ambient-user-index";
 import { getVirtualPlayerActivityStats } from "@/lib/platform-leaderboard-virtual";
 import { isUserOnline } from "@/lib/platform-leaderboard";
 import { resolveEquippedTitleForUser } from "@/lib/equipped-title-service";
@@ -9,6 +9,7 @@ import {
   getVirtualPlayerCountryCode,
 } from "@/lib/request-geo";
 import { getVirtualPlayerById } from "@/lib/virtual-players";
+import { getVirtualPlayerBio } from "@/lib/virtual-player-bios";
 import type { EquippedTitle } from "@/lib/titles";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -21,12 +22,14 @@ export type ChatPlayerAchievementHighlight = {
 export type ChatPlayerPublicProfile = {
   userId: string | null;
   virtualPlayerId: string | null;
+  playerNumber: number | null;
   displayName: string;
   avatarUrl: string | null;
   equippedTitle: EquippedTitle | null;
   isCreator: boolean;
   isVirtual: boolean;
   isOnline: boolean;
+  bio: string | null;
   website: string | null;
   profilePublic: boolean;
   achievementCount: number;
@@ -61,7 +64,7 @@ async function loadRealUserProfile(
 ): Promise<ChatPlayerPublicProfile | null> {
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("id, display_name, avatar_url, role")
+    .select("id, display_name, avatar_url, role, bio, player_number")
     .eq("id", userId)
     .maybeSingle();
 
@@ -74,6 +77,9 @@ async function loadRealUserProfile(
 
   const metadata = authData.user?.user_metadata ?? {};
   const profilePublic = readBoolean(metadata.profile_public, true);
+  const bio = profilePublic
+    ? readOptionalString(profile.bio) ?? readOptionalString(metadata.bio)
+    : null;
   const website = profilePublic ? readOptionalString(metadata.website) : null;
   const countryCode = readCountryCode(metadata.country_code);
 
@@ -150,12 +156,19 @@ async function loadRealUserProfile(
   return {
     userId,
     virtualPlayerId: null,
+    playerNumber:
+      typeof profile.player_number === "number"
+        ? profile.player_number
+        : profile.player_number != null
+          ? Number(profile.player_number) || null
+          : null,
     displayName: profile.display_name?.trim() || "匿名玩家",
     avatarUrl: profile.avatar_url ?? null,
     equippedTitle,
     isCreator: profile.role === "creator",
     isVirtual: false,
     isOnline: lastActiveAt ? isUserOnline(lastActiveAt) : false,
+    bio,
     website,
     profilePublic,
     achievementCount: achievementCountRes.count ?? achievementHighlights.length,
@@ -200,12 +213,14 @@ async function loadVirtualPlayerProfile(
   return {
     userId: null,
     virtualPlayerId,
+    playerNumber: null,
     displayName: player.displayName,
     avatarUrl: resolveVirtualPlayerAvatarUrl(virtualPlayerId),
     equippedTitle: null,
     isCreator,
     isVirtual: true,
     isOnline: activity.isOnline,
+    bio: getVirtualPlayerBio(virtualPlayerId),
     website: social.website,
     profilePublic: true,
     achievementCount: social.achievementCount,
@@ -269,6 +284,19 @@ export async function getChatPlayerPublicProfile(
         supabase,
         options.virtualPlayerId ?? mappedVirtualId
       );
+      const realProfile = await loadRealUserProfile(supabase, options.userId);
+      if (profile) {
+        const ambientUserId = await getAmbientUserIdForVirtualPlayer(
+          supabase,
+          options.virtualPlayerId ?? mappedVirtualId,
+          { preferCreator: profile.isCreator }
+        );
+        profile = {
+          ...profile,
+          userId: ambientUserId ?? options.userId,
+          ...(realProfile?.bio ? { bio: realProfile.bio } : {}),
+        };
+      }
     } else {
       profile = await loadRealUserProfile(supabase, options.userId);
     }
@@ -279,6 +307,17 @@ export async function getChatPlayerPublicProfile(
   }
 
   if (!profile) return null;
+
+  if (profile.isVirtual && profile.virtualPlayerId && !profile.userId) {
+    const ambientUserId = await getAmbientUserIdForVirtualPlayer(
+      supabase,
+      profile.virtualPlayerId,
+      { preferCreator: profile.isCreator }
+    );
+    if (ambientUserId) {
+      profile = { ...profile, userId: ambientUserId };
+    }
+  }
 
   if (!profile.equippedTitle && options.fallbackEquippedTitle) {
     return {

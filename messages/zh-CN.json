@@ -410,6 +410,9 @@
     "revenueRecentTitle": "最近打赏记录",
     "revenueRecentDesc": "玩家随喜赞助的最新动态",
     "revenueRecentEmpty": "尚无打赏记录",
+    "revenueRecentUnknownPlayer": "未知玩家",
+    "revenueRecentPlayerId": "ID {id}",
+    "revenueRecentPublicAnonymous": "公开支持者墙匿名",
     "revenueTimeJustNow": "刚刚",
     "revenueTimeHours": "{count} 小时前",
     "revenueTimeDays": "{count} 天前",
@@ -762,6 +765,9 @@
     "publicProfile": "公开资料",
     "displayName": "显示名称",
     "displayNamePlaceholder": "在讨论区与全站显示的昵称",
+    "bio": "自我介绍",
+    "bioPlaceholder": "介绍一下自己吧",
+    "bioHint": "{count} / {max} 字",
     "website": "个人网站",
     "twitter": "Twitter / X 账号",
     "accountInfo": "账户信息",
@@ -783,7 +789,9 @@
     "settingsHint": "外观、通知与系统偏好请至",
     "region": "区域",
     "regionHint": "根据你的 IP 位址自动侦测，会显示于玩家资料卡",
-    "regionUnknown": "无法侦测"
+    "regionUnknown": "无法侦测",
+    "playerId": "ID",
+    "playerIdHint": "注册时自动分配的唯一编号，联系客服时可提供此 ID"
   },
   "settings": {
     "title": "设置",
@@ -1592,6 +1600,7 @@
     "tipsEnabled": "可打赏",
     "followBtn": "追踪创作者",
     "unfollowBtn": "已追踪",
+    "followersLabel": "追踪者",
     "followerCount": "{count} 位追踪者",
     "followFailed": "追踪操作失败"
   },
@@ -1742,6 +1751,9 @@
     "playerCardViewProfile": "查看我的档案",
     "playerCardViewCreator": "查看创作者主页",
     "playerCardRegion": "区域",
+    "playerCardPlayerId": "ID",
+    "playerCardBio": "自我介绍",
+    "playerCardBioEmpty": "尚未填写自我介绍",
     "playerCardLoadFailed": "载入玩家资料失败",
     "playerCardOnlineTime": "在线时长",
     "playerCardPlayTime": "游玩时长",
@@ -1751,6 +1763,7 @@
     "playerCardForumPosts": "论坛发文",
     "playerCardDonated": "打赏支出",
     "playerCardFollowers": "追踪者",
+    "playerCardFollowersOnly": "追踪者",
     "playerCardPublishedGames": "发布作品",
     "playerCardRecentAchievements": "近期成就"
   }

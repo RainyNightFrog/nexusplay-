@@ -16,6 +16,7 @@ import { syncUserCountryFromRequest } from "@/lib/chat-player-profile-service";
 
 type ProfilePatchBody = {
   display_name?: string;
+  bio?: string;
   website?: string;
   twitter?: string;
   playing_games?: boolean;
@@ -87,6 +88,10 @@ export async function PATCH(request: Request) {
       body.display_name ?? currentProfile.display_name,
       PROFILE_LIMITS.displayName
     );
+    const bioRaw =
+      body.bio !== undefined
+        ? sanitizePlainText(body.bio, PROFILE_LIMITS.bio)
+        : (currentProfile.bio ?? "");
     const websiteRaw =
       body.website !== undefined
         ? sanitizePlainText(body.website, PROFILE_LIMITS.website)
@@ -104,6 +109,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "請輸入顯示名稱" }, { status: 400 });
     }
 
+    const bio = bioRaw || "";
     const website = websiteRaw ? normalizeWebsite(websiteRaw) : "";
     const twitter = twitterRaw ? normalizeTwitterHandle(twitterRaw) : "";
     const supportEmail = supportEmailRaw
@@ -142,6 +148,7 @@ export async function PATCH(request: Request) {
 
     const metadata = {
       display_name: displayName,
+      bio: bio || null,
       website: website || null,
       twitter: twitter || null,
       playing_games: playingGames,
@@ -164,6 +171,7 @@ export async function PATCH(request: Request) {
       .update({
         display_name: displayName,
         support_email: supportEmail || null,
+        bio: bio || null,
         ...(isAdmin ? {} : { role: resolveRoleFromPreferences(developingGames) }),
       })
       .eq("id", user.id);

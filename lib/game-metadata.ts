@@ -289,15 +289,50 @@ function parseJsonArray(raw: string): unknown[] {
 }
 
 function parseTags(raw: string): string[] {
-  const items = parseJsonArray(raw)
-    .map((item) => String(item).trim())
-    .filter(Boolean);
+  return parseTagsFromRecord(parseJsonArray(raw));
+}
 
-  const valid = items.filter((item): item is GameTag =>
-    (GAME_TAGS as readonly string[]).includes(item)
-  );
+/** 從資料庫紀錄或草稿 JSON 解析子標籤 */
+export function parseTagsFromRecord(value: unknown): GameTag[] {
+  let items: unknown[] = [];
+
+  if (Array.isArray(value)) {
+    items = value;
+  } else if (typeof value === "string" && value.trim()) {
+    items = parseJsonArray(value);
+  }
+
+  const valid = items
+    .map((item) => String(item).trim())
+    .filter(Boolean)
+    .filter((item): item is GameTag =>
+      (GAME_TAGS as readonly string[]).includes(item)
+    );
 
   return [...new Set(valid)].slice(0, MAX_GAME_TAGS);
+}
+
+/** 合併伺服器與本機草稿：已儲存的子標籤不會被空草稿覆蓋 */
+export function mergeGamePublishMetadata(
+  server: GamePublishMetadata,
+  draft: GamePublishMetadata
+): GamePublishMetadata {
+  return {
+    ...server,
+    ...draft,
+    tags: draft.tags.length > 0 ? draft.tags : server.tags,
+    viewportWidth: draft.viewportWidth ?? server.viewportWidth,
+    viewportHeight: draft.viewportHeight ?? server.viewportHeight,
+    fullscreenButton: draft.fullscreenButton ?? server.fullscreenButton,
+    aiDisclosed: draft.aiDisclosed ?? server.aiDisclosed,
+    aiContentTypes:
+      draft.aiContentTypes.length > 0
+        ? draft.aiContentTypes
+        : server.aiContentTypes,
+    detailsHtml: draft.detailsHtml.trim()
+      ? draft.detailsHtml
+      : server.detailsHtml,
+  };
 }
 
 function parseAiContentTypes(raw: string): AiContentType[] {
@@ -430,14 +465,8 @@ export function metadataFromGameRecord(record: {
   ai_content_types?: unknown;
   details_html?: string;
 }): GamePublishMetadata {
-  const rawTags = Array.isArray(record.tags)
-    ? record.tags.map(String)
-    : [];
-
   return {
-    tags: rawTags.filter((tag): tag is GameTag =>
-      (GAME_TAGS as readonly string[]).includes(tag)
-    ),
+    tags: parseTagsFromRecord(record.tags),
     viewportWidth: record.viewport_width ?? DEFAULT_VIEWPORT_WIDTH,
     viewportHeight: record.viewport_height ?? DEFAULT_VIEWPORT_HEIGHT,
     fullscreenButton: record.fullscreen_button ?? true,

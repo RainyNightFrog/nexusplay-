@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Loader2, UserPlus, UserMinus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
@@ -16,6 +16,9 @@ type FollowCreatorButtonProps = {
   compact?: boolean;
   showFollowerCount?: boolean;
   centered?: boolean;
+  layout?: "inline" | "stacked";
+  align?: "start" | "end";
+  localOnly?: boolean;
 };
 
 export function FollowCreatorButton({
@@ -26,6 +29,9 @@ export function FollowCreatorButton({
   compact = false,
   showFollowerCount = true,
   centered = false,
+  layout = "inline",
+  align = "start",
+  localOnly = false,
 }: FollowCreatorButtonProps) {
   const t = useTranslations("creatorPublic");
   const router = useRouter();
@@ -33,8 +39,11 @@ export function FollowCreatorButton({
   const [following, setFollowing] = useState(initialFollowing);
   const [followerCount, setFollowerCount] = useState(initialFollowerCount);
   const [submitting, setSubmitting] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const hasLocalFollowChange = useRef(false);
 
   useEffect(() => {
+    if (localOnly) return;
     let cancelled = false;
 
     void fetch(`/api/creators/${creatorId}/follow`, {
@@ -56,14 +65,28 @@ export function FollowCreatorButton({
     return () => {
       cancelled = true;
     };
-  }, [creatorId]);
+  }, [creatorId, localOnly]);
 
-  if (profile?.id === creatorId) {
+  useEffect(() => {
+    if (localOnly && hasLocalFollowChange.current) return;
+    setFollowerCount(initialFollowerCount);
+  }, [initialFollowerCount, localOnly]);
+
+  if (profile?.id === creatorId && !localOnly) {
     if (!showFollowerCount) return null;
     return (
-      <p className={cn("text-sm text-zinc-500", className)}>
-        {t("followerCount", { count: followerCount })}
-      </p>
+      <div
+        className={cn(
+          "flex flex-col gap-1",
+          align === "end" ? "items-end text-right" : "items-start",
+          className
+        )}
+      >
+        <span className="text-xs font-medium text-zinc-500">{t("followersLabel")}</span>
+        <p className="text-sm font-semibold text-zinc-200">
+          {t("followerCount", { count: followerCount })}
+        </p>
+      </div>
     );
   }
 
@@ -73,7 +96,16 @@ export function FollowCreatorButton({
       return;
     }
 
+    if (localOnly) {
+      const willFollow = !following;
+      hasLocalFollowChange.current = true;
+      setFollowing(willFollow);
+      setFollowerCount((count) => Math.max(0, count + (willFollow ? 1 : -1)));
+      return;
+    }
+
     setSubmitting(true);
+    setActionError(null);
     try {
       const response = await fetch(`/api/creators/${creatorId}/follow`, {
         method: following ? "DELETE" : "POST",
@@ -90,8 +122,10 @@ export function FollowCreatorButton({
       if (typeof data.followerCount === "number") {
         setFollowerCount(data.followerCount);
       }
-    } catch {
-      // keep current state
+    } catch (error) {
+      setActionError(
+        error instanceof Error ? error.message : t("followFailed")
+      );
     } finally {
       setSubmitting(false);
     }
@@ -100,14 +134,19 @@ export function FollowCreatorButton({
   return (
     <div
       className={cn(
+        layout === "stacked"
+          ? cn("flex flex-col gap-1.5", align === "end" ? "items-end" : "items-start")
+          : "",
         centered ? "flex flex-col items-center" : "",
         className
       )}
     >
       <div
         className={cn(
-          "flex flex-wrap items-center gap-3",
-          centered && "justify-center"
+          "flex flex-wrap items-center gap-2",
+          centered && "justify-center",
+          layout === "stacked" &&
+            cn("flex-col gap-1.5", align === "end" ? "items-end" : "items-start")
         )}
       >
         <Button
@@ -118,25 +157,33 @@ export function FollowCreatorButton({
           variant={following ? "outline" : "default"}
           className={
             following
-              ? "gap-2 border-white/10 bg-white/5 text-zinc-200"
-              : "gap-2 bg-violet-600 hover:bg-violet-500"
+              ? "h-8 gap-1.5 border-white/10 bg-white/5 px-3 text-xs text-zinc-200 sm:text-sm"
+              : "h-8 gap-1.5 bg-violet-600 px-3 text-xs hover:bg-violet-500 sm:text-sm"
           }
         >
           {submitting ? (
-            <Loader2 className="size-4 animate-spin" />
+            <Loader2 className="size-3.5 animate-spin" />
           ) : following ? (
-            <UserMinus className="size-4" />
+            <UserMinus className="size-3.5" />
           ) : (
-            <UserPlus className="size-4" />
+            <UserPlus className="size-3.5" />
           )}
           {following ? t("unfollowBtn") : t("followBtn")}
         </Button>
         {showFollowerCount && (
-          <p className="text-sm text-zinc-500">
+          <p
+            className={cn(
+              "text-xs text-zinc-500 sm:text-sm",
+              align === "end" && "text-right"
+            )}
+          >
             {t("followerCount", { count: followerCount })}
           </p>
         )}
       </div>
+      {actionError && (
+        <p className="mt-1 max-w-[12rem] text-xs text-rose-300">{actionError}</p>
+      )}
     </div>
   );
 }

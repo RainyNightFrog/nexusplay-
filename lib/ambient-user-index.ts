@@ -32,3 +32,28 @@ export async function getAmbientUserPlayerMap(
   cachedAt = Date.now();
   return map;
 }
+
+export async function getAmbientUserIdForVirtualPlayer(
+  supabase: SupabaseClient,
+  virtualPlayerId: string,
+  options?: { preferCreator?: boolean }
+): Promise<string | null> {
+  const map = await getAmbientUserPlayerMap(supabase);
+  const matches: string[] = [];
+  for (const [userId, playerId] of map.entries()) {
+    if (playerId === virtualPlayerId) matches.push(userId);
+  }
+  if (matches.length === 0) return null;
+  if (!options?.preferCreator) return matches[0] ?? null;
+
+  for (const userId of matches) {
+    const { data } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", userId)
+      .maybeSingle();
+    if (data?.role === "creator") return userId;
+  }
+
+  return matches[0] ?? null;
+}

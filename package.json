@@ -19,6 +19,8 @@
     "db:publish-metadata": "node scripts/run-game-publish-metadata.mjs",
     "db:tip-fee-lock": "node scripts/run-tip-fee-lock.mjs",
     "db:profile-settings": "node scripts/run-profile-settings-extended.mjs",
+    "db:profile-bio": "node scripts/run-profile-bio.mjs",
+    "db:profile-player-number": "node scripts/run-profile-player-number.mjs",
     "db:creator-payout": "node scripts/run-creator-payout-stripe.mjs",
     "db:game-tips": "node scripts/run-game-tips.mjs",
     "db:payment-safety": "node scripts/run-payment-safety.mjs",

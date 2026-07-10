@@ -8,6 +8,7 @@ import {
   AtSign,
   Camera,
   Check,
+  FileText,
   Globe,
   Loader2,
   Mail,
@@ -15,6 +16,7 @@ import {
   Settings,
   Shield,
   UserRound,
+  Hash,
 } from "lucide-react";
 import { Link, useRouter } from "@/i18n/navigation";
 import { AchievementsModal } from "@/components/AchievementsModal";
@@ -22,7 +24,9 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { formatCountryName } from "@/lib/request-geo";
+import { formatPlayerIdLabel } from "@/lib/player-id";
 import { getInitials } from "@/lib/auth";
 import { useAuth } from "@/hooks/use-auth";
 import { useApiError } from "@/hooks/use-api-error";
@@ -36,6 +40,7 @@ import {
 } from "@/components/settings/account-shell";
 import { UserBadge } from "@/components/UserBadge";
 import { cn } from "@/lib/utils";
+import { PROFILE_LIMITS } from "@/lib/profile-settings";
 
 export default function ProfilePage() {
   const t = useTranslations("profile");
@@ -50,6 +55,7 @@ export default function ProfilePage() {
   const [email, setEmail] = useState<string | null>(null);
   const [countryCode, setCountryCode] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState("");
+  const [bio, setBio] = useState("");
   const [website, setWebsite] = useState("");
   const [twitter, setTwitter] = useState("");
   const [playingGames, setPlayingGames] = useState(true);
@@ -76,6 +82,7 @@ export default function ProfilePage() {
     }
 
     setDisplayName(profile.display_name);
+    setBio(profile.bio ?? "");
     setWebsite(profile.website ?? "");
     setTwitter(profile.twitter ?? "");
     setPlayingGames(profile.playing_games);
@@ -160,6 +167,7 @@ export default function ProfilePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           display_name: displayName.trim(),
+          bio: bio.trim(),
           website: website.trim(),
           twitter: twitter.trim(),
           playing_games: playingGames,
@@ -297,6 +305,29 @@ export default function ProfilePage() {
 
               <div className={accountFieldClassName}>
                 <Label
+                  htmlFor="bio"
+                  className={cn(accountLabelClassName, "flex items-center justify-center gap-2")}
+                >
+                  <FileText className="size-4 text-emerald-400" />
+                  {t("bio")}
+                </Label>
+                <Textarea
+                  id="bio"
+                  value={bio}
+                  maxLength={PROFILE_LIMITS.bio}
+                  rows={4}
+                  onChange={(event) => setBio(event.target.value)}
+                  className={cn(accountInputClassName, "min-h-24 resize-y text-center")}
+                  placeholder={t("bioPlaceholder")}
+                  disabled={saving}
+                />
+                <p className="text-center text-xs text-zinc-600">
+                  {t("bioHint", { count: bio.length, max: PROFILE_LIMITS.bio })}
+                </p>
+              </div>
+
+              <div className={accountFieldClassName}>
+                <Label
                   htmlFor="website"
                   className={cn(accountLabelClassName, "flex items-center justify-center gap-2")}
                 >
@@ -340,6 +371,24 @@ export default function ProfilePage() {
                 <Shield className="size-4 text-violet-400" />
                 {t("accountInfo")}
               </h2>
+
+              <div className={accountFieldClassName}>
+                <Label htmlFor="playerId" className={accountLabelClassName}>
+                  {t("playerId")}
+                </Label>
+                <div
+                  className={cn(
+                    accountInputClassName,
+                    "flex items-center justify-center gap-2 font-mono text-zinc-200"
+                  )}
+                >
+                  <Hash className="size-4 shrink-0 text-cyan-400" />
+                  <span id="playerId">
+                    {formatPlayerIdLabel(profile.player_number) ?? "—"}
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-600">{t("playerIdHint")}</p>
+              </div>
 
               <div className={accountFieldClassName}>
                 <Label htmlFor="email" className={accountLabelClassName}>

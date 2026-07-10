@@ -33,7 +33,7 @@ export async function resolveUserProfile(
 
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("id, display_name, avatar_url, role, created_at, support_email, equipped_title_id")
+    .select("id, display_name, avatar_url, role, created_at, support_email, equipped_title_id, bio, player_number")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -47,6 +47,12 @@ export async function resolveUserProfile(
 
     return {
       ...metadataProfile,
+      player_number:
+        typeof profile.player_number === "number"
+          ? profile.player_number
+          : profile.player_number != null
+            ? Number(profile.player_number) || null
+            : null,
       display_name: profile.display_name || metadataProfile.display_name,
       avatar_url: profile.avatar_url ?? metadataProfile.avatar_url,
       role: isAdmin ? "player" : resolveRoleFromPreferences(developingGames),
@@ -54,6 +60,7 @@ export async function resolveUserProfile(
       created_at: profile.created_at ?? metadataProfile.created_at,
       developing_games: developingGames,
       support_email: readOptionalString(profile.support_email),
+      bio: readOptionalString(profile.bio) ?? metadataProfile.bio,
       equipped_title_id: profile.equipped_title_id ?? null,
       equipped_title: equippedTitle,
     };

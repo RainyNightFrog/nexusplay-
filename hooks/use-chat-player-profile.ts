@@ -24,7 +24,7 @@ export function useChatPlayerProfile(
       if (player.virtualPlayerId) {
         params.set("virtualPlayerId", player.virtualPlayerId);
       }
-      if (player.userId && !player.isVirtual) {
+      if (player.userId) {
         params.set("userId", player.userId);
       }
 

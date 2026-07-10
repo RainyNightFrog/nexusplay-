@@ -35,12 +35,14 @@ export type RevenueBreakdownRow = {
 
 export type RecentTipRow = {
   id: string;
-  playerLabel: string;
+  payerName: string | null;
+  payerId: string;
+  payerPlayerNumber: number | null;
   gameTitle: string;
   amount: number;
   status?: "preview" | "live";
-  relativeTimeKey: "revenueTimeJustNow" | "revenueTimeHours" | "revenueTimeDays";
-  relativeTimeValue?: number;
+  createdAt: string;
+  publicAnonymous?: boolean;
 };
 
 export type DashboardRevenueAnalytics = {

@@ -26,6 +26,7 @@ export function profileFromUserMetadata(user: User): UserProfile {
 
   return {
     id: user.id,
+    player_number: null,
     display_name:
       (typeof metadata.display_name === "string" && metadata.display_name.trim()) ||
       user.email?.split("@")[0] ||
@@ -35,6 +36,7 @@ export function profileFromUserMetadata(user: User): UserProfile {
     role: isAdmin ? "player" : resolveRoleFromPreferences(developingGames),
     is_admin: isAdmin,
     created_at: user.created_at,
+    bio: readOptionalString(metadata.bio),
     website: readOptionalString(metadata.website),
     twitter: readOptionalString(metadata.twitter),
     playing_games: readBoolean(metadata.playing_games, true),

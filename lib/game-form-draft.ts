@@ -5,7 +5,7 @@ import {
   clampViewportWidth,
   DEFAULT_GAME_PUBLISH_METADATA,
   GAME_GENRES,
-  GAME_TAGS,
+  parseTagsFromRecord,
   type GameGenre,
   type GamePublishMetadata,
 } from "@/lib/game-metadata";
@@ -49,11 +49,11 @@ function parseMetadata(value: unknown): GamePublishMetadata {
   }
 
   const rawTags = Array.isArray(value.tags)
-    ? value.tags.map(String).filter(Boolean)
-    : [];
-  const tags = rawTags.filter((tag): tag is (typeof GAME_TAGS)[number] =>
-    (GAME_TAGS as readonly string[]).includes(tag)
-  );
+    ? value.tags
+    : typeof value.tags === "string"
+      ? value.tags
+      : [];
+  const tags = parseTagsFromRecord(rawTags);
 
   const rawAiTypes = Array.isArray(value.aiContentTypes)
     ? value.aiContentTypes.map(String)

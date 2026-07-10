@@ -3,11 +3,19 @@
 -- 請在 Supabase Dashboard → SQL Editor 中執行
 -- ============================================================
 
+create sequence if not exists public.profile_player_number_seq
+  as bigint
+  start with 100001
+  increment by 1
+  no maxvalue
+  cache 1;
+
 create table if not exists public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   display_name text not null,
   avatar_url text,
   role text not null default 'player' check (role in ('player', 'creator')),
+  player_number bigint unique,
   created_at timestamptz not null default now()
 );
 
@@ -40,14 +48,15 @@ begin
     selected_role := 'player';
   end if;
 
-  insert into public.profiles (id, display_name, role)
+  insert into public.profiles (id, display_name, role, player_number)
   values (
     new.id,
     coalesce(
       nullif(trim(new.raw_user_meta_data->>'display_name'), ''),
       split_part(new.email, '@', 1)
     ),
-    selected_role
+    selected_role,
+    nextval('public.profile_player_number_seq')
   )
   on conflict (id) do nothing;
 
