@@ -20,6 +20,7 @@
     "searchPlaceholder": "Spiele, Tags oder Creator suchen...",
     "home": "Startseite",
     "backHome": "Zurück zur Startseite",
+    "scrollToTop": "Nach oben",
     "userMenu": "Benutzermenü",
     "profile": "Profil",
     "settings": "Einstellungen",
@@ -49,7 +50,8 @@
     "fetchError": "Bestenlisten konnten nicht geladen werden. Stellen Sie sicher, dass der Entwicklungsserver läuft, oder bitten Sie einen Administrator, die Datenbankeinrichtung auszuführen.",
     "pagePrev": "Zurück",
     "pageNext": "Als nächstes",
-    "pageInfo": "Seite {current} / {total}"
+    "pageInfo": "Seite {current} / {total}",
+    "backToFirstPage": "Zur ersten Seite"
   },
   "common": {
     "404": "Seite nicht gefunden",
@@ -268,6 +270,7 @@
     "rssForum": "Forum-RSS",
     "atomFeed": "Atom-Feed",
     "feedsHub": "Futternabe",
+    "feedsHubAll": "Vollständiger Feed-Hub",
     "opmlFeed": "OPML-Export",
     "favoritesSectionTitle": "Meine Favoriten",
     "favoritesSectionDesc": "Springen Sie zurück zu den Spielen, die Sie lieben",
@@ -1687,6 +1690,22 @@
     "achievementCompleted": "Leistung geschafft",
     "achievementInProgress": "In Bearbeitung",
     "noEquipped": "Kein Titel vorhanden"
+  },
+  "about": {
+    "metaTitle": "Über uns · RainyNightFrog",
+    "metaDesc": "Erfahren Sie mehr über RainyNightFrog, wie Sie mitmachen können und wie Sie uns für Einreichungen und Partnerschaften erreichen.",
+    "title": "Über uns",
+    "intro": "RainyNightFrog ist eine kostenlose Webspiele-Plattform zum Veröffentlichen und sofortigen Spielen.",
+    "joinTitle": "Mitmachen",
+    "joinP1": "Wir heißen Creator, Spieler und Partner willkommen, die Spiele lieben.",
+    "joinP2": "Zum Veröffentlichen registrieren und im Creator-Dashboard hochladen.",
+    "contactTitle": "Einreichungen & Partnerschaften",
+    "contactP1": "Für Spieleinreichungen, Partnerschaften oder geschäftliche Anfragen schreiben Sie uns an:",
+    "backHome": "Zur Startseite",
+    "navAbout": "Über uns",
+    "footerTitle": "Über uns",
+    "footerJoin": "RainyNightFrog heißt Creator und Spieler willkommen.",
+    "footerContact": "Für Einreichungen und Partnerschaften:"
   },
   "chat": {
     "title": "Live-Chat",

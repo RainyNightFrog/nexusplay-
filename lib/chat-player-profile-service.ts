@@ -2,7 +2,7 @@ import { getAmbientUserPlayerMap } from "@/lib/ambient-user-index";
 import { getVirtualPlayerActivityStats } from "@/lib/platform-leaderboard-virtual";
 import { isUserOnline } from "@/lib/platform-leaderboard";
 import { resolveEquippedTitleForUser } from "@/lib/equipped-title-service";
-import { getVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
+import { resolveVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
 import { getVirtualPlayerSocialStats } from "@/lib/virtual-player-public-profile";
 import {
   getCountryCodeFromHeaders,
@@ -201,7 +201,7 @@ async function loadVirtualPlayerProfile(
     userId: null,
     virtualPlayerId,
     displayName: player.displayName,
-    avatarUrl: getVirtualPlayerAvatarUrl(virtualPlayerId),
+    avatarUrl: resolveVirtualPlayerAvatarUrl(virtualPlayerId),
     equippedTitle: null,
     isCreator,
     isVirtual: true,

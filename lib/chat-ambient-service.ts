@@ -7,6 +7,10 @@ import {
   type AmbientChatSingle,
 } from "@/lib/chat-ambient-content";
 import { pickRandom, pickWithoutRepeat } from "@/lib/chat-ambient-pick";
+import {
+  filterAmbientByTimeSlot,
+  getCurrentAmbientTimeSlot,
+} from "@/lib/chat-ambient-time";
 import type { ChatChannel } from "@/lib/chat";
 import { CHAT_LIMITS } from "@/lib/chat";
 import { createServerSupabase } from "@/lib/supabase-server";
@@ -19,6 +23,7 @@ import {
   type VirtualPlayer,
   type VirtualPlayerLocale,
 } from "@/lib/virtual-players";
+import { resolveVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 const WORLD_DIALOGUE_CHANCE = 0.5;
@@ -74,13 +79,23 @@ function pickLocale(): VirtualPlayerLocale {
   return "en";
 }
 
+function applyTimeSlotPool<T>(
+  pool: T[],
+  getText: (item: T) => string | string[]
+): T[] {
+  const slot = getCurrentAmbientTimeSlot();
+  const filtered = filterAmbientByTimeSlot(pool, slot, getText);
+  return filtered.length > 0 ? filtered : pool;
+}
+
 function pickWorldSingle(
   locale: VirtualPlayerLocale | undefined,
   recent: Set<string>
 ): AmbientChatSingle {
-  const pool = locale
+  const base = locale
     ? AMBIENT_CHAT_SINGLES.filter((line) => line.locale === locale)
     : AMBIENT_CHAT_SINGLES;
+  const pool = applyTimeSlotPool(base, (line) => line.content);
   return pickWithoutRepeat(pool, recent, (line) => line.content);
 }
 
@@ -88,9 +103,10 @@ function pickCreatorSingle(
   locale: VirtualPlayerLocale | undefined,
   recent: Set<string>
 ): AmbientChatSingle {
-  const pool = locale
+  const base = locale
     ? AMBIENT_CREATOR_SINGLES.filter((line) => line.locale === locale)
     : AMBIENT_CREATOR_SINGLES;
+  const pool = applyTimeSlotPool(base, (line) => line.content);
   return pickWithoutRepeat(pool, recent, (line) => line.content);
 }
 
@@ -99,8 +115,9 @@ function pickDialogue(
   locale: VirtualPlayerLocale | undefined,
   recent: Set<string>
 ): AmbientChatDialogue {
-  const filtered = locale ? pool.filter((line) => line.locale === locale) : pool;
-  return pickWithoutRepeat(filtered, recent, (line) => line.lines);
+  const byLocale = locale ? pool.filter((line) => line.locale === locale) : pool;
+  const timePool = applyTimeSlotPool(byLocale, (line) => line.lines);
+  return pickWithoutRepeat(timePool, recent, (line) => line.lines);
 }
 
 function pickWorldDialogue(
@@ -151,6 +168,7 @@ async function syncAmbientPlayerProfile(
     {
       id: userId,
       display_name: player.displayName,
+      avatar_url: resolveVirtualPlayerAvatarUrl(player.id),
       role,
     },
     { onConflict: "id" }

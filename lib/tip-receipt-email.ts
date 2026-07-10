@@ -1,5 +1,6 @@
 import { sendEmail, isEmailConfigured } from "@/lib/email-service";
 import { formatBillingLines, type TipReceipt } from "@/lib/tip-receipt";
+import { getSiteUrl } from "@/lib/site-url";
 import { createServerSupabase } from "@/lib/supabase-server";
 
 function escapeHtml(value: string) {
@@ -12,6 +13,7 @@ function escapeHtml(value: string) {
 
 export function buildTipReceiptEmailContent(receipt: TipReceipt) {
   const billingLines = formatBillingLines(receipt.billing);
+  const logoUrl = `${getSiteUrl()}/brand/rainynightfrog-logo.png`;
   const billingHtml =
     billingLines.length > 0
       ? `<p><strong>帳單地址</strong><br/>${billingLines.map((line) => escapeHtml(line)).join("<br/>")}</p>`
@@ -19,6 +21,7 @@ export function buildTipReceiptEmailContent(receipt: TipReceipt) {
 
   const html = `
     <div style="font-family:sans-serif;line-height:1.6;color:#111;">
+      <img src="${logoUrl}" alt="RainyNightFrog" width="200" style="display:block;height:auto;max-width:200px;margin:0 0 16px;" />
       <h2 style="margin:0 0 12px;">RainyNightFrog 打賞收據</h2>
       <p>感謝你支持創作者！</p>
       <table style="border-collapse:collapse;margin:16px 0;">

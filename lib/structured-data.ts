@@ -13,6 +13,11 @@ export function buildWebSiteJsonLd(locale: string): JsonLdObject {
     "@type": "WebSite",
     name: "RainyNightFrog",
     url: absoluteUrl(locale, "/"),
+    publisher: {
+      "@type": "Organization",
+      name: "RainyNightFrog",
+      logo: `${siteUrl}/brand/rainynightfrog-logo.png`,
+    },
     potentialAction: {
       "@type": "SearchAction",
       target: {
@@ -97,10 +102,13 @@ export function buildPersonJsonLd({
 }
 
 export function buildOrganizationJsonLd(): JsonLdObject {
+  const siteUrl = getSiteUrl();
+
   return {
     "@context": "https://schema.org",
     "@type": "Organization",
     name: "RainyNightFrog",
-    url: getSiteUrl(),
+    url: siteUrl,
+    logo: `${siteUrl}/brand/rainynightfrog-logo.png`,
   };
 }

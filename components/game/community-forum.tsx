@@ -51,6 +51,7 @@ import {
   isSeedForumUserId,
 } from "@/lib/forum-seed-builder";
 import { getVirtualPlayerById } from "@/lib/virtual-players";
+import { resolveVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
 import { cn } from "@/lib/utils";
 
 type GameOption = { id: number; title: string };
@@ -207,7 +208,7 @@ export function CommunityForum({
             virtualPlayerToPlayerPreview({
               id: player.id,
               displayName: name,
-              avatarUrl: null,
+              avatarUrl: resolveVirtualPlayerAvatarUrl(player.id),
               equippedTitle,
             })
           );

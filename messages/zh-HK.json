@@ -20,6 +20,7 @@
     "searchPlaceholder": "搜尋遊戲、標籤或創作者...",
     "home": "首頁",
     "backHome": "返回首頁",
+    "scrollToTop": "置頂",
     "userMenu": "使用者選單",
     "profile": "個人資料",
     "settings": "設定",
@@ -184,7 +185,8 @@
     "loggedInHint": "你的在線與遊玩時長會自動累計至排行榜",
     "pagePrev": "上一頁",
     "pageNext": "下一頁",
-    "pageInfo": "第 {current} / {total} 頁"
+    "pageInfo": "第 {current} / {total} 頁",
+    "backToFirstPage": "返回第一頁"
   },
   "common": {
     "404": "找不到頁面",
@@ -305,6 +307,7 @@
     "atomFeed": "Atom 訂閱",
     "rssForum": "論壇 RSS",
     "feedsHub": "訂閱中心",
+    "feedsHubAll": "完整訂閱中心",
     "opmlFeed": "OPML 匯出",
     "socialNavLabel": "官方社群連結",
     "socialX": "X 官網",
@@ -1676,6 +1679,22 @@
     "disclaimerP1": "RainyNightFrog 不對用戶上傳的遊戲內容、創作者聲明或玩家間互動承擔全部責任。遊戲由創作者提供，平台僅提供托管與展示。",
     "disclaimerP2": "平台依「現狀」提供服務，不保證不間斷或無錯誤運作。因網路、第三方服務或不可抗力導致的損失，在法律允許範圍內我們不負賠償責任。",
     "disclaimerP3": "打賞收益、稅務申報與當地法規遵循（含消費者保護、反洗錢等）由創作者與付款玩家自行了解；必要時請諮詢專業顧問。"
+  },
+  "about": {
+    "metaTitle": "關於我們 · RainyNightFrog",
+    "metaDesc": "了解 RainyNightFrog 平台願景、加入我們的方式，以及投稿與合作聯絡方式。",
+    "title": "關於我們",
+    "intro": "RainyNightFrog 是一個免費網頁遊戲平台，讓創作者輕鬆發布作品、玩家即時開玩。我們持續擴充平台功能，打造公平透明的遊戲社群。",
+    "joinTitle": "加入我們",
+    "joinP1": "我們歡迎熱愛遊戲的創作者、玩家與夥伴加入 RainyNightFrog。你可以上傳原創或授權允許的網頁遊戲、參與社群討論、支持喜愛的創作者，一起壯大這個零平台費的遊戲宇宙。",
+    "joinP2": "想成為創作者？註冊帳號後於創作者中心上傳遊戲即可；我們也持續招募對平台營運、社群與技術有熱忱的協作者。",
+    "contactTitle": "投稿與合作",
+    "contactP1": "如有遊戲投稿、平台合作、商務洽詢或其他建議，歡迎電郵聯絡我們：",
+    "backHome": "返回首頁",
+    "navAbout": "關於我們",
+    "footerTitle": "關於我們",
+    "footerJoin": "RainyNightFrog 歡迎創作者與玩家加入，一起發布、遊玩與支持網頁遊戲。",
+    "footerContact": "如需投稿合作聯絡："
   },
   "chat": {
     "title": "即時聊天",

@@ -8,7 +8,7 @@ import { ChatInput } from "@/components/chat/chat-input";
 import { UserBadge } from "@/components/UserBadge";
 import { useVirtualContacts, useVirtualDm } from "@/hooks/use-virtual-dm";
 import type { EquippedTitle } from "@/lib/titles";
-import { getVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
+import { resolveVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
 import { getVirtualPlayerById } from "@/lib/virtual-players";
 import { cn } from "@/lib/utils";
 
@@ -227,9 +227,7 @@ export function ChatContactsPanel({
         return {
           id: player.id,
           displayName: player.displayName,
-          avatarUrl:
-            getVirtualPlayerAvatarUrl(player.id) ??
-            `https://api.dicebear.com/9.x/notionists/png?seed=${encodeURIComponent(player.id)}&size=128`,
+          avatarUrl: resolveVirtualPlayerAvatarUrl(player.id),
           lastMessage: null,
           lastMessageAt: null,
           equippedTitle: null,

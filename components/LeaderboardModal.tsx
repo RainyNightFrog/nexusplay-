@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Crown, ChevronLeft, ChevronRight, Loader2, Medal, RefreshCw, Trophy } from "lucide-react";
+import { Crown, ArrowLeft, ChevronLeft, ChevronRight, Loader2, Medal, RefreshCw, Trophy } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Dialog,
@@ -604,6 +604,20 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
               </div>
             </div>
           </Tabs>
+
+          <div className="shrink-0 border-t border-white/5 pt-3 text-center">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={pageByTab[activeTab] <= 1}
+              onClick={() => setTabPage(activeTab, 1)}
+              className="gap-1.5 border-white/10 bg-white/5 text-zinc-300 hover:border-cyan-400/30 hover:text-cyan-300"
+            >
+              <ArrowLeft className="size-4" />
+              {t("backToFirstPage")}
+            </Button>
+          </div>
 
           {profile && (
             <p className="shrink-0 border-t border-white/5 pt-3 text-center text-xs text-zinc-500">

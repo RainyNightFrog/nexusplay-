@@ -1,7 +1,7 @@
 import { pickVirtualDmReply } from "@/lib/virtual-dm-replies";
 import type { VirtualContactSummary, VirtualDmMessage } from "@/lib/virtual-dm";
 import { VIRTUAL_DM_LIMITS } from "@/lib/virtual-dm";
-import { getVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
+import { resolveVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
 import { getVirtualPlayerById } from "@/lib/virtual-players";
 import { createServerSupabase } from "@/lib/supabase-server";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -72,9 +72,7 @@ export async function listVirtualContacts(
         id: player.id,
         displayName: player.displayName,
         locale: player.locale,
-        avatarUrl:
-          getVirtualPlayerAvatarUrl(player.id) ??
-          `https://api.dicebear.com/9.x/notionists/png?seed=${encodeURIComponent(player.id)}&size=128`,
+        avatarUrl: resolveVirtualPlayerAvatarUrl(player.id),
         lastMessage: last.content,
         lastMessageAt: last.created_at,
         equippedTitle: null,

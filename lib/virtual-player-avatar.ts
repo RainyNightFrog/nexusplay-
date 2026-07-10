@@ -20,13 +20,15 @@ function hashString(value: string, salt: number) {
   return Math.abs(hash);
 }
 
-/** 約七成虛擬玩家顯示不同風格的生成頭像 */
-export function getVirtualPlayerAvatarUrl(playerId: string): string | null {
-  if (hashString(playerId, 91) % 10 >= 7) {
-    return null;
-  }
-
-  const style = AVATAR_STYLES[hashString(playerId, 37) % AVATAR_STYLES.length]!;
+/** 依虛擬玩家 ID 產生穩定 DiceBear 頭像 URL */
+export function resolveVirtualPlayerAvatarUrl(playerId: string): string {
+  const style =
+    AVATAR_STYLES[hashString(playerId, 37) % AVATAR_STYLES.length]!;
   const seed = encodeURIComponent(playerId);
   return `https://api.dicebear.com/9.x/${style}/png?seed=${seed}&size=128`;
+}
+
+/** @deprecated 請改用 resolveVirtualPlayerAvatarUrl */
+export function getVirtualPlayerAvatarUrl(playerId: string): string | null {
+  return resolveVirtualPlayerAvatarUrl(playerId);
 }

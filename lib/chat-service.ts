@@ -6,6 +6,7 @@ import {
   isValidChatChannel,
 } from "@/lib/chat";
 import { getAmbientUserPlayerMap } from "@/lib/ambient-user-index";
+import { resolveVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
 import { resolveEquippedTitles } from "@/lib/equipped-title-service";
 import { formatForumAuthor } from "@/lib/forum";
 import { createServerSupabase } from "@/lib/supabase-server";
@@ -61,7 +62,9 @@ function mapChatMessage(
   return {
     ...record,
     author_name: formatForumAuthor(record.user_id, displayName),
-    author_avatar_url: profile?.avatar_url ?? null,
+    author_avatar_url: virtualPlayerId
+      ? resolveVirtualPlayerAvatarUrl(virtualPlayerId)
+      : (profile?.avatar_url ?? null),
     author_equipped_title: titleMap.get(record.user_id) ?? null,
     is_creator: profile?.role === "creator",
     is_own: viewerId ? record.user_id === viewerId : false,

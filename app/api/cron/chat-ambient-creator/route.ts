@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { postAmbientCreatorChat } from "@/lib/chat-ambient-service";
+import { maintainAmbientChat } from "@/lib/chat-ambient-maintain";
 import { verifyCronSecret } from "@/lib/cron-auth";
 import { getPlatformModeStatus } from "@/lib/platform-mode";
 
@@ -8,9 +8,9 @@ export async function GET(request: Request) {
   if (authError) return authError;
 
   try {
-    const result = await postAmbientCreatorChat();
+    await maintainAmbientChat("creator");
     return NextResponse.json({
-      ...result,
+      channel: "creator",
       ...getPlatformModeStatus(),
     });
   } catch (error) {

@@ -20,6 +20,7 @@
     "searchPlaceholder": "ゲーム、タグ、クリエイターを検索...",
     "home": "ホーム",
     "backHome": "ホームに戻る",
+    "scrollToTop": "トップへ",
     "userMenu": "ユーザーメニュー",
     "profile": "プロフィール",
     "settings": "設定",
@@ -49,7 +50,8 @@
     "fetchError": "リーダーボードを読み込めませんでした。 Make sure the dev server is running, or ask an admin to run the database setup.",
     "pagePrev": "前へ",
     "pageNext": "次へ",
-    "pageInfo": "ページ {current} / {total}"
+    "pageInfo": "ページ {current} / {total}",
+    "backToFirstPage": "最初のページへ"
   },
   "common": {
     "404": "ページが見つかりません",
@@ -268,6 +270,7 @@
     "rssForum": "フォーラムの RSS",
     "atomFeed": "アトムフィード",
     "feedsHub": "フィードハブ",
+    "feedsHubAll": "フィード一覧",
     "opmlFeed": "OPML エクスポート",
     "favoritesSectionTitle": "私のお気に入り",
     "favoritesSectionDesc": "お気に入りのゲームに戻る",
@@ -1687,6 +1690,22 @@
     "achievementCompleted": "達成された成果",
     "achievementInProgress": "進行中",
     "noEquipped": "タイトルが装備されていません"
+  },
+  "about": {
+    "metaTitle": "私たちについて · RainyNightFrog",
+    "metaDesc": "RainyNightFrog のビジョン、参加方法、投稿・提携の連絡先をご案内します。",
+    "title": "私たちについて",
+    "intro": "RainyNightFrog は無料のウェブゲームプラットフォームです。クリエイターが作品を公開し、プレイヤーがすぐに遊べます。",
+    "joinTitle": "参加する",
+    "joinP1": "ゲームが好きなクリエイター、プレイヤー、パートナーの参加を歓迎します。作品をアップロードし、コミュニティに参加し、お気に入りのクリエイターを応援しましょう。",
+    "joinP2": "クリエイターになりたい方はアカウント登録後、クリエイターダッシュボードからゲームをアップロードできます。",
+    "contactTitle": "投稿・提携",
+    "contactP1": "ゲーム投稿、プラットフォーム提携、ビジネスに関するお問い合わせはこちら：",
+    "backHome": "ホームに戻る",
+    "navAbout": "私たちについて",
+    "footerTitle": "私たちについて",
+    "footerJoin": "RainyNightFrog はクリエイターとプレイヤーの参加を歓迎します。",
+    "footerContact": "投稿・提携のお問い合わせ："
   },
   "chat": {
     "title": "ライブチャット",

@@ -157,6 +157,7 @@ export function renderForumDigestHtml(
     : "";
 
   return `<div style="font-family:sans-serif;color:#fafafa;background:#09090b;padding:24px">
+  <img src="${getSiteUrl()}/brand/rainynightfrog-logo.png" alt="RainyNightFrog" width="200" style="display:block;height:auto;max-width:200px;margin:0 0 16px;" />
   <h1 style="color:#a78bfa;margin:0 0 8px">${copy.title}</h1>
   <p style="color:#a1a1aa;margin:0 0 20px">${copy.periodLabel.replace("{days}", String(preview.periodDays))}</p>
   <ul style="padding-left:18px;margin:0">${items || `<li>${copy.emptyPosts}</li>`}</ul>

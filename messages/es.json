@@ -20,6 +20,7 @@
     "searchPlaceholder": "Buscar juegos, etiquetas o creadores...",
     "home": "Inicio",
     "backHome": "Volver al inicio",
+    "scrollToTop": "Ir arriba",
     "userMenu": "Menú de usuario",
     "profile": "Perfil",
     "settings": "Configuración",
@@ -49,7 +50,8 @@
     "fetchError": "No se pudieron cargar las tablas de clasificación. Asegúrese de que el servidor de desarrollo esté ejecutándose o pídale a un administrador que ejecute la configuración de la base de datos.",
     "pagePrev": "Anterior",
     "pageNext": "Siguiente",
-    "pageInfo": "Página {current} / {total}"
+    "pageInfo": "Página {current} / {total}",
+    "backToFirstPage": "Volver a la primera página"
   },
   "common": {
     "404": "Página no encontrada",
@@ -268,6 +270,7 @@
     "rssForum": "Foro RSS",
     "atomFeed": "Alimentación atómica",
     "feedsHub": "Centro de alimentación",
+    "feedsHubAll": "Centro completo",
     "opmlFeed": "Exportación OPML",
     "favoritesSectionTitle": "mis favoritos",
     "favoritesSectionDesc": "Vuelve a los juegos que te encantan",
@@ -1687,6 +1690,22 @@
     "achievementCompleted": "logro realizado",
     "achievementInProgress": "En progreso",
     "noEquipped": "Sin título equipado"
+  },
+  "about": {
+    "metaTitle": "Sobre nosotros · RainyNightFrog",
+    "metaDesc": "Conoce RainyNightFrog, cómo unirte y cómo contactarnos para envíos y colaboraciones.",
+    "title": "Sobre nosotros",
+    "intro": "RainyNightFrog es una plataforma gratuita de juegos web para publicar y jugar al instante.",
+    "joinTitle": "Únete",
+    "joinP1": "Damos la bienvenida a creadores, jugadores y socios apasionados por los juegos.",
+    "joinP2": "¿Quieres publicar? Regístrate y sube tu juego desde el panel de creador.",
+    "contactTitle": "Envíos y colaboración",
+    "contactP1": "Para envíos de juegos, colaboraciones o consultas comerciales, escríbenos a:",
+    "backHome": "Volver al inicio",
+    "navAbout": "Sobre nosotros",
+    "footerTitle": "Sobre nosotros",
+    "footerJoin": "RainyNightFrog da la bienvenida a creadores y jugadores.",
+    "footerContact": "Para envíos y colaboración:"
   },
   "chat": {
     "title": "Chat en vivo",

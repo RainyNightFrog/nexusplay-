@@ -20,6 +20,7 @@
     "searchPlaceholder": "Tìm game, thẻ hoặc creator...",
     "home": "Trang chủ",
     "backHome": "Về trang chủ",
+    "scrollToTop": "Lên đầu trang",
     "userMenu": "Menu người dùng",
     "profile": "Hồ sơ",
     "settings": "Cài đặt",
@@ -49,7 +50,8 @@
     "fetchError": "Không thể tải bảng xếp hạng. Đảm bảo máy chủ nhà phát triển đang chạy hoặc yêu cầu quản trị viên chạy thiết lập cơ sở dữ liệu.",
     "pagePrev": "trước đó",
     "pageNext": "Tiếp theo",
-    "pageInfo": "Trang {current} / {total}"
+    "pageInfo": "Trang {current} / {total}",
+    "backToFirstPage": "Về trang đầu"
   },
   "common": {
     "404": "Không tìm thấy trang",
@@ -268,6 +270,7 @@
     "rssForum": "diễn đàn RSS",
     "atomFeed": "Nguồn cấp dữ liệu nguyên tử",
     "feedsHub": "Trung tâm nguồn cấp dữ liệu",
+    "feedsHubAll": "Trung tâm đầy đủ",
     "opmlFeed": "Xuất OPML",
     "favoritesSectionTitle": "yêu thích của tôi",
     "favoritesSectionDesc": "Quay lại trò chơi bạn yêu thích",
@@ -1687,6 +1690,22 @@
     "achievementCompleted": "Đã hoàn thành thành tích",
     "achievementInProgress": "Đang tiến hành",
     "noEquipped": "Không có danh hiệu được trang bị"
+  },
+  "about": {
+    "metaTitle": "Về chúng tôi · RainyNightFrog",
+    "metaDesc": "Tìm hiểu RainyNightFrog, cách tham gia và liên hệ gửi bài đăng/hợp tác.",
+    "title": "Về chúng tôi",
+    "intro": "RainyNightFrog là nền tảng game web miễn phí để đăng tải và chơi ngay.",
+    "joinTitle": "Tham gia",
+    "joinP1": "Chúng tôi chào đón creator, người chơi và đối tác yêu thích game.",
+    "joinP2": "Muốn đăng game? Đăng ký và tải lên từ bảng điều khiển creator.",
+    "contactTitle": "Gửi bài & hợp tác",
+    "contactP1": "Để gửi game, hợp tác hoặc liên hệ kinh doanh, vui lòng email:",
+    "backHome": "Về trang chủ",
+    "navAbout": "Về chúng tôi",
+    "footerTitle": "Về chúng tôi",
+    "footerJoin": "RainyNightFrog chào đón creator và người chơi.",
+    "footerContact": "Liên hệ gửi bài và hợp tác:"
   },
   "chat": {
     "title": "Trò chuyện trực tiếp",

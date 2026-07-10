@@ -35,6 +35,10 @@ export const metadata: Metadata = {
     template: "%s · RainyNightFrog",
   },
   description: "Web game platform for play and upload",
+  icons: {
+    icon: [{ url: "/icon", sizes: "32x32", type: "image/png" }],
+    apple: [{ url: "/apple-icon", sizes: "180x180", type: "image/png" }],
+  },
   alternates: {
     types: feedAlternateTypes(platformGamesFeedAlternates()),
   },
@@ -42,9 +46,18 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "RainyNightFrog",
     locale: "zh_HK",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "RainyNightFrog",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
+    images: ["/opengraph-image"],
   },
 };
 

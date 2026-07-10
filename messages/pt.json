@@ -20,6 +20,7 @@
     "searchPlaceholder": "Buscar jogos, tags ou criadores...",
     "home": "Início",
     "backHome": "Voltar ao início",
+    "scrollToTop": "Ir ao topo",
     "userMenu": "Menu do usuário",
     "profile": "Perfil",
     "settings": "Configurações",
@@ -49,7 +50,8 @@
     "fetchError": "Não foi possível carregar os placares. Certifique-se de que o servidor de desenvolvimento esteja em execução ou peça a um administrador para executar a configuração do banco de dados.",
     "pagePrev": "Anterior",
     "pageNext": "Próximo",
-    "pageInfo": "Página {current} / {total}"
+    "pageInfo": "Página {current} / {total}",
+    "backToFirstPage": "Voltar à primeira página"
   },
   "common": {
     "404": "Página não encontrada",
@@ -268,6 +270,7 @@
     "rssForum": "RSS do fórum",
     "atomFeed": "Alimentação de átomo",
     "feedsHub": "Centro de alimentação",
+    "feedsHubAll": "Centro completo",
     "opmlFeed": "Exportação OPML",
     "favoritesSectionTitle": "Meus favoritos",
     "favoritesSectionDesc": "Volte para os jogos que você adora",
@@ -1687,6 +1690,22 @@
     "achievementCompleted": "Conquista realizada",
     "achievementInProgress": "Em andamento",
     "noEquipped": "Nenhum título equipado"
+  },
+  "about": {
+    "metaTitle": "Sobre nós · RainyNightFrog",
+    "metaDesc": "Conheça a RainyNightFrog, como participar e como contactar-nos para submissões e parcerias.",
+    "title": "Sobre nós",
+    "intro": "RainyNightFrog é uma plataforma gratuita de jogos web para publicar e jogar instantaneamente.",
+    "joinTitle": "Junte-se a nós",
+    "joinP1": "Damos as boas-vindas a criadores, jogadores e parceiros apaixonados por jogos.",
+    "joinP2": "Para publicar, registe-se e envie o jogo no painel de criador.",
+    "contactTitle": "Submissões e parcerias",
+    "contactP1": "Para submissões de jogos, parcerias ou contactos comerciais, escreva para:",
+    "backHome": "Voltar ao início",
+    "navAbout": "Sobre nós",
+    "footerTitle": "Sobre nós",
+    "footerJoin": "A RainyNightFrog dá as boas-vindas a criadores e jogadores.",
+    "footerContact": "Para submissões e parcerias:"
   },
   "chat": {
     "title": "Bate-papo ao vivo",

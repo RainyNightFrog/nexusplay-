@@ -20,6 +20,7 @@
     "searchPlaceholder": "搜索游戏、标签或创作者...",
     "home": "首页",
     "backHome": "返回首页",
+    "scrollToTop": "置顶",
     "userMenu": "用户菜单",
     "profile": "个人资料",
     "settings": "设置",
@@ -49,7 +50,8 @@
     "fetchError": "无法载入排行榜，请确认开发伺服器已启动，或联络管理员执行资料库设定。",
     "pagePrev": "上一页",
     "pageNext": "下一页",
-    "pageInfo": "第 {current} / {total} 页"
+    "pageInfo": "第 {current} / {total} 页",
+    "backToFirstPage": "返回第一页"
   },
   "common": {
     "404": "找不到页面",
@@ -268,6 +270,7 @@
     "rssForum": "论坛 RSS",
     "atomFeed": "Atom 订阅",
     "feedsHub": "订阅中心",
+    "feedsHubAll": "完整订阅中心",
     "opmlFeed": "OPML 汇出",
     "favoritesSectionTitle": "我的收藏",
     "favoritesSectionDesc": "快速回到你喜欢的游戏",
@@ -1678,6 +1681,22 @@
     "achievementCompleted": "成就已完成",
     "achievementInProgress": "成就进行中",
     "noEquipped": "尚未佩戴称号"
+  },
+  "about": {
+    "metaTitle": "关于我们 · RainyNightFrog",
+    "metaDesc": "了解 RainyNightFrog 平台愿景、加入我们的方式，以及投稿与合作联络方式。",
+    "title": "关于我们",
+    "intro": "RainyNightFrog 是一个免费网页游戏平台，让创作者轻松发布作品、玩家即时开玩。我们持续扩充平台功能，打造公平透明的游戏社群。",
+    "joinTitle": "加入我们",
+    "joinP1": "我们欢迎热爱游戏的创作者、玩家与伙伴加入 RainyNightFrog。你可以上传原创或授权允许的网页游戏、参与社群讨论、支持喜爱的创作者，一起壮大这个零平台费的游戏宇宙。",
+    "joinP2": "想成为创作者？注册账号后于创作者中心上传游戏即可；我们也持续招募对平台营运、社群与技术有热忱的协作者。",
+    "contactTitle": "投稿与合作",
+    "contactP1": "如有游戏投稿、平台合作、商务洽询或其他建议，欢迎电邮联络我们：",
+    "backHome": "返回首页",
+    "navAbout": "关于我们",
+    "footerTitle": "关于我们",
+    "footerJoin": "RainyNightFrog 欢迎创作者与玩家加入，一起发布、游玩与支持网页游戏。",
+    "footerContact": "如需投稿合作联络："
   },
   "chat": {
     "title": "即时聊天",

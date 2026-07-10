@@ -35,7 +35,7 @@ export function SiteHeader({
     >
       <div
         className={cn(
-          "mx-auto flex h-16 items-center gap-3 px-4 sm:gap-4 sm:px-6 lg:px-8",
+          "mx-auto flex h-[72px] items-center gap-3 px-4 sm:gap-4 sm:px-6 lg:px-8",
           maxWidthClass[maxWidth],
           innerClassName
         )}

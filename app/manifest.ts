@@ -8,7 +8,7 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: "/",
     display: "standalone",
     background_color: "#09090b",
-    theme_color: "#0891b2",
+    theme_color: "#22d3ee",
     lang: "zh-HK",
     icons: [
       {
@@ -20,6 +20,17 @@ export default function manifest(): MetadataRoute.Manifest {
         src: "/apple-icon",
         sizes: "180x180",
         type: "image/png",
+      },
+      {
+        src: "/brand/rainynightfrog-icon-256.png",
+        sizes: "256x256",
+        type: "image/png",
+      },
+      {
+        src: "/brand/rainynightfrog-icon-512.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "any",
       },
     ],
     scope: "/",

@@ -1,41 +1,22 @@
-import { isUserOnline, LEADERBOARD_TOP_LIMIT, type PlatformLeaderboardEntry } from "@/lib/platform-leaderboard";
-import { getVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
 import {
+  isUserOnline,
+  type PlatformLeaderboardEntry,
+} from "@/lib/platform-leaderboard";
+import { resolveVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
+import {
+  VIRTUAL_PLAYERS,
   getVirtualPlayerById,
   type VirtualPlayer,
 } from "@/lib/virtual-players";
 
 export const VIRTUAL_LEADERBOARD_USER_PREFIX = "virtual-player:";
 
-/** 排行榜虛擬玩家池：24 人（45% 簡體 · 40% 英文 · 15% 繁體粵語） */
-export const LEADERBOARD_VIRTUAL_PLAYER_IDS = [
-  "hk-01",
-  "hk-06",
-  "hk-12",
-  "cn-01",
-  "cn-02",
-  "cn-03",
-  "cn-04",
-  "cn-05",
-  "cn-06",
-  "cn-07",
-  "cn-08",
-  "cn-09",
-  "cn-10",
-  "cn-11",
-  "en-01",
-  "en-02",
-  "en-03",
-  "en-04",
-  "en-05",
-  "en-06",
-  "en-07",
-  "en-08",
-  "en-09",
-  "en-10",
-] as const;
+/** 排行榜使用全部虛擬玩家 */
+export const LEADERBOARD_VIRTUAL_PLAYER_IDS = VIRTUAL_PLAYERS.map(
+  (player) => player.id
+);
 
-export const LEADERBOARD_VIRTUAL_COUNT = LEADERBOARD_VIRTUAL_PLAYER_IDS.length;
+export const LEADERBOARD_VIRTUAL_COUNT = VIRTUAL_PLAYERS.length;
 
 type VirtualStats = {
   playerId: string;
@@ -54,8 +35,10 @@ function hashString(value: string, salt: number) {
   return Math.abs(hash);
 }
 
-const THREE_HOURS_SECONDS = 3 * 3600;
-const THREE_DAYS_SECONDS = 3 * 24 * 3600;
+const TWO_HOURS_SECONDS = 2 * 3600;
+const EIGHT_HOURS_SECONDS = 8 * 3600;
+const MAX_CEILING_SECONDS = 56 * 3600;
+const MIN_CEILING_SECONDS = 6 * 3600;
 
 /** 虛擬玩家時長起算點（香港時間） */
 const VIRTUAL_LEADERBOARD_EPOCH_MS = Date.parse("2026-03-01T00:00:00+08:00");
@@ -63,28 +46,8 @@ const VIRTUAL_LEADERBOARD_EPOCH_MS = Date.parse("2026-03-01T00:00:00+08:00");
 /** 相對真實時間的累加速度：約 1/3（每 3 秒真實時間 +1 秒虛擬在線） */
 const VIRTUAL_TIME_GROWTH_RATIO = 1 / 3;
 
-function scaleHashToRange(hash: number, min: number, max: number) {
-  const span = max - min;
-  return min + (hash % (span + 1));
-}
-
-/** 每位玩家獨立上限（秒），分散在約 5h–72h，避免整批卡在 72 小時 */
-function getPlayerOnlineCeilingSeconds(h1: number, h2: number, h4: number) {
-  if (h4 % 11 === 0) {
-    return THREE_DAYS_SECONDS - (h2 % 5) * 600;
-  }
-
-  const minSeconds = 5 * 3600;
-  const maxSeconds = THREE_DAYS_SECONDS - 3 * 3600;
-  const span = maxSeconds - minSeconds;
-  const raw = (Math.imul(h1, 2654435761) ^ Math.imul(h2, 1597334677) ^ h4) >>> 0;
-  return minSeconds + (raw % (span + 1));
-}
-
 function getLeaderboardVirtualPlayers(): VirtualPlayer[] {
-  return LEADERBOARD_VIRTUAL_PLAYER_IDS.map((id) => getVirtualPlayerById(id)).filter(
-    (player): player is VirtualPlayer => Boolean(player)
-  );
+  return VIRTUAL_PLAYERS;
 }
 
 type VirtualActivitySnapshot = {
@@ -93,13 +56,41 @@ type VirtualActivitySnapshot = {
   lastActiveAt: string;
 };
 
+/** 依玩家 ID 在池中的百分位，讓時長分布更平均、差距像真人 */
+function getPlayerTier(playerId: string, totalPlayers: number) {
+  const h1 = hashString(playerId, 17);
+  const h2 = hashString(playerId, 53);
+  return (h1 + h2 * 7) % totalPlayers;
+}
+
+function getPlayerCeilingSeconds(playerId: string, totalPlayers: number) {
+  const tier = getPlayerTier(playerId, totalPlayers);
+  const jitter = hashString(playerId, 127) % 1800;
+  const span = MAX_CEILING_SECONDS - MIN_CEILING_SECONDS;
+  const base = MIN_CEILING_SECONDS + Math.floor((tier / Math.max(totalPlayers - 1, 1)) * span);
+  return Math.min(MAX_CEILING_SECONDS, base + jitter - 900);
+}
+
+function getPlayerBaseOnlineSeconds(
+  playerId: string,
+  ceilingSeconds: number,
+  h3: number,
+  h5: number
+) {
+  const startFraction = 0.18 + (h3 % 27) / 100;
+  const fromCeiling = Math.floor(ceilingSeconds * startFraction);
+  const floor = TWO_HOURS_SECONDS + (h5 % (EIGHT_HOURS_SECONDS - TWO_HOURS_SECONDS));
+  return Math.min(ceilingSeconds - 3600, Math.max(floor, fromCeiling));
+}
+
 /**
  * 模擬真人上線節奏：上線累加 → 下線休息（時長凍結）→ 再上線。
  * 休息中的玩家時長停止，其他玩家可反超；累加速度約為真實時間的 1/3。
  */
 function computeVirtualActivity(
   player: VirtualPlayer,
-  now: number
+  now: number,
+  totalPlayers: number
 ): VirtualActivitySnapshot {
   const h1 = hashString(player.id, 17);
   const h2 = hashString(player.id, 53);
@@ -107,18 +98,16 @@ function computeVirtualActivity(
   const h4 = hashString(player.id, 127);
   const h5 = hashString(player.id, 163);
 
-  const playerCeilingSeconds = getPlayerOnlineCeilingSeconds(h1, h2, h4);
-  const baseOnlineSeconds = scaleHashToRange(
-    h5,
-    THREE_HOURS_SECONDS,
-    Math.max(
-      THREE_HOURS_SECONDS,
-      Math.floor(playerCeilingSeconds * (0.28 + (h3 % 23) / 100))
-    )
+  const playerCeilingSeconds = getPlayerCeilingSeconds(player.id, totalPlayers);
+  const baseOnlineSeconds = getPlayerBaseOnlineSeconds(
+    player.id,
+    playerCeilingSeconds,
+    h3,
+    h5
   );
-  const playRatioPercent = 40 + (h2 % 41);
+  const playRatioPercent = 36 + (h2 % 39);
 
-  const startOffsetMs = (h3 % (48 * 3600)) * 1000;
+  const startOffsetMs = (h3 % (72 * 3600)) * 1000;
   const playerStartMs = VIRTUAL_LEADERBOARD_EPOCH_MS + startOffsetMs;
 
   if (now <= playerStartMs) {
@@ -135,8 +124,8 @@ function computeVirtualActivity(
 
   const elapsedMs = now - playerStartMs;
 
-  const sessionMs = (90 + (h1 % 271)) * 60_000;
-  const breakMs = (15 + (h2 % 226)) * 60_000 * (h4 % 9 === 0 ? 1.45 : 1);
+  const sessionMs = (75 + (h1 % 285)) * 60_000;
+  const breakMs = (20 + (h2 % 240)) * 60_000 * (h4 % 11 === 0 ? 1.35 : 1);
   const cycleMs = sessionMs + breakMs;
   const cycleOffsetMs = h4 % cycleMs;
 
@@ -149,7 +138,7 @@ function computeVirtualActivity(
   const totalActiveMs = fullCycles * sessionMs + activeMsThisCycle;
 
   const growthMultiplier =
-    VIRTUAL_TIME_GROWTH_RATIO * (0.88 + (h2 % 25) / 100);
+    VIRTUAL_TIME_GROWTH_RATIO * (0.82 + (h2 % 31) / 100);
   const grownSeconds = Math.floor((totalActiveMs / 1000) * growthMultiplier);
 
   const onlineSeconds = Math.min(
@@ -166,12 +155,12 @@ function computeVirtualActivity(
 
   let lastActiveAt: string;
   if (isInSession) {
-    const minutesAgo = 1 + Math.floor((cyclePositionMs / sessionMs) * 6) + (h1 % 3);
+    const minutesAgo = 1 + Math.floor((cyclePositionMs / sessionMs) * 8) + (h1 % 4);
     lastActiveAt = new Date(now - minutesAgo * 60_000).toISOString();
   } else {
     const breakElapsedMs = cyclePositionMs - sessionMs;
     const minutesSinceOffline =
-      Math.floor(breakElapsedMs / 60_000) + 8 + (h3 % 36);
+      Math.floor(breakElapsedMs / 60_000) + 10 + (h3 % 42);
     lastActiveAt = new Date(now - minutesSinceOffline * 60_000).toISOString();
   }
 
@@ -186,7 +175,7 @@ export function getVirtualPlayerActivityStats(
   const player = getVirtualPlayerById(playerId);
   if (!player) return null;
 
-  const activity = computeVirtualActivity(player, now);
+  const activity = computeVirtualActivity(player, now, LEADERBOARD_VIRTUAL_COUNT);
   return {
     playerId: player.id,
     displayName: player.displayName,
@@ -197,8 +186,9 @@ export function getVirtualPlayerActivityStats(
 }
 
 function buildVirtualStats(now = Date.now()): VirtualStats[] {
-  return getLeaderboardVirtualPlayers().map((player) => {
-    const activity = computeVirtualActivity(player, now);
+  const players = getLeaderboardVirtualPlayers();
+  return players.map((player) => {
+    const activity = computeVirtualActivity(player, now, players.length);
     return {
       playerId: player.id,
       displayName: player.displayName,
@@ -214,12 +204,15 @@ function toEntries(
   currentUserId?: string | null
 ): PlatformLeaderboardEntry[] {
   return [...rows]
-    .sort((a, b) => b[valueKey] - a[valueKey])
+    .sort((a, b) => {
+      if (b[valueKey] !== a[valueKey]) return b[valueKey] - a[valueKey];
+      return Date.parse(b.lastActiveAt) - Date.parse(a.lastActiveAt);
+    })
     .map((row, index) => ({
       rank: index + 1,
       userId: `${VIRTUAL_LEADERBOARD_USER_PREFIX}${row.playerId}`,
       displayName: row.displayName,
-      avatarUrl: getVirtualPlayerAvatarUrl(row.playerId),
+      avatarUrl: resolveVirtualPlayerAvatarUrl(row.playerId),
       equippedTitle: null,
       value: row[valueKey],
       lastActiveAt: row.lastActiveAt,
@@ -247,23 +240,22 @@ export function isVirtualLeaderboardUserId(userId: string) {
 }
 
 /**
- * 合併排行榜：真實玩家全部保留（數據不變），虛擬玩家僅填補剩餘名額。
+ * 合併排行榜：真實玩家全部保留，虛擬玩家全部加入，依時長重排。
  */
 export function mergePlatformLeaderboardEntries(
   real: PlatformLeaderboardEntry[],
   virtual: PlatformLeaderboardEntry[],
-  currentUserId?: string | null,
-  limit = LEADERBOARD_TOP_LIMIT
+  currentUserId?: string | null
 ): PlatformLeaderboardEntry[] {
   const realIds = new Set(real.map((entry) => entry.userId));
   const virtualPool = virtual.filter((entry) => !realIds.has(entry.userId));
 
-  const slotsForVirtual = Math.max(0, limit - real.length);
-  const virtualPicks = virtualPool.slice(0, slotsForVirtual);
+  const combined = [...real, ...virtualPool].sort((a, b) => {
+    if (b.value !== a.value) return b.value - a.value;
+    return Date.parse(b.lastActiveAt) - Date.parse(a.lastActiveAt);
+  });
 
-  const combined = [...real, ...virtualPicks].sort((a, b) => b.value - a.value);
-
-  return combined.slice(0, limit).map((entry, index) => ({
+  return combined.map((entry, index) => ({
     ...entry,
     rank: index + 1,
     isMe: currentUserId ? entry.userId === currentUserId : undefined,

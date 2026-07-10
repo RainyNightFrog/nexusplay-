@@ -20,6 +20,7 @@
     "searchPlaceholder": "Search games, tags, or creators...",
     "home": "Home",
     "backHome": "Back to Home",
+    "scrollToTop": "Scroll to top",
     "userMenu": "User Menu",
     "profile": "Profile",
     "settings": "Settings",
@@ -184,7 +185,8 @@
     "loggedInHint": "Your online and play time are tracked automatically",
     "pagePrev": "Previous",
     "pageNext": "Next",
-    "pageInfo": "Page {current} / {total}"
+    "pageInfo": "Page {current} / {total}",
+    "backToFirstPage": "Back to first page"
   },
   "common": {
     "404": "Page not found",
@@ -305,6 +307,7 @@
     "atomFeed": "Atom Feed",
     "rssForum": "Forum RSS",
     "feedsHub": "Feed hub",
+    "feedsHubAll": "Full feed hub",
     "opmlFeed": "OPML export",
     "socialNavLabel": "Official social links",
     "socialX": "X official website",
@@ -1676,6 +1679,22 @@
     "privacyP2": "Billing addresses are used for receipts and compliance; payment card data is processed by Stripe and full card numbers are not stored on our servers.",
     "privacyP3": "You can export personal data or delete your account under Data & account. Exports include tip receipts and transaction history.",
     "privacyP4": "We may use cookies and analytics to improve the service; if Google Analytics is enabled, you can limit tracking in your browser settings."
+  },
+  "about": {
+    "metaTitle": "About Us · RainyNightFrog",
+    "metaDesc": "Learn about RainyNightFrog, how to join us, and how to contact us for submissions and partnerships.",
+    "title": "About Us",
+    "intro": "RainyNightFrog is a free web game platform where creators publish games and players jump in instantly. We are building an open, transparent community with 0% platform fees for early creators.",
+    "joinTitle": "Join Us",
+    "joinP1": "We welcome creators, players, and partners who love games. Upload your browser games, join community discussions, support creators you enjoy, and help grow this zero-platform-fee universe.",
+    "joinP2": "Want to publish? Sign up and upload from the creator dashboard. We are also open to collaborators passionate about platform operations, community, and engineering.",
+    "contactTitle": "Submissions & Partnerships",
+    "contactP1": "For game submissions, platform partnerships, business inquiries, or suggestions, email us at:",
+    "backHome": "Back to home",
+    "navAbout": "About Us",
+    "footerTitle": "About Us",
+    "footerJoin": "RainyNightFrog welcomes creators and players to publish, play, and support web games together.",
+    "footerContact": "For submissions and partnerships:"
   },
   "chat": {
     "title": "Live Chat",

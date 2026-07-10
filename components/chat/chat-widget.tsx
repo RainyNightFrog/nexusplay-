@@ -20,6 +20,7 @@ import {
   type ChatPlayerPreview,
 } from "@/components/chat/chat-player-card";
 import { Button } from "@/components/ui/button";
+import { ScrollToTopButton } from "@/components/layout/scroll-to-top-button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "@/i18n/navigation";
@@ -265,16 +266,19 @@ export function ChatWidget() {
         )}
       </AnimatePresence>
 
-      <motion.button
-        type="button"
-        onClick={() => setOpen((prev) => !prev)}
-        whileHover={{ scale: 1.04 }}
-        whileTap={{ scale: 0.96 }}
-        aria-label={open ? t("close") : t("open")}
-        className="pointer-events-auto inline-flex size-14 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-violet-600 text-white shadow-xl shadow-cyan-500/25 ring-2 ring-white/10"
-      >
-        <MessageCircle className="size-6" />
-      </motion.button>
+      <div className="pointer-events-auto flex items-center gap-3">
+        <ScrollToTopButton />
+        <motion.button
+          type="button"
+          onClick={() => setOpen((prev) => !prev)}
+          whileHover={{ scale: 1.04 }}
+          whileTap={{ scale: 0.96 }}
+          aria-label={open ? t("close") : t("open")}
+          className="inline-flex size-14 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-violet-600 text-white shadow-xl shadow-cyan-500/25 ring-2 ring-white/10"
+        >
+          <MessageCircle className="size-6" />
+        </motion.button>
+      </div>
     </div>
 
     <ChatPlayerCard

@@ -4,17 +4,14 @@ import {
   postAmbientCreatorChat,
   postAmbientWorldChat,
 } from "@/lib/chat-ambient-service";
+import {
+  AMBIENT_POST_INTERVAL_MS,
+  AMBIENT_SEED_COOLDOWN_MS,
+} from "@/lib/chat-ambient-schedule";
 import { CHAT_LIMITS, type ChatChannel } from "@/lib/chat";
 import { createServerSupabase } from "@/lib/supabase-server";
 
-const SEED_COOLDOWN_MS = 10 * 60_000;
 const lastSeedAt: Partial<Record<ChatChannel, number>> = {};
-const lastDevPostAt: Partial<Record<ChatChannel, number>> = {};
-
-const DEV_POST_INTERVAL_MS: Record<ChatChannel, number> = {
-  world: 5 * 60_000,
-  creator: 45 * 60_000,
-};
 
 function historyCutoffIso() {
   return new Date(
@@ -22,18 +19,10 @@ function historyCutoffIso() {
   ).toISOString();
 }
 
-function canRun(key: "seed" | "post", channel: ChatChannel, cooldownMs: number) {
-  const store = key === "seed" ? lastSeedAt : lastDevPostAt;
-  const last = store[channel] ?? 0;
-  if (Date.now() - last < cooldownMs) return false;
-  store[channel] = Date.now();
-  return true;
-}
-
-function shouldSimulateAmbientCron() {
-  if (process.env.NODE_ENV === "development") return true;
-  // Vercel Cron 僅在 production 部署執行；preview / 本機 next start 需由讀取 API 模擬
-  if (process.env.VERCEL_ENV === "production") return false;
+function canSeed(channel: ChatChannel) {
+  const last = lastSeedAt[channel] ?? 0;
+  if (Date.now() - last < AMBIENT_SEED_COOLDOWN_MS) return false;
+  lastSeedAt[channel] = Date.now();
   return true;
 }
 
@@ -65,12 +54,12 @@ async function latestMessageAgeMs(channel: ChatChannel) {
   return Date.now() - new Date(data.created_at).getTime();
 }
 
-/** 頻道無訊息時灌入初始對話；本機開發時模擬 cron 持續發言 */
+/** 頻道無訊息時灌入初始對話；依資料庫時間間隔持續發言（本機與正式環境皆適用） */
 export async function maintainAmbientChat(channel: ChatChannel) {
   const messageCount = await countRecentMessages(channel);
 
   if (messageCount === 0) {
-    if (!canRun("seed", channel, SEED_COOLDOWN_MS)) return;
+    if (!canSeed(channel)) return;
     if (channel === "world") {
       await bootstrapAmbientWorldChat(14);
     } else {
@@ -79,12 +68,9 @@ export async function maintainAmbientChat(channel: ChatChannel) {
     return;
   }
 
-  if (!shouldSimulateAmbientCron()) return;
-
-  const interval = DEV_POST_INTERVAL_MS[channel];
+  const interval = AMBIENT_POST_INTERVAL_MS[channel];
   const age = await latestMessageAgeMs(channel);
   if (age < interval) return;
-  if (!canRun("post", channel, interval)) return;
 
   if (channel === "world") {
     await postAmbientWorldChat();
