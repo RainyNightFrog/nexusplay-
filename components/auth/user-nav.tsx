@@ -99,6 +99,7 @@ export function UserNav() {
               username={profile.display_name}
               title={profile.equipped_title}
               isSupporter={profile.is_supporter}
+              supporterBadge={profile.supporter_badge}
               layout="stacked"
               usernameClassName="truncate text-sm font-medium text-white"
               titleClassName="text-[10px]"

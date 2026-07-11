@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { useGameFavoriteActions } from "@/hooks/use-game-favorite-actions";
 import { useFormatCount } from "@/hooks/use-format-count";
 import type { PublicCreatorProfile } from "@/lib/creator-public-service";
+import { normalizeWebsite } from "@/lib/profile-settings";
 import { cn } from "@/lib/utils";
 
 export default function CreatorPublicPage() {
@@ -105,7 +106,7 @@ export default function CreatorPublicPage() {
             <div className="mt-3 flex flex-wrap justify-center gap-2 sm:justify-start">
               {creator.website && (
                 <a
-                  href={creator.website}
+                  href={normalizeWebsite(creator.website)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-sm text-cyan-400 hover:underline"

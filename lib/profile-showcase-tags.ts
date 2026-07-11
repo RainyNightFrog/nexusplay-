@@ -6,7 +6,6 @@ export type ProfileShowcaseTagId =
   | "donated_rank"
   | "achievement_count"
   | "forum_posts"
-  | "creator"
   | "supporter"
   | "follower_count"
   | "published_games"
@@ -19,13 +18,15 @@ export const PROFILE_SHOWCASE_TAG_IDS: ProfileShowcaseTagId[] = [
   "donated_rank",
   "achievement_count",
   "forum_posts",
-  "creator",
   "supporter",
   "follower_count",
   "published_games",
   "online_status",
   "country",
 ];
+
+/** Legacy tag ids stripped from saved preferences (shown elsewhere on player card). */
+const DEPRECATED_PROFILE_SHOWCASE_TAG_IDS = new Set(["creator"]);
 
 export const DEFAULT_PROFILE_SHOWCASE_TAGS: ProfileShowcaseTagId[] = [
   "online_rank",
@@ -75,7 +76,9 @@ export function parseProfileShowcaseTags(value: unknown): ProfileShowcaseTagId[]
 
   const parsed = value.filter(
     (item): item is ProfileShowcaseTagId =>
-      typeof item === "string" && isProfileShowcaseTagId(item)
+      typeof item === "string" &&
+      !DEPRECATED_PROFILE_SHOWCASE_TAG_IDS.has(item) &&
+      isProfileShowcaseTagId(item)
   );
 
   return normalizeProfileShowcaseTags(parsed);
@@ -112,8 +115,6 @@ function isTagAvailable(
       return context.achievementCount > 0;
     case "forum_posts":
       return context.forumPostCount > 0;
-    case "creator":
-      return context.isCreator;
     case "supporter":
       return context.isSupporter;
     case "follower_count":
@@ -146,8 +147,6 @@ function buildTagPayload(
       return { id, count: context.achievementCount };
     case "forum_posts":
       return { id, count: context.forumPostCount };
-    case "creator":
-      return { id };
     case "supporter":
       return { id };
     case "follower_count":

@@ -771,3 +771,38 @@
 .animate-gradient {
   animation: title-gradient-flow 3s ease-in-out infinite;
 }
+
+/* ── 平台支持者視覺特效 ── */
+@keyframes supporter-username-shimmer {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.supporter-username-premium {
+  background-size: 200% auto;
+  animation: supporter-username-shimmer 4s ease-in-out infinite;
+  filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.28));
+}
+
+.title-supporter-v1 {
+  color: rgb(251 191 36);
+}
+
+.title-supporter-v2 {
+  display: inline-block;
+  background-image: linear-gradient(
+    90deg,
+    rgb(251 191 36),
+    rgb(244 114 182),
+    rgb(167 139 250)
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 8px rgba(167, 139, 250, 0.35));
+}

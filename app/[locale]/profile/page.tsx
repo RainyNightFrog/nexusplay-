@@ -38,6 +38,10 @@ import {
   accountSectionTitleClassName,
 } from "@/components/settings/account-shell";
 import { UserBadge } from "@/components/UserBadge";
+import {
+  getSupporterDisplayTier,
+  supporterAvatarRingClassByTier,
+} from "@/lib/supporter-tier";
 import { cn } from "@/lib/utils";
 import { CreatorUsernameField } from "@/components/profile/creator-username-field";
 import { normalizeCreatorUsername } from "@/lib/creator-username";
@@ -69,6 +73,10 @@ export default function ProfilePage() {
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [achievementsOpen, setAchievementsOpen] = useState(false);
+
+  const supporterTier = profile
+    ? getSupporterDisplayTier(profile.is_supporter, profile.supporter_badge)
+    : "none";
 
   const showToast = useCallback((message: string) => {
     setToast(message);
@@ -226,6 +234,8 @@ export default function ProfilePage() {
                 "group relative size-28 overflow-hidden rounded-full",
                 "border-2 border-white/10 transition-all duration-300",
                 "hover:border-cyan-400/70 hover:shadow-lg hover:shadow-cyan-500/25",
+                supporterTier !== "none" &&
+                  supporterAvatarRingClassByTier[supporterTier],
                 avatarUploading && "pointer-events-none opacity-70"
               )}
             >
@@ -266,6 +276,7 @@ export default function ProfilePage() {
                 username={displayName || profile.display_name}
                 title={profile.equipped_title}
                 isSupporter={profile.is_supporter}
+                supporterBadge={profile.supporter_badge}
                 usernameClassName="text-lg font-semibold text-zinc-100"
                 titleClassName="text-xs"
               />
@@ -283,6 +294,12 @@ export default function ProfilePage() {
               >
                 {t("changeTitle")}
               </Button>
+              <Link
+                href="/settings/privacy"
+                className="text-xs text-cyan-300/90 transition-colors hover:text-cyan-200"
+              >
+                {t("editShowcaseTags")}
+              </Link>
             </div>
           </div>
 

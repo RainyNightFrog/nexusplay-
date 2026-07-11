@@ -1,11 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { readCreatorPayoutRow } from "@/lib/creator-payout-service";
 import {
-  createStripeCustomer,
   getStripeClient,
   isPaymentsLive,
   isStripeConfigured,
 } from "@/lib/stripe-connect";
+import { ensurePayerStripeCustomer } from "@/lib/stripe-payer-customer";
 import { createServerSupabase } from "@/lib/supabase-server";
 
 export async function ensureStripeCustomerForUser(params: {
@@ -16,22 +16,14 @@ export async function ensureStripeCustomerForUser(params: {
 }) {
   const supabase = params.supabase ?? createServerSupabase();
   const row = await readCreatorPayoutRow(supabase, params.userId);
-  let customerId = row?.stripe_customer_id ?? null;
 
-  if (!customerId) {
-    const customer = await createStripeCustomer({
-      userId: params.userId,
-      email: params.email,
-      displayName: params.displayName,
-    });
-    customerId = customer.id;
-    await supabase
-      .from("profiles")
-      .update({ stripe_customer_id: customerId })
-      .eq("id", params.userId);
-  }
-
-  return customerId;
+  return ensurePayerStripeCustomer({
+    supabase,
+    userId: params.userId,
+    email: params.email,
+    displayName: params.displayName,
+    existingCustomerId: row?.stripe_customer_id ?? null,
+  });
 }
 
 export async function createPaymentMethodSetupIntent(

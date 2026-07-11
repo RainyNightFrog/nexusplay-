@@ -167,6 +167,8 @@ export function ChatMessageList({
                     <UserBadge
                       username={message.is_own ? t("you") : message.author_name}
                       title={message.author_equipped_title}
+                      isSupporter={message.author_is_supporter}
+                      supporterBadge={message.author_supporter_badge}
                       animateTitle={false}
                       usernameClassName="text-zinc-400 hover:text-cyan-300"
                       titleClassName="text-[9px]"
@@ -176,6 +178,8 @@ export function ChatMessageList({
                   <UserBadge
                     username={message.is_own ? t("you") : message.author_name}
                     title={message.author_equipped_title}
+                    isSupporter={message.author_is_supporter}
+                    supporterBadge={message.author_supporter_badge}
                     animateTitle={false}
                     usernameClassName="text-zinc-400"
                     titleClassName="text-[9px]"

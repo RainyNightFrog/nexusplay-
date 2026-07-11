@@ -4,6 +4,7 @@ import type {
   AchievementWithProgress,
   AchievementCategory,
 } from "@/lib/achievements";
+import { isAchievementClaimable } from "@/lib/achievement-claim-service";
 import {
   loadUserAchievementMetrics,
   resolveAchievementProgress,
@@ -115,6 +116,11 @@ export async function getAchievementsWithProgress(
       unlock_count: Number(stat?.unlock_count ?? 0),
       progress_current: progress.progress_current,
       progress_percent: progress.progress_percent,
+      claimable: isAchievementClaimable({
+        unlocked,
+        progress_current: progress.progress_current,
+        progress_target: target,
+      }),
     };
   });
 }

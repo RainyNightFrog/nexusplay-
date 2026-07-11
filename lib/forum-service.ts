@@ -17,7 +17,7 @@ import {
 } from "@/lib/forum-seed-builder";
 import { getAmbientUserPlayerMap } from "@/lib/ambient-user-index";
 import { resolveEquippedTitles } from "@/lib/equipped-title-service";
-import { resolveSupporterFlags } from "@/lib/supporter-profile";
+import { resolveSupporterProfiles, type SupporterProfileFlags } from "@/lib/supporter-profile";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -220,29 +220,37 @@ function mapPosts(
   nameMap: Map<string, string>,
   titleMap: Map<string, import("@/lib/titles").EquippedTitle | null>,
   commentCounts: Map<number, number> = new Map(),
-  supporterMap: Map<string, boolean> = new Map()
+  supporterMap: Map<string, SupporterProfileFlags> = new Map()
 ): ForumPost[] {
-  return records.map((record) => ({
-    ...record,
-    author_name: nameMap.get(record.user_id) ?? formatForumAuthor(record.user_id),
-    author_equipped_title: titleMap.get(record.user_id) ?? null,
-    author_is_supporter: supporterMap.get(record.user_id) === true,
-    comment_count: commentCounts.get(record.id) ?? 0,
-  }));
+  return records.map((record) => {
+    const supporter = supporterMap.get(record.user_id);
+    return {
+      ...record,
+      author_name: nameMap.get(record.user_id) ?? formatForumAuthor(record.user_id),
+      author_equipped_title: titleMap.get(record.user_id) ?? null,
+      author_is_supporter: supporter?.isSupporter === true,
+      author_supporter_badge: supporter?.badge ?? null,
+      comment_count: commentCounts.get(record.id) ?? 0,
+    };
+  });
 }
 
 function mapComments(
   records: ForumCommentRecord[],
   nameMap: Map<string, string>,
   titleMap: Map<string, import("@/lib/titles").EquippedTitle | null>,
-  supporterMap: Map<string, boolean> = new Map()
+  supporterMap: Map<string, SupporterProfileFlags> = new Map()
 ): ForumComment[] {
-  return records.map((record) => ({
-    ...record,
-    author_name: nameMap.get(record.user_id) ?? formatForumAuthor(record.user_id),
-    author_equipped_title: titleMap.get(record.user_id) ?? null,
-    author_is_supporter: supporterMap.get(record.user_id) === true,
-  }));
+  return records.map((record) => {
+    const supporter = supporterMap.get(record.user_id);
+    return {
+      ...record,
+      author_name: nameMap.get(record.user_id) ?? formatForumAuthor(record.user_id),
+      author_equipped_title: titleMap.get(record.user_id) ?? null,
+      author_is_supporter: supporter?.isSupporter === true,
+      author_supporter_badge: supporter?.badge ?? null,
+    };
+  });
 }
 
 async function resolveAuthorDisplay(userIds: string[]) {
@@ -254,14 +262,14 @@ async function resolveAuthorDisplay(userIds: string[]) {
     return {
       nameMap,
       titleMap: new Map<string, import("@/lib/titles").EquippedTitle | null>(),
-      supporterMap: new Map<string, boolean>(),
+      supporterMap: new Map<string, SupporterProfileFlags>(),
     };
   }
 
   const [{ data: profiles }, titleMap, supporterMap] = await Promise.all([
     supabase.from("profiles").select("id, display_name").in("id", uniqueIds),
     resolveEquippedTitles(supabase, uniqueIds),
-    resolveSupporterFlags(supabase, uniqueIds),
+    resolveSupporterProfiles(supabase, uniqueIds),
   ]);
 
   for (const userId of uniqueIds) {

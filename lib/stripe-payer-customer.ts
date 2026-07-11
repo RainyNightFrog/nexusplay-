@@ -1,5 +1,35 @@
+import type Stripe from "stripe";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { createStripeCustomer } from "@/lib/stripe-connect";
+import { createStripeCustomer, getStripeClient } from "@/lib/stripe-connect";
+
+function isMissingStripeCustomerError(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+
+  const stripeError = error as Stripe.errors.StripeInvalidRequestError;
+  return (
+    stripeError.type === "StripeInvalidRequestError" &&
+    (stripeError.code === "resource_missing" ||
+      stripeError.param === "customer" ||
+      stripeError.message?.includes("No such customer"))
+  );
+}
+
+async function retrieveActiveStripeCustomer(customerId: string) {
+  const stripe = getStripeClient();
+
+  try {
+    const customer = await stripe.customers.retrieve(customerId);
+    if ("deleted" in customer && customer.deleted) {
+      return null;
+    }
+    return customer;
+  } catch (error) {
+    if (isMissingStripeCustomerError(error)) {
+      return null;
+    }
+    throw error;
+  }
+}
 
 export async function ensurePayerStripeCustomer(params: {
   supabase: SupabaseClient;
@@ -9,7 +39,12 @@ export async function ensurePayerStripeCustomer(params: {
   existingCustomerId: string | null;
 }) {
   if (params.existingCustomerId) {
-    return params.existingCustomerId;
+    const existing = await retrieveActiveStripeCustomer(
+      params.existingCustomerId
+    );
+    if (existing) {
+      return params.existingCustomerId;
+    }
   }
 
   const customer = await createStripeCustomer({

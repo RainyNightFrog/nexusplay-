@@ -9,6 +9,7 @@ import { getAmbientUserPlayerMap } from "@/lib/ambient-user-index";
 import { resolveVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
 import { resolveEquippedTitles } from "@/lib/equipped-title-service";
 import { formatForumAuthor } from "@/lib/forum";
+import { resolveSupporterProfiles } from "@/lib/supporter-profile";
 import { createServerSupabase } from "@/lib/supabase-server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -52,10 +53,12 @@ function mapChatMessage(
   record: ChatMessageRecord,
   profileMap: Map<string, AuthorProfile>,
   titleMap: Map<string, import("@/lib/titles").EquippedTitle | null>,
+  supporterMap: Map<string, import("@/lib/supporter-profile").SupporterProfileFlags>,
   ambientMap: Map<string, string>,
   viewerId?: string
 ): ChatMessage {
   const profile = profileMap.get(record.user_id);
+  const supporter = supporterMap.get(record.user_id);
   const displayName = profile?.display_name ?? null;
   const virtualPlayerId = ambientMap.get(record.user_id) ?? null;
 
@@ -66,6 +69,8 @@ function mapChatMessage(
       ? resolveVirtualPlayerAvatarUrl(virtualPlayerId)
       : (profile?.avatar_url ?? null),
     author_equipped_title: titleMap.get(record.user_id) ?? null,
+    author_is_supporter: supporter?.isSupporter === true,
+    author_supporter_badge: supporter?.badge ?? null,
     is_creator: profile?.role === "creator",
     is_own: viewerId ? record.user_id === viewerId : false,
     is_virtual: Boolean(virtualPlayerId),
@@ -99,15 +104,23 @@ export async function listChatMessages(
 
   const records = (data ?? []) as ChatMessageRecord[];
   const userIds = records.map((row) => row.user_id);
-  const [profileMap, titleMap, ambientMap] = await Promise.all([
+  const [profileMap, titleMap, supporterMap, ambientMap] = await Promise.all([
     resolveAuthorProfiles(userIds),
     resolveEquippedTitles(supabase, userIds),
+    resolveSupporterProfiles(supabase, userIds),
     getAmbientUserPlayerMap(supabase),
   ]);
 
   return records
     .map((record) =>
-      mapChatMessage(record, profileMap, titleMap, ambientMap, viewerId)
+      mapChatMessage(
+        record,
+        profileMap,
+        titleMap,
+        supporterMap,
+        ambientMap,
+        viewerId
+      )
     )
     .reverse();
 }
@@ -219,15 +232,17 @@ export async function createChatMessage(
 
   const record = data as ChatMessageRecord;
   const serverSupabase = createServerSupabase();
-  const [profileMap, titleMap, ambientMap] = await Promise.all([
+  const [profileMap, titleMap, supporterMap, ambientMap] = await Promise.all([
     resolveAuthorProfiles([record.user_id]),
     resolveEquippedTitles(serverSupabase, [record.user_id]),
+    resolveSupporterProfiles(serverSupabase, [record.user_id]),
     getAmbientUserPlayerMap(serverSupabase),
   ]);
   return mapChatMessage(
     record,
     profileMap,
     titleMap,
+    supporterMap,
     ambientMap,
     input.userId
   );
@@ -266,12 +281,20 @@ export async function recallChatMessage(
 
   const record = data as ChatMessageRecord;
   const serverSupabase = createServerSupabase();
-  const [profileMap, titleMap, ambientMap] = await Promise.all([
+  const [profileMap, titleMap, supporterMap, ambientMap] = await Promise.all([
     resolveAuthorProfiles([record.user_id]),
     resolveEquippedTitles(serverSupabase, [record.user_id]),
+    resolveSupporterProfiles(serverSupabase, [record.user_id]),
     getAmbientUserPlayerMap(serverSupabase),
   ]);
-  return mapChatMessage(record, profileMap, titleMap, ambientMap, userId);
+  return mapChatMessage(
+    record,
+    profileMap,
+    titleMap,
+    supporterMap,
+    ambientMap,
+    userId
+  );
 }
 
 export async function cleanupExpiredChatMessages() {

@@ -32,6 +32,11 @@ import {
 import { formatProgressLabel } from "@/lib/achievement-progress";
 import type { TitleWardrobeEntry } from "@/lib/titles";
 import {
+  SUPPORTER_TITLE_V1,
+  SUPPORTER_TITLE_V2,
+} from "@/lib/supporter-tier";
+import { Link } from "@/i18n/navigation";
+import {
   RARITY_BORDER_CLASS,
   RARITY_LABELS,
   getTitleDisplayClass,
@@ -50,6 +55,7 @@ type AchievementsResponse = {
     total_count: number;
     total_points: number;
     completion_percent: number;
+    claimable_count?: number;
   };
   categoryProgress: {
     category: AchievementCategory;
@@ -191,9 +197,18 @@ function AchievementProgressPanel({
   );
 }
 
-function AchievementCard({ achievement }: { achievement: AchievementWithProgress }) {
+function AchievementCard({
+  achievement,
+  claiming,
+  onClaim,
+}: {
+  achievement: AchievementWithProgress;
+  claiming: boolean;
+  onClaim?: (code: string) => void;
+}) {
   const t = useTranslations("achievements");
   const locked = !achievement.unlocked;
+  const claimable = achievement.claimable && locked;
   const progressLabel = formatProgressLabel(
     achievement.code,
     achievement.progress_current,
@@ -204,12 +219,14 @@ function AchievementCard({ achievement }: { achievement: AchievementWithProgress
     <div
       className={cn(
         "relative overflow-hidden rounded-xl border p-4 transition-all sm:p-5",
-        locked
-          ? "border-white/6 bg-zinc-900/40"
-          : cn(
-              "border-white/10 bg-zinc-900/60",
-              RARITY_BORDER_CLASS[achievement.rarity_tier]
-            )
+        claimable
+          ? "border-amber-400/35 bg-amber-500/5 ring-1 ring-amber-400/20"
+          : locked
+            ? "border-white/6 bg-zinc-900/40"
+            : cn(
+                "border-white/10 bg-zinc-900/60",
+                RARITY_BORDER_CLASS[achievement.rarity_tier]
+              )
       )}
     >
       <div
@@ -269,9 +286,29 @@ function AchievementCard({ achievement }: { achievement: AchievementWithProgress
             unlocked={achievement.unlocked}
             size={56}
           />
-          <span className="text-xs tabular-nums text-zinc-500">
-            {achievement.unlocked ? t("unlocked") : progressLabel}
-          </span>
+          {claimable && onClaim ? (
+            <Button
+              type="button"
+              disabled={claiming}
+              onClick={() => onClaim(achievement.code)}
+              className="h-8 border-0 bg-gradient-to-r from-amber-500 to-orange-500 px-3 text-xs font-semibold text-white shadow-md shadow-amber-500/25 hover:from-amber-400 hover:to-orange-400"
+            >
+              {claiming ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Sparkles className="size-3.5" />
+              )}
+              {claiming ? t("claiming") : t("claim")}
+            </Button>
+          ) : (
+            <span className="text-xs tabular-nums text-zinc-500">
+              {achievement.unlocked
+                ? t("unlocked")
+                : claimable
+                  ? t("claimable")
+                  : progressLabel}
+            </span>
+          )}
         </div>
       </div>
     </div>
@@ -448,6 +485,10 @@ function TitleCard({
                     </span>
                   )}
                 </>
+              ) : title.name === SUPPORTER_TITLE_V1 ? (
+                t("unlockRequirementSupporterBasic")
+              ) : title.name === SUPPORTER_TITLE_V2 ? (
+                t("unlockRequirementSupporterPremium")
               ) : (
                 t("unlockRequirementUnknown")
               )}
@@ -482,6 +523,18 @@ function TitleCard({
                   <ArrowRight className="size-3.5" />
                 </Button>
               )}
+              {locked &&
+                !achievement &&
+                (title.name === SUPPORTER_TITLE_V1 ||
+                  title.name === SUPPORTER_TITLE_V2) && (
+                  <Link
+                    href="/supporter"
+                    className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs text-zinc-400 transition-colors hover:text-amber-300"
+                  >
+                    {t("goToSupporter")}
+                    <ArrowRight className="size-3.5" />
+                  </Link>
+                )}
               {locked ? (
                 <Button
                   type="button"
@@ -534,6 +587,7 @@ export function AchievementsModal({ open, onOpenChange }: AchievementsModalProps
   const [titlesData, setTitlesData] = useState<TitlesResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [equippingId, setEquippingId] = useState<string | "unequip" | null>(null);
+  const [claimingCode, setClaimingCode] = useState<string | "all" | null>(null);
   const [error, setError] = useState(false);
 
   const fetchData = useCallback(async (silent = false) => {
@@ -621,6 +675,61 @@ export function AchievementsModal({ open, onOpenChange }: AchievementsModalProps
       setEquippingId(null);
     }
   };
+
+  const handleClaim = async (code: string) => {
+    setClaimingCode(code);
+    try {
+      const response = await fetch("/api/achievements/claim", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      });
+
+      if (!response.ok) {
+        throw new Error("claim failed");
+      }
+
+      const payload = (await response.json()) as AchievementsResponse;
+      setAchievementsData(payload);
+      await fetchData(true);
+      await refreshProfile();
+    } catch {
+      setError(true);
+    } finally {
+      setClaimingCode(null);
+    }
+  };
+
+  const handleClaimAll = async () => {
+    setClaimingCode("all");
+    try {
+      const response = await fetch("/api/achievements/claim", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ claim_all: true }),
+      });
+
+      if (!response.ok) {
+        throw new Error("claim all failed");
+      }
+
+      const payload = (await response.json()) as AchievementsResponse;
+      setAchievementsData(payload);
+      await fetchData(true);
+      await refreshProfile();
+    } catch {
+      setError(true);
+    } finally {
+      setClaimingCode(null);
+    }
+  };
+
+  const claimableCount =
+    achievementsData?.summary.claimable_count ??
+    achievementsData?.achievements.filter((item) => item.claimable).length ??
+    0;
 
   const groupedAchievements = ACHIEVEMENT_CATEGORY_ORDER.map((category) => ({
     category,
@@ -754,6 +863,26 @@ export function AchievementsModal({ open, onOpenChange }: AchievementsModalProps
                     <p className="py-16 text-center text-base text-zinc-500">{t("loadError")}</p>
                   ) : (
                     <div className="space-y-4">
+                      {profile && achievementsData && claimableCount > 0 && (
+                        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-400/25 bg-amber-500/10 px-4 py-3">
+                          <p className="text-sm text-amber-100 sm:text-base">
+                            {t("claimable")} · {claimableCount}
+                          </p>
+                          <Button
+                            type="button"
+                            disabled={claimingCode !== null}
+                            onClick={() => void handleClaimAll()}
+                            className="h-9 border-0 bg-gradient-to-r from-amber-500 to-orange-500 px-4 text-sm font-semibold text-white shadow-md shadow-amber-500/25 hover:from-amber-400 hover:to-orange-400"
+                          >
+                            {claimingCode === "all" ? (
+                              <Loader2 className="mr-2 size-4 animate-spin" />
+                            ) : (
+                              <Sparkles className="mr-2 size-4" />
+                            )}
+                            {claimingCode === "all" ? t("claiming") : t("claimAll")}
+                          </Button>
+                        </div>
+                      )}
                       {profile && achievementsData && (
                         <div className="rounded-xl border border-white/8 bg-zinc-900/50 p-4 lg:hidden">
                           <div className="flex items-center gap-4">
@@ -788,6 +917,8 @@ export function AchievementsModal({ open, onOpenChange }: AchievementsModalProps
                               <AchievementCard
                                 key={achievement.id}
                                 achievement={achievement}
+                                claiming={claimingCode === achievement.code}
+                                onClaim={profile ? handleClaim : undefined}
                               />
                             ))}
                           </div>

@@ -6,7 +6,7 @@ import { resolveUserRole, hasCreatorDashboardAccess } from "@/lib/auth-profile";
 import { isAdminUser } from "@/lib/admin-auth";
 import { ANALYTICS_SESSION_COOKIE } from "@/lib/analytics-service";
 import {
-  buildSubdomainCanonicalRedirectPath,
+  buildSubdomainRedundantPathRedirect,
   buildSubdomainRewritePath,
   isSubdomainCanonicalPath,
   resolveSubdomainFromHost,
@@ -163,17 +163,17 @@ export async function middleware(request: NextRequest) {
       routeKind = "game";
     }
 
-    const canonicalRedirect = buildSubdomainCanonicalRedirectPath(
+    const redundantRedirect = buildSubdomainRedundantPathRedirect(
       request.nextUrl.pathname,
       subdomainLabel,
       routeKind
     );
     if (
-      canonicalRedirect &&
-      canonicalRedirect !== request.nextUrl.pathname
+      redundantRedirect &&
+      redundantRedirect !== request.nextUrl.pathname
     ) {
       const redirectUrl = request.nextUrl.clone();
-      redirectUrl.pathname = canonicalRedirect;
+      redirectUrl.pathname = redundantRedirect;
       return NextResponse.redirect(redirectUrl);
     }
 

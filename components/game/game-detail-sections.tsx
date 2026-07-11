@@ -366,6 +366,7 @@ export function GameDetailSections({
                         username={comment.author_name}
                         title={comment.author_equipped_title}
                         isSupporter={comment.author_is_supporter}
+                        supporterBadge={comment.author_supporter_badge}
                         animateTitle={false}
                         usernameClassName="text-sm text-zinc-200"
                         titleClassName="text-[10px]"

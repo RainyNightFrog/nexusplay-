@@ -8,7 +8,7 @@ import {
 } from "@/lib/forum-seed-builder";
 import { formatForumAuthor } from "@/lib/forum";
 import { resolveEquippedTitles } from "@/lib/equipped-title-service";
-import { resolveSupporterFlags } from "@/lib/supporter-profile";
+import { resolveSupporterProfiles, type SupporterProfileFlags } from "@/lib/supporter-profile";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -52,15 +52,19 @@ function mapComments(
   records: GameCommentRecord[],
   nameMap: Map<string, string>,
   titleMap: Map<string, import("@/lib/titles").EquippedTitle | null>,
-  supporterMap: Map<string, boolean>
+  supporterMap: Map<string, SupporterProfileFlags>
 ): GameComment[] {
-  return records.map((record) => ({
-    ...record,
-    author_name:
-      nameMap.get(record.user_id) ?? formatForumAuthor(record.user_id),
-    author_equipped_title: titleMap.get(record.user_id) ?? null,
-    author_is_supporter: supporterMap.get(record.user_id) === true,
-  }));
+  return records.map((record) => {
+    const supporter = supporterMap.get(record.user_id);
+    return {
+      ...record,
+      author_name:
+        nameMap.get(record.user_id) ?? formatForumAuthor(record.user_id),
+      author_equipped_title: titleMap.get(record.user_id) ?? null,
+      author_is_supporter: supporter?.isSupporter === true,
+      author_supporter_badge: supporter?.badge ?? null,
+    };
+  });
 }
 
 async function loadGameTitle(gameId: number) {
@@ -126,7 +130,7 @@ export async function getGameCommentsByGameId(
       supabase,
       records.map((row) => row.user_id)
     ),
-    resolveSupporterFlags(
+    resolveSupporterProfiles(
       supabase,
       records.map((row) => row.user_id)
     ),
@@ -167,7 +171,7 @@ export async function createGameComment(
   const [nameMap, titleMap, supporterMap] = await Promise.all([
     resolveAuthorNames([record.user_id]),
     resolveEquippedTitles(serverSupabase, [record.user_id]),
-    resolveSupporterFlags(serverSupabase, [record.user_id]),
+    resolveSupporterProfiles(serverSupabase, [record.user_id]),
   ]);
   return mapComments([record], nameMap, titleMap, supporterMap)[0]!;
 }

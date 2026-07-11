@@ -6,8 +6,8 @@ import {
 } from "@/lib/checkout-order";
 import { getCheckoutPaymentsState } from "@/lib/game-checkout-service";
 import {
-  parseSupporterPassTierId,
-  type SupporterPassTier,
+  resolveSupporterPassCheckout,
+  type ResolvedSupporterPassCheckout,
 } from "@/lib/supporter-pass";
 import { ensurePayerStripeCustomer } from "@/lib/stripe-payer-customer";
 import {
@@ -16,6 +16,7 @@ import {
   resolveSiteUrl,
 } from "@/lib/stripe-connect";
 import { createServerSupabase } from "@/lib/supabase-server";
+import { grantSupporterTitlesForBadge } from "@/lib/supporter-title-service";
 
 export { getCheckoutPaymentsState, formatCentsAsUsd };
 
@@ -42,6 +43,12 @@ export async function grantSupporterStatus(params: {
   if (error) {
     throw new Error(error.message);
   }
+
+  await grantSupporterTitlesForBadge({
+    supabase,
+    userId: params.userId,
+    badge: params.badge || DEFAULT_SUPPORTER_BADGE,
+  });
 }
 
 export async function revokeSupporterStatus(userId: string) {
@@ -61,23 +68,18 @@ export async function revokeSupporterStatus(userId: string) {
 }
 
 function buildSupporterLineItem(
-  tier: SupporterPassTier,
+  checkout: ResolvedSupporterPassCheckout,
   productName: string
 ): Stripe.Checkout.SessionCreateParams.LineItem {
-  const priceData: Stripe.Checkout.SessionCreateParams.LineItem.PriceData = {
-    currency: "usd",
-    unit_amount: tier.priceCents,
-    product_data: {
-      name: productName,
-    },
-  };
-
-  if (tier.interval) {
-    priceData.recurring = { interval: tier.interval };
-  }
-
   return {
-    price_data: priceData,
+    price_data: {
+      currency: "usd",
+      unit_amount: checkout.priceCents,
+      product_data: {
+        name: productName,
+      },
+      recurring: { interval: checkout.interval },
+    },
     quantity: 1,
   };
 }
@@ -94,12 +96,15 @@ export async function createSupporterPassCheckoutSession(params: {
     return { mode: "preview" as const };
   }
 
-  const tier = parseSupporterPassTierId(params.tierId);
-  if (!tier) {
-    return { error: "無效的支持者方案", status: 400 };
+  const resolved = resolveSupporterPassCheckout({
+    tierId: params.tierId,
+  });
+  if (!resolved.ok) {
+    return { error: resolved.error, status: 400 };
   }
 
-  const priceCents = sanitizeCents(tier.priceCents);
+  const checkout = resolved.checkout;
+  const priceCents = sanitizeCents(checkout.priceCents);
   if (priceCents <= 0) {
     return { error: "方案金額無效", status: 400 };
   }
@@ -142,37 +147,33 @@ export async function createSupporterPassCheckoutSession(params: {
   const siteUrl = resolveSiteUrl(params.requestOrigin);
   const supporterPath = params.localePath ?? "/supporter";
   const productName =
-    tier.interval === "month"
-      ? `平台支持者月費 · $${formatCentsAsUsd(priceCents)}`
-      : `平台支持者通行證 · $${formatCentsAsUsd(priceCents)}`;
+    checkout.interval === "year"
+      ? `平台支持者年費 · $${formatCentsAsUsd(priceCents)}`
+      : `平台支持者月費 · $${formatCentsAsUsd(priceCents)}`;
 
   const session = await stripe.checkout.sessions.create({
-    mode: tier.interval ? "subscription" : "payment",
+    mode: "subscription",
     customer: customerId,
     client_reference_id: params.userId,
-    line_items: [buildSupporterLineItem(tier, productName)],
-    ...(tier.interval
-      ? {
-          subscription_data: {
-            metadata: {
-              nexusplay_user_id: params.userId,
-              order_type: "supporter_pass",
-              nexusplay_order_type: "supporter_pass",
-              supporter_tier_id: tier.id,
-              supporter_badge: tier.badge,
-              billing_interval: tier.interval,
-            },
-          },
-        }
-      : {}),
+    line_items: [buildSupporterLineItem(checkout, productName)],
+    subscription_data: {
+      metadata: {
+        nexusplay_user_id: params.userId,
+        order_type: "supporter_pass",
+        nexusplay_order_type: "supporter_pass",
+        supporter_tier_id: checkout.tierId,
+        supporter_badge: checkout.badge,
+        billing_interval: checkout.interval,
+      },
+    },
     metadata: {
       nexusplay_order_id: orderRow.id,
       order_type: "supporter_pass",
       nexusplay_order_type: "supporter_pass",
       nexusplay_user_id: params.userId,
-      supporter_tier_id: tier.id,
-      supporter_badge: tier.badge,
-      billing_interval: tier.interval ?? "once",
+      supporter_tier_id: checkout.tierId,
+      supporter_badge: checkout.badge,
+      billing_interval: checkout.interval,
       game_price_cents: String(priceCents),
       platform_tip_cents: "0",
       total_amount_cents: String(priceCents),
@@ -198,7 +199,7 @@ export async function createSupporterPassCheckoutSession(params: {
     mode: "live" as const,
     url: session.url,
     orderId: orderRow.id,
-    tier,
+    checkout,
     priceCents,
   };
 }
@@ -207,12 +208,15 @@ export async function recordPreviewSupporterPass(params: {
   userId: string;
   tierId: string;
 }) {
-  const tier = parseSupporterPassTierId(params.tierId);
-  if (!tier) {
-    return { error: "無效的支持者方案", status: 400 };
+  const resolved = resolveSupporterPassCheckout({
+    tierId: params.tierId,
+  });
+  if (!resolved.ok) {
+    return { error: resolved.error, status: 400 };
   }
 
-  const priceCents = sanitizeCents(tier.priceCents);
+  const checkout = resolved.checkout;
+  const priceCents = sanitizeCents(checkout.priceCents);
   const supabase = createServerSupabase();
 
   const { data, error } = await supabase
@@ -235,13 +239,13 @@ export async function recordPreviewSupporterPass(params: {
 
   await grantSupporterStatus({
     userId: params.userId,
-    badge: tier.badge,
+    badge: checkout.badge,
   });
 
   return {
     mode: "preview" as const,
     orderId: data.id,
-    tier,
+    checkout,
     priceCents,
   };
 }

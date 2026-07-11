@@ -1,18 +1,8 @@
+export const SUPPORTER_BILLING_INTERVALS = ["month", "year"] as const;
+export type SupporterBillingInterval =
+  (typeof SUPPORTER_BILLING_INTERVALS)[number];
+
 export const SUPPORTER_PASS_TIERS = [
-  {
-    id: "supporter_5_once",
-    priceCents: 500,
-    interval: null,
-    badge: "supporter_v1",
-    labelKey: "tier5Once",
-  },
-  {
-    id: "supporter_10_once",
-    priceCents: 1000,
-    interval: null,
-    badge: "supporter_v2",
-    labelKey: "tier10Once",
-  },
   {
     id: "supporter_5_monthly",
     priceCents: 500,
@@ -26,6 +16,20 @@ export const SUPPORTER_PASS_TIERS = [
     interval: "month" as const,
     badge: "supporter_v2",
     labelKey: "tier10Monthly",
+  },
+  {
+    id: "supporter_5_yearly",
+    priceCents: 5000,
+    interval: "year" as const,
+    badge: "supporter_v1",
+    labelKey: "tier5Yearly",
+  },
+  {
+    id: "supporter_10_yearly",
+    priceCents: 10000,
+    interval: "year" as const,
+    badge: "supporter_v2",
+    labelKey: "tier10Yearly",
   },
 ] as const;
 
@@ -44,4 +48,30 @@ export function parseSupporterPassTierId(
 
 export function formatTierPriceUsd(cents: number) {
   return (cents / 100).toFixed(2);
+}
+
+export type ResolvedSupporterPassCheckout = {
+  tierId: string;
+  priceCents: number;
+  badge: string;
+  interval: SupporterBillingInterval;
+};
+
+export function resolveSupporterPassCheckout(input: { tierId: string }):
+  | { ok: true; checkout: ResolvedSupporterPassCheckout }
+  | { ok: false; error: string } {
+  const tier = parseSupporterPassTierId(input.tierId);
+  if (!tier) {
+    return { ok: false, error: "無效的支持者方案" };
+  }
+
+  return {
+    ok: true,
+    checkout: {
+      tierId: tier.id,
+      priceCents: tier.priceCents,
+      badge: tier.badge,
+      interval: tier.interval,
+    },
+  };
 }

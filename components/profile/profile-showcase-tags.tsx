@@ -13,7 +13,6 @@ const TAG_STYLE: Partial<
   donated_rank: "border-amber-500/25 bg-amber-500/10 text-amber-100",
   achievement_count: "border-emerald-500/25 bg-emerald-500/10 text-emerald-200",
   forum_posts: "border-sky-500/25 bg-sky-500/10 text-sky-200",
-  creator: "border-violet-500/25 bg-violet-500/15 text-violet-300",
   supporter: "border-fuchsia-500/25 bg-fuchsia-500/10 text-fuchsia-200",
   follower_count: "border-pink-500/25 bg-pink-500/10 text-pink-200",
   published_games: "border-indigo-500/25 bg-indigo-500/10 text-indigo-200",
@@ -44,8 +43,6 @@ export function ProfileShowcaseTags({ tags, className }: ProfileShowcaseTagsProp
         return t("playerCardTagAchievements", { count: tag.count ?? 0 });
       case "forum_posts":
         return t("playerCardTagForumPosts", { count: tag.count ?? 0 });
-      case "creator":
-        return t("playerCardTagCreator");
       case "supporter":
         return t("playerCardTagSupporter");
       case "follower_count":

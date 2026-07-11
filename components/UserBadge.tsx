@@ -3,15 +3,17 @@
 import type { EquippedTitle } from "@/lib/titles";
 import { getTitleDisplayClass } from "@/lib/titles";
 import {
-  SupporterBadge,
-  supporterUsernameClassName,
-} from "@/components/supporter/supporter-badge";
+  getSupporterDisplayTier,
+  supporterUsernameClassByTier,
+} from "@/lib/supporter-tier";
+import { SupporterBadge } from "@/components/supporter/supporter-badge";
 import { cn } from "@/lib/utils";
 
 type UserBadgeProps = {
   username: string;
   title?: EquippedTitle | null;
   isSupporter?: boolean;
+  supporterBadge?: string | null;
   className?: string;
   usernameClassName?: string;
   titleClassName?: string;
@@ -25,6 +27,7 @@ export function UserBadge({
   username,
   title,
   isSupporter = false,
+  supporterBadge = null,
   className,
   usernameClassName,
   titleClassName,
@@ -33,6 +36,8 @@ export function UserBadge({
   animateTitle = true,
   maxTitleWidth = "max-w-[5.5rem]",
 }: UserBadgeProps) {
+  const supporterTier = getSupporterDisplayTier(isSupporter, supporterBadge);
+
   const titleLabel = title
     ? showBrackets
       ? `「${title.name}」`
@@ -51,11 +56,19 @@ export function UserBadge({
 
   const nameClass = cn(
     "font-medium",
-    isSupporter && supporterUsernameClassName,
+    supporterTier !== "none" &&
+      supporterUsernameClassByTier[supporterTier],
     usernameClassName
   );
 
-  const supporterIcon = isSupporter ? <SupporterBadge /> : null;
+  const supporterIcon =
+    supporterTier !== "none" ? (
+      <SupporterBadge
+        isSupporter={isSupporter}
+        supporterBadge={supporterBadge}
+        tier={supporterTier}
+      />
+    ) : null;
 
   if (layout === "stacked") {
     return (

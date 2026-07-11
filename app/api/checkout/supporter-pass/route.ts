@@ -61,7 +61,7 @@ export async function POST(request: Request) {
       return NextResponse.json({
         mode: "preview",
         orderId: result.orderId,
-        tier: result.tier,
+        checkout: result.checkout,
         priceCents: result.priceCents,
       });
     }

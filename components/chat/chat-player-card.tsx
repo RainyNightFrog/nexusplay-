@@ -28,6 +28,7 @@ import type { ChatMessage } from "@/lib/chat";
 import type { EquippedTitle } from "@/lib/titles";
 import { getTitleDisplayClass } from "@/lib/titles";
 import { formatCountryName } from "@/lib/request-geo";
+import { normalizeWebsite } from "@/lib/profile-settings";
 import {
   formatDonationAmount,
   formatDonationTierLabel,
@@ -363,7 +364,7 @@ export function ChatPlayerCard({
 
               {detail.website && (
                 <a
-                  href={detail.website}
+                  href={normalizeWebsite(detail.website)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 rounded-lg border border-cyan-500/20 bg-cyan-500/10 px-3 py-2 text-sm text-cyan-200 transition-colors hover:bg-cyan-500/15 sm:text-base"

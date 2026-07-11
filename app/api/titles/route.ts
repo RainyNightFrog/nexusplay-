@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getTitleWardrobe } from "@/lib/achievements-service";
+import { syncSupporterTitlesIfNeeded } from "@/lib/supporter-title-service";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
 
@@ -15,6 +16,10 @@ export async function GET() {
     }
 
     const supabase = createServerSupabase();
+    await syncSupporterTitlesIfNeeded({
+      supabase,
+      userId: user.id,
+    });
     const wardrobe = await getTitleWardrobe(supabase, user.id);
 
     return NextResponse.json({

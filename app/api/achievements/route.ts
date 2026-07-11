@@ -33,6 +33,7 @@ export async function GET() {
           achievements.length > 0
             ? Math.round((unlockedCount / achievements.length) * 100)
             : 0,
+        claimable_count: achievements.filter((item) => item.claimable).length,
       },
       categoryProgress,
       fetchedAt: new Date().toISOString(),

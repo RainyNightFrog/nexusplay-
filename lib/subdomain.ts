@@ -131,8 +131,27 @@ export function buildSubdomainRewritePath(
 }
 
 /**
- * 子網域根路徑或僅語言前綴（/、/zh-CN）時，導向含 slug 的正式路徑，避免 rewrite 後 params 錯亂。
+ * 子網域上若網址列出現冗餘的 /game/{slug} 或 /creator/{username}，
+ * 導回子網域根路徑（維持乾淨網址；實際頁面由 rewrite 處理）。
  */
+export function buildSubdomainRedundantPathRedirect(
+  pathname: string,
+  subdomain: string,
+  kind: "game" | "creator" = "game"
+): string | null {
+  const { locale, pathname: path } = splitLocaleFromPath(pathname);
+  const base = kind === "creator" ? `/creator/${subdomain}` : `/game/${subdomain}`;
+  const canonical = applyLocalePrefix(base, locale);
+
+  if (pathname !== canonical && !pathname.startsWith(`${canonical}/`)) {
+    return null;
+  }
+
+  const root = applyLocalePrefix("/", locale);
+  return pathname === root ? null : root;
+}
+
+/** @deprecated 改以 rewrite 維持子網域根路徑，不再將 / 導向 /game/{slug} */
 export function buildSubdomainCanonicalRedirectPath(
   pathname: string,
   subdomain: string,

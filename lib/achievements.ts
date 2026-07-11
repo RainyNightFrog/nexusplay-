@@ -22,6 +22,7 @@ export type AchievementWithProgress = AchievementRecord & {
   unlock_count: number;
   progress_current: number;
   progress_percent: number;
+  claimable: boolean;
 };
 
 export type AchievementCategoryProgress = {

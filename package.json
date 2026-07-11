@@ -30,6 +30,8 @@
     "db:creator-payout": "node scripts/run-creator-payout-stripe.mjs",
     "db:game-tips": "node scripts/run-game-tips.mjs",
     "db:profile-supporter": "node scripts/run-profile-supporter-fields.mjs",
+    "db:supporter-titles": "node scripts/run-supporter-titles.mjs",
+    "db:supporter-titles-backfill": "node scripts/backfill-supporter-titles.mjs",
     "db:orders-checkout": "node scripts/run-orders-checkout.mjs",
     "db:orders-cancelled": "node scripts/run-orders-cancelled-status.mjs",
     "db:game-entitlements": "node scripts/run-game-entitlements.mjs",

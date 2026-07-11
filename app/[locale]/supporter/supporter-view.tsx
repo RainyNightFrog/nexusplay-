@@ -23,9 +23,14 @@ import {
   formatTierPriceUsd,
   type SupporterPassTierId,
 } from "@/lib/supporter-pass";
+import { isPremiumSupporterBadge } from "@/lib/supporter-tier";
 import { cn } from "@/lib/utils";
 
 const PERK_ICONS = [Sparkles, Palette, HeartHandshake] as const;
+
+function getBillingLabelKey(interval: "month" | "year") {
+  return interval === "year" ? "billingYearly" : "billingMonthly";
+}
 
 export function SupporterView() {
   const t = useTranslations("supporter");
@@ -36,7 +41,7 @@ export function SupporterView() {
   const router = useRouter();
 
   const [selectedTier, setSelectedTier] = useState<SupporterPassTierId>(
-    "supporter_5_once"
+    "supporter_5_monthly"
   );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -142,7 +147,11 @@ export function SupporterView() {
           >
             <Check className="size-4 shrink-0" />
             {t("alreadySupporter")}
-            <SupporterBadge showLabel />
+            <SupporterBadge
+              showLabel
+              isSupporter
+              supporterBadge={profile.supporter_badge}
+            />
           </motion.div>
         )}
 
@@ -178,44 +187,61 @@ export function SupporterView() {
           })}
         </section>
 
-        <section className="mt-10 rounded-2xl border border-white/8 bg-zinc-900/50 p-6 sm:p-8">
+        <section className="mx-auto mt-10 max-w-3xl rounded-2xl border border-white/8 bg-zinc-900/50 p-6 sm:p-8">
           <div className="text-center">
             <h2 className="text-xl font-semibold text-white">{t("tiersTitle")}</h2>
             <p className="mt-2 text-sm text-zinc-400">{t("tiersDesc")}</p>
           </div>
 
-          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+          <div className="mx-auto mt-6 grid max-w-2xl gap-4 sm:grid-cols-2">
             {SUPPORTER_PASS_TIERS.map((tier) => (
               <button
                 key={tier.id}
                 type="button"
                 onClick={() => setSelectedTier(tier.id)}
                 className={cn(
-                  "rounded-2xl border p-5 text-left transition-colors",
+                  "rounded-2xl border p-5 text-center transition-colors",
                   selectedTier === tier.id
                     ? "border-amber-400/40 bg-amber-500/10 shadow-[0_0_24px_rgba(251,191,36,0.08)]"
                     : "border-white/10 bg-zinc-950/40 hover:border-white/20"
                 )}
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-lg font-semibold text-white">
-                      ${formatTierPriceUsd(tier.priceCents)} USD
-                    </p>
-                    <p className="mt-1 text-sm text-zinc-400">
-                      {t(tier.labelKey)}
-                    </p>
-                  </div>
-                  {selectedTier === tier.id && (
-                    <Check className="size-5 shrink-0 text-amber-300" />
-                  )}
-                </div>
-                <p className="mt-3 text-xs text-zinc-500">
-                  {tier.interval ? t("billingMonthly") : t("billingOnce")}
+                {selectedTier === tier.id && (
+                  <Check className="mx-auto mb-2 size-5 text-amber-300" />
+                )}
+                <p className="text-lg font-semibold text-white">
+                  ${formatTierPriceUsd(tier.priceCents)} USD
                 </p>
+                <p className="mt-1 text-sm text-zinc-400">
+                  {t(tier.labelKey)}
+                </p>
+                <p className="mt-3 text-xs text-zinc-500">
+                  {t(getBillingLabelKey(tier.interval))}
+                </p>
+                <ul className="mt-4 space-y-1 text-xs text-zinc-500">
+                  <li>{t("tierPerkBadge")}</li>
+                  <li>{t("tierPerkUsername")}</li>
+                  <li>
+                    {t(
+                      isPremiumSupporterBadge(tier.badge)
+                        ? "tierPerkTitlePremium"
+                        : "tierPerkTitleBasic"
+                    )}
+                  </li>
+                  {isPremiumSupporterBadge(tier.badge) && (
+                    <>
+                      <li>{t("tierPerkPremiumBadge")}</li>
+                      <li>{t("tierPerkPremiumGlow")}</li>
+                    </>
+                  )}
+                </ul>
               </button>
             ))}
           </div>
+
+          <p className="mt-4 text-center text-[11px] leading-relaxed text-zinc-500">
+            {t("spendingHint")}
+          </p>
 
           {!paymentsLive && (
             <p className="mt-4 text-center text-xs text-amber-200/80">
@@ -227,19 +253,21 @@ export function SupporterView() {
             <p className="mt-4 text-center text-sm text-rose-300">{error}</p>
           )}
 
-          <Button
-            type="button"
-            disabled={submitting}
-            onClick={() => void handlePurchase()}
-            className="mt-6 w-full gap-2 bg-gradient-to-r from-amber-500 to-violet-600 text-white hover:from-amber-400 hover:to-violet-500"
-          >
-            {submitting ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Shield className="size-4" />
-            )}
-            {profile?.is_supporter ? t("extendSupport") : t("cta")}
-          </Button>
+          <div className="mt-6 flex justify-center">
+            <Button
+              type="button"
+              disabled={submitting}
+              onClick={() => void handlePurchase()}
+              className="w-full max-w-md gap-2 bg-gradient-to-r from-amber-500 to-violet-600 text-white hover:from-amber-400 hover:to-violet-500"
+            >
+              {submitting ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Shield className="size-4" />
+              )}
+              {profile?.is_supporter ? t("extendSupport") : t("cta")}
+            </Button>
+          </div>
         </section>
       </main>
     </div>
