@@ -4,6 +4,7 @@ import { extractBuildPrefixFromPlayUrl } from "@/lib/game-storage";
 import { guessContentType } from "@/lib/game-mime";
 import { patchHtmlForPlatformEmbed } from "@/lib/embed-html-patch";
 import { canViewGame } from "@/lib/game-publish";
+import { resolvePurchaseEntitlementForGame } from "@/lib/game-entitlement-service";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
 
@@ -62,7 +63,18 @@ export async function GET(
       data: { user },
     } = await authClient.auth.getUser();
 
-    if (!canViewGame(record, user?.id, { isAdmin: isAdminUser(user) })) {
+    const hasPurchaseEntitlement = await resolvePurchaseEntitlementForGame(
+      supabase,
+      numericId,
+      user?.id
+    );
+
+    if (
+      !canViewGame(record, user?.id, {
+        isAdmin: isAdminUser(user),
+        hasPurchaseEntitlement,
+      })
+    ) {
       return NextResponse.json({ error: "找不到此遊戲" }, { status: 404 });
     }
 

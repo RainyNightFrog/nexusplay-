@@ -6,6 +6,7 @@ import {
   validateSavePayload,
 } from "@/lib/game-save";
 import { canViewGame } from "@/lib/game-publish";
+import { resolvePurchaseEntitlementForGame } from "@/lib/game-entitlement-service";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
 
@@ -24,7 +25,7 @@ async function authorizePlayerForGame(gameId: number) {
   const supabase = createServerSupabase();
   const { data: record, error: recordError } = await supabase
     .from("games")
-    .select("id, publish_status, creator_id, status")
+    .select("id, publish_status, creator_id, status, pricing_type, price, min_price")
     .eq("id", gameId)
     .maybeSingle();
 
@@ -38,7 +39,18 @@ async function authorizePlayerForGame(gameId: number) {
     };
   }
 
-  if (!canViewGame(record, user.id, { isAdmin: isAdminUser(user) })) {
+  const hasPurchaseEntitlement = await resolvePurchaseEntitlementForGame(
+    supabase,
+    gameId,
+    user.id
+  );
+
+  if (
+    !canViewGame(record, user.id, {
+      isAdmin: isAdminUser(user),
+      hasPurchaseEntitlement,
+    })
+  ) {
     return {
       error: NextResponse.json({ error: "找不到此遊戲", save: null }, { status: 404 }),
     };

@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { syncConnectAccountFromWebhook } from "@/lib/creator-connect-webhook";
 import { syncCreatorPayoutFromStripeEvent } from "@/lib/creator-payout-webhook";
 import { finalizeTipPayment } from "@/lib/tip-checkout-service";
+import { handleCheckoutSessionCompleted } from "@/lib/checkout-session-webhook";
 import {
   handleTipDisputeClosed,
   handleTipDisputeCreated,
@@ -44,6 +45,11 @@ export async function POST(request: Request) {
 
   try {
     switch (event.type) {
+      case "checkout.session.completed": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        await handleCheckoutSessionCompleted(session);
+        break;
+      }
       case "payment_intent.succeeded": {
         const paymentIntent = event.data.object as Stripe.PaymentIntent;
         await finalizeTipPayment(paymentIntent.id);

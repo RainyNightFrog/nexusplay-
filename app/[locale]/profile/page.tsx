@@ -260,6 +260,7 @@ export default function ProfilePage() {
               <UserBadge
                 username={displayName || profile.display_name}
                 title={profile.equipped_title}
+                isSupporter={profile.is_supporter}
                 usernameClassName="text-lg font-semibold text-zinc-100"
                 titleClassName="text-xs"
               />

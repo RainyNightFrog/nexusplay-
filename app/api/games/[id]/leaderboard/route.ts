@@ -9,6 +9,7 @@ import {
   validateLeaderboardSubmit,
 } from "@/lib/game-leaderboard";
 import { canViewGame } from "@/lib/game-publish";
+import { resolvePurchaseEntitlementForGame } from "@/lib/game-entitlement-service";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
 
@@ -16,7 +17,7 @@ async function loadGame(gameId: number) {
   const supabase = createServerSupabase();
   const { data: record, error } = await supabase
     .from("games")
-    .select("id, publish_status, creator_id, status")
+    .select("id, publish_status, creator_id, status, pricing_type, price, min_price")
     .eq("id", gameId)
     .maybeSingle();
 
@@ -49,7 +50,19 @@ export async function GET(
       data: { user },
     } = await authClient.auth.getUser();
 
-    if (!canViewGame(record, user?.id, { isAdmin: isAdminUser(user) })) {
+    const supabase = createServerSupabase();
+    const hasPurchaseEntitlement = await resolvePurchaseEntitlementForGame(
+      supabase,
+      gameId,
+      user?.id
+    );
+
+    if (
+      !canViewGame(record, user?.id, {
+        isAdmin: isAdminUser(user),
+        hasPurchaseEntitlement,
+      })
+    ) {
       return NextResponse.json({ error: "找不到此遊戲" }, { status: 404 });
     }
 
@@ -100,7 +113,19 @@ export async function POST(
       return NextResponse.json({ error: "找不到此遊戲" }, { status: 404 });
     }
 
-    if (!canViewGame(record, user.id, { isAdmin: isAdminUser(user) })) {
+    const supabase = createServerSupabase();
+    const hasPurchaseEntitlement = await resolvePurchaseEntitlementForGame(
+      supabase,
+      gameId,
+      user.id
+    );
+
+    if (
+      !canViewGame(record, user.id, {
+        isAdmin: isAdminUser(user),
+        hasPurchaseEntitlement,
+      })
+    ) {
       return NextResponse.json({ error: "找不到此遊戲" }, { status: 404 });
     }
 

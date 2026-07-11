@@ -89,11 +89,13 @@ function AuthorChip({
   name,
   userId,
   equippedTitle,
+  isSupporter = false,
   onClick,
 }: {
   name: string;
   userId: string;
   equippedTitle?: import("@/lib/titles").EquippedTitle | null;
+  isSupporter?: boolean;
   onClick?: () => void;
 }) {
   const shortId = userId.replace(/-/g, "").slice(0, 6).toUpperCase();
@@ -113,6 +115,7 @@ function AuthorChip({
         <UserBadge
           username={name}
           title={equippedTitle}
+          isSupporter={isSupporter}
           layout="stacked"
           animateTitle={false}
           usernameClassName="text-zinc-300"
@@ -724,6 +727,7 @@ export function CommunityForum({
                     name={selectedPost.author_name}
                     userId={selectedPost.user_id}
                     equippedTitle={selectedPost.author_equipped_title}
+                    isSupporter={selectedPost.author_is_supporter}
                     onClick={
                       profile
                         ? () =>
@@ -768,6 +772,7 @@ export function CommunityForum({
                           name={comment.author_name}
                           userId={comment.user_id}
                           equippedTitle={comment.author_equipped_title}
+                          isSupporter={comment.author_is_supporter}
                           onClick={
                             profile
                               ? () =>
@@ -1167,6 +1172,7 @@ export function CommunityForum({
                         name={post.author_name}
                         userId={post.user_id}
                         equippedTitle={post.author_equipped_title}
+                        isSupporter={post.author_is_supporter}
                         onClick={
                           profile
                             ? () =>

@@ -55,6 +55,14 @@ const GameSupportSection = dynamic(
   { ssr: false }
 );
 
+const GameCheckoutPanel = dynamic(
+  () =>
+    import("@/components/game/game-checkout-panel").then(
+      (module) => module.GameCheckoutPanel
+    ),
+  { ssr: false }
+);
+
 const GameDetailSections = dynamic(
   () =>
     import("@/components/game/game-detail-sections").then(
@@ -368,7 +376,22 @@ function GamePageContent() {
   const isGameOwner = Boolean(
     profile?.id && ownerCreatorId && profile.id === ownerCreatorId
   );
+  const showCheckout =
+    game != null &&
+    (game.pricingType === "pwyw" ||
+      (game.pricingType === "fixed" && (game.price ?? 0) > 0));
   const editGameHref = game ? `/dashboard/edit/${game.id}` : "/dashboard";
+
+  useEffect(() => {
+    const checkoutState = searchParams.get("checkout");
+    if (checkoutState === "success") {
+      showToast(t("checkoutSuccessLive"));
+      router.replace(`/game/${gameId}`, { scroll: false });
+    } else if (checkoutState === "cancelled") {
+      showToast(t("checkoutCancelled"));
+      router.replace(`/game/${gameId}`, { scroll: false });
+    }
+  }, [searchParams, showToast, t, router, gameId]);
 
   const openCreatorProfile = useCallback(() => {
     if (!game?.creatorId) return;
@@ -832,6 +855,28 @@ function GamePageContent() {
             </div>
           </motion.aside>
         </div>
+
+        {showCheckout && game && (
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, delay: 0.05 }}
+            className="mt-10"
+          >
+            <div className="rounded-2xl border border-emerald-400/20 bg-zinc-900/60 p-6 sm:p-8 shadow-lg shadow-black/40">
+              <GameCheckoutPanel
+                embedded
+                gameId={game.id}
+                gameTitle={game.title}
+                pricingType={game.pricingType === "pwyw" ? "pwyw" : "fixed"}
+                priceCents={game.price ?? 0}
+                minPriceCents={game.minPrice ?? 0}
+                currency={game.currency ?? "USD"}
+                isGameOwner={isGameOwner}
+              />
+            </div>
+          </motion.section>
+        )}
 
         {game.tipsEnabled && (
           <GameSupportSection

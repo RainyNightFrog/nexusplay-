@@ -1,4 +1,5 @@
 import type { GameRecord } from "@/lib/supabase";
+import { gameRequiresPurchase } from "@/lib/game-entitlement-service";
 import { MIN_SUGGESTED_TIP_USD } from "@/lib/tip-limits";
 
 export const GAME_PUBLISH_STATUSES = ["draft", "public"] as const;
@@ -66,9 +67,13 @@ export function parseMonetizationFromFormData(
 }
 
 export function canViewGame(
-  record: Pick<GameRecord, "publish_status" | "creator_id" | "status">,
+  record: Pick<GameRecord, "publish_status" | "creator_id" | "status" | "pricing_type" | "price" | "min_price">,
   userId?: string | null,
-  options?: { isAdmin?: boolean; hasPartnerAccess?: boolean }
+  options?: {
+    isAdmin?: boolean;
+    hasPartnerAccess?: boolean;
+    hasPurchaseEntitlement?: boolean;
+  }
 ) {
   if (options?.isAdmin) {
     return true;
@@ -83,7 +88,18 @@ export function canViewGame(
   }
 
   const approvalStatus = record.status ?? "approved";
-  return record.publish_status === "public" && approvalStatus === "approved";
+  const publiclyVisible =
+    record.publish_status === "public" && approvalStatus === "approved";
+
+  if (!publiclyVisible) {
+    return false;
+  }
+
+  if (gameRequiresPurchase(record)) {
+    return options?.hasPurchaseEntitlement === true;
+  }
+
+  return true;
 }
 
 export function normalizePublishStatus(

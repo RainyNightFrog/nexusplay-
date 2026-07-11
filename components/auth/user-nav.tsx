@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
-import { Loader2, LogOut, Heart, Palette, Settings, Shield, UserRound, Bell, Trophy } from "lucide-react";
+import { Loader2, LogOut, Heart, Palette, Settings, Shield, UserRound, Bell, Trophy, Sparkles } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { AchievementsModal } from "@/components/AchievementsModal";
@@ -98,6 +98,7 @@ export function UserNav() {
             <UserBadge
               username={profile.display_name}
               title={profile.equipped_title}
+              isSupporter={profile.is_supporter}
               layout="stacked"
               usernameClassName="truncate text-sm font-medium text-white"
               titleClassName="text-[10px]"
@@ -170,6 +171,15 @@ export function UserNav() {
           >
             <Bell className="size-4 text-amber-400" />
             {t("notifications")}
+          </Link>
+
+          <Link
+            href="/supporter"
+            onClick={() => setOpen(false)}
+            className="flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white"
+          >
+            <Sparkles className="size-4 text-amber-400" />
+            {t("supporterPass")}
           </Link>
 
           <Link

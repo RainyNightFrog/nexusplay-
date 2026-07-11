@@ -18,6 +18,7 @@ export type GameComment = {
   created_at: string;
   author_name: string;
   author_equipped_title: import("@/lib/titles").EquippedTitle | null;
+  author_is_supporter?: boolean;
 };
 
 export type SeedGameComment = {

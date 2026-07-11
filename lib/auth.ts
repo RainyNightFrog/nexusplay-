@@ -22,6 +22,9 @@ export type UserProfile = {
   equipped_title: EquippedTitle | null;
   stripe_account_id?: string | null;
   stripe_details_submitted?: boolean;
+  is_supporter: boolean;
+  supporter_since: string | null;
+  supporter_badge: string | null;
 };
 
 export function getInitials(name: string) {

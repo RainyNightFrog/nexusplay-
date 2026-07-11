@@ -17,6 +17,7 @@ import {
 } from "@/lib/forum-seed-builder";
 import { getAmbientUserPlayerMap } from "@/lib/ambient-user-index";
 import { resolveEquippedTitles } from "@/lib/equipped-title-service";
+import { resolveSupporterFlags } from "@/lib/supporter-profile";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -218,12 +219,14 @@ function mapPosts(
   records: ForumPostRecord[],
   nameMap: Map<string, string>,
   titleMap: Map<string, import("@/lib/titles").EquippedTitle | null>,
-  commentCounts: Map<number, number> = new Map()
+  commentCounts: Map<number, number> = new Map(),
+  supporterMap: Map<string, boolean> = new Map()
 ): ForumPost[] {
   return records.map((record) => ({
     ...record,
     author_name: nameMap.get(record.user_id) ?? formatForumAuthor(record.user_id),
     author_equipped_title: titleMap.get(record.user_id) ?? null,
+    author_is_supporter: supporterMap.get(record.user_id) === true,
     comment_count: commentCounts.get(record.id) ?? 0,
   }));
 }
@@ -231,12 +234,14 @@ function mapPosts(
 function mapComments(
   records: ForumCommentRecord[],
   nameMap: Map<string, string>,
-  titleMap: Map<string, import("@/lib/titles").EquippedTitle | null>
+  titleMap: Map<string, import("@/lib/titles").EquippedTitle | null>,
+  supporterMap: Map<string, boolean> = new Map()
 ): ForumComment[] {
   return records.map((record) => ({
     ...record,
     author_name: nameMap.get(record.user_id) ?? formatForumAuthor(record.user_id),
     author_equipped_title: titleMap.get(record.user_id) ?? null,
+    author_is_supporter: supporterMap.get(record.user_id) === true,
   }));
 }
 
@@ -246,12 +251,17 @@ async function resolveAuthorDisplay(userIds: string[]) {
   const nameMap = new Map<string, string>();
 
   if (uniqueIds.length === 0) {
-    return { nameMap, titleMap: new Map<string, import("@/lib/titles").EquippedTitle | null>() };
+    return {
+      nameMap,
+      titleMap: new Map<string, import("@/lib/titles").EquippedTitle | null>(),
+      supporterMap: new Map<string, boolean>(),
+    };
   }
 
-  const [{ data: profiles }, titleMap] = await Promise.all([
+  const [{ data: profiles }, titleMap, supporterMap] = await Promise.all([
     supabase.from("profiles").select("id, display_name").in("id", uniqueIds),
     resolveEquippedTitles(supabase, uniqueIds),
+    resolveSupporterFlags(supabase, uniqueIds),
   ]);
 
   for (const userId of uniqueIds) {
@@ -262,7 +272,7 @@ async function resolveAuthorDisplay(userIds: string[]) {
     );
   }
 
-  return { nameMap, titleMap };
+  return { nameMap, titleMap, supporterMap };
 }
 
 export async function getForumPostsByGameId(
@@ -292,14 +302,14 @@ export async function getForumPostsByGameId(
 
   gameTitle = gameRow?.title ?? "";
 
-  const { nameMap, titleMap } = await resolveAuthorDisplay(
+  const { nameMap, titleMap, supporterMap } = await resolveAuthorDisplay(
     records.map((row) => row.user_id)
   );
   const commentCounts = await attachCommentCounts(
     supabase,
     records.map((row) => row.id)
   );
-  const realPosts = mapPosts(records, nameMap, titleMap, commentCounts);
+  const realPosts = mapPosts(records, nameMap, titleMap, commentCounts, supporterMap);
   return mergeRealPostsWithRemainingSeeds(gameId, gameTitle, realPosts, locale);
 }
 
@@ -328,7 +338,7 @@ export async function getAllForumPosts(
   const mappedByGame = new Map<number, ForumPost[]>();
 
   if (dbRecords.length > 0) {
-    const { nameMap, titleMap } = await resolveAuthorDisplay(
+    const { nameMap, titleMap, supporterMap } = await resolveAuthorDisplay(
       dbRecords.map((row) => row.user_id)
     );
     const commentCounts = await attachCommentCounts(
@@ -337,7 +347,7 @@ export async function getAllForumPosts(
     );
 
     for (const record of dbRecords) {
-      const mapped = mapPosts([record], nameMap, titleMap, commentCounts)[0];
+      const mapped = mapPosts([record], nameMap, titleMap, commentCounts, supporterMap)[0];
       if (!mapped) continue;
       const list = mappedByGame.get(record.game_id) ?? [];
       list.push(mapped);
@@ -386,9 +396,9 @@ export async function getForumPostById(
   if (!data) return null;
 
   const record = data as ForumPostRecord;
-  const { nameMap, titleMap } = await resolveAuthorDisplay([record.user_id]);
+  const { nameMap, titleMap, supporterMap } = await resolveAuthorDisplay([record.user_id]);
   const commentCounts = await attachCommentCounts(supabase, [record.id]);
-  return mapPosts([record], nameMap, titleMap, commentCounts)[0] ?? null;
+  return mapPosts([record], nameMap, titleMap, commentCounts, supporterMap)[0] ?? null;
 }
 
 export async function getForumCommentsByPostId(
@@ -451,10 +461,10 @@ export async function getForumCommentsByPostId(
   }
 
   const records = (data ?? []) as ForumCommentRecord[];
-  const { nameMap, titleMap } = await resolveAuthorDisplay(
+  const { nameMap, titleMap, supporterMap } = await resolveAuthorDisplay(
     records.map((row) => row.user_id)
   );
-  return mapComments(records, nameMap, titleMap);
+  return mapComments(records, nameMap, titleMap, supporterMap);
 }
 
 export async function createForumPost(
@@ -489,8 +499,8 @@ export async function createForumPost(
   }
 
   const record = data as ForumPostRecord;
-  const { nameMap, titleMap } = await resolveAuthorDisplay([record.user_id]);
-  return mapPosts([record], nameMap, titleMap, new Map([[record.id, 0]]))[0]!;
+  const { nameMap, titleMap, supporterMap } = await resolveAuthorDisplay([record.user_id]);
+  return mapPosts([record], nameMap, titleMap, new Map([[record.id, 0]]), supporterMap)[0]!;
 }
 
 export async function createForumComment(
@@ -517,8 +527,8 @@ export async function createForumComment(
   }
 
   const record = data as ForumCommentRecord;
-  const { nameMap, titleMap } = await resolveAuthorDisplay([record.user_id]);
-  return mapComments([record], nameMap, titleMap)[0]!;
+  const { nameMap, titleMap, supporterMap } = await resolveAuthorDisplay([record.user_id]);
+  return mapComments([record], nameMap, titleMap, supporterMap)[0]!;
 }
 
 export async function forumPostBelongsToGame(

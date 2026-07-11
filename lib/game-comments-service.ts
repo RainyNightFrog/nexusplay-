@@ -8,6 +8,7 @@ import {
 } from "@/lib/forum-seed-builder";
 import { formatForumAuthor } from "@/lib/forum";
 import { resolveEquippedTitles } from "@/lib/equipped-title-service";
+import { resolveSupporterFlags } from "@/lib/supporter-profile";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -50,13 +51,15 @@ async function resolveAuthorNames(userIds: string[]) {
 function mapComments(
   records: GameCommentRecord[],
   nameMap: Map<string, string>,
-  titleMap: Map<string, import("@/lib/titles").EquippedTitle | null>
+  titleMap: Map<string, import("@/lib/titles").EquippedTitle | null>,
+  supporterMap: Map<string, boolean>
 ): GameComment[] {
   return records.map((record) => ({
     ...record,
     author_name:
       nameMap.get(record.user_id) ?? formatForumAuthor(record.user_id),
     author_equipped_title: titleMap.get(record.user_id) ?? null,
+    author_is_supporter: supporterMap.get(record.user_id) === true,
   }));
 }
 
@@ -118,11 +121,17 @@ export async function getGameCommentsByGameId(
   }
 
   const nameMap = await resolveAuthorNames(records.map((row) => row.user_id));
-  const titleMap = await resolveEquippedTitles(
-    supabase,
-    records.map((row) => row.user_id)
-  );
-  const realComments = mapComments(records, nameMap, titleMap);
+  const [titleMap, supporterMap] = await Promise.all([
+    resolveEquippedTitles(
+      supabase,
+      records.map((row) => row.user_id)
+    ),
+    resolveSupporterFlags(
+      supabase,
+      records.map((row) => row.user_id)
+    ),
+  ]);
+  const realComments = mapComments(records, nameMap, titleMap, supporterMap);
   return mergeWithSeedComments(gameId, gameTitle, realComments, locale);
 }
 
@@ -155,9 +164,10 @@ export async function createGameComment(
 
   const record = data as GameCommentRecord;
   const serverSupabase = createServerSupabase();
-  const [nameMap, titleMap] = await Promise.all([
+  const [nameMap, titleMap, supporterMap] = await Promise.all([
     resolveAuthorNames([record.user_id]),
     resolveEquippedTitles(serverSupabase, [record.user_id]),
+    resolveSupporterFlags(serverSupabase, [record.user_id]),
   ]);
-  return mapComments([record], nameMap, titleMap)[0]!;
+  return mapComments([record], nameMap, titleMap, supporterMap)[0]!;
 }

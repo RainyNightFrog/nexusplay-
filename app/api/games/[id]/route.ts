@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isAdminUser } from "@/lib/admin-auth";
 import { canViewGame } from "@/lib/game-publish";
+import { hasGameEntitlement, resolvePurchaseEntitlementForGame } from "@/lib/game-entitlement-service";
 import { mapRecordToGame } from "@/lib/games-data";
 import { resolveGameCreator } from "@/lib/game-creator-resolver";
 import {
@@ -73,10 +74,17 @@ export async function GET(
       }
     }
 
+    const hasPurchaseEntitlement = await resolvePurchaseEntitlementForGame(
+      supabase,
+      numericId,
+      user?.id
+    );
+
     if (
       !canViewGame(record, user?.id, {
         isAdmin: isAdminUser(user),
         hasPartnerAccess,
+        hasPurchaseEntitlement,
       })
     ) {
       return NextResponse.json({ error: "找不到此遊戲" }, { status: 404 });

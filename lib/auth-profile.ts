@@ -33,7 +33,9 @@ export async function resolveUserProfile(
 
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("id, display_name, avatar_url, role, created_at, support_email, equipped_title_id, bio, player_number")
+    .select(
+      "id, display_name, avatar_url, role, created_at, support_email, equipped_title_id, bio, player_number, is_supporter, supporter_since, supporter_badge"
+    )
     .eq("id", user.id)
     .maybeSingle();
 
@@ -63,6 +65,9 @@ export async function resolveUserProfile(
       bio: readOptionalString(profile.bio) ?? metadataProfile.bio,
       equipped_title_id: profile.equipped_title_id ?? null,
       equipped_title: equippedTitle,
+      is_supporter: profile.is_supporter === true,
+      supporter_since: readOptionalString(profile.supporter_since),
+      supporter_badge: readOptionalString(profile.supporter_badge),
     };
   }
 

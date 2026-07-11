@@ -46,5 +46,8 @@ export function profileFromUserMetadata(user: User): UserProfile {
     show_in_leaderboard: readBoolean(metadata.show_in_leaderboard, true),
     equipped_title_id: null,
     equipped_title: null,
+    is_supporter: false,
+    supporter_since: null,
+    supporter_badge: null,
   };
 }
