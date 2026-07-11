@@ -65,6 +65,7 @@ function buildCreatorUpdatePayload(
     price: number;
     currency: string;
     minPrice: number;
+    onSale: boolean;
     galleryUrls: string[];
     devlogEntries: unknown;
     metadataPayload: Record<string, unknown>;
@@ -89,6 +90,7 @@ function buildCreatorUpdatePayload(
     price: input.price,
     currency: input.currency,
     min_price: input.minPrice,
+    on_sale: input.onSale,
     gallery_urls: input.galleryUrls,
     devlog_entries: input.devlogEntries,
     ...input.metadataPayload,
@@ -380,6 +382,7 @@ export async function patchCreatorGame(input: {
         price: pricing.data.price,
         currency: pricing.data.currency,
         minPrice: pricing.data.min_price,
+        onSale: pricing.data.on_sale,
         galleryUrls,
         devlogEntries,
         metadataPayload,

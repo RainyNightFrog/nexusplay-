@@ -288,6 +288,7 @@ export async function uploadCreatorGameFromFormData(params: {
         price: pricing.data.price,
         currency: pricing.data.currency,
         min_price: pricing.data.min_price,
+        on_sale: pricing.data.on_sale,
         status: "pending",
         gallery_urls: galleryUrls,
         devlog_entries: [],

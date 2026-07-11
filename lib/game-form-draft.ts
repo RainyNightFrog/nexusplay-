@@ -118,6 +118,7 @@ function parsePricing(value: unknown): GamePricingValues {
         typeof value.currency === "string" && value.currency.trim()
           ? value.currency.trim().toUpperCase()
           : defaultGamePricingValues().currency,
+      onSale: value.onSale === true,
     };
   }
 
@@ -128,6 +129,7 @@ function parsePricing(value: unknown): GamePricingValues {
     min_price:
       typeof value.min_price === "number" ? value.min_price : undefined,
     currency: typeof value.currency === "string" ? value.currency : undefined,
+    on_sale: typeof value.on_sale === "boolean" ? value.on_sale : undefined,
   });
 }
 

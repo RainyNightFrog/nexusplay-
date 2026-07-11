@@ -1,9 +1,10 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { BadgeDollarSign, Gift, HandCoins, Tag } from "lucide-react";
+import { BadgeDollarSign, Gift, HandCoins, Percent, Tag } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { RequiredFieldLabel } from "@/components/dashboard/required-field-label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DEFAULT_PRICING_CURRENCY,
   type GamePricingType,
@@ -56,6 +57,7 @@ export function GamePricingFields({
         pricingType === "pwyw"
           ? values.minPriceAmount.trim() || "0"
           : "",
+      onSale: pricingType !== "free" ? values.onSale : false,
     });
   };
 
@@ -200,6 +202,45 @@ export function GamePricingFields({
                         currency: values.currency || DEFAULT_PRICING_CURRENCY,
                       })}
                 </p>
+              </div>
+
+              <div className="mt-5 flex items-start gap-3 rounded-xl border border-amber-400/20 bg-amber-500/[0.06] px-4 py-4">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-amber-400/25 bg-amber-500/10 text-amber-300">
+                  <Percent className="size-5" />
+                </div>
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div>
+                    <p className="text-sm font-semibold text-amber-100">
+                      {t("pricingOnSaleLabel")}
+                    </p>
+                    <p className="mt-1 text-xs leading-relaxed text-zinc-400">
+                      {t("pricingOnSaleDesc")}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-zinc-950/40 px-4 py-3">
+                    <Checkbox
+                      id="game-on-sale"
+                      checked={values.onSale}
+                      onCheckedChange={(checked) =>
+                        setField("onSale", checked === true)
+                      }
+                      disabled={disabled}
+                      className={cn(
+                        "size-5 border-white/20 bg-zinc-900/80 data-checked:border-amber-400 data-checked:bg-amber-500",
+                        "focus-visible:border-amber-400 focus-visible:ring-amber-500/30"
+                      )}
+                    />
+                    <label
+                      htmlFor="game-on-sale"
+                      className="cursor-pointer text-sm font-medium text-zinc-200"
+                    >
+                      {values.onSale
+                        ? t("pricingOnSaleToggleOn")
+                        : t("pricingOnSaleToggleOff")}
+                    </label>
+                  </div>
+                  <p className="text-xs text-zinc-500">{t("pricingOnSaleHint")}</p>
+                </div>
               </div>
             </div>
           </motion.div>

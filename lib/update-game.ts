@@ -56,6 +56,7 @@ export type UpdateGameResult = {
     price?: number;
     currency?: string;
     min_price?: number;
+    on_sale?: boolean;
   };
 };
 

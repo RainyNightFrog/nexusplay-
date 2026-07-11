@@ -9,6 +9,7 @@ export type GamePricingValues = {
   priceAmount: string;
   minPriceAmount: string;
   currency: string;
+  onSale: boolean;
 };
 
 export type GamePricingPayload = {
@@ -16,6 +17,7 @@ export type GamePricingPayload = {
   price: number;
   currency: string;
   min_price: number;
+  on_sale: boolean;
 };
 
 export function defaultGamePricingValues(): GamePricingValues {
@@ -24,6 +26,7 @@ export function defaultGamePricingValues(): GamePricingValues {
     priceAmount: "",
     minPriceAmount: "",
     currency: DEFAULT_PRICING_CURRENCY,
+    onSale: false,
   };
 }
 
@@ -52,6 +55,7 @@ export function pricingValuesFromRecord(record: {
   price?: number | null;
   min_price?: number | null;
   currency?: string | null;
+  on_sale?: boolean | null;
 }): GamePricingValues {
   const pricingType = parsePricingType(record.pricing_type);
   const priceCents =
@@ -72,6 +76,8 @@ export function pricingValuesFromRecord(record: {
       typeof record.currency === "string" && record.currency.trim()
         ? record.currency.trim().toUpperCase()
         : DEFAULT_PRICING_CURRENCY,
+    onSale:
+      pricingType !== "free" && record.on_sale === true,
   };
 }
 
@@ -87,16 +93,27 @@ export function appendPricingToFormData(
   if (values.pricingType === "pwyw") {
     formData.append("minPriceAmount", values.minPriceAmount.trim() || "0");
   }
+  formData.append("onSale", String(values.onSale && values.pricingType !== "free"));
+}
+
+function parseOnSaleFromFormData(
+  formData: FormData,
+  pricingType: GamePricingType
+): boolean {
+  if (pricingType === "free") return false;
+  return String(formData.get("onSale") ?? "false") === "true";
 }
 
 export function buildPricingDbPayload(
   data: GamePricingPayload
 ): GamePricingPayload {
+  const pricingType = data.pricing_type;
   return {
-    pricing_type: data.pricing_type,
+    pricing_type: pricingType,
     price: Math.max(0, Math.trunc(data.price)),
     currency: data.currency || DEFAULT_PRICING_CURRENCY,
     min_price: Math.max(0, Math.trunc(data.min_price)),
+    on_sale: pricingType !== "free" && data.on_sale === true,
   };
 }
 
@@ -108,6 +125,7 @@ export function parsePricingFromFormData(
     .trim()
     .toUpperCase();
   const currency = currencyRaw || DEFAULT_PRICING_CURRENCY;
+  const onSale = parseOnSaleFromFormData(formData, pricingType);
 
   if (pricingType === "free") {
     return {
@@ -117,6 +135,7 @@ export function parsePricingFromFormData(
         price: 0,
         currency,
         min_price: 0,
+        on_sale: false,
       }),
     };
   }
@@ -145,6 +164,7 @@ export function parsePricingFromFormData(
         price: priceCents,
         currency,
         min_price: 0,
+        on_sale: onSale,
       }),
     };
   }
@@ -165,6 +185,7 @@ export function parsePricingFromFormData(
       price: 0,
       currency,
       min_price: minPriceCents,
+      on_sale: onSale,
     }),
   };
 }
