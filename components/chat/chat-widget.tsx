@@ -244,6 +244,7 @@ export function ChatWidget() {
                     />
                   ) : (
                     <ChatChannelPanel
+                      key={channel}
                       channel={channel}
                       active={channel === "world" || channel === "creator"}
                       readOnly={channel === "creator" && !isCreator}

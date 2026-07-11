@@ -6,8 +6,9 @@ import {
   materializeSeedForumPostIfNeeded,
 } from "@/lib/forum-service";
 import { FORUM_LIMITS } from "@/lib/forum";
+import { isForumContentEmpty } from "@/lib/forum-content";
 import { resolveRequestLocale } from "@/lib/request-locale";
-import { sanitizePlainText } from "@/lib/sanitize-plain";
+import { sanitizeRichHtml } from "@/lib/sanitize-rich-html";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 
 function parseId(raw: string) {
@@ -87,9 +88,9 @@ export async function POST(
     }
 
     const body = (await request.json()) as { content?: string };
-    const content = sanitizePlainText(body.content ?? "", FORUM_LIMITS.comment);
+    const content = sanitizeRichHtml(body.content ?? "", FORUM_LIMITS.comment);
 
-    if (!content) {
+    if (isForumContentEmpty(content)) {
       return NextResponse.json({ error: "請輸入回覆內容" }, { status: 400 });
     }
 

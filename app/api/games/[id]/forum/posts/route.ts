@@ -4,10 +4,12 @@ import {
   VALID_FORUM_CATEGORIES,
   type ForumCategory,
 } from "@/lib/forum";
+import { isForumContentEmpty } from "@/lib/forum-content";
 import { createForumPost, getForumPostsByGameId } from "@/lib/forum-service";
 import { resolveRequestLocale } from "@/lib/request-locale";
 import { triggerForumWebSubPing } from "@/lib/websub-service";
 import { sanitizePlainText } from "@/lib/sanitize-plain";
+import { sanitizeRichHtml } from "@/lib/sanitize-rich-html";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 
 function parseGameId(raw: string) {
@@ -64,13 +66,13 @@ export async function POST(
     };
 
     const title = sanitizePlainText(body.title ?? "", FORUM_LIMITS.title);
-    const content = sanitizePlainText(body.content ?? "", FORUM_LIMITS.content);
+    const content = sanitizeRichHtml(body.content ?? "", FORUM_LIMITS.content);
     const category = body.category as ForumCategory;
 
     if (!title) {
       return NextResponse.json({ error: "請輸入貼文標題" }, { status: 400 });
     }
-    if (!content) {
+    if (isForumContentEmpty(content)) {
       return NextResponse.json({ error: "請輸入貼文內容" }, { status: 400 });
     }
     if (!category || !VALID_FORUM_CATEGORIES.includes(category)) {

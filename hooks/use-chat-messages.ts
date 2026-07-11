@@ -10,6 +10,9 @@ import { createClient } from "@/lib/supabase/client";
 /** 輪詢間隔：本機開發時觸發 maintainAmbientChat；亦作 Realtime 後備 */
 export const CHAT_POLL_INTERVAL_MS = 60_000;
 
+const CHAT_FETCH_TIMEOUT_MS = 15_000;
+const REALTIME_RELOAD_DEBOUNCE_MS = 400;
+
 /** 對非當前分頁的頻道背景輪詢，確保世界／創作者頻道虛擬發言在本機也能觸發 */
 export function useAmbientChatBackgroundPoll(
   channels: ChatChannel[],
@@ -40,6 +43,26 @@ async function parseJsonResponse<T>(response: Response): Promise<T> {
   return (await response.json()) as T;
 }
 
+async function fetchChatMessages(
+  channel: ChatChannel,
+  signal: AbortSignal
+): Promise<ChatMessage[]> {
+  const response = await fetch(
+    `/api/chat/messages?channel=${encodeURIComponent(channel)}`,
+    { signal }
+  );
+  const data = await parseJsonResponse<{
+    messages?: ChatMessage[];
+    error?: string;
+  }>(response);
+
+  if (!response.ok) {
+    throw new Error(data.error ?? "read failed");
+  }
+
+  return data.messages ?? [];
+}
+
 function mergeMessages(existing: ChatMessage[], incoming: ChatMessage[]) {
   const map = new Map<string, ChatMessage>();
   for (const message of existing) map.set(message.id, message);
@@ -56,9 +79,14 @@ export function useChatMessages(channel: ChatChannel, enabled: boolean) {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const loadGenerationRef = useRef(0);
+  const realtimeDebounceRef = useRef<number | null>(null);
 
   const formatError = useCallback(
     (err: unknown, fallback: string) => {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        return t("connectionFailed");
+      }
       if (err instanceof Error && err.message === "invalid response") {
         return t("connectionFailed");
       }
@@ -71,39 +99,49 @@ export function useChatMessages(channel: ChatChannel, enabled: boolean) {
     async (options?: { silent?: boolean }) => {
       if (!enabled) return;
 
-      if (!options?.silent) setLoading(true);
+      const generation = ++loadGenerationRef.current;
+      const silent = options?.silent ?? false;
+
+      if (!silent) setLoading(true);
       setError(null);
+
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(
+        () => controller.abort(),
+        CHAT_FETCH_TIMEOUT_MS
+      );
+
       try {
-        const response = await fetch(
-          `/api/chat/messages?channel=${encodeURIComponent(channel)}`
-        );
-        const data = await parseJsonResponse<{
-          messages?: ChatMessage[];
-          error?: string;
-        }>(response);
+        const incoming = await fetchChatMessages(channel, controller.signal);
+        if (generation !== loadGenerationRef.current) return;
 
-        if (!response.ok) {
-          throw new Error(data.error ?? t("readFailed"));
-        }
-
-        setMessages(data.messages ?? []);
+        setMessages(incoming);
       } catch (err) {
+        if (generation !== loadGenerationRef.current) return;
         setError(formatError(err, t("readFailed")));
       } finally {
-        if (!options?.silent) setLoading(false);
+        window.clearTimeout(timeoutId);
+        if (generation === loadGenerationRef.current && !silent) {
+          setLoading(false);
+        }
       }
     },
     [channel, enabled, formatError, t]
   );
 
   useEffect(() => {
+    loadGenerationRef.current += 1;
+
     if (!enabled) {
       setMessages([]);
+      setLoading(false);
+      setError(null);
       return;
     }
 
+    setMessages([]);
     void loadMessages();
-  }, [enabled, loadMessages]);
+  }, [channel, enabled, loadMessages]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -130,7 +168,12 @@ export function useChatMessages(channel: ChatChannel, enabled: boolean) {
           filter: `channel=eq.${channel}`,
         },
         () => {
-          void loadMessages();
+          if (realtimeDebounceRef.current) {
+            window.clearTimeout(realtimeDebounceRef.current);
+          }
+          realtimeDebounceRef.current = window.setTimeout(() => {
+            void loadMessages({ silent: true });
+          }, REALTIME_RELOAD_DEBOUNCE_MS);
         }
       )
       .subscribe();
@@ -138,6 +181,10 @@ export function useChatMessages(channel: ChatChannel, enabled: boolean) {
     channelRef.current = realtimeChannel;
 
     return () => {
+      if (realtimeDebounceRef.current) {
+        window.clearTimeout(realtimeDebounceRef.current);
+        realtimeDebounceRef.current = null;
+      }
       void supabase.removeChannel(realtimeChannel);
       channelRef.current = null;
     };
@@ -168,7 +215,7 @@ export function useChatMessages(channel: ChatChannel, enabled: boolean) {
         if (data.message) {
           setMessages((prev) => mergeMessages(prev, [data.message!]));
         } else {
-          await loadMessages();
+          await loadMessages({ silent: true });
         }
 
         return true;

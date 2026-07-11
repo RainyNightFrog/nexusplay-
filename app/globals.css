@@ -691,6 +691,24 @@
   margin-right: auto;
 }
 
+.forum-content img,
+.forum-inline-image {
+  display: block;
+  max-width: min(100%, 480px);
+  height: auto;
+  margin: 0.75rem auto;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(255 255 255 / 0.1);
+}
+
+.forum-editor .ProseMirror {
+  text-align: center;
+}
+
+.forum-editor .ProseMirror p.is-editor-empty:first-child::before {
+  text-align: center;
+}
+
 /* ── 稱號視覺特效（成就系統） ── */
 @keyframes title-gradient-flow {
   0%,

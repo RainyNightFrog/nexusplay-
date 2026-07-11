@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { CHAT_LIMITS, isValidChatChannel } from "@/lib/chat";
 import { maintainAmbientChat } from "@/lib/chat-ambient-maintain";
 import { createChatMessage, listChatMessages } from "@/lib/chat-service";
@@ -24,13 +24,19 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "無效的聊天頻道" }, { status: 400 });
     }
 
-    try {
-      await maintainAmbientChat(channel);
-    } catch {
-      // 虛擬聊天維護失敗不應阻擋讀取既有訊息
+    const messages = await listChatMessages(channel, user.id, { before });
+
+    const skipMaintain = searchParams.get("maintain") === "0";
+    if (!skipMaintain) {
+      after(async () => {
+        try {
+          await maintainAmbientChat(channel);
+        } catch {
+          // 虛擬聊天維護失敗不應影響已回傳的訊息
+        }
+      });
     }
 
-    const messages = await listChatMessages(channel, user.id, { before });
     return NextResponse.json({ messages });
   } catch (error) {
     const message = error instanceof Error ? error.message : "讀取聊天記錄失敗";

@@ -19,9 +19,16 @@ const RICH_HTML_OPTIONS: sanitizeHtml.IOptions = {
     "code",
     "pre",
     "hr",
+    "img",
   ],
   allowedAttributes: {
     a: ["href", "target", "rel"],
+    img: ["src", "alt", "title"],
+  },
+  allowedSchemes: ["http", "https"],
+  allowedSchemesByTag: {
+    img: ["http", "https"],
+    a: ["http", "https", "mailto"],
   },
 };
 

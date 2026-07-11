@@ -35,12 +35,12 @@ export function PriceFilterSidebar({
           "min-[1600px]:sticky min-[1600px]:top-24"
         )}
       >
-        <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-emerald-300">
+        <div className="mb-3 flex items-center justify-center gap-2 text-center text-sm font-semibold text-emerald-300">
           <BadgeDollarSign className="size-4 shrink-0" />
           <span>{t("priceFilterTitle")}</span>
         </div>
 
-        <nav className="flex flex-wrap gap-2 min-[1600px]:flex-col min-[1600px]:items-stretch">
+        <nav className="flex flex-wrap justify-center gap-2 min-[1600px]:flex-col min-[1600px]:items-center">
           {PRICE_FILTER_IDS.map((id) => {
             const active = value === id;
             return (
@@ -51,8 +51,8 @@ export function PriceFilterSidebar({
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 className={cn(
-                  "rounded-xl border px-3 py-2 text-left text-sm font-medium transition-colors",
-                  "min-[1600px]:px-3 min-[1600px]:py-2.5",
+                  "rounded-xl border px-3 py-2 text-center text-sm font-medium transition-colors",
+                  "min-[1600px]:w-full min-[1600px]:px-3 min-[1600px]:py-2.5",
                   active
                     ? "border-emerald-400/40 bg-emerald-500/15 text-emerald-100 shadow-[0_0_20px_rgba(52,211,153,0.12)]"
                     : "border-white/10 bg-white/[0.03] text-zinc-300 hover:border-white/20 hover:bg-white/[0.06] hover:text-white"

@@ -1,4 +1,5 @@
 import { sendEmail, isEmailConfigured } from "@/lib/email-service";
+import { stripHtmlForPreview } from "@/lib/forum-content";
 import { readNotificationPrefs, shouldCreateInAppNotification } from "@/lib/notification-prefs-service";
 import { createUserNotification } from "@/lib/user-notifications-service";
 import { createServerSupabase } from "@/lib/supabase-server";
@@ -38,13 +39,13 @@ export async function sendForumReplyNotificationEmail(params: {
     return { sent: false as const, reason: "no_email" as const };
   }
 
-  const preview = params.replyPreview.slice(0, 200);
+  const preview = stripHtmlForPreview(params.replyPreview).slice(0, 200);
   const html = `
     <div style="font-family:sans-serif;line-height:1.6;color:#111;">
       <h2 style="margin:0 0 12px;">💬 有人回覆你的討論</h2>
       <p>在 <strong>${escapeHtml(params.gameTitle)}</strong> 的討論串「${escapeHtml(params.postTitle)}」有新回覆：</p>
       <blockquote style="margin:16px 0;padding:12px 16px;border-left:3px solid #8b5cf6;background:#f4f4f5;">
-        ${escapeHtml(preview)}${params.replyPreview.length > 200 ? "…" : ""}
+        ${escapeHtml(preview)}${stripHtmlForPreview(params.replyPreview).length > 200 ? "…" : ""}
       </blockquote>
       <p><a href="${escapeHtml(params.forumUrl)}">前往討論區查看</a></p>
     </div>
@@ -105,7 +106,7 @@ export async function notifyForumPostAuthorOfReply(params: {
         userId: post.user_id,
         kind: "forum_reply",
         title: `新回覆 · ${post.title}`,
-        body: params.replyContent.slice(0, 160),
+        body: stripHtmlForPreview(params.replyContent).slice(0, 160),
         href: forumPath,
       });
     }

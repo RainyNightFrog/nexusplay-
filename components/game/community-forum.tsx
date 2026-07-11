@@ -12,7 +12,6 @@ import {
   MessageCircle,
   MessageSquarePlus,
   MessagesSquare,
-  Search,
   Send,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -27,7 +26,9 @@ import {
   SelectTrigger,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
+import { ForumContentView } from "@/components/game/forum-content-view";
+import { ForumRichTextEditor } from "@/components/game/forum-rich-text-editor";
+import { ForumSearchInput } from "@/components/game/forum-search-input";
 import { useAuth } from "@/hooks/use-auth";
 import { useApiError } from "@/hooks/use-api-error";
 import {
@@ -52,6 +53,7 @@ import {
 } from "@/lib/forum-seed-builder";
 import { getVirtualPlayerById } from "@/lib/virtual-players";
 import { resolveVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
+import { isForumContentEmpty, stripHtmlForPreview } from "@/lib/forum-content";
 import { cn } from "@/lib/utils";
 
 type GameOption = { id: number; title: string };
@@ -278,7 +280,7 @@ export function CommunityForum({
     return result.filter((post) => {
       const haystack = [
         post.title,
-        post.content,
+        stripHtmlForPreview(post.content),
         post.author_name,
         post.game_title ?? "",
       ]
@@ -491,8 +493,12 @@ export function CommunityForum({
       onToast(t("titleRequired"));
       return;
     }
-    if (!content) {
+    if (isForumContentEmpty(content)) {
       onToast(t("contentRequired"));
+      return;
+    }
+    if (content.length > FORUM_LIMITS.content) {
+      onToast(t("contentTooLong"));
       return;
     }
 
@@ -550,8 +556,12 @@ export function CommunityForum({
     }
 
     const content = replyContent.trim();
-    if (!content) {
+    if (isForumContentEmpty(content)) {
       onToast(t("replyRequired"));
+      return;
+    }
+    if (content.length > FORUM_LIMITS.comment) {
+      onToast(t("replyTooLong"));
       return;
     }
 
@@ -629,16 +639,6 @@ export function CommunityForum({
       onToast(t("replyFailed"));
     } finally {
       setReplying(false);
-    }
-  };
-
-  const handleSubmitOnShortcut = (
-    event: React.KeyboardEvent,
-    action: () => void
-  ) => {
-    if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
-      event.preventDefault();
-      action();
     }
   };
 
@@ -741,9 +741,10 @@ export function CommunityForum({
                     }
                   />
                 </div>
-                <p className="mt-5 whitespace-pre-wrap text-sm leading-relaxed text-zinc-300">
-                  {selectedPost.content}
-                </p>
+                <ForumContentView
+                  content={selectedPost.content}
+                  className="mt-5 text-zinc-300"
+                />
               </div>
             </article>
 
@@ -789,9 +790,10 @@ export function CommunityForum({
                           {formatDate(comment.created_at)}
                         </span>
                       </div>
-                      <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-zinc-400">
-                        {comment.content}
-                      </p>
+                      <ForumContentView
+                        content={comment.content}
+                        className="mt-3 text-zinc-400"
+                      />
                     </div>
                   ))}
                 </div>
@@ -808,29 +810,29 @@ export function CommunityForum({
                 )}
               >
                 {profile ? (
-                  <div className="space-y-3">
-                    <Textarea
+                  <div className="mx-auto max-w-xl space-y-3">
+                    <ForumRichTextEditor
+                      id="forum-reply-inline"
                       value={replyContent}
-                      onChange={(event) => setReplyContent(event.target.value)}
-                      onKeyDown={(event) =>
-                        handleSubmitOnShortcut(event, handleSubmitReply)
-                      }
+                      onChange={setReplyContent}
+                      disabled={replying}
+                      maxLength={FORUM_LIMITS.comment}
+                      minHeightClass="min-h-[120px]"
                       placeholder={
                         isSeedForumPostId(selectedPost.id)
                           ? t("seedReplyPlaceholder")
                           : t("replyPlaceholder")
                       }
-                      maxLength={FORUM_LIMITS.comment}
-                      rows={3}
-                      className="min-h-24 resize-none border-white/10 bg-white/5 text-zinc-100 placeholder:text-zinc-500 focus-visible:border-violet-400/40 focus-visible:ring-violet-500/20"
+                      onUploadError={onToast}
                     />
                     <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
-                      <span className="text-xs text-zinc-600">
-                        {replyContent.length}/{FORUM_LIMITS.comment}
-                      </span>
                       <Button
                         onClick={handleSubmitReply}
-                        disabled={replying || !replyContent.trim()}
+                        disabled={
+                          replying ||
+                          isForumContentEmpty(replyContent) ||
+                          replyContent.length > FORUM_LIMITS.comment
+                        }
                         className="gap-2 bg-gradient-to-r from-violet-600 to-cyan-600 text-white hover:from-violet-500 hover:to-cyan-500"
                       >
                         {replying ? (
@@ -876,124 +878,111 @@ export function CommunityForum({
                   <MessageSquarePlus className="size-4 text-violet-400" />
                   {t("createPost")}
                 </h4>
-                <div className="space-y-4">
-                  <div
-                    className={cn(
-                      "grid gap-4",
-                      isHub
-                        ? "sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto]"
-                        : "sm:grid-cols-[1fr_auto]"
-                    )}
-                  >
-                    {isHub && games && games.length > 0 && (
-                      <div className="space-y-2">
-                        <Label className="text-zinc-300">{t("gameField")}</Label>
-                        <Select
-                          value={composeGameId?.toString() ?? ""}
-                          onValueChange={(value) => {
-                            if (value) {
-                              setComposeGameId(Number.parseInt(value, 10));
-                            }
-                          }}
-                        >
-                          <SelectTrigger className="w-full border-white/10 bg-white/5 text-zinc-100">
-                            <SelectDisplayValue>
-                              {games.find((game) => game.id === composeGameId)?.title ??
-                                t("selectGame")}
-                            </SelectDisplayValue>
-                          </SelectTrigger>
-                          <SelectContent className="border-white/10 bg-zinc-900 text-zinc-100 ring-white/10">
-                            {games.map((game) => (
-                              <SelectItem
-                                key={game.id}
-                                value={game.id.toString()}
-                                className="focus:bg-violet-500/10 focus:text-violet-100"
-                              >
-                                {game.title}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="forum-title-inline"
-                        className="block w-full text-center text-zinc-300"
-                      >
-                        {t("postTitle")}
-                      </Label>
-                      <Input
-                        id="forum-title-inline"
-                        value={newTitle}
-                        onChange={(event) => setNewTitle(event.target.value)}
-                        placeholder={t("titlePlaceholder")}
-                        maxLength={FORUM_LIMITS.title}
-                        className="border-white/10 bg-white/5 text-zinc-100 placeholder:text-zinc-500 focus-visible:border-violet-400/40 focus-visible:ring-violet-500/20"
-                      />
-                    </div>
-                    <div className="space-y-2 sm:w-44">
-                      <Label className="block w-full text-center text-zinc-300">
-                        {t("category")}
+                <div className="mx-auto flex w-full max-w-xl flex-col items-center gap-4 text-center">
+                  {isHub && games && games.length > 0 && (
+                    <div className="w-full space-y-2">
+                      <Label className="w-full justify-center text-zinc-300">
+                        {t("gameField")}
                       </Label>
                       <Select
-                        value={newCategory}
-                        onValueChange={(value) =>
-                          setNewCategory(value as ForumCategory)
-                        }
+                        value={composeGameId?.toString() ?? ""}
+                        onValueChange={(value) => {
+                          if (value) {
+                            setComposeGameId(Number.parseInt(value, 10));
+                          }
+                        }}
                       >
-                        <SelectTrigger className="w-full border-white/10 bg-white/5 text-zinc-100">
+                        <SelectTrigger className="w-full justify-center border-white/10 bg-white/5 text-center text-zinc-100">
                           <SelectDisplayValue>
-                            {(() => {
-                              const meta = getForumCategoryMeta(newCategory);
-                              return `${meta.emoji} ${t(`categories.${meta.value}`)}`;
-                            })()}
+                            {games.find((game) => game.id === composeGameId)?.title ??
+                              t("selectGame")}
                           </SelectDisplayValue>
                         </SelectTrigger>
                         <SelectContent className="border-white/10 bg-zinc-900 text-zinc-100 ring-white/10">
-                          {FORUM_CATEGORIES.map((item) => (
+                          {games.map((game) => (
                             <SelectItem
-                              key={item.value}
-                              value={item.value}
+                              key={game.id}
+                              value={game.id.toString()}
                               className="focus:bg-violet-500/10 focus:text-violet-100"
                             >
-                              {item.emoji} {t(`categories.${item.value}`)}
+                              {game.title}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
+                  )}
+                  <div className="w-full space-y-2">
+                    <Label
+                      htmlFor="forum-title-inline"
+                      className="w-full justify-center text-zinc-300"
+                    >
+                      {t("postTitle")}
+                    </Label>
+                    <Input
+                      id="forum-title-inline"
+                      value={newTitle}
+                      onChange={(event) => setNewTitle(event.target.value)}
+                      placeholder={t("titlePlaceholder")}
+                      maxLength={FORUM_LIMITS.title}
+                      className="border-white/10 bg-white/5 text-center text-zinc-100 placeholder:text-center placeholder:text-zinc-500 focus-visible:border-violet-400/40 focus-visible:ring-violet-500/20"
+                    />
                   </div>
-                  <div className="space-y-2">
+                  <div className="w-full space-y-2">
+                    <Label className="w-full justify-center text-zinc-300">
+                      {t("category")}
+                    </Label>
+                    <Select
+                      value={newCategory}
+                      onValueChange={(value) =>
+                        setNewCategory(value as ForumCategory)
+                      }
+                    >
+                      <SelectTrigger className="w-full justify-center border-white/10 bg-white/5 text-center text-zinc-100">
+                        <SelectDisplayValue>
+                          {(() => {
+                            const meta = getForumCategoryMeta(newCategory);
+                            return `${meta.emoji} ${t(`categories.${meta.value}`)}`;
+                          })()}
+                        </SelectDisplayValue>
+                      </SelectTrigger>
+                      <SelectContent className="border-white/10 bg-zinc-900 text-zinc-100 ring-white/10">
+                        {FORUM_CATEGORIES.map((item) => (
+                          <SelectItem
+                            key={item.value}
+                            value={item.value}
+                            className="focus:bg-violet-500/10 focus:text-violet-100"
+                          >
+                            {item.emoji} {t(`categories.${item.value}`)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="w-full space-y-2">
                     <Label
                       htmlFor="forum-content-inline"
-                      className="block w-full text-center text-zinc-300"
+                      className="w-full justify-center text-zinc-300"
                     >
                       {t("content")}
                     </Label>
-                    <Textarea
+                    <ForumRichTextEditor
                       id="forum-content-inline"
                       value={newContent}
-                      onChange={(event) => setNewContent(event.target.value)}
-                      onKeyDown={(event) =>
-                        handleSubmitOnShortcut(event, handleCreatePost)
-                      }
+                      onChange={setNewContent}
+                      disabled={creating}
                       placeholder={t("contentPlaceholder")}
-                      maxLength={FORUM_LIMITS.content}
-                      rows={4}
-                      className="min-h-28 resize-none border-white/10 bg-white/5 text-zinc-100 placeholder:text-zinc-500 focus-visible:border-violet-400/40 focus-visible:ring-violet-500/20"
+                      onUploadError={onToast}
                     />
                   </div>
-                  <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
-                    <span className="text-xs text-zinc-600">
-                      {newContent.length}/{FORUM_LIMITS.content}
-                    </span>
+                  <div className="flex w-full flex-col items-center justify-center gap-3 sm:flex-row">
                     <Button
                       onClick={handleCreatePost}
                       disabled={
                         creating ||
                         !newTitle.trim() ||
-                        !newContent.trim() ||
+                        isForumContentEmpty(newContent) ||
+                        newContent.length > FORUM_LIMITS.content ||
                         (isHub && !composeGameId)
                       }
                       className="gap-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white hover:from-violet-500 hover:to-fuchsia-500"
@@ -1028,16 +1017,11 @@ export function CommunityForum({
               </div>
             )}
 
-            <div className="relative mx-auto max-w-md">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
-              <Input
-                type="search"
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder={t("searchPlaceholder")}
-                className="border-white/10 bg-white/5 pl-10 text-zinc-100 placeholder:text-zinc-500"
-              />
-            </div>
+            <ForumSearchInput
+              value={searchQuery}
+              onChange={setSearchQuery}
+              posts={posts}
+            />
 
             {isHub && games && games.length > 0 && (
               <div className="flex flex-wrap items-center justify-center gap-2">
@@ -1164,8 +1148,11 @@ export function CommunityForum({
                     <h4 className="mt-2 text-base font-semibold text-white transition-colors group-hover:text-violet-50">
                       {post.title}
                     </h4>
-                    <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-zinc-500">
-                      {post.content}
+                    <p className="mt-1.5">
+                      <ForumContentView
+                        content={post.content}
+                        preview
+                      />
                     </p>
                     <div className="mt-3 flex justify-center">
                       <AuthorChip
