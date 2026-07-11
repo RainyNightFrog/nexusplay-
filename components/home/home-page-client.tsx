@@ -560,14 +560,13 @@ export function HomePageClient() {
             </p>
           </div>
 
-          <div className="mx-auto grid w-full max-w-[95rem] grid-cols-1 gap-5 sm:gap-6 xl:grid-cols-[11rem_minmax(0,80rem)] xl:justify-center xl:gap-6">
+          <div className="relative">
             <PriceFilterSidebar
               value={priceFilter}
               onChange={setPriceFilter}
-              className="xl:justify-self-end"
+              className="mb-6 min-[1600px]:absolute min-[1600px]:top-0 min-[1600px]:right-full min-[1600px]:z-10 min-[1600px]:mb-0 min-[1600px]:mr-4 min-[1600px]:w-36"
             />
 
-            <div className="min-w-0 w-full max-w-7xl justify-self-center xl:max-w-none xl:justify-self-stretch">
           <FilterSortBar
             category={category}
             sort={sort}
@@ -664,7 +663,6 @@ export function HomePageClient() {
               </motion.div>
             )}
           </AnimatePresence>
-            </div>
           </div>
         </section>
       </main>

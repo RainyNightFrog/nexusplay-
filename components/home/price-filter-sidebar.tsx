@@ -28,16 +28,11 @@ export function PriceFilterSidebar({
   const t = useTranslations("home");
 
   return (
-    <aside
-      className={cn(
-        "w-full shrink-0 xl:w-full xl:max-w-[11rem]",
-        className
-      )}
-    >
+    <aside className={cn("w-full shrink-0", className)}>
       <div
         className={cn(
           "rounded-2xl border border-white/10 bg-zinc-900/50 p-3.5 shadow-xl shadow-black/20 backdrop-blur-md sm:p-4",
-          "lg:sticky lg:top-24"
+          "min-[1600px]:sticky min-[1600px]:top-24"
         )}
       >
         <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-emerald-300">
@@ -45,7 +40,7 @@ export function PriceFilterSidebar({
           <span>{t("priceFilterTitle")}</span>
         </div>
 
-        <nav className="flex flex-wrap gap-2 xl:flex-col xl:items-stretch">
+        <nav className="flex flex-wrap gap-2 min-[1600px]:flex-col min-[1600px]:items-stretch">
           {PRICE_FILTER_IDS.map((id) => {
             const active = value === id;
             return (
@@ -57,7 +52,7 @@ export function PriceFilterSidebar({
                 whileTap={{ scale: 0.98 }}
                 className={cn(
                   "rounded-xl border px-3 py-2 text-left text-sm font-medium transition-colors",
-                  "xl:px-3 xl:py-2.5",
+                  "min-[1600px]:px-3 min-[1600px]:py-2.5",
                   active
                     ? "border-emerald-400/40 bg-emerald-500/15 text-emerald-100 shadow-[0_0_20px_rgba(52,211,153,0.12)]"
                     : "border-white/10 bg-white/[0.03] text-zinc-300 hover:border-white/20 hover:bg-white/[0.06] hover:text-white"
