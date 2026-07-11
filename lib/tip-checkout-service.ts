@@ -15,11 +15,11 @@ import { notifyCreatorOfTip } from "@/lib/creator-tip-notify";
 import { recordTipDonationAndCheckBigTipper } from "@/lib/achievement-unlock-service";
 import { verifyCustomerPaymentMethod } from "@/lib/stripe-customer-service";
 import {
-  createStripeCustomer,
   getStripeClient,
   isPaymentsLive,
   isStripeConfigured,
 } from "@/lib/stripe-connect";
+import { ensurePayerStripeCustomer } from "@/lib/stripe-payer-customer";
 import { createServerSupabase } from "@/lib/supabase-server";
 import type { GameRecord } from "@/lib/supabase";
 import { MIN_TIP_USD, MAX_TIP_USD } from "@/lib/tip-limits";
@@ -108,31 +108,6 @@ export async function loadTipCheckoutContext(
 
 export function buildTipBreakdown(amountUsd: number, platformFeePercent: number) {
   return estimateCreatorNetFromTip(amountUsd, platformFeePercent);
-}
-
-export async function ensurePayerStripeCustomer(params: {
-  supabase: SupabaseClient;
-  userId: string;
-  email: string;
-  displayName: string;
-  existingCustomerId: string | null;
-}) {
-  if (params.existingCustomerId) {
-    return params.existingCustomerId;
-  }
-
-  const customer = await createStripeCustomer({
-    userId: params.userId,
-    email: params.email,
-    displayName: params.displayName,
-  });
-
-  await params.supabase
-    .from("profiles")
-    .update({ stripe_customer_id: customer.id })
-    .eq("id", params.userId);
-
-  return customer.id;
 }
 
 function buildStripeCustomerAddress(

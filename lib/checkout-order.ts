@@ -187,3 +187,7 @@ export function parsePlatformTipInput(body: {
 
   return { ok: true, cents: 0 };
 }
+
+export function formatCentsAsUsd(cents: number) {
+  return (Math.max(0, cents) / 100).toFixed(2);
+}

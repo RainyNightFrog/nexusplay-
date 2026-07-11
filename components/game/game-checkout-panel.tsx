@@ -20,13 +20,11 @@ import { useApiError } from "@/hooks/use-api-error";
 import { useScrollLock } from "@/hooks/use-scroll-lock";
 import {
   computeStripeConnectAmounts,
+  formatCentsAsUsd,
   MAX_PLATFORM_TIP_USD,
   PLATFORM_TIP_PRESETS_USD,
 } from "@/lib/checkout-order";
-import {
-  formatCentsAsUsd,
-  parseDisplayAmountToCents,
-} from "@/lib/game-checkout-service";
+import { parseDisplayAmountToCents } from "@/lib/game-pricing";
 import { cn } from "@/lib/utils";
 
 type TipPreset = (typeof PLATFORM_TIP_PRESETS_USD)[number] | "custom";

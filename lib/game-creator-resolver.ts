@@ -30,7 +30,7 @@ async function getPlatformDefaultCreatorId(
   if (error) throw new Error(error.message);
 
   cachedPlatformCreatorId = data?.creator_id ?? null;
-  return cachedPlatformCreatorId;
+  return cachedPlatformCreatorId ?? null;
 }
 
 async function readCreatorDisplayName(

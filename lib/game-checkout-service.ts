@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type Stripe from "stripe";
 import {
   computeStripeConnectAmounts,
+  formatCentsAsUsd,
   parsePlatformTipInput,
   type StripeConnectAmounts,
 } from "@/lib/checkout-order";
@@ -13,7 +14,7 @@ import {
   type GamePricingType,
 } from "@/lib/game-pricing";
 import { resolveEffectivePlatformFeePercent } from "@/lib/tip-fee-policy";
-import { ensurePayerStripeCustomer } from "@/lib/tip-checkout-service";
+import { ensurePayerStripeCustomer } from "@/lib/stripe-payer-customer";
 import {
   getStripeClient,
   isPaymentsLive,
@@ -493,8 +494,4 @@ export function gameRequiresCheckout(pricingType?: GamePricingType | string | nu
   return normalized === "fixed" || normalized === "pwyw";
 }
 
-export function formatCentsAsUsd(cents: number) {
-  return (Math.max(0, cents) / 100).toFixed(2);
-}
-
-export { parseDisplayAmountToCents };
+export { formatCentsAsUsd, parseDisplayAmountToCents };

@@ -1,17 +1,15 @@
 import type Stripe from "stripe";
 import {
   DEFAULT_SUPPORTER_BADGE,
+  formatCentsAsUsd,
   sanitizeCents,
 } from "@/lib/checkout-order";
-import {
-  getCheckoutPaymentsState,
-  formatCentsAsUsd,
-} from "@/lib/game-checkout-service";
+import { getCheckoutPaymentsState } from "@/lib/game-checkout-service";
 import {
   parseSupporterPassTierId,
   type SupporterPassTier,
 } from "@/lib/supporter-pass";
-import { ensurePayerStripeCustomer } from "@/lib/tip-checkout-service";
+import { ensurePayerStripeCustomer } from "@/lib/stripe-payer-customer";
 import {
   getStripeClient,
   isPaymentsLive,
