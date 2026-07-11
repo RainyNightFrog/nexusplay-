@@ -39,6 +39,8 @@ import {
 } from "@/components/settings/account-shell";
 import { UserBadge } from "@/components/UserBadge";
 import { cn } from "@/lib/utils";
+import { CreatorUsernameField } from "@/components/profile/creator-username-field";
+import { normalizeCreatorUsername } from "@/lib/creator-username";
 import { PROFILE_LIMITS } from "@/lib/profile-settings";
 
 export default function ProfilePage() {
@@ -54,6 +56,7 @@ export default function ProfilePage() {
   const [email, setEmail] = useState<string | null>(null);
   const [countryCode, setCountryCode] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState("");
+  const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
   const [website, setWebsite] = useState("");
   const [twitter, setTwitter] = useState("");
@@ -81,6 +84,7 @@ export default function ProfilePage() {
     }
 
     setDisplayName(profile.display_name);
+    setUsername(profile.username ?? "");
     setBio(profile.bio ?? "");
     setWebsite(profile.website ?? "");
     setTwitter(profile.twitter ?? "");
@@ -166,6 +170,7 @@ export default function ProfilePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           display_name: displayName.trim(),
+          username: normalizeCreatorUsername(username),
           bio: bio.trim(),
           website: website.trim(),
           twitter: twitter.trim(),
@@ -302,6 +307,14 @@ export default function ProfilePage() {
                   disabled={saving}
                 />
               </div>
+
+              {(isCreator || developingGames) ? (
+                <CreatorUsernameField
+                  value={username}
+                  onChange={setUsername}
+                  disabled={saving}
+                />
+              ) : null}
 
               <div className={accountFieldClassName}>
                 <Label

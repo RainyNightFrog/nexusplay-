@@ -24,6 +24,7 @@ const LEGACY_UPLOAD_DRAFT_KEY = "nexusplay-game-upload-draft";
 
 export type PersistedGameFormState = {
   title: string;
+  slug: string;
   description: string;
   genre: GameGenre | "";
 };
@@ -156,11 +157,12 @@ function parseMonetization(value: unknown): PublishMonetizationValues {
 
 function parseForm(value: unknown): PersistedGameFormState {
   if (!isRecord(value)) {
-    return { title: "", description: "", genre: "" };
+    return { title: "", slug: "", description: "", genre: "" };
   }
 
   return {
     title: typeof value.title === "string" ? value.title : "",
+    slug: typeof value.slug === "string" ? value.slug : "",
     description: typeof value.description === "string" ? value.description : "",
     genre: parseGenre(value.genre),
   };

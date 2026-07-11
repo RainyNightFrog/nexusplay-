@@ -31,6 +31,7 @@ export function profileFromUserMetadata(user: User): UserProfile {
       (typeof metadata.display_name === "string" && metadata.display_name.trim()) ||
       user.email?.split("@")[0] ||
       "玩家",
+    username: null,
     avatar_url:
       typeof metadata.avatar_url === "string" ? metadata.avatar_url : null,
     role: isAdmin ? "player" : resolveRoleFromPreferences(developingGames),

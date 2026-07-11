@@ -4,6 +4,7 @@ import type { EquippedTitle } from "@/lib/titles";
 
 export type PublicCreatorProfile = {
   id: string;
+  username: string | null;
   displayName: string;
   avatarUrl: string | null;
   website: string | null;
@@ -22,18 +23,22 @@ export type PublicCreatorProfile = {
   }>;
 };
 
+import { resolveCreatorIdByRouteParam } from "@/lib/creator-username";
+
 function readOptionalString(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
 export async function loadPublicCreatorProfile(
-  creatorId: string
+  creatorRef: string
 ): Promise<PublicCreatorProfile | null> {
   const supabase = createServerSupabase();
+  const creatorId = await resolveCreatorIdByRouteParam(supabase, creatorRef);
+  if (!creatorId) return null;
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("id, display_name, avatar_url, role, created_at")
+    .select("id, display_name, avatar_url, role, created_at, username")
     .eq("id", creatorId)
     .maybeSingle();
 
@@ -68,6 +73,7 @@ export async function loadPublicCreatorProfile(
 
   return {
     id: profile.id,
+    username: readOptionalString(profile.username),
     displayName: profile.display_name,
     avatarUrl: profile.avatar_url,
     website: readOptionalString(metadata.website),

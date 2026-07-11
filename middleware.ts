@@ -1,10 +1,15 @@
 import createIntlMiddleware from "next-intl/middleware";
 import { createServerClient } from "@supabase/ssr";
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { shouldSkipAccountIntent } from "@/lib/account-intent";
 import { resolveUserRole, hasCreatorDashboardAccess } from "@/lib/auth-profile";
 import { isAdminUser } from "@/lib/admin-auth";
 import { ANALYTICS_SESSION_COOKIE } from "@/lib/analytics-service";
+import {
+  buildSubdomainRewritePath,
+  resolveSubdomainFromHost,
+} from "@/lib/subdomain";
+import { resolveSubdomainRoute } from "@/lib/creator-username";
 import { routing } from "@/i18n/routing";
 
 const intlMiddleware = createIntlMiddleware(routing);
@@ -21,6 +26,84 @@ function stripLocalePrefix(pathname: string): string {
   return pathname;
 }
 
+function applySubdomainRewrite(request: NextRequest) {
+  const subdomain = resolveSubdomainFromHost(request.headers.get("host") ?? "");
+  if (!subdomain) {
+    return { request, rewriteUrl: null as URL | null };
+  }
+
+  const rewriteUrl = request.nextUrl.clone();
+  rewriteUrl.pathname = buildSubdomainRewritePath(
+    request.nextUrl.pathname,
+    subdomain,
+    "game"
+  );
+
+  const rewrittenRequest = new NextRequest(rewriteUrl, {
+    headers: request.headers,
+    method: request.method,
+  });
+
+  return { request: rewrittenRequest, rewriteUrl };
+}
+
+async function resolveSubdomainRewrite(
+  request: NextRequest,
+  supabase: ReturnType<typeof createServerClient>
+) {
+  const subdomain = resolveSubdomainFromHost(request.headers.get("host") ?? "");
+  if (!subdomain) {
+    return { request, rewriteUrl: null as URL | null };
+  }
+
+  let routeKind: "game" | "creator" = "game";
+  try {
+    const resolved = await resolveSubdomainRoute(supabase, subdomain);
+    if (resolved) routeKind = resolved;
+  } catch {
+    routeKind = "game";
+  }
+
+  const rewriteUrl = request.nextUrl.clone();
+  rewriteUrl.pathname = buildSubdomainRewritePath(
+    request.nextUrl.pathname,
+    subdomain,
+    routeKind
+  );
+
+  const rewrittenRequest = new NextRequest(rewriteUrl, {
+    headers: request.headers,
+    method: request.method,
+  });
+
+  return { request: rewrittenRequest, rewriteUrl };
+}
+
+function finalizeMiddlewareResponse(
+  request: NextRequest,
+  response: NextResponse,
+  rewriteUrl: URL | null
+) {
+  if (!rewriteUrl) {
+    return response;
+  }
+
+  const rewriteResponse = NextResponse.rewrite(rewriteUrl, {
+    request: { headers: request.headers },
+  });
+
+  response.cookies.getAll().forEach((cookie) => {
+    rewriteResponse.cookies.set(cookie);
+  });
+
+  response.headers.forEach((value, key) => {
+    if (key.toLowerCase() === "set-cookie") return;
+    rewriteResponse.headers.set(key, value);
+  });
+
+  return rewriteResponse;
+}
+
 export async function middleware(request: NextRequest) {
   if (
     request.nextUrl.pathname === "/zh-TW" ||
@@ -32,22 +115,53 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  const oauthCode = request.nextUrl.searchParams.get("code");
-  const pathnameWithoutLocale = stripLocalePrefix(request.nextUrl.pathname);
+  const subdomainLabel = resolveSubdomainFromHost(request.headers.get("host") ?? "");
+  let effectiveRequest = request;
+  let rewriteUrl: URL | null = null;
+
+  if (subdomainLabel) {
+    const lookupClient = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll();
+          },
+          setAll() {},
+        },
+      }
+    );
+
+    try {
+      const resolved = await resolveSubdomainRewrite(request, lookupClient);
+      effectiveRequest = resolved.request;
+      rewriteUrl = resolved.rewriteUrl;
+    } catch {
+      const fallback = applySubdomainRewrite(request);
+      effectiveRequest = fallback.request;
+      rewriteUrl = fallback.rewriteUrl;
+    }
+  }
+
+  const oauthCode = effectiveRequest.nextUrl.searchParams.get("code");
+  const pathnameWithoutLocale = stripLocalePrefix(
+    effectiveRequest.nextUrl.pathname
+  );
 
   if (
     oauthCode &&
     pathnameWithoutLocale !== "/auth/callback" &&
     !pathnameWithoutLocale.startsWith("/api/")
   ) {
-    const callbackUrl = request.nextUrl.clone();
+    const callbackUrl = effectiveRequest.nextUrl.clone();
     callbackUrl.pathname = "/auth/callback";
     return NextResponse.redirect(callbackUrl);
   }
 
-  const response = intlMiddleware(request);
+  const response = intlMiddleware(effectiveRequest);
 
-  if (!request.cookies.get(ANALYTICS_SESSION_COOKIE)?.value) {
+  if (!effectiveRequest.cookies.get(ANALYTICS_SESSION_COOKIE)?.value) {
     response.cookies.set(ANALYTICS_SESSION_COOKIE, crypto.randomUUID(), {
       httpOnly: true,
       sameSite: "lax",
@@ -62,11 +176,11 @@ export async function middleware(request: NextRequest) {
     {
       cookies: {
         getAll() {
-          return request.cookies.getAll();
+          return effectiveRequest.cookies.getAll();
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => {
-            request.cookies.set(name, value);
+            effectiveRequest.cookies.set(name, value);
             response.cookies.set(name, value, options);
           });
         },
@@ -79,7 +193,7 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (pathnameWithoutLocale.startsWith("/admin")) {
-    const redirectUrl = request.nextUrl.clone();
+    const redirectUrl = effectiveRequest.nextUrl.clone();
     redirectUrl.pathname = "/auth";
     redirectUrl.searchParams.set(
       "redirect",
@@ -89,17 +203,25 @@ export async function middleware(request: NextRequest) {
     );
 
     if (!user) {
-      return NextResponse.redirect(redirectUrl);
+      return finalizeMiddlewareResponse(
+        request,
+        NextResponse.redirect(redirectUrl),
+        rewriteUrl
+      );
     }
 
     if (!isAdminUser(user)) {
       redirectUrl.searchParams.set("hint", "admin");
-      return NextResponse.redirect(redirectUrl);
+      return finalizeMiddlewareResponse(
+        request,
+        NextResponse.redirect(redirectUrl),
+        rewriteUrl
+      );
     }
   }
 
   if (pathnameWithoutLocale.startsWith("/dashboard")) {
-    const redirectUrl = request.nextUrl.clone();
+    const redirectUrl = effectiveRequest.nextUrl.clone();
     redirectUrl.pathname = "/auth";
     redirectUrl.searchParams.set(
       "redirect",
@@ -109,14 +231,22 @@ export async function middleware(request: NextRequest) {
     );
 
     if (!user) {
-      return NextResponse.redirect(redirectUrl);
+      return finalizeMiddlewareResponse(
+        request,
+        NextResponse.redirect(redirectUrl),
+        rewriteUrl
+      );
     }
 
     const role = await resolveUserRole(supabase, user);
 
     if (!hasCreatorDashboardAccess(user, role)) {
       redirectUrl.searchParams.set("hint", "creator");
-      return NextResponse.redirect(redirectUrl);
+      return finalizeMiddlewareResponse(
+        request,
+        NextResponse.redirect(redirectUrl),
+        rewriteUrl
+      );
     }
   }
 
@@ -126,35 +256,47 @@ export async function middleware(request: NextRequest) {
     pathnameWithoutLocale.startsWith("/settings")
   ) {
     if (!user) {
-      const redirectUrl = request.nextUrl.clone();
+      const redirectUrl = effectiveRequest.nextUrl.clone();
       redirectUrl.pathname = "/auth";
       redirectUrl.searchParams.set("redirect", pathnameWithoutLocale);
-      return NextResponse.redirect(redirectUrl);
+      return finalizeMiddlewareResponse(
+        request,
+        NextResponse.redirect(redirectUrl),
+        rewriteUrl
+      );
     }
   }
 
   if (pathnameWithoutLocale === "/auth/choose-role") {
     const redirectTarget =
-      request.nextUrl.searchParams.get("redirect") ?? "/";
+      effectiveRequest.nextUrl.searchParams.get("redirect") ?? "/";
 
     if (!user) {
-      const redirectUrl = request.nextUrl.clone();
+      const redirectUrl = effectiveRequest.nextUrl.clone();
       redirectUrl.pathname = "/auth";
       redirectUrl.searchParams.set("redirect", redirectTarget);
-      return NextResponse.redirect(redirectUrl);
+      return finalizeMiddlewareResponse(
+        request,
+        NextResponse.redirect(redirectUrl),
+        rewriteUrl
+      );
     }
 
     if (shouldSkipAccountIntent(user)) {
-      const redirectUrl = request.nextUrl.clone();
+      const redirectUrl = effectiveRequest.nextUrl.clone();
       redirectUrl.pathname = redirectTarget.startsWith("/")
         ? redirectTarget
         : "/";
       redirectUrl.search = "";
-      return NextResponse.redirect(redirectUrl);
+      return finalizeMiddlewareResponse(
+        request,
+        NextResponse.redirect(redirectUrl),
+        rewriteUrl
+      );
     }
   }
 
-  return response;
+  return finalizeMiddlewareResponse(request, response, rewriteUrl);
 }
 
 export const config = {

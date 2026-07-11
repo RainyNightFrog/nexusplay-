@@ -86,6 +86,7 @@ import { cn } from "@/lib/utils";
 
 type FormState = {
   title: string;
+  slug: string;
   description: string;
   genre: GameGenre | "";
 };
@@ -276,6 +277,7 @@ export default function EditGamePage() {
 
   const [form, setForm] = useState<FormState>({
     title: "",
+    slug: "",
     description: "",
     genre: "",
   });
@@ -344,6 +346,7 @@ export default function EditGamePage() {
         const serverMetadata = metadataFromGameRecord(game);
         setForm({
           title: game.title,
+          slug: game.slug ?? "",
           description: game.description,
           genre: game.category as GameGenre,
         });
@@ -489,6 +492,7 @@ export default function EditGamePage() {
       publishStatus: monetization.publishStatus,
       publishVersion,
       title: form.title,
+      slug: form.slug,
       description: form.description,
       genre: form.genre,
       hasCover: Boolean(coverFile || existingCoverUrl),

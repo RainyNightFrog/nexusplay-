@@ -22,6 +22,7 @@ export const supabase = createSupabaseJsClient(
 export type GameRecord = {
   id: number;
   title: string;
+  slug: string | null;
   description: string;
   category: string;
   cover_url: string;

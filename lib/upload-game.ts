@@ -6,6 +6,7 @@ import { readApiJson } from "@/lib/fetch-api-json";
 
 export type UploadGameInput = {
   title: string;
+  slug: string;
   description: string;
   category: string;
   coverFile: File | null;
@@ -25,6 +26,7 @@ export type UploadGameResult = {
     category: string;
     cover_url: string;
     game_url: string;
+    slug?: string | null;
     creator_id: string;
     created_at: string;
     publish_status: GamePublishStatus;
@@ -45,6 +47,7 @@ export async function uploadGame(
 
   const formData = new FormData();
   formData.append("title", input.title);
+  formData.append("slug", input.slug);
   formData.append("description", input.description);
   formData.append("category", input.category);
   if (input.coverFile) {

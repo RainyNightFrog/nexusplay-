@@ -6,6 +6,7 @@ export type UserProfile = {
   id: string;
   player_number: number | null;
   display_name: string;
+  username: string | null;
   avatar_url: string | null;
   role: UserRole;
   is_admin: boolean;

@@ -3,6 +3,7 @@ import type { GamePublishStatus } from "@/lib/game-publish";
 import type { AiContentType } from "@/lib/game-metadata";
 import type { GamePricingType } from "@/lib/game-pricing";
 import { pricingValuesRequireStripeConnect } from "@/lib/creator-stripe-gate";
+import { resolveGameSlugForSave } from "@/lib/game-slug";
 import { MIN_SUGGESTED_TIP_USD } from "@/lib/tip-limits";
 
 export type PublishFormValidationInput = {
@@ -10,6 +11,7 @@ export type PublishFormValidationInput = {
   publishStatus: GamePublishStatus;
   publishVersion?: boolean;
   title: string;
+  slug: string;
   description: string;
   genre: GameGenre | "";
   hasCover: boolean;
@@ -26,6 +28,7 @@ export type PublishFormValidationInput = {
 
 export type PublishValidationField =
   | "title"
+  | "slug"
   | "description"
   | "genre"
   | "cover"
@@ -151,6 +154,15 @@ export function getPublishValidationIssues(
 
   appendPricingValidationIssues(issues, input);
   appendStripeConnectValidationIssues(issues, input);
+
+  const slugResult = resolveGameSlugForSave({
+    rawSlug: input.slug,
+    title: input.title,
+    requireSlug: isPublic,
+  });
+  if (!slugResult.ok) {
+    issues.push({ field: "slug", messageKey: "alertSlug" });
+  }
 
   return issues;
 }

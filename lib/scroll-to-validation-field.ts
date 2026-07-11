@@ -3,6 +3,7 @@ import type { PublishValidationField } from "@/lib/publish-form-validation";
 const FIELD_ELEMENT_IDS: Partial<Record<PublishValidationField, string>> = {
   title: "title",
   description: "description",
+  slug: "field-slug",
   genre: "field-genre",
   cover: "field-cover",
   gameZip: "field-game-zip",

@@ -42,6 +42,7 @@ import {
   GamePublishMetadataFields,
   DEFAULT_GAME_PUBLISH_METADATA,
 } from "@/components/dashboard/game-publish-metadata-fields";
+import { GameSlugField } from "@/components/dashboard/game-slug-field";
 import { uploadGame } from "@/lib/upload-game";
 import { DEFAULT_PUBLISH_STATUS } from "@/lib/game-publish";
 import { defaultGamePricingValues } from "@/lib/game-pricing";
@@ -68,10 +69,12 @@ import {
   PRODUCTION_UPLOAD_BYTES,
 } from "@/lib/upload-limits";
 import { isZipFileAsync, validateGameZipFile, ZIP_FILE_ACCEPT } from "@/lib/zip-file-validation";
+import { suggestGameSlugFromTitle } from "@/lib/game-slug";
 import { cn } from "@/lib/utils";
 
 type FormState = {
   title: string;
+  slug: string;
   description: string;
   genre: GameGenre | "";
 };
@@ -254,6 +257,7 @@ export default function UploadPage() {
   const zipProductionSize = formatMaxSize(PRODUCTION_UPLOAD_BYTES);
   const [form, setForm] = useState<FormState>({
     title: "",
+    slug: "",
     description: "",
     genre: "",
   });
@@ -384,6 +388,7 @@ export default function UploadPage() {
       mode: "upload",
       publishStatus: monetization.publishStatus,
       title: form.title,
+      slug: form.slug,
       description: form.description,
       genre: form.genre,
       hasCover: Boolean(coverFile),
@@ -425,6 +430,7 @@ export default function UploadPage() {
       const { game } = await uploadGame(
         {
           title: form.title.trim(),
+          slug: form.slug.trim(),
           description: form.description.trim(),
           category: form.genre,
           coverFile,
@@ -443,11 +449,15 @@ export default function UploadPage() {
       clearPersistedGameUploadDraft();
 
       const isDraft = monetization.publishStatus === "draft";
+      const gamePathSegment =
+        typeof game.slug === "string" && game.slug.trim()
+          ? game.slug.trim()
+          : String(game.id);
 
       if (isDraft) {
         const previewPath = getPathname({
           locale,
-          href: `/game/${game.id}`,
+          href: `/game/${gamePathSegment}`,
         });
         window.location.replace(`${previewPath}?draftSaved=1`);
         return;
@@ -464,7 +474,7 @@ export default function UploadPage() {
 
       const livePath = getPathname({
         locale,
-        href: `/game/${game.id}`,
+        href: `/game/${gamePathSegment}`,
       });
       window.setTimeout(() => {
         window.location.replace(`${livePath}?published=1`);
@@ -554,9 +564,17 @@ export default function UploadPage() {
                   type="text"
                   value={form.title}
                   maxLength={MAX_TITLE_LENGTH}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, title: event.target.value }))
-                  }
+                  onChange={(event) => {
+                    const title = event.target.value;
+                    setForm((prev) => {
+                      const next = { ...prev, title };
+                      if (!prev.slug.trim()) {
+                        const suggested = suggestGameSlugFromTitle(title);
+                        if (suggested) next.slug = suggested;
+                      }
+                      return next;
+                    });
+                  }}
                   placeholder={t("gameTitlePlaceholder")}
                   className={cn(
                     inputClassName,
@@ -564,6 +582,16 @@ export default function UploadPage() {
                     fieldErrors.title && "border-rose-400/50 ring-2 ring-rose-400/20"
                   )}
                   disabled={isSubmitting}
+                />
+              </div>
+
+              <div id="field-slug">
+                <GameSlugField
+                  value={form.slug}
+                  onChange={(slug) => setForm((prev) => ({ ...prev, slug }))}
+                  disabled={isSubmitting}
+                  required={isPublicUpload}
+                  hasError={fieldErrors.slug}
                 />
               </div>
 

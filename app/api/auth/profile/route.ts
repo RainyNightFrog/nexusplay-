@@ -13,9 +13,14 @@ import { getCountryCodeFromRequest } from "@/lib/request-geo";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { syncUserCountryFromRequest } from "@/lib/chat-player-profile-service";
+import {
+  normalizeCreatorUsername,
+  validateCreatorUsername,
+} from "@/lib/creator-username";
 
 type ProfilePatchBody = {
   display_name?: string;
+  username?: string;
   bio?: string;
   website?: string;
   twitter?: string;
@@ -88,6 +93,10 @@ export async function PATCH(request: Request) {
       body.display_name ?? currentProfile.display_name,
       PROFILE_LIMITS.displayName
     );
+    const usernameRaw =
+      body.username !== undefined
+        ? normalizeCreatorUsername(body.username)
+        : (currentProfile.username ?? "");
     const bioRaw =
       body.bio !== undefined
         ? sanitizePlainText(body.bio, PROFILE_LIMITS.bio)
@@ -107,6 +116,40 @@ export async function PATCH(request: Request) {
 
     if (!displayName) {
       return NextResponse.json({ error: "請輸入顯示名稱" }, { status: 400 });
+    }
+
+    let username: string | null = null;
+    if (usernameRaw) {
+      const usernameResult = validateCreatorUsername(usernameRaw);
+      if (!usernameResult.ok) {
+        return NextResponse.json({ error: usernameResult.error }, { status: 400 });
+      }
+      username = usernameResult.username;
+
+      const { data: gameConflict } = await supabase
+        .from("games")
+        .select("id")
+        .eq("slug", username)
+        .maybeSingle();
+      if (gameConflict) {
+        return NextResponse.json(
+          { error: "此網址名稱已被遊戲使用，請改用其他名稱" },
+          { status: 409 }
+        );
+      }
+
+      const { data: profileConflict } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("username", username)
+        .neq("id", user.id)
+        .maybeSingle();
+      if (profileConflict) {
+        return NextResponse.json(
+          { error: "此創作者網址已被使用，請改用其他名稱" },
+          { status: 409 }
+        );
+      }
     }
 
     const bio = bioRaw || "";
@@ -170,6 +213,7 @@ export async function PATCH(request: Request) {
       .from("profiles")
       .update({
         display_name: displayName,
+        username,
         support_email: supportEmail || null,
         bio: bio || null,
         ...(isAdmin ? {} : { role: resolveRoleFromPreferences(developingGames) }),

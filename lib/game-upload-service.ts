@@ -32,6 +32,7 @@ import {
   MAX_ZIP_BYTES,
   PRODUCTION_UPLOAD_BYTES,
 } from "@/lib/upload-limits";
+import { resolveGameSlugForSave } from "@/lib/game-slug";
 import { resolvePlatformFeePercentForSave } from "@/lib/tip-fee-policy";
 import { isZipBuffer, isZipFile } from "@/lib/zip-file-validation";
 
@@ -229,6 +230,30 @@ export async function uploadCreatorGameFromFormData(params: {
     return { ok: false, status: 400, error: metadataResult.error };
   }
 
+  const slugResult = resolveGameSlugForSave({
+    rawSlug: String(formData.get("slug") ?? ""),
+    title,
+    requireSlug: isPublic,
+  });
+  if (!slugResult.ok) {
+    return { ok: false, status: 400, error: slugResult.error };
+  }
+
+  if (slugResult.slug) {
+    const { data: profileConflict } = await (params.supabase ?? createServerSupabase())
+      .from("profiles")
+      .select("id")
+      .eq("username", slugResult.slug)
+      .maybeSingle();
+    if (profileConflict) {
+      return {
+        ok: false,
+        status: 409,
+        error: "此專案網址已被創作者使用，請改用其他名稱",
+      };
+    }
+  }
+
   const metadataPayload = buildMetadataDbPayload({
     ...metadataResult.data,
     detailsHtml: sanitizeRichHtml(
@@ -276,6 +301,7 @@ export async function uploadCreatorGameFromFormData(params: {
       .from("games")
       .insert({
         title,
+        slug: slugResult.slug,
         description: finalDescription,
         category: finalCategory,
         cover_url: coverUpload.publicUrl,
@@ -302,6 +328,13 @@ export async function uploadCreatorGameFromFormData(params: {
       .single();
 
     if (error) {
+      if (error.message.includes("games_slug_unique_idx") || error.code === "23505") {
+        return {
+          ok: false,
+          status: 409,
+          error: "此專案網址已被使用，請改用其他名稱",
+        };
+      }
       throw new Error(`資料庫寫入失敗：${error.message}`);
     }
 

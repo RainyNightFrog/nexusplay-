@@ -34,7 +34,7 @@ export async function resolveUserProfile(
   const { data: profile, error } = await supabase
     .from("profiles")
     .select(
-      "id, display_name, avatar_url, role, created_at, support_email, equipped_title_id, bio, player_number, is_supporter, supporter_since, supporter_badge"
+      "id, display_name, avatar_url, role, created_at, support_email, equipped_title_id, bio, player_number, is_supporter, supporter_since, supporter_badge, username"
     )
     .eq("id", user.id)
     .maybeSingle();
@@ -56,6 +56,7 @@ export async function resolveUserProfile(
             ? Number(profile.player_number) || null
             : null,
       display_name: profile.display_name || metadataProfile.display_name,
+      username: readOptionalString(profile.username),
       avatar_url: profile.avatar_url ?? metadataProfile.avatar_url,
       role: isAdmin ? "player" : resolveRoleFromPreferences(developingGames),
       is_admin: isAdmin,

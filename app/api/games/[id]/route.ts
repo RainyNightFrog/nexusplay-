@@ -16,6 +16,7 @@ import {
   redeemPartnerAccessCode,
   validatePartnerAccessCode,
 } from "@/lib/partner-access-service";
+import { resolveGameRecordByRouteParam } from "@/lib/game-slug";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
 
@@ -25,24 +26,14 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const numericId = Number.parseInt(id, 10);
-
-    if (Number.isNaN(numericId)) {
-      return NextResponse.json({ error: "無效的遊戲 ID" }, { status: 400 });
-    }
 
     const supabase = createServerSupabase();
-    const { data: record, error: recordError } = await supabase
-      .from("games")
-      .select("*")
-      .eq("id", numericId)
-      .maybeSingle();
+    const { record, numericId } = await resolveGameRecordByRouteParam(
+      supabase,
+      id
+    );
 
-    if (recordError) {
-      throw new Error(`讀取遊戲失敗：${recordError.message}`);
-    }
-
-    if (!record) {
+    if (!record || numericId == null) {
       return NextResponse.json({ error: "找不到此遊戲" }, { status: 404 });
     }
 

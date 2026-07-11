@@ -4,6 +4,7 @@ import { GAME_GENRES, GAME_TAGS } from "@/lib/game-metadata";
 export type Game = {
   id: number;
   title: string;
+  slug?: string | null;
   tags: string[];
   genre: string;
   players: number;

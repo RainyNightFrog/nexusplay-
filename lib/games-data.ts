@@ -40,6 +40,7 @@ export function mapRecordToGame(record: GameRecord): Game {
   return {
     id: enriched.id,
     title: enriched.title,
+    slug: enriched.slug ?? meta?.slug ?? null,
     tags: meta?.categories ?? resolveTags(enriched, enriched.category),
     genre: enriched.category,
     players: enriched.plays_count ?? 0,

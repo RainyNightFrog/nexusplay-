@@ -15,6 +15,9 @@
     "db:on-sale": "node scripts/run-add-game-on-sale.mjs",
     "db:stripe-user-fields": "node scripts/run-add-stripe-user-connect-fields.mjs",
     "db:status": "node scripts/run-add-game-status.mjs",
+    "db:slug": "node scripts/run-add-game-slug.mjs",
+    "db:username": "node scripts/run-add-profile-username.mjs",
+    "db:seed-creator-usernames": "node scripts/seed-creator-usernames.mjs",
     "db:game-saves": "node scripts/run-game-saves.mjs",
     "db:legacy-imports": "node scripts/run-legacy-imports.mjs",
     "db:leaderboard": "node scripts/run-leaderboard.mjs",
@@ -82,7 +85,8 @@
     "db:assign-admin": "node scripts/assign-admin.mjs",
     "setup:production-auth": "node scripts/configure-production-auth.mjs",
     "setup:resend-domain": "node scripts/setup-resend-domain.mjs",
-    "check:resend-domain": "node scripts/setup-resend-domain.mjs --check"
+    "check:resend-domain": "node scripts/setup-resend-domain.mjs --check",
+    "setup:subdomain-dns": "node scripts/setup-subdomain-dns.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
