@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Memory Matrix Glitch · 記憶矩陣故障</title>
+</head>
+<body>
+<script src="/sdk/rnf-game-sdk.js"></script>
+<script>
+RNF.init();
+var shell = RNF.buildShell({
+  title: "Memory Matrix Glitch",
+  creator: "NeuralMind",
+  subtitle: "滑鼠 / Enter 翻牌配對 · 限時挑戰 · 故障翻轉特效 · 連擊音階遞升",
+  width: 960,
+  height: 520,
+  bgmStyle: "ambient",
+  onStart: startGame
+});
+
+var ctx, particles, running, loopId, lastT;
+var cards, selected, matched, combo, score, timeLeft, level, flipAnim;
+var ICONS = ["◆", "★", "▲", "●", "■", "♦", "✦", "⬡", "◎", "✚", "▼", "◇"];
+var COLORS = ["#22d3ee", "#a78bfa", "#f472b6", "#4ade80", "#fbbf24", "#60a5fa", "#fb923c", "#e879f9"];
+
+function cleanup() {
+  running = false;
+  if (loopId) cancelAnimationFrame(loopId);
+  loopId = null;
+  shell.canvas.removeEventListener("click", onClick);
+  window.removeEventListener("keydown", onKeyDown);
+}
+
+function startGame() {
+  cleanup();
+  ctx = shell.ctx;
+  particles = shell.particles;
+  level = 1;
+  score = 0;
+  combo = 0;
+  timeLeft = 90;
+  selected = [];
+  matched = 0;
+  flipAnim = [];
+  buildLevel();
+  updateHud();
+  running = true;
+  lastT = performance.now();
+  shell.canvas.addEventListener("click", onClick);
+  window.addEventListener("keydown", onKeyDown);
+  loopId = requestAnimationFrame(loop);
+}
+
+function buildLevel() {
+  var pairs = Math.min(6 + level, 10);
+  var items = [];
+  for (var i = 0; i < pairs; i++) {
+    var sym = ICONS[i % ICONS.length];
+    var col = COLORS[i % COLORS.length];
+    items.push({ id: i, sym: sym, col: col });
+    items.push({ id: i, sym: sym, col: col });
+  }
+  for (var j = items.length - 1; j > 0; j--) {
+    var k = Math.floor(Math.random() * (j + 1));
+    var tmp = items[j]; items[j] = items[k]; items[k] = tmp;
+  }
+  var cols = pairs <= 6 ? 4 : pairs <= 8 ? 4 : 5;
+  var rows = Math.ceil(pairs * 2 / cols);
+  var cw = 80, ch = 100, gap = 12;
+  var totalW = cols * cw + (cols - 1) * gap;
+  var totalH = rows * ch + (rows - 1) * gap;
+  var ox = (960 - totalW) / 2, oy = (520 - totalH) / 2 + 10;
+  cards = items.map(function (item, idx) {
+    var c = idx % cols, r = Math.floor(idx / cols);
+    return {
+      item: item, x: ox + c * (cw + gap), y: oy + r * (ch + gap), w: cw, h: ch,
+      flipped: false, matched: false, flipT: 0, glitch: 0, idx: idx
+    };
+  });
+  matched = 0;
+  selected = [];
+  timeLeft += 15;
+}
+
+function updateHud() {
+  shell.setHud(
+    '<div><span>分數</span><b>' + score.toLocaleString() + '</b></div>' +
+    '<div><span>剩餘時間</span><b>' + Math.ceil(timeLeft) + 's</b></div>' +
+    '<div><span>連擊</span><b>x' + combo + '</b></div>' +
+    '<div><span>關卡</span><b>' + level + '</b></div>' +
+    '<div><span>配對</span><b>' + matched + '/' + (cards.length / 2) + '</b></div>'
+  );
+}
+
+function cardAt(mx, my) {
+  for (var i = cards.length - 1; i >= 0; i--) {
+    var c = cards[i];
+    if (mx >= c.x && mx <= c.x + c.w && my >= c.y && my <= c.y + c.h) return c;
+  }
+  return null;
+}
+
+function flipCard(c) {
+  if (c.flipped || c.matched || selected.length >= 2) return;
+  c.flipped = true;
+  c.flipT = 0;
+  c.glitch = 0.35;
+  flipAnim.push(c);
+  selected.push(c);
+  RNF.sfx.click();
+  if (selected.length === 2) setTimeout(checkMatch, 500);
+}
+
+function checkMatch() {
+  if (!running) return;
+  var a = selected[0], b = selected[1];
+  if (a.item.id === b.item.id) {
+    a.matched = b.matched = true;
+    matched++;
+    combo++;
+    var pts = (100 + combo * 25) * level;
+    score += pts;
+    RNF.sfx.combo(Math.min(combo, 8));
+    shell.triggerShake(3 + combo * 0.5, 0.12);
+    particles.burst((a.x + b.x) / 2 + 40, (a.y + b.y) / 2 + 50, a.item.col, 14);
+    if (matched >= cards.length / 2) {
+      level++;
+      RNF.sfx.score();
+      setTimeout(function () { if (running) buildLevel(); updateHud(); }, 600);
+    }
+  } else {
+    combo = 0;
+    RNF.sfx.hit();
+    setTimeout(function () {
+      if (!running) return;
+      a.flipped = b.flipped = false;
+      a.glitch = b.glitch = 0.25;
+    }, 350);
+  }
+  selected = [];
+  updateHud();
+}
+
+function onClick(e) {
+  if (!running || selected.length >= 2) return;
+  var rect = shell.canvas.getBoundingClientRect();
+  var mx = (e.clientX - rect.left) * (960 / rect.width);
+  var my = (e.clientY - rect.top) * (520 / rect.height);
+  var c = cardAt(mx, my);
+  if (c) flipCard(c);
+}
+
+function onKeyDown(e) {
+  if (!running) return;
+  if (e.code === "Enter" && cards.length) {
+    var pick = cards.find(function (c) { return !c.matched && !c.flipped; });
+    if (pick) flipCard(pick);
+  }
+}
+
+function loop(now) {
+  if (!running) return;
+  var dt = Math.min(0.05, (now - lastT) / 1000);
+  lastT = now;
+  timeLeft -= dt;
+  if (timeLeft <= 0) {
+    shell.gameOver(score, { level: level, combo: combo });
+    return;
+  }
+  cards.forEach(function (c) {
+    if (c.flipT < 1) c.flipT = Math.min(1, c.flipT + dt * 4);
+    if (c.glitch > 0) c.glitch -= dt;
+  });
+  if (timeLeft < 10 && Math.floor(timeLeft * 4) !== Math.floor((timeLeft + dt) * 4))
+    RNF.sfx.heartbeat();
+  particles.update(dt);
+  draw();
+  updateHud();
+  loopId = requestAnimationFrame(loop);
+}
+
+function drawCard(c) {
+  var showFace = c.flipped || c.matched;
+  var scaleX = showFace ? Math.abs(Math.cos(c.flipT * Math.PI)) : Math.abs(Math.cos((1 - c.flipT) * Math.PI));
+  scaleX = Math.max(0.08, scaleX);
+  ctx.save();
+  ctx.translate(c.x + c.w / 2, c.y + c.h / 2);
+  ctx.scale(scaleX, 1);
+  if (c.glitch > 0) {
+    ctx.translate((Math.random() - 0.5) * 12 * c.glitch, (Math.random() - 0.5) * 8 * c.glitch);
+    if (Math.random() < 0.3) ctx.filter = "hue-rotate(" + (Math.random() * 360) + "deg)";
+  }
+  if (showFace) {
+    ctx.fillStyle = "rgba(6,10,18,0.95)";
+    ctx.strokeStyle = c.item.col;
+    ctx.lineWidth = 2;
+    ctx.shadowBlur = 16; ctx.shadowColor = c.item.col;
+    ctx.fillRect(-c.w / 2, -c.h / 2, c.w, c.h);
+    ctx.strokeRect(-c.w / 2, -c.h / 2, c.w, c.h);
+    ctx.fillStyle = c.item.col;
+    ctx.font = "bold 36px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(c.item.sym, 0, 0);
+  } else {
+    ctx.fillStyle = "rgba(12,18,32,0.95)";
+    ctx.strokeStyle = "rgba(34,211,238,0.5)";
+    ctx.lineWidth = 1;
+    ctx.fillRect(-c.w / 2, -c.h / 2, c.w, c.h);
+    ctx.strokeRect(-c.w / 2, -c.h / 2, c.w, c.h);
+    ctx.fillStyle = "#22d3ee";
+    ctx.font = "10px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("NEURAL", 0, -8);
+    ctx.fillText("?", 0, 12);
+  }
+  ctx.filter = "none";
+  ctx.shadowBlur = 0;
+  ctx.restore();
+  if (c.glitch > 0 && shell.isHighQuality()) {
+    ctx.save();
+    ctx.strokeStyle = c.item.col || "#22d3ee";
+    ctx.globalAlpha = c.glitch;
+    ctx.beginPath();
+    ctx.moveTo(c.x, c.y + Math.random() * c.h);
+    ctx.lineTo(c.x + c.w, c.y + Math.random() * c.h);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function draw() {
+  ctx.save();
+  shell.applyShake(ctx);
+  ctx.fillStyle = "#050810";
+  ctx.fillRect(0, 0, 960, 520);
+  ctx.strokeStyle = "rgba(34,211,238,0.06)";
+  for (var i = 0; i < 960; i += 32) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 520); ctx.stroke(); }
+  ctx.fillStyle = "#64748b";
+  ctx.font = "13px 'Microsoft JhengHei',sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("NeuralMind · 記憶矩陣故障 · 配對所有卡片進入下一關", 480, 24);
+  if (timeLeft < 10) {
+    ctx.fillStyle = "rgba(244,114,182," + (0.3 + Math.sin(performance.now() * 0.01) * 0.2) + ")";
+    ctx.fillRect(0, 0, 960, 520);
+  }
+  cards.forEach(drawCard);
+  particles.draw(ctx);
+  ctx.restore();
+}
+</script>
+</body>
+</html>

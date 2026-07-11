@@ -29,6 +29,7 @@ import type { Game } from "@/lib/games";
 import { useGameFavoriteActions } from "@/hooks/use-game-favorite-actions";
 import { useFormatCount } from "@/hooks/use-format-count";
 import { cn } from "@/lib/utils";
+import { resolveDisplayFavoriteCount } from "@/lib/virtual-games-seed-data";
 
 function SearchPageContent() {
   const t = useTranslations("search");
@@ -215,7 +216,10 @@ function SearchPageContent() {
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {games.map((game, index) => {
                     const favorited = favoritedIds.has(game.id);
-                    const favoriteCount = favoriteCounts[game.id] ?? game.likes;
+                    const favoriteCount = resolveDisplayFavoriteCount(
+                      favoriteCounts[game.id],
+                      game.likes
+                    );
 
                     return (
                       <motion.div

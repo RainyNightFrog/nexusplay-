@@ -21,6 +21,8 @@ import {
   RAINYNIGHTFROG_PLAY_MODE_MESSAGE,
   LEGACY_NEXUSPLAY_EXPAND_REQUEST,
   LEGACY_NEXUSPLAY_PLAY_MODE_MESSAGE,
+  RNF_SUBMIT_SCORE_MESSAGE,
+  RNF_SAVE_DATA_MESSAGE,
   type RainyNightFrogAuthUser,
   type RainyNightFrogLeaveConfirmRequest,
 } from "@/lib/rainynightfrog-embed-sdk";
@@ -188,6 +190,56 @@ export function GameEmbedBridge({
     [gameId, respondApiProxy]
   );
 
+  const handleRnfSubmitScore = useCallback(
+    async (data: { score?: unknown; metadata?: unknown; timestamp?: unknown }) => {
+      const score = Number(data.score);
+      if (!Number.isFinite(score) || score < 0) return;
+
+      const meta =
+        data.metadata && typeof data.metadata === "object" && !Array.isArray(data.metadata)
+          ? (data.metadata as Record<string, unknown>)
+          : {};
+
+      try {
+        await fetch(`/api/games/${gameId}/leaderboard`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            score: Math.floor(score),
+            meta: {
+              ...meta,
+              submittedAt: data.timestamp ?? Date.now(),
+            },
+          }),
+        });
+      } catch (error) {
+        console.error("[RNF] submitScore failed:", error);
+      }
+    },
+    [gameId]
+  );
+
+  const handleRnfSaveData = useCallback(
+    async (data: { data?: unknown }) => {
+      if (data.data == null || typeof data.data !== "object" || Array.isArray(data.data)) {
+        return;
+      }
+
+      try {
+        await fetch(`/api/games/${gameId}/save`, {
+          method: "PUT",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ save: data.data }),
+        });
+      } catch (error) {
+        console.error("[RNF] saveData failed:", error);
+      }
+    },
+    [gameId]
+  );
+
   const syncIframeLayout = useCallback(() => {
     const iframe = iframeRef.current;
     if (!iframe?.contentWindow) return;
@@ -262,6 +314,16 @@ export function GameEmbedBridge({
         return;
       }
 
+      if (data?.type === RNF_SUBMIT_SCORE_MESSAGE) {
+        void handleRnfSubmitScore(data as { score?: unknown; metadata?: unknown; timestamp?: unknown });
+        return;
+      }
+
+      if (data?.type === RNF_SAVE_DATA_MESSAGE) {
+        void handleRnfSaveData(data as { data?: unknown });
+        return;
+      }
+
       if (
         data?.type === RAINYNIGHTFROG_LEAVE_CONFIRM_REQUEST ||
         data?.type === LEGACY_NEXUSPLAY_LEAVE_CONFIRM_REQUEST
@@ -307,7 +369,7 @@ export function GameEmbedBridge({
 
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [gameId, postAuth, postResize, router, onExpandRequest, isMessageFromIframe, handleApiProxyRequest]);
+  }, [gameId, postAuth, postResize, router, onExpandRequest, isMessageFromIframe, handleApiProxyRequest, handleRnfSubmitScore, handleRnfSaveData]);
 
   useEffect(() => {
     if (!loading) {

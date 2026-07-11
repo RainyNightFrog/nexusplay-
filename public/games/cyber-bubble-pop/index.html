@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cyber Bubble Pop · 賽博泡泡</title>
+  <script src="/sdk/rnf-game-sdk.js"></script>
+</head>
+<body>
+<script>
+RNF.init();
+var shell = RNF.buildShell({
+  title: "Cyber Bubble Pop",
+  creator: "BubbleMaster_X",
+  subtitle: "←→ 瞄準 · 空白鍵發射 · 三消以上連鎖 · 閃電/黑洞特殊球 · 連擊限時加分",
+  width: 960,
+  height: 520,
+  bgmStyle: "ambient",
+  onStart: startGame
+});
+
+var W = shell.width, H = shell.height;
+var ctx = shell.ctx;
+var particles = shell.particles;
+var animId = null, running = false, gameEnded = false;
+var COLORS = ["#22d3ee", "#a78bfa", "#f472b6", "#34d399", "#fbbf24", "#fb7185"];
+var RADIUS = 18, ROWS = 12, COLS = 16;
+var grid, shooter, aimAngle, currentBubble, nextBubble, score, combo, comboTimer;
+var falling = [], animating = false, shootCooldown = 0, projectile = null;
+
+function cleanup() {
+  running = false;
+  if (animId) cancelAnimationFrame(animId);
+  animId = null;
+  window.removeEventListener("keydown", onKey);
+}
+
+function onKey(e) {
+  if (gameEnded || animating) return;
+  if (e.key === "ArrowLeft") aimAngle -= 0.04;
+  if (e.key === "ArrowRight") aimAngle += 0.04;
+  aimAngle = Math.max(-1.2, Math.min(1.2, aimAngle));
+  if (e.key === " " || e.code === "Space") { e.preventDefault(); shoot(); }
+}
+
+function makeBubble(c, r, color, special) {
+  return { c: c, r: r, x: c * RADIUS * 2 + (r % 2 ? RADIUS : 0) + RADIUS, y: r * RADIUS * 1.732 + RADIUS + 10, color: color, special: special || null };
+}
+
+function initGrid() {
+  grid = [];
+  for (var r = 0; r < 5; r++) {
+    for (var c = 0; c < COLS; c++) {
+      if (Math.random() < 0.85) {
+        var sp = null;
+        if (Math.random() < 0.04) sp = "lightning";
+        else if (Math.random() < 0.03) sp = "blackhole";
+        grid.push(makeBubble(c, r, COLORS[Math.floor(Math.random() * COLORS.length)], sp));
+      }
+    }
+  }
+}
+
+function snapPos(x, y) {
+  var r = Math.round((y - RADIUS - 10) / (RADIUS * 1.732));
+  r = Math.max(0, Math.min(ROWS - 1, r));
+  var offset = r % 2 ? RADIUS : 0;
+  var c = Math.round((x - RADIUS - offset) / (RADIUS * 2));
+  c = Math.max(0, Math.min(COLS - 1, c));
+  return { c: c, r: r };
+}
+
+function getBubble(c, r) {
+  for (var i = 0; i < grid.length; i++) {
+    if (grid[i].c === c && grid[i].r === r) return grid[i];
+  }
+  return null;
+}
+
+function neighbors(c, r) {
+  var odd = r % 2;
+  var dirs = odd
+    ? [[-1,0],[1,0],[0,-1],[1,-1],[0,1],[1,1]]
+    : [[-1,0],[1,0],[-1,-1],[0,-1],[-1,1],[0,1]];
+  var list = [];
+  dirs.forEach(function (d) {
+    var b = getBubble(c + d[0], r + d[1]);
+    if (b) list.push(b);
+  });
+  return list;
+}
+
+function findCluster(start, color) {
+  var visited = {}, cluster = [], queue = [start];
+  visited[start.c + "," + start.r] = true;
+  while (queue.length) {
+    var b = queue.shift();
+    cluster.push(b);
+    neighbors(b.c, b.r).forEach(function (n) {
+      if (!visited[n.c + "," + n.r] && n.color === color) {
+        visited[n.c + "," + n.r] = true;
+        queue.push(n);
+      }
+    });
+  }
+  return cluster;
+}
+
+function floatingBubbles() {
+  var connected = {};
+  grid.forEach(function (b) {
+    if (b.r === 0) {
+      var q = [b], vis = {};
+      while (q.length) {
+        var cur = q.shift();
+        var k = cur.c + "," + cur.r;
+        if (vis[k]) continue;
+        vis[k] = true;
+        connected[k] = true;
+        neighbors(cur.c, cur.r).forEach(function (n) { if (!vis[n.c + "," + n.r]) q.push(n); });
+      }
+    }
+  });
+  var drop = [];
+  grid = grid.filter(function (b) {
+    if (!connected[b.c + "," + b.r]) { drop.push(b); return false; }
+    return true;
+  });
+  drop.forEach(function (b) {
+    falling.push({ x: b.x, y: b.y, vy: 0, color: b.color, life: 1 });
+    score += 5;
+  });
+  if (drop.length) {
+    shell.triggerShake(5, 0.2);
+    RNF.sfx.combo(Math.min(drop.length, 8));
+  }
+}
+
+function popCluster(cluster, special) {
+  cluster.forEach(function (b) {
+    particles.burst(b.x, b.y, b.color, 10);
+    if (b.special === "lightning") {
+      grid.forEach(function (g) {
+        if (g.c === b.c) {
+          particles.burst(g.x, g.y, "#fbbf24", 8);
+        }
+      });
+      grid = grid.filter(function (g) { return g.c !== b.c; });
+    } else if (b.special === "blackhole") {
+      var cx = b.x, cy = b.y;
+      grid.forEach(function (g) {
+        var d = Math.hypot(g.x - cx, g.y - cy);
+        if (d < RADIUS * 5) particles.burst(g.x, g.y, "#a78bfa", 6);
+      });
+      grid = grid.filter(function (g) { return Math.hypot(g.x - cx, g.y - cy) >= RADIUS * 5; });
+    }
+  });
+  if (!special) {
+    var remove = {};
+    cluster.forEach(function (b) { remove[b.c + "," + b.r] = true; });
+    grid = grid.filter(function (b) { return !remove[b.c + "," + b.r]; });
+  }
+}
+
+function processMatches(placed) {
+  animating = true;
+  var cluster = findCluster(placed, placed.color);
+  if (cluster.length >= 3) {
+    combo++;
+    comboTimer = 5;
+    var pts = cluster.length * 10 * (1 + combo * 0.3);
+    score += Math.floor(pts);
+    RNF.sfx.pop();
+    shell.triggerShake(4 + combo, 0.18);
+    RNF.sfx.combo(combo);
+    popCluster(cluster);
+    floatingBubbles();
+  } else {
+    combo = 0;
+  }
+  if (grid.some(function (b) { return b.r >= ROWS - 2; })) endGame();
+  animating = false;
+}
+
+function landBubble(f) {
+  var pos = snapPos(f.x, f.y);
+  if (getBubble(pos.c, pos.r)) pos.r = Math.min(pos.r + 1, ROWS - 1);
+  var nb = makeBubble(pos.c, pos.r, f.color, f.special);
+  nb.x = pos.c * RADIUS * 2 + (pos.r % 2 ? RADIUS : 0) + RADIUS;
+  nb.y = pos.r * RADIUS * 1.732 + RADIUS + 10;
+  grid.push(nb);
+  projectile = null;
+  RNF.sfx.hit();
+  processMatches(nb);
+  currentBubble = nextBubble;
+  nextBubble = randomBubble();
+}
+
+function shoot() {
+  if (shootCooldown > 0 || !currentBubble || projectile) return;
+  shootCooldown = 0.25;
+  var sx = W / 2, sy = H - 40;
+  var dx = Math.sin(aimAngle), dy = -Math.cos(aimAngle);
+  projectile = { x: sx, y: sy, vx: dx * 14, vy: dy * 14, color: currentBubble.color, special: currentBubble.special };
+  currentBubble = null;
+  RNF.sfx.laser();
+}
+
+function updateProjectile() {
+  if (!projectile) return;
+  var f = projectile;
+  f.x += f.vx;
+  f.y += f.vy;
+  if (f.x < RADIUS || f.x > W - RADIUS) f.vx *= -1;
+  if (f.y < RADIUS + 10) { landBubble(f); return; }
+  for (var i = 0; i < grid.length; i++) {
+    var g = grid[i];
+    if (Math.hypot(f.x - g.x, f.y - g.y) < RADIUS * 1.85) { landBubble(f); return; }
+  }
+}
+
+function randomBubble() {
+  var sp = null;
+  if (Math.random() < 0.06) sp = Math.random() < 0.5 ? "lightning" : "blackhole";
+  return { color: COLORS[Math.floor(Math.random() * COLORS.length)], special: sp };
+}
+
+function endGame() {
+  if (gameEnded) return;
+  gameEnded = true;
+  running = false;
+  RNF.sfx.die();
+  shell.triggerShake(10, 0.35);
+  cleanup();
+  shell.gameOver(score, { combo: combo });
+}
+
+function updateHud() {
+  shell.setHud(
+    '<div><span>分數</span><b>' + score + '</b></div>' +
+    '<div><span>連擊</span><b>x' + combo + '</b></div>' +
+    '<div><span>限時</span><b>' + comboTimer.toFixed(1) + 's</b></div>' +
+    '<div><span>泡泡</span><b>' + grid.length + '</b></div>'
+  );
+}
+
+function startGame() {
+  cleanup();
+  score = 0; combo = 0; comboTimer = 0;
+  aimAngle = 0; shootCooldown = 0;
+  falling = []; gameEnded = false; animating = false; projectile = null;
+  initGrid();
+  currentBubble = randomBubble();
+  nextBubble = randomBubble();
+  running = true;
+  window.addEventListener("keydown", onKey);
+  lastTs = performance.now();
+  animId = requestAnimationFrame(loop);
+}
+
+var lastTs = 0;
+
+function loop(ts) {
+  if (!running) return;
+  var dt = Math.min(0.05, (ts - lastTs) / 1000);
+  lastTs = ts;
+  shootCooldown = Math.max(0, shootCooldown - dt);
+  comboTimer = Math.max(0, comboTimer - dt);
+  if (comboTimer <= 0 && combo > 0) combo = 0;
+
+  falling.forEach(function (f) {
+    f.vy += 0.4;
+    f.y += f.vy;
+    f.life -= dt;
+    particles.trail(f.x, f.y, f.color);
+  });
+  falling = falling.filter(function (f) { return f.life > 0 && f.y < H + 20; });
+
+  updateProjectile();
+  particles.update(dt);
+  draw();
+  updateHud();
+  if (grid.length === 0) {
+    score += 500;
+    RNF.sfx.score();
+    initGrid();
+  }
+  animId = requestAnimationFrame(loop);
+}
+
+function drawBubble(b, alpha) {
+  ctx.globalAlpha = alpha || 1;
+  ctx.shadowBlur = 12;
+  ctx.shadowColor = b.color;
+  ctx.fillStyle = b.color;
+  ctx.beginPath();
+  ctx.arc(b.x, b.y, RADIUS - 2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.35)";
+  ctx.beginPath();
+  ctx.arc(b.x - 5, b.y - 5, 5, 0, Math.PI * 2);
+  ctx.fill();
+  if (b.special === "lightning") {
+    ctx.strokeStyle = "#fbbf24";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(b.x - 4, b.y - 8);
+    ctx.lineTo(b.x + 2, b.y);
+    ctx.lineTo(b.x - 2, b.y);
+    ctx.lineTo(b.x + 4, b.y + 8);
+    ctx.stroke();
+  } else if (b.special === "blackhole") {
+    ctx.fillStyle = "#0f0a1a";
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, RADIUS * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#a78bfa";
+    ctx.stroke();
+  }
+  ctx.shadowBlur = 0;
+  ctx.globalAlpha = 1;
+}
+
+function draw() {
+  ctx.save();
+  shell.applyShake(ctx);
+  ctx.fillStyle = "#060a12";
+  ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = "rgba(167,139,250,0.15)";
+  ctx.strokeRect(RADIUS, 10, W - RADIUS * 2, ROWS * RADIUS * 1.732);
+
+  grid.forEach(function (b) { drawBubble(b); });
+  falling.forEach(function (f) { drawBubble({ x: f.x, y: f.y, color: f.color }, f.life); });
+
+  var sx = W / 2, sy = H - 40;
+  ctx.strokeStyle = "rgba(34,211,238,0.5)";
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6, 6]);
+  ctx.beginPath();
+  ctx.moveTo(sx, sy);
+  ctx.lineTo(sx + Math.sin(aimAngle) * 120, sy - Math.cos(aimAngle) * 120);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  if (projectile) drawBubble(projectile);
+  else if (currentBubble) drawBubble({ x: sx, y: sy, color: currentBubble.color, special: currentBubble.special });
+  drawBubble({ x: sx + 50, y: sy + 20, color: nextBubble.color, special: nextBubble.special });
+
+  ctx.fillStyle = "#64748b";
+  ctx.font = "11px sans-serif";
+  ctx.fillText("NEXT", sx + 35, sy + 38);
+
+  particles.draw(ctx);
+  ctx.restore();
+}
+</script>
+</body>
+</html>

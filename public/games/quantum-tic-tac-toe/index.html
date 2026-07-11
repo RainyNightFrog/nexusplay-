@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quantum Tic-Tac-Toe · 量子五子棋</title>
+  <script src="/sdk/rnf-game-sdk.js"></script>
+</head>
+<body>
+<script>
+RNF.init();
+var shell = RNF.buildShell({
+  title: "Quantum Tic-Tac-Toe",
+  creator: "LogicKnight_HK",
+  subtitle: "滑鼠點格落子 · 5×5 連五獲勝 · 限時倒數心跳音效 · 對戰 AI · 勝率統計",
+  width: 960,
+  height: 520,
+  bgmStyle: "ambient",
+  onStart: startGame
+});
+
+var W = shell.width, H = shell.height;
+var ctx = shell.ctx;
+var particles = shell.particles;
+var animId = null, running = false, gameEnded = false;
+var SIZE = 5, CELL, board, turn, timer, timerMax, heartbeatAcc, glitchT;
+var wins = 0, losses = 0, draws = 0;
+var save = shell.getSave();
+if (save.wins) wins = save.wins;
+if (save.losses) losses = save.losses;
+if (save.draws) draws = save.draws;
+
+function cleanup() {
+  running = false;
+  if (animId) cancelAnimationFrame(animId);
+  animId = null;
+  canvas.removeEventListener("click", onClick);
+}
+
+function onClick(e) {
+  if (gameEnded || turn !== "X") return;
+  var rect = shell.canvas.getBoundingClientRect();
+  var mx = (e.clientX - rect.left) * (W / rect.width);
+  var my = (e.clientY - rect.top) * (H / rect.height);
+  var ox = (W - CELL * SIZE) / 2, oy = (H - CELL * SIZE) / 2 + 20;
+  var c = Math.floor((mx - ox) / CELL), r = Math.floor((my - oy) / CELL);
+  if (r >= 0 && r < SIZE && c >= 0 && c < SIZE && !board[r][c]) {
+    place(r, c, "X");
+    RNF.sfx.click();
+    if (checkWin("X")) { endRound("win"); return; }
+    if (isFull()) { endRound("draw"); return; }
+    turn = "O";
+    setTimeout(aiMove, 400);
+  }
+}
+
+function place(r, c, p) {
+  board[r][c] = p;
+  var ox = (W - CELL * SIZE) / 2, oy = (H - CELL * SIZE) / 2 + 20;
+  particles.burst(ox + c * CELL + CELL / 2, oy + r * CELL + CELL / 2, p === "X" ? "#22d3ee" : "#f472b6", 12);
+  shell.triggerShake(2, 0.08);
+}
+
+function checkWin(p) {
+  for (var r = 0; r < SIZE; r++) {
+    for (var c = 0; c <= SIZE - 5; c++) {
+      if (board[r][c] === p && board[r][c+1] === p && board[r][c+2] === p && board[r][c+3] === p && board[r][c+4] === p) return true;
+    }
+  }
+  for (var c = 0; c < SIZE; c++) {
+    for (var r = 0; r <= SIZE - 5; r++) {
+      if (board[r][c] === p && board[r+1][c] === p && board[r+2][c] === p && board[r+3][c] === p && board[r+4][c] === p) return true;
+    }
+  }
+  for (var r = 0; r <= SIZE - 5; r++) {
+    for (var c = 0; c <= SIZE - 5; c++) {
+      if (board[r][c] === p && board[r+1][c+1] === p && board[r+2][c+2] === p && board[r+3][c+3] === p && board[r+4][c+4] === p) return true;
+      if (board[r][c+4] === p && board[r+1][c+3] === p && board[r+2][c+2] === p && board[r+3][c+1] === p && board[r+4][c] === p) return true;
+    }
+  }
+  return false;
+}
+
+function isFull() {
+  for (var r = 0; r < SIZE; r++) for (var c = 0; c < SIZE; c++) if (!board[r][c]) return false;
+  return true;
+}
+
+function scoreCell(r, c, p, opp) {
+  if (board[r][c]) return -9999;
+  var s = 0;
+  var dirs = [[0,1],[1,0],[1,1],[1,-1]];
+  dirs.forEach(function (d) {
+    var cnt = 0, open = 0;
+    for (var i = 1; i < 5; i++) {
+      var nr = r + d[0]*i, nc = c + d[1]*i;
+      if (nr < 0 || nr >= SIZE || nc < 0 || nc >= SIZE) break;
+      if (board[nr][nc] === p) cnt++; else if (!board[nr][nc]) { open++; break; } else break;
+    }
+    for (var j = 1; j < 5; j++) {
+      var nr2 = r - d[0]*j, nc2 = c - d[1]*j;
+      if (nr2 < 0 || nr2 >= SIZE || nc2 < 0 || nc2 >= SIZE) break;
+      if (board[nr2][nc2] === p) cnt++; else if (!board[nr2][nc2]) { open++; break; } else break;
+    }
+    if (cnt >= 4) s += 8000;
+    else if (cnt === 3 && open >= 1) s += 400;
+    else if (cnt === 2) s += 40;
+    else if (cnt === 1) s += 5;
+  });
+  return s;
+}
+
+function aiMove() {
+  if (gameEnded) return;
+  var best = -99999, br = 0, bc = 0;
+  for (var r = 0; r < SIZE; r++) {
+    for (var c = 0; c < SIZE; c++) {
+      var s = scoreCell(r, c, "O", "X") + scoreCell(r, c, "X", "O") * 0.9;
+      if (r === 2 && c === 2) s += 15;
+      if (s > best) { best = s; br = r; bc = c; }
+    }
+  }
+  place(br, bc, "O");
+  RNF.sfx.hit();
+  if (checkWin("O")) { endRound("lose"); return; }
+  if (isFull()) { endRound("draw"); return; }
+  turn = "X";
+}
+
+function endRound(result) {
+  gameEnded = true;
+  running = false;
+  var score = 0;
+  if (result === "win") {
+    wins++;
+    score = Math.floor(timer * 10) + 500;
+    RNF.sfx.score();
+    shell.triggerShake(8, 0.3);
+    particles.burst(W/2, H/2, "#22d3ee", 40);
+  } else if (result === "lose") {
+    losses++;
+    score = Math.floor(timer * 2);
+    RNF.sfx.die();
+    shell.triggerShake(10, 0.35);
+  } else {
+    draws++;
+    score = 100;
+    RNF.sfx.confirm();
+  }
+  shell.saveProgress({ wins: wins, losses: losses, draws: draws });
+  cleanup();
+  shell.gameOver(score, { result: result, winRate: winRate() });
+}
+
+function winRate() {
+  var total = wins + losses + draws;
+  return total ? Math.round(wins / total * 100) : 0;
+}
+
+function updateHud() {
+  shell.setHud(
+    '<div><span>回合</span><b>' + (turn === "X" ? "你 (X)" : "AI (O)") + '</b></div>' +
+    '<div><span>倒數</span><b style="color:' + (timer < 10 ? "#f472b6" : "#22d3ee") + '">' + Math.ceil(timer) + 's</b></div>' +
+    '<div><span>勝率</span><b>' + winRate() + '%</b></div>' +
+    '<div><span>戰績</span><b>' + wins + 'W ' + losses + 'L</b></div>'
+  );
+}
+
+function startGame() {
+  cleanup();
+  CELL = Math.min((W - 80) / SIZE, (H - 120) / SIZE);
+  board = [];
+  for (var r = 0; r < SIZE; r++) {
+    board[r] = [];
+    for (var c = 0; c < SIZE; c++) board[r][c] = null;
+  }
+  turn = "X";
+  timer = 60;
+  timerMax = 60;
+  heartbeatAcc = 0;
+  glitchT = 0;
+  gameEnded = false;
+  running = true;
+  shell.canvas.addEventListener("click", onClick);
+  lastTs = performance.now();
+  animId = requestAnimationFrame(loop);
+}
+
+var lastTs = 0;
+var canvas = shell.canvas;
+
+function loop(ts) {
+  if (!running) return;
+  var dt = Math.min(0.05, (ts - lastTs) / 1000);
+  lastTs = ts;
+  glitchT += dt;
+
+  if (turn === "X") {
+    timer -= dt;
+    heartbeatAcc += dt;
+    if (timer < 15 && heartbeatAcc >= (timer < 5 ? 0.35 : 0.7)) {
+      RNF.sfx.heartbeat();
+      heartbeatAcc = 0;
+    }
+    if (timer <= 0) { endRound("lose"); return; }
+  }
+
+  particles.update(dt);
+  draw();
+  updateHud();
+  animId = requestAnimationFrame(loop);
+}
+
+function drawChip(x, y, p, t) {
+  var glitch = Math.sin(t * 20 + x) * (timer < 10 ? 2 : 0.5);
+  ctx.save();
+  ctx.translate(x + glitch, y);
+  ctx.shadowBlur = 14;
+  ctx.shadowColor = p === "X" ? "#22d3ee" : "#f472b6";
+  ctx.fillStyle = "rgba(8,12,24,0.9)";
+  ctx.strokeStyle = p === "X" ? "#22d3ee" : "#f472b6";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(-CELL * 0.38, -CELL * 0.38, CELL * 0.76, CELL * 0.76, 6);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = p === "X" ? "#22d3ee" : "#f472b6";
+  ctx.font = "bold " + Math.floor(CELL * 0.45) + "px monospace";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  if (Math.random() < 0.02 && timer < 8) {
+    ctx.globalAlpha = 0.7;
+    ctx.fillText(p, (Math.random()-0.5)*4, (Math.random()-0.5)*4);
+  }
+  ctx.globalAlpha = 1;
+  ctx.fillText(p, 0, 0);
+  ctx.restore();
+}
+
+function draw() {
+  ctx.save();
+  shell.applyShake(ctx);
+  ctx.fillStyle = "#060a12";
+  ctx.fillRect(0, 0, W, H);
+
+  var ox = (W - CELL * SIZE) / 2, oy = (H - CELL * SIZE) / 2 + 20;
+  ctx.strokeStyle = "rgba(34,211,238,0.25)";
+  ctx.lineWidth = 1;
+  for (var i = 0; i <= SIZE; i++) {
+    ctx.beginPath();
+    ctx.moveTo(ox, oy + i * CELL);
+    ctx.lineTo(ox + SIZE * CELL, oy + i * CELL);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(ox + i * CELL, oy);
+    ctx.lineTo(ox + i * CELL, oy + SIZE * CELL);
+    ctx.stroke();
+  }
+
+  for (var r = 0; r < SIZE; r++) {
+    for (var c = 0; c < SIZE; c++) {
+      if (board[r][c]) {
+        drawChip(ox + c * CELL + CELL / 2, oy + r * CELL + CELL / 2, board[r][c], glitchT + r + c);
+      }
+    }
+  }
+
+  var barW = SIZE * CELL;
+  ctx.fillStyle = "rgba(0,0,0,0.4)";
+  ctx.fillRect(ox, oy - 18, barW, 8);
+  ctx.fillStyle = timer < 10 ? "#f472b6" : "#22d3ee";
+  ctx.fillRect(ox, oy - 18, barW * (timer / timerMax), 8);
+
+  ctx.fillStyle = "#94a3b8";
+  ctx.font = "13px sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("量子晶片對弈 · 連五獲勝", W / 2, oy + SIZE * CELL + 30);
+
+  particles.draw(ctx);
+  ctx.restore();
+}
+</script>
+</body>
+</html>

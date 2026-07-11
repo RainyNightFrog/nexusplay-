@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Galactic Invader 2026 · 銀河侵略者</title>
+</head>
+<body>
+<script src="/sdk/rnf-game-sdk.js"></script>
+<script>
+RNF.init();
+var shell = RNF.buildShell({
+  title: "Galactic Invader 2026",
+  creator: "NebulaCraft",
+  subtitle: "←→ 移動 · 空白 射擊 · 升級武器 · 護盾吸收 · 擊敗 BOSS 觸發震屏",
+  width: 960,
+  height: 520,
+  bgmStyle: "ambient",
+  onStart: startGame
+});
+
+var ctx, particles, running, loopId, lastT, keys = {};
+var player, bullets, enemies, enemyBullets, powerUps, boss, wave, score, lives, shield;
+var weaponLevel, shootCd, enemyDir, moveTimer, bossActive;
+
+function cleanup() {
+  running = false;
+  if (loopId) cancelAnimationFrame(loopId);
+  loopId = null;
+  window.removeEventListener("keydown", onKeyDown);
+  window.removeEventListener("keyup", onKeyUp);
+}
+
+function startGame() {
+  cleanup();
+  ctx = shell.ctx;
+  particles = shell.particles;
+  score = 0; lives = 3; wave = 1; weaponLevel = 1; shield = 0;
+  player = { x: 480, y: 460, w: 36, h: 28, speed: 280 };
+  bullets = []; enemies = []; enemyBullets = []; powerUps = [];
+  boss = null; bossActive = false; shootCd = 0; enemyDir = 1; moveTimer = 0;
+  spawnWave();
+  updateHud();
+  running = true;
+  lastT = performance.now();
+  window.addEventListener("keydown", onKeyDown);
+  window.addEventListener("keyup", onKeyUp);
+  loopId = requestAnimationFrame(loop);
+}
+
+function spawnWave() {
+  enemies = [];
+  bossActive = false;
+  boss = null;
+  if (wave % 5 === 0) {
+    bossActive = true;
+    boss = { x: 480, y: 80, w: 120, h: 60, hp: 80 + wave * 15, maxHp: 80 + wave * 15, phase: 0, cd: 0 };
+    return;
+  }
+  var rows = Math.min(4, 2 + Math.floor(wave / 3));
+  var cols = 8;
+  for (var r = 0; r < rows; r++)
+    for (var c = 0; c < cols; c++)
+      enemies.push({
+        x: 180 + c * 72, y: 60 + r * 48, w: 40, h: 32,
+        hp: 1 + Math.floor(wave / 4), pts: 10 + wave * 2
+      });
+}
+
+function onKeyDown(e) {
+  if (!running) return;
+  keys[e.code] = true;
+  if (e.code === "Space") e.preventDefault();
+}
+
+function onKeyUp(e) { keys[e.code] = false; }
+
+function shoot() {
+  if (shootCd > 0) return;
+  shootCd = Math.max(0.08, 0.22 - weaponLevel * 0.03);
+  RNF.sfx.laser();
+  var spreads = weaponLevel >= 3 ? [-18, 0, 18] : weaponLevel >= 2 ? [-10, 10] : [0];
+  spreads.forEach(function (off) {
+    bullets.push({ x: player.x + off, y: player.y - 16, vx: off * 0.5, vy: -520, dmg: 1 + Math.floor(weaponLevel / 2) });
+  });
+  particles.burst(player.x, player.y - 10, "#22d3ee", 4);
+}
+
+function updateHud() {
+  var wpn = ["單發", "雙發", "三向"][Math.min(weaponLevel - 1, 2)];
+  shell.setHud(
+    '<div><span>分數</span><b>' + score.toLocaleString() + '</b></div>' +
+    '<div><span>波次</span><b>' + wave + '</b></div>' +
+    '<div><span>生命</span><b>' + lives + '</b></div>' +
+    '<div><span>武器</span><b>' + wpn + '</b></div>' +
+    '<div><span>護盾</span><b>' + (shield > 0 ? shield : "—") + '</b></div>'
+  );
+}
+
+function hitPlayer() {
+  if (shield > 0) {
+    shield--;
+    RNF.sfx.hit();
+    shell.triggerShake(5, 0.15);
+    particles.burst(player.x, player.y, "#a78bfa", 12);
+    updateHud();
+    return;
+  }
+  lives--;
+  RNF.sfx.die();
+  shell.triggerShake(10, 0.35);
+  particles.burst(player.x, player.y, "#f472b6", 20);
+  player.x = 480;
+  weaponLevel = Math.max(1, weaponLevel - 1);
+  updateHud();
+  if (lives <= 0) shell.gameOver(score, { wave: wave, weapon: weaponLevel });
+}
+
+function killEnemy(e, idx) {
+  score += e.pts || 10;
+  particles.burst(e.x, e.y, "#4ade80", 10);
+  if (Math.random() < 0.12)
+    powerUps.push({ x: e.x, y: e.y, vy: 80, type: Math.random() < 0.5 ? "weapon" : "shield" });
+  if (idx >= 0) enemies.splice(idx, 1);
+  RNF.sfx.pop();
+  updateHud();
+}
+
+function loop(now) {
+  if (!running) return;
+  var dt = Math.min(0.033, (now - lastT) / 1000);
+  lastT = now;
+  shootCd = Math.max(0, shootCd - dt);
+
+  if (keys["ArrowLeft"]) player.x -= player.speed * dt;
+  if (keys["ArrowRight"]) player.x += player.speed * dt;
+  player.x = Math.max(30, Math.min(930, player.x));
+  if (keys["Space"]) shoot();
+
+  bullets.forEach(function (b) { b.x += b.vx * dt; b.y += b.vy * dt; });
+  bullets = bullets.filter(function (b) { return b.y > -20; });
+
+  if (bossActive && boss) {
+    boss.phase += dt;
+    boss.x = 480 + Math.sin(boss.phase * 1.2) * 280;
+    boss.cd -= dt;
+    if (boss.cd <= 0) {
+      boss.cd = 0.7;
+      for (var i = -1; i <= 1; i++)
+        enemyBullets.push({ x: boss.x + i * 30, y: boss.y + 30, vx: i * 60, vy: 200, r: 5 });
+    }
+    bullets.forEach(function (b, bi) {
+      if (Math.abs(b.x - boss.x) < boss.w / 2 && Math.abs(b.y - boss.y) < boss.h / 2) {
+        boss.hp -= b.dmg;
+        bullets.splice(bi, 1);
+        particles.burst(b.x, b.y, "#fb923c", 6);
+        RNF.sfx.hit();
+        if (boss.hp <= 0) {
+          score += 500 + wave * 50;
+          shell.triggerShake(14, 0.4);
+          particles.burst(boss.x, boss.y, "#fbbf24", 30);
+          RNF.sfx.power();
+          boss = null; bossActive = false;
+          wave++;
+          spawnWave();
+          updateHud();
+        }
+      }
+    });
+  } else {
+    moveTimer += dt;
+    if (moveTimer > 0.6) {
+      moveTimer = 0;
+      var edge = false;
+      enemies.forEach(function (e) {
+        e.x += enemyDir * 18;
+        if (e.x < 50 || e.x > 910) edge = true;
+      });
+      if (edge) {
+        enemyDir *= -1;
+        enemies.forEach(function (e) { e.y += 24; if (e.y > 420) hitPlayer(); });
+      }
+      if (Math.random() < 0.02 + wave * 0.003 && enemies.length)
+        enemyBullets.push({ x: enemies[Math.floor(Math.random() * enemies.length)].x, y: enemies[0].y + 20, vx: 0, vy: 220, r: 4 });
+    }
+    enemies.forEach(function (e, ei) {
+      bullets.forEach(function (b, bi) {
+        if (Math.abs(b.x - e.x) < e.w / 2 && Math.abs(b.y - e.y) < e.h / 2) {
+          e.hp -= b.dmg;
+          bullets.splice(bi, 1);
+          if (e.hp <= 0) killEnemy(e, ei);
+        }
+      });
+    });
+    if (enemies.length === 0) { wave++; spawnWave(); RNF.sfx.score(); updateHud(); }
+  }
+
+  enemyBullets.forEach(function (b) { b.x += b.vx * dt; b.y += b.vy * dt; });
+  enemyBullets = enemyBullets.filter(function (b) {
+    if (Math.abs(b.x - player.x) < 20 && Math.abs(b.y - player.y) < 16) { hitPlayer(); return false; }
+    return b.y < 540;
+  });
+
+  powerUps.forEach(function (p) {
+    p.y += p.vy * dt;
+    if (Math.abs(p.x - player.x) < 28 && Math.abs(p.y - player.y) < 24) {
+      if (p.type === "weapon") { weaponLevel = Math.min(3, weaponLevel + 1); RNF.sfx.power(); }
+      else { shield = Math.min(3, shield + 1); RNF.sfx.confirm(); }
+      particles.burst(p.x, p.y, "#22d3ee", 8);
+      p.dead = true;
+      updateHud();
+    }
+  });
+  powerUps = powerUps.filter(function (p) { return !p.dead && p.y < 540; });
+
+  particles.update(dt);
+  draw(dt);
+  loopId = requestAnimationFrame(loop);
+}
+
+function draw(dt) {
+  ctx.save();
+  shell.applyShake(ctx);
+  ctx.fillStyle = "#030508";
+  ctx.fillRect(0, 0, 960, 520);
+  for (var i = 0; i < 80; i++) {
+    ctx.fillStyle = "rgba(255,255,255," + (0.2 + Math.sin(i * 1.7) * 0.15) + ")";
+    ctx.fillRect((i * 137) % 960, (i * 89 + performance.now() * 0.02 * (i % 3 + 1)) % 520, 2, 2);
+  }
+  ctx.strokeStyle = "rgba(167,139,250,0.08)";
+  for (var g = 0; g < 960; g += 48) { ctx.beginPath(); ctx.moveTo(g, 0); ctx.lineTo(g, 520); ctx.stroke(); }
+
+  enemies.forEach(function (e) {
+    ctx.fillStyle = "#a78bfa";
+    ctx.shadowBlur = 12; ctx.shadowColor = "#a78bfa";
+    ctx.beginPath();
+    ctx.moveTo(e.x, e.y + e.h / 2);
+    ctx.lineTo(e.x - e.w / 2, e.y - e.h / 2);
+    ctx.lineTo(e.x + e.w / 2, e.y - e.h / 2);
+    ctx.closePath(); ctx.fill();
+    ctx.shadowBlur = 0;
+  });
+
+  if (boss) {
+    ctx.fillStyle = "#f472b6";
+    ctx.shadowBlur = 20; ctx.shadowColor = "#f472b6";
+    ctx.fillRect(boss.x - boss.w / 2, boss.y - boss.h / 2, boss.w, boss.h);
+    ctx.shadowBlur = 0;
+    var barW = 200, bx = 480 - barW / 2, by = 16;
+    ctx.fillStyle = "rgba(0,0,0,0.6)";
+    ctx.fillRect(bx, by, barW, 14);
+    ctx.fillStyle = "#f472b6";
+    ctx.fillRect(bx, by, barW * (boss.hp / boss.maxHp), 14);
+    ctx.strokeStyle = "#22d3ee";
+    ctx.strokeRect(bx, by, barW, 14);
+    ctx.fillStyle = "#22d3ee";
+    ctx.font = "bold 11px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("BOSS · 剩餘 HP " + Math.ceil(boss.hp), 480, by + 11);
+  }
+
+  bullets.forEach(function (b) {
+    ctx.fillStyle = "#22d3ee";
+    ctx.shadowBlur = 8; ctx.shadowColor = "#22d3ee";
+    ctx.fillRect(b.x - 2, b.y - 10, 4, 14);
+  });
+  enemyBullets.forEach(function (b) {
+    ctx.fillStyle = "#fb923c";
+    ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.fill();
+  });
+  powerUps.forEach(function (p) {
+    ctx.fillStyle = p.type === "weapon" ? "#4ade80" : "#60a5fa";
+    ctx.shadowBlur = 10; ctx.shadowColor = ctx.fillStyle;
+    ctx.fillRect(p.x - 10, p.y - 10, 20, 20);
+  });
+
+  ctx.fillStyle = shield > 0 ? "rgba(167,139,250,0.35)" : "transparent";
+  ctx.beginPath(); ctx.arc(player.x, player.y, 28, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#22d3ee";
+  ctx.shadowBlur = 14; ctx.shadowColor = "#22d3ee";
+  ctx.beginPath();
+  ctx.moveTo(player.x, player.y - 18);
+  ctx.lineTo(player.x - 18, player.y + 14);
+  ctx.lineTo(player.x + 18, player.y + 14);
+  ctx.closePath(); ctx.fill();
+  ctx.shadowBlur = 0;
+
+  if (shield > 0) {
+    ctx.strokeStyle = "#a78bfa";
+    ctx.lineWidth = 2;
+    for (var s = 0; s < shield; s++) {
+      ctx.beginPath(); ctx.arc(player.x, player.y, 22 + s * 6, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+
+  particles.draw(ctx);
+  ctx.restore();
+}
+</script>
+</body>
+</html>

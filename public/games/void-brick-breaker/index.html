@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Void Brick Breaker · 虛空打磚塊</title>
+  <script src="/sdk/rnf-game-sdk.js"></script>
+</head>
+<body>
+<script>
+RNF.init();
+var shell = RNF.buildShell({
+  title: "Void Brick Breaker",
+  creator: "PixelArchitect",
+  subtitle: "←→ 移動擋板 · 空白鍵雷射 · 多球分裂 · 黑洞磁力強化 · 星塵粒子特效",
+  width: 960,
+  height: 520,
+  bgmStyle: "pulse",
+  onStart: startGame
+});
+
+var W = shell.width, H = shell.height;
+var ctx = shell.ctx;
+var particles = shell.particles;
+var animId = null, running = false, gameEnded = false, keys = {};
+var paddle, balls, bricks, lasers, powerups, score, lives, level;
+var laserCooldown = 0, magnetTimer = 0, stars = [];
+
+function cleanup() {
+  running = false;
+  if (animId) cancelAnimationFrame(animId);
+  animId = null;
+  window.removeEventListener("keydown", onKey);
+  window.removeEventListener("keyup", onKeyUp);
+}
+
+function onKey(e) { keys[e.code] = true; if (e.code === "Space") e.preventDefault(); }
+function onKeyUp(e) { keys[e.code] = false; }
+
+function initStars() {
+  stars = [];
+  for (var i = 0; i < 80; i++) {
+    stars.push({ x: Math.random() * W, y: Math.random() * H, s: Math.random() * 2, sp: 0.2 + Math.random() * 0.8 });
+  }
+}
+
+function makeLevel(lv) {
+  bricks = [];
+  var rows = Math.min(6 + lv, 10), cols = 14;
+  var bw = (W - 40) / cols, bh = 22;
+  var colors = ["#22d3ee", "#a78bfa", "#f472b6", "#34d399", "#fbbf24"];
+  for (var r = 0; r < rows; r++) {
+    for (var c = 0; c < cols; c++) {
+      if (Math.random() < 0.92) {
+        bricks.push({
+          x: 20 + c * bw + 1, y: 40 + r * (bh + 3),
+          w: bw - 2, h: bh,
+          hp: 1 + Math.floor(r / 3),
+          maxHp: 1 + Math.floor(r / 3),
+          color: colors[r % colors.length],
+          power: Math.random() < 0.08 ? (Math.random() < 0.5 ? "multiball" : "magnet") : null
+        });
+      }
+    }
+  }
+}
+
+function spawnBall(x, y, vx, vy) {
+  balls.push({ x: x || W/2, y: y || H - 80, vx: vx || (Math.random() - 0.5) * 6, vy: vy || -7, r: 7 });
+}
+
+function startGame() {
+  cleanup();
+  score = 0; lives = 3; level = 1;
+  paddle = { x: W/2 - 55, w: 110, h: 14, laser: false };
+  balls = []; lasers = []; powerups = [];
+  laserCooldown = 0; magnetTimer = 0; gameEnded = false;
+  initStars();
+  makeLevel(level);
+  spawnBall();
+  running = true;
+  window.addEventListener("keydown", onKey);
+  window.addEventListener("keyup", onKeyUp);
+  lastTs = performance.now();
+  animId = requestAnimationFrame(loop);
+}
+
+var lastTs = 0;
+
+function fireLaser() {
+  if (laserCooldown > 0) return;
+  laserCooldown = 0.15;
+  lasers.push({ x: paddle.x + paddle.w / 2 - 2, y: paddle.y, w: 4, h: 16, vy: -14 });
+  lasers.push({ x: paddle.x + paddle.w / 2 + 2, y: paddle.y, w: 4, h: 16, vy: -14 });
+  RNF.sfx.laser();
+}
+
+function updateHud() {
+  shell.setHud(
+    '<div><span>分數</span><b>' + score + '</b></div>' +
+    '<div><span>生命</span><b>' + lives + '</b></div>' +
+    '<div><span>關卡</span><b>' + level + '</b></div>' +
+    '<div><span>球數</span><b>' + balls.length + '</b></div>' +
+    (magnetTimer > 0 ? '<div><span>黑洞</span><b style="color:#a78bfa">ON</b></div>' : '')
+  );
+}
+
+function die() {
+  if (gameEnded) return;
+  gameEnded = true;
+  running = false;
+  RNF.sfx.die();
+  shell.triggerShake(12, 0.4);
+  cleanup();
+  shell.gameOver(score, { level: level });
+}
+
+function loop(ts) {
+  if (!running) return;
+  var dt = Math.min(0.05, (ts - lastTs) / 1000);
+  lastTs = ts;
+
+  var spd = 420 * dt;
+  if (keys["ArrowLeft"] || keys["KeyA"]) paddle.x -= spd;
+  if (keys["ArrowRight"] || keys["KeyD"]) paddle.x += spd;
+  paddle.x = Math.max(10, Math.min(W - paddle.w - 10, paddle.x));
+  if (keys["Space"]) fireLaser();
+
+  laserCooldown = Math.max(0, laserCooldown - dt);
+  magnetTimer = Math.max(0, magnetTimer - dt);
+  if (magnetTimer > 0) paddle.w = 140;
+  else paddle.w = 110;
+
+  balls.forEach(function (b) {
+    if (magnetTimer > 0 && b.y > H * 0.5) {
+      b.vx += (paddle.x + paddle.w / 2 - b.x) * 0.08 * dt * 60;
+    }
+    b.x += b.vx;
+    b.y += b.vy;
+    if (b.x < b.r || b.x > W - b.r) { b.vx *= -1; RNF.sfx.hit(); }
+    if (b.y < b.r) { b.vy *= -1; }
+    if (b.y > H + 30) b.dead = true;
+
+    if (b.y + b.r >= paddle.y && b.y - b.r <= paddle.y + paddle.h &&
+        b.x >= paddle.x && b.x <= paddle.x + paddle.w && b.vy > 0) {
+      b.vy = -Math.abs(b.vy);
+      var hit = (b.x - paddle.x) / paddle.w - 0.5;
+      b.vx = hit * 10;
+      RNF.sfx.hit();
+      particles.burst(b.x, b.y, "#22d3ee", 6);
+    }
+
+    bricks.forEach(function (br) {
+      if (br.dead) return;
+      if (b.x + b.r > br.x && b.x - b.r < br.x + br.w && b.y + b.r > br.y && b.y - b.r < br.y + br.h) {
+        br.hp--;
+        b.vy *= -1;
+        if (br.hp <= 0) {
+          br.dead = true;
+          score += 10 * level;
+          shell.triggerShake(3, 0.1);
+          particles.burst(br.x + br.w/2, br.y + br.h/2, br.color, 14);
+          RNF.sfx.pop();
+          if (br.power) {
+            powerups.push({ x: br.x + br.w/2, y: br.y + br.h/2, vy: 2, type: br.power });
+          }
+        } else {
+          RNF.sfx.hit();
+        }
+      }
+    });
+    particles.trail(b.x, b.y, "#a78bfa");
+  });
+
+  balls = balls.filter(function (b) { return !b.dead; });
+  if (balls.length === 0) {
+    lives--;
+    shell.triggerShake(6, 0.2);
+    if (lives <= 0) { die(); return; }
+    spawnBall();
+  }
+
+  lasers.forEach(function (l) {
+    l.y += l.vy;
+    bricks.forEach(function (br) {
+      if (br.dead) return;
+      if (l.x + l.w > br.x && l.x < br.x + br.w && l.y < br.y + br.h && l.y + l.h > br.y) {
+        br.hp = 0; br.dead = true;
+        score += 15;
+        particles.burst(br.x + br.w/2, br.y + br.h/2, br.color, 10);
+        l.dead = true;
+      }
+    });
+  });
+  lasers = lasers.filter(function (l) { return !l.dead && l.y > -20; });
+
+  powerups.forEach(function (p) {
+    p.y += p.vy;
+    if (p.x > paddle.x && p.x < paddle.x + paddle.w && p.y > paddle.y - 10 && p.y < paddle.y + paddle.h) {
+      p.dead = true;
+      RNF.sfx.power();
+      if (p.type === "multiball") {
+        var copy = balls.slice();
+        copy.forEach(function (b) {
+          spawnBall(b.x, b.y, -b.vx * 0.8, -Math.abs(b.vy));
+        });
+        shell.triggerShake(5, 0.15);
+      } else if (p.type === "magnet") {
+        magnetTimer = 8;
+        shell.triggerShake(4, 0.12);
+      }
+    }
+  });
+  powerups = powerups.filter(function (p) { return !p.dead && p.y < H; });
+
+  bricks = bricks.filter(function (b) { return !b.dead; });
+  if (bricks.length === 0) {
+    level++;
+    RNF.sfx.score();
+    makeLevel(level);
+    balls = [{ x: W/2, y: H - 80, vx: (Math.random()-0.5)*5, vy: -7, r: 7 }];
+  }
+
+  stars.forEach(function (s) {
+    s.y += s.sp;
+    if (s.y > H) { s.y = 0; s.x = Math.random() * W; }
+  });
+
+  particles.update(dt);
+  draw();
+  updateHud();
+  animId = requestAnimationFrame(loop);
+}
+
+function draw() {
+  ctx.save();
+  shell.applyShake(ctx);
+  ctx.fillStyle = "#060a12";
+  ctx.fillRect(0, 0, W, H);
+
+  stars.forEach(function (s) {
+    ctx.globalAlpha = 0.3 + s.sp * 0.3;
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(s.x, s.y, s.s, s.s);
+  });
+  ctx.globalAlpha = 1;
+
+  bricks.forEach(function (br) {
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = br.color;
+    ctx.fillStyle = br.color;
+    ctx.globalAlpha = 0.4 + (br.hp / br.maxHp) * 0.6;
+    ctx.fillRect(br.x, br.y, br.w, br.h);
+    ctx.strokeStyle = "rgba(255,255,255,0.3)";
+    ctx.strokeRect(br.x, br.y, br.w, br.h);
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+  });
+
+  ctx.shadowBlur = 12;
+  ctx.shadowColor = magnetTimer > 0 ? "#a78bfa" : "#22d3ee";
+  ctx.fillStyle = magnetTimer > 0 ? "#a78bfa" : "#22d3ee";
+  ctx.beginPath();
+  ctx.roundRect(paddle.x, paddle.y, paddle.w, paddle.h, 6);
+  ctx.fill();
+  if (magnetTimer > 0) {
+    ctx.strokeStyle = "#a78bfa";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(paddle.x + paddle.w/2, paddle.y + paddle.h/2, paddle.w * 0.6, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.shadowBlur = 0;
+
+  balls.forEach(function (b) {
+    ctx.shadowBlur = 14;
+    ctx.shadowColor = "#f472b6";
+    ctx.fillStyle = "#fff";
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.shadowBlur = 0;
+
+  lasers.forEach(function (l) {
+    ctx.fillStyle = "#fbbf24";
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = "#fbbf24";
+    ctx.fillRect(l.x, l.y, l.w, l.h);
+  });
+  ctx.shadowBlur = 0;
+
+  powerups.forEach(function (p) {
+    ctx.fillStyle = p.type === "multiball" ? "#34d399" : "#a78bfa";
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 10, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#fff";
+    ctx.font = "10px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(p.type === "multiball" ? "S" : "M", p.x, p.y + 4);
+  });
+
+  particles.draw(ctx);
+  ctx.restore();
+}
+</script>
+</body>
+</html>

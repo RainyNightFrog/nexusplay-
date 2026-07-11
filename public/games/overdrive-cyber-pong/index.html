@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Overdrive Cyber Pong · 超頻電競乒乓</title>
+</head>
+<body>
+<script src="/sdk/rnf-game-sdk.js"></script>
+<script>
+RNF.init();
+var shell = RNF.buildShell({
+  title: "Overdrive Cyber Pong",
+  creator: "HyperPong_Studio",
+  subtitle: "1=簡單AI · 2=困難AI · 3=雙人(W/S vs ↑↓) · 曲球軌跡 · 重力場 · 光束拖尾",
+  width: 960,
+  height: 520,
+  bgmStyle: "pulse",
+  onStart: startGame
+});
+
+var ctx, particles, running, loopId, lastT, keys = {};
+var mode, modePick, left, right, ball, scoreL, scoreR, gravityZones, serveDir, pickTimer;
+
+function cleanup() {
+  running = false;
+  if (loopId) cancelAnimationFrame(loopId);
+  loopId = null;
+  window.removeEventListener("keydown", onKeyDown);
+  window.removeEventListener("keyup", onKeyUp);
+}
+
+function startGame() {
+  cleanup();
+  ctx = shell.ctx;
+  particles = shell.particles;
+  mode = null;
+  modePick = true;
+  pickTimer = 0;
+  scoreL = 0; scoreR = 0;
+  left = { x: 24, y: 210, w: 14, h: 100, vy: 0 };
+  right = { x: 922, y: 210, w: 14, h: 100, vy: 0 };
+  gravityZones = [
+    { x: 380, y: 160, r: 70, str: 180 },
+    { x: 580, y: 320, r: 65, str: -160 }
+  ];
+  resetBall(1);
+  updateHud();
+  running = true;
+  lastT = performance.now();
+  window.addEventListener("keydown", onKeyDown);
+  window.addEventListener("keyup", onKeyUp);
+  loopId = requestAnimationFrame(loop);
+}
+
+function resetBall(dir) {
+  ball = {
+    x: 480, y: 260, vx: dir * 320, vy: (Math.random() - 0.5) * 200,
+    r: 9, spin: 0, trail: []
+  };
+  serveDir = dir;
+}
+
+function onKeyDown(e) {
+  if (!running) return;
+  keys[e.code] = true;
+  if (modePick) {
+    if (e.code === "Digit1") { mode = "easy"; modePick = false; RNF.sfx.confirm(); }
+    else if (e.code === "Digit2") { mode = "hard"; modePick = false; RNF.sfx.confirm(); }
+    else if (e.code === "Digit3") { mode = "2p"; modePick = false; RNF.sfx.confirm(); }
+  }
+}
+
+function onKeyUp(e) { keys[e.code] = false; }
+
+function updateHud() {
+  var modeTxt = modePick ? "選模式" : mode === "easy" ? "簡單 AI" : mode === "hard" ? "困難 AI" : "雙人";
+  shell.setHud(
+    '<div><span>左方</span><b>' + scoreL + '</b></div>' +
+    '<div><span>右方</span><b>' + scoreR + '</b></div>' +
+    '<div><span>模式</span><b>' + modeTxt + '</b></div>' +
+    '<div><span>曲球</span><b>' + Math.abs(ball.spin).toFixed(1) + '</b></div>'
+  );
+}
+
+function aiMove(paddle, diff) {
+  var target = ball.y - paddle.h / 2;
+  var spd = diff === "hard" ? 340 : 210;
+  if (paddle.y + paddle.h / 2 < ball.y - 20) paddle.y += spd * 0.016;
+  else if (paddle.y + paddle.h / 2 > ball.y + 20) paddle.y -= spd * 0.016;
+  paddle.y = Math.max(20, Math.min(400, paddle.y));
+}
+
+function loop(now) {
+  if (!running) return;
+  var dt = Math.min(0.033, (now - lastT) / 1000);
+  lastT = now;
+  if (modePick) {
+    pickTimer += dt;
+    draw(dt);
+    updateHud();
+    loopId = requestAnimationFrame(loop);
+    return;
+  }
+
+  if (mode === "2p") {
+    if (keys["KeyW"]) left.y -= 360 * dt;
+    if (keys["KeyS"]) left.y += 360 * dt;
+    if (keys["ArrowUp"]) right.y -= 360 * dt;
+    if (keys["ArrowDown"]) right.y += 360 * dt;
+  } else {
+    if (keys["KeyW"]) left.y -= 360 * dt;
+    if (keys["KeyS"]) left.y += 360 * dt;
+    aiMove(right, mode);
+  }
+  left.y = Math.max(20, Math.min(400, left.y));
+  right.y = Math.max(20, Math.min(400, right.y));
+
+  gravityZones.forEach(function (z) {
+    var dx = ball.x - z.x, dy = ball.y - z.y;
+    var d = Math.sqrt(dx * dx + dy * dy);
+    if (d < z.r) {
+      var f = (1 - d / z.r) * z.str * dt;
+      ball.vy += (dy / (d || 1)) * f * 0.02;
+      ball.vx += (dx / (d || 1)) * f * 0.01;
+    }
+  });
+
+  ball.vy += ball.spin * dt * 40;
+  ball.x += ball.vx * dt;
+  ball.y += ball.vy * dt;
+
+  if (ball.y - ball.r < 10) { ball.y = 10 + ball.r; ball.vy = Math.abs(ball.vy); RNF.sfx.hit(); }
+  if (ball.y + ball.r > 510) { ball.y = 510 - ball.r; ball.vy = -Math.abs(ball.vy); RNF.sfx.hit(); }
+
+  function hitPaddle(p, side) {
+    if (ball.x + ball.r > p.x && ball.x - ball.r < p.x + p.w &&
+        ball.y > p.y && ball.y < p.y + p.h) {
+      ball.vx = side * Math.abs(ball.vx) * 1.04;
+      var rel = (ball.y - (p.y + p.h / 2)) / (p.h / 2);
+      ball.vy += rel * 220;
+      ball.spin += rel * 3;
+      ball.x = side > 0 ? p.x + p.w + ball.r : p.x - ball.r;
+      RNF.sfx.combo(2);
+      shell.triggerShake(4, 0.1);
+      particles.burst(ball.x, ball.y, "#22d3ee", 8);
+      return true;
+    }
+    return false;
+  }
+  hitPaddle(left, 1);
+  hitPaddle(right, -1);
+
+  ball.trail.push({ x: ball.x, y: ball.y });
+  if (ball.trail.length > 18) ball.trail.shift();
+  if (shell.isHighQuality()) particles.trail(ball.x, ball.y, "#a78bfa");
+
+  if (ball.x < -20) {
+    scoreR++;
+    RNF.sfx.score();
+    if (scoreR >= 7) shell.gameOver(scoreL * 100 + scoreR * 50, { winner: "right", mode: mode });
+    else resetBall(1);
+  }
+  if (ball.x > 980) {
+    scoreL++;
+    RNF.sfx.score();
+    if (scoreL >= 7) shell.gameOver(scoreL * 100 + scoreR * 50, { winner: "left", mode: mode });
+    else resetBall(-1);
+  }
+
+  particles.update(dt);
+  draw(dt);
+  updateHud();
+  loopId = requestAnimationFrame(loop);
+}
+
+function draw(dt) {
+  ctx.save();
+  shell.applyShake(ctx);
+  ctx.fillStyle = "#060810";
+  ctx.fillRect(0, 0, 960, 520);
+  ctx.strokeStyle = "rgba(34,211,238,0.15)";
+  ctx.setLineDash([8, 12]);
+  ctx.beginPath(); ctx.moveTo(480, 0); ctx.lineTo(480, 520); ctx.stroke();
+  ctx.setLineDash([]);
+
+  gravityZones.forEach(function (z) {
+    var g = ctx.createRadialGradient(z.x, z.y, 0, z.x, z.y, z.r);
+    g.addColorStop(0, z.str > 0 ? "rgba(34,211,238,0.2)" : "rgba(167,139,250,0.2)");
+    g.addColorStop(1, "transparent");
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(z.x, z.y, z.r, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = z.str > 0 ? "rgba(34,211,238,0.4)" : "rgba(167,139,250,0.4)";
+    ctx.stroke();
+  });
+
+  ball.trail.forEach(function (t, i) {
+    var a = (i + 1) / ball.trail.length;
+    ctx.fillStyle = "rgba(34,211,238," + a * 0.5 + ")";
+    ctx.shadowBlur = 12; ctx.shadowColor = "#22d3ee";
+    ctx.beginPath(); ctx.arc(t.x, t.y, ball.r * a * 0.8, 0, Math.PI * 2); ctx.fill();
+  });
+  ctx.shadowBlur = 0;
+
+  ctx.fillStyle = "#22d3ee";
+  ctx.shadowBlur = 14; ctx.shadowColor = "#22d3ee";
+  ctx.fillRect(left.x, left.y, left.w, left.h);
+  ctx.fillStyle = "#f472b6";
+  ctx.shadowColor = "#f472b6";
+  ctx.fillRect(right.x, right.y, right.w, right.h);
+  ctx.fillStyle = "#fff";
+  ctx.shadowColor = "#fff";
+  ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2); ctx.fill();
+  ctx.shadowBlur = 0;
+
+  if (modePick) {
+    ctx.fillStyle = "rgba(0,0,0,0.65)";
+    ctx.fillRect(0, 0, 960, 520);
+    ctx.fillStyle = "#22d3ee";
+    ctx.font = "bold 24px 'Microsoft JhengHei',sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("選擇模式", 480, 200);
+    ctx.font = "16px sans-serif";
+    ctx.fillStyle = "#94a3b8";
+    ctx.fillText("1 — 單人簡單 AI", 480, 250);
+    ctx.fillText("2 — 單人困難 AI", 480, 280);
+    ctx.fillText("3 — 本地雙人 (W/S vs ↑↓)", 480, 310);
+  }
+
+  particles.draw(ctx);
+  ctx.restore();
+}
+</script>
+</body>
+</html>

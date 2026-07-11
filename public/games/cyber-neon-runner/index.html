@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cyber Neon Runner · 賽博霓虹跑酷</title>
+</head>
+<body>
+<script src="/sdk/rnf-game-sdk.js"></script>
+<script>
+RNF.init();
+var shell = RNF.buildShell({
+  title: "Cyber Neon Runner",
+  creator: "NightCity_Runner",
+  subtitle: "空白 跳躍 · ↓ 滑行 · Z 雷射 · 收集金幣 · 視差霓虹背景 · 摧毀障礙物",
+  width: 960,
+  height: 520,
+  bgmStyle: "pulse",
+  onStart: startGame
+});
+
+var ctx, particles, running, loopId, lastT, keys = {};
+var player, obstacles, coins, lasers, speed, score, dist, parallax, groundY, shootCd, slideT, spawnTimer;
+
+function cleanup() {
+  running = false;
+  if (loopId) cancelAnimationFrame(loopId);
+  loopId = null;
+  window.removeEventListener("keydown", onKeyDown);
+  window.removeEventListener("keyup", onKeyUp);
+}
+
+function startGame() {
+  cleanup();
+  ctx = shell.ctx;
+  particles = shell.particles;
+  groundY = 420;
+  player = { x: 140, y: groundY - 48, w: 36, h: 48, vy: 0, onGround: true, sliding: false };
+  obstacles = []; coins = []; lasers = [];
+  speed = 280; score = 0; dist = 0; shootCd = 0; slideT = 0;
+  parallax = [
+    { color: "rgba(34,211,238,0.08)", spd: 0.2, h: 120, off: 0, blocks: [] },
+    { color: "rgba(167,139,250,0.1)", spd: 0.45, h: 180, off: 0, blocks: [] },
+    { color: "rgba(244,114,182,0.12)", spd: 0.75, h: 260, off: 0, blocks: [] }
+  ];
+  parallax.forEach(function (l) {
+    for (var i = 0; i < 12; i++)
+      l.blocks.push({ x: i * 120, w: 40 + Math.random() * 60, h: 20 + Math.random() * 80 });
+  });
+  spawnTimer = 0;
+  updateHud();
+  running = true;
+  lastT = performance.now();
+  window.addEventListener("keydown", onKeyDown);
+  window.addEventListener("keyup", onKeyUp);
+  loopId = requestAnimationFrame(loop);
+}
+
+function onKeyDown(e) {
+  if (!running) return;
+  keys[e.code] = true;
+  if (e.code === "Space") {
+    e.preventDefault();
+    if (player.onGround && !player.sliding) {
+      player.vy = -420;
+      player.onGround = false;
+      RNF.sfx.power();
+      particles.burst(player.x, player.y + player.h, "#22d3ee", 6);
+    }
+  }
+  if (e.code === "ArrowDown" && player.onGround) {
+    player.sliding = true;
+    slideT = 0.6;
+    player.h = 24;
+    player.y = groundY - player.h;
+  }
+  if (e.code === "KeyZ" && shootCd <= 0) {
+    shootCd = 0.35;
+    lasers.push({ x: player.x + player.w, y: player.y + player.h / 2 - 3, vx: 620, w: 28, h: 4 });
+    RNF.sfx.laser();
+    shell.triggerShake(2, 0.06);
+  }
+}
+
+function onKeyUp(e) {
+  keys[e.code] = false;
+  if (e.code === "ArrowDown" && player.sliding) {
+    player.sliding = false;
+    player.h = 48;
+    player.y = groundY - player.h;
+  }
+}
+
+function spawnObstacle() {
+  var type = Math.random() < 0.55 ? "block" : "drone";
+  if (type === "block")
+    obstacles.push({ x: 980, y: groundY - (40 + Math.random() * 30), w: 28 + Math.random() * 20, h: 40 + Math.random() * 30, type: "block", hp: 1 });
+  else
+    obstacles.push({ x: 980, y: groundY - 120 - Math.random() * 80, w: 36, h: 28, type: "drone", hp: 1, bob: Math.random() * 6 });
+  if (Math.random() < 0.45)
+    coins.push({ x: 980 + 40, y: groundY - 60 - Math.random() * 100, r: 10, taken: false });
+}
+
+function updateHud() {
+  shell.setHud(
+    '<div><span>分數</span><b>' + score.toLocaleString() + '</b></div>' +
+    '<div><span>距離</span><b>' + Math.floor(dist) + 'm</b></div>' +
+    '<div><span>速度</span><b>' + Math.floor(speed) + '</b></div>' +
+    '<div><span>狀態</span><b>' + (player.sliding ? "滑行" : player.onGround ? "奔跑" : "跳躍") + '</b></div>'
+  );
+}
+
+function hitPlayer() {
+  RNF.sfx.die();
+  shell.triggerShake(12, 0.35);
+  particles.burst(player.x, player.y + player.h / 2, "#f472b6", 25);
+  shell.gameOver(score, { distance: Math.floor(dist) });
+}
+
+function loop(now) {
+  if (!running) return;
+  var dt = Math.min(0.033, (now - lastT) / 1000);
+  lastT = now;
+  dist += speed * dt * 0.1;
+  score += Math.floor(speed * dt * 0.05);
+  speed = Math.min(520, 280 + dist * 0.08);
+  shootCd = Math.max(0, shootCd - dt);
+  if (slideT > 0) { slideT -= dt; if (slideT <= 0 && !keys["ArrowDown"]) { player.sliding = false; player.h = 48; player.y = groundY - player.h; } }
+
+  player.vy += 980 * dt;
+  player.y += player.vy * dt;
+  if (player.y + player.h >= groundY) {
+    player.y = groundY - player.h;
+    player.vy = 0;
+    player.onGround = true;
+  }
+
+  spawnTimer += dt;
+  if (spawnTimer > Math.max(0.7, 1.6 - dist * 0.002)) {
+    spawnTimer = 0;
+    spawnObstacle();
+  }
+
+  parallax.forEach(function (l) {
+    l.off = (l.off + speed * l.spd * dt) % 1200;
+    l.blocks.forEach(function (b) {
+      b.x -= speed * l.spd * dt;
+      if (b.x + b.w < 0) b.x += 1200;
+    });
+  });
+
+  obstacles.forEach(function (o) {
+    o.x -= speed * dt;
+    if (o.type === "drone") o.y += Math.sin(performance.now() * 0.005 + o.bob) * 0.4;
+  });
+  coins.forEach(function (c) { c.x -= speed * dt; });
+  lasers.forEach(function (l) { l.x += l.vx * dt; });
+
+  lasers.forEach(function (l, li) {
+    obstacles.forEach(function (o, oi) {
+      if (o.hp > 0 && l.x < o.x + o.w && l.x + l.w > o.x && l.y < o.y + o.h && l.y + l.h > o.y) {
+        o.hp = 0;
+        lasers.splice(li, 1);
+        score += 50;
+        RNF.sfx.hit();
+        shell.triggerShake(5, 0.12);
+        particles.burst(o.x + o.w / 2, o.y + o.h / 2, "#4ade80", 12);
+      }
+    });
+  });
+  obstacles = obstacles.filter(function (o) { return o.x > -80 && o.hp > 0; });
+  lasers = lasers.filter(function (l) { return l.x < 980; });
+
+  obstacles.forEach(function (o) {
+    if (player.x + player.w > o.x + 6 && player.x < o.x + o.w - 6 &&
+        player.y + player.h > o.y + 4 && player.y < o.y + o.h - 4) hitPlayer();
+  });
+
+  coins.forEach(function (c) {
+    if (!c.taken && Math.abs(c.x - (player.x + player.w / 2)) < 24 && Math.abs(c.y - (player.y + player.h / 2)) < 30) {
+      c.taken = true;
+      score += 25;
+      RNF.sfx.score();
+      particles.burst(c.x, c.y, "#fbbf24", 8);
+      updateHud();
+    }
+  });
+  coins = coins.filter(function (c) { return !c.taken && c.x > -20; });
+
+  if (shell.isHighQuality()) particles.trail(player.x + player.w / 2, player.y + player.h / 2, "#22d3ee");
+  particles.update(dt);
+  draw();
+  updateHud();
+  loopId = requestAnimationFrame(loop);
+}
+
+function draw() {
+  ctx.save();
+  shell.applyShake(ctx);
+  var sky = ctx.createLinearGradient(0, 0, 0, 520);
+  sky.addColorStop(0, "#0a0618");
+  sky.addColorStop(0.5, "#12082a");
+  sky.addColorStop(1, "#060810");
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, 960, 520);
+
+  parallax.forEach(function (l, li) {
+    ctx.fillStyle = l.color;
+    l.blocks.forEach(function (b) {
+      var x = b.x - l.off * 0.3;
+      ctx.fillRect(x, groundY - l.h - b.h * 0.3, b.w, b.h);
+    });
+    ctx.fillRect(0, groundY - li * 8, 960, 2);
+  });
+
+  ctx.fillStyle = "#1e293b";
+  ctx.fillRect(0, groundY, 960, 520 - groundY);
+  ctx.strokeStyle = "#22d3ee";
+  ctx.shadowBlur = 8; ctx.shadowColor = "#22d3ee";
+  ctx.beginPath(); ctx.moveTo(0, groundY); ctx.lineTo(960, groundY); ctx.stroke();
+  ctx.shadowBlur = 0;
+  for (var gx = -(dist * 3) % 60; gx < 960; gx += 60) {
+    ctx.strokeStyle = "rgba(34,211,238,0.15)";
+    ctx.beginPath(); ctx.moveTo(gx, groundY); ctx.lineTo(gx - 30, 520); ctx.stroke();
+  }
+
+  coins.forEach(function (c) {
+    if (c.taken) return;
+    ctx.fillStyle = "#fbbf24";
+    ctx.shadowBlur = 12; ctx.shadowColor = "#fbbf24";
+    ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 10px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("₿", c.x, c.y + 4);
+  });
+
+  obstacles.forEach(function (o) {
+    ctx.fillStyle = o.type === "drone" ? "#f472b6" : "#a78bfa";
+    ctx.shadowBlur = 10; ctx.shadowColor = ctx.fillStyle;
+    ctx.fillRect(o.x, o.y, o.w, o.h);
+    if (o.type === "drone") {
+      ctx.fillStyle = "#22d3ee";
+      ctx.fillRect(o.x + 4, o.y + o.h / 2 - 2, o.w - 8, 4);
+    }
+  });
+
+  lasers.forEach(function (l) {
+    ctx.fillStyle = "#22d3ee";
+    ctx.shadowBlur = 16; ctx.shadowColor = "#22d3ee";
+    ctx.fillRect(l.x, l.y, l.w, l.h);
+  });
+
+  ctx.fillStyle = player.sliding ? "#60a5fa" : "#22d3ee";
+  ctx.shadowBlur = 16; ctx.shadowColor = "#22d3ee";
+  ctx.fillRect(player.x, player.y, player.w, player.h);
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(player.x + 22, player.y + 8, 8, 8);
+  ctx.shadowBlur = 0;
+
+  ctx.fillStyle = "rgba(0,0,0,0.35)";
+  ctx.fillRect(0, 0, 960, 36);
+  ctx.fillStyle = "#a78bfa";
+  ctx.font = "12px 'Microsoft JhengHei',sans-serif";
+  ctx.textAlign = "left";
+  ctx.fillText("NightCity · 賽博霓虹跑酷", 16, 22);
+
+  particles.draw(ctx);
+  ctx.restore();
+}
+</script>
+</body>
+</html>

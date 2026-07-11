@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Neon Snake Extreme · 霓虹貪食蛇</title>
+  <script src="/sdk/rnf-game-sdk.js"></script>
+</head>
+<body>
+<script>
+RNF.init();
+var shell = RNF.buildShell({
+  title: "Neon Snake Extreme",
+  creator: "CyberViper_Studio",
+  subtitle: "方向鍵/WASD 移動 · Shift 氮氣加速 · 連續吃食物累積連擊倍率 · 瀕死子彈時間",
+  width: 960,
+  height: 520,
+  bgmStyle: "pulse",
+  onStart: startGame
+});
+
+var W = shell.width, H = shell.height;
+var ctx = shell.ctx, canvas = shell.canvas;
+var particles = shell.particles;
+var animId = null, running = false, keys = {};
+var GRID = 20, COLS = W / GRID, ROWS = H / GRID;
+var snake, dir, nextDir, food, score, combo, comboTimer, nitro, nitroFuel;
+var bulletTime, nearMiss, tickAcc, baseSpeed, moveTimer, gameEnded;
+
+function cleanup() {
+  running = false;
+  if (animId) cancelAnimationFrame(animId);
+  animId = null;
+  window.removeEventListener("keydown", onKey);
+  window.removeEventListener("keyup", onKeyUp);
+}
+
+function onKey(e) {
+  keys[e.code] = true;
+  var k = e.key.toLowerCase();
+  if (k === "arrowup" || k === "w") { if (dir.y !== 1) nextDir = { x: 0, y: -1 }; e.preventDefault(); }
+  if (k === "arrowdown" || k === "s") { if (dir.y !== -1) nextDir = { x: 0, y: 1 }; e.preventDefault(); }
+  if (k === "arrowleft" || k === "a") { if (dir.x !== 1) nextDir = { x: -1, y: 0 }; e.preventDefault(); }
+  if (k === "arrowright" || k === "d") { if (dir.x !== -1) nextDir = { x: 1, y: 0 }; e.preventDefault(); }
+}
+function onKeyUp(e) { keys[e.code] = false; }
+
+function spawnFood() {
+  var occupied = {};
+  snake.forEach(function (s) { occupied[s.x + "," + s.y] = true; });
+  var tries = 0;
+  do {
+    food = {
+      x: Math.floor(Math.random() * COLS),
+      y: Math.floor(Math.random() * ROWS),
+      type: Math.random() < 0.15 ? "combo" : "normal",
+      pulse: Math.random() * Math.PI * 2
+    };
+    tries++;
+  } while (occupied[food.x + "," + food.y] && tries < 200);
+}
+
+function checkNearMiss() {
+  var head = snake[0];
+  var danger = false;
+  for (var i = 1; i < snake.length; i++) {
+    var s = snake[i];
+    var dx = Math.abs(head.x - s.x), dy = Math.abs(head.y - s.y);
+    if ((dx <= 1 && dy <= 1) && !(dx === 0 && dy === 0)) danger = true;
+  }
+  if (head.x <= 0 || head.x >= COLS - 1 || head.y <= 0 || head.y >= ROWS - 1) danger = true;
+  if (danger && !nearMiss) {
+    nearMiss = true;
+    bulletTime = 0.6;
+    RNF.sfx.power();
+  }
+  if (!danger) nearMiss = false;
+}
+
+function startGame(isRetry) {
+  cleanup();
+  snake = [{ x: Math.floor(COLS / 2), y: Math.floor(ROWS / 2) }];
+  for (var i = 1; i < 4; i++) snake.push({ x: snake[0].x - i, y: snake[0].y });
+  dir = { x: 1, y: 0 };
+  nextDir = { x: 1, y: 0 };
+  score = 0;
+  combo = 0;
+  comboTimer = 0;
+  nitro = false;
+  nitroFuel = 100;
+  bulletTime = 0;
+  nearMiss = false;
+  tickAcc = 0;
+  baseSpeed = 0.12;
+  moveTimer = 0;
+  gameEnded = false;
+  running = true;
+  spawnFood();
+  window.addEventListener("keydown", onKey);
+  window.addEventListener("keyup", onKeyUp);
+  updateHud();
+  lastTs = performance.now();
+  animId = requestAnimationFrame(loop);
+}
+
+var lastTs = 0;
+
+function updateHud() {
+  shell.setHud(
+    '<div><span>分數</span><b>' + score + '</b></div>' +
+    '<div><span>連擊</span><b>x' + (1 + combo * 0.5).toFixed(1) + '</b></div>' +
+    '<div><span>氮氣</span><b>' + Math.floor(nitroFuel) + '%</b></div>' +
+    '<div><span>長度</span><b>' + snake.length + '</b></div>' +
+    (bulletTime > 0 ? '<div><span>子彈時間</span><b style="color:#f472b6">ON</b></div>' : '')
+  );
+}
+
+function die() {
+  if (gameEnded) return;
+  gameEnded = true;
+  running = false;
+  shell.triggerShake(12, 0.4);
+  particles.burst(snake[0].x * GRID + GRID / 2, snake[0].y * GRID + GRID / 2, "#f472b6", 30);
+  RNF.sfx.die();
+  cleanup();
+  shell.gameOver(score, { combo: combo, length: snake.length });
+}
+
+function loop(ts) {
+  if (!running) return;
+  var dt = Math.min(0.05, (ts - lastTs) / 1000);
+  lastTs = ts;
+  var timeScale = bulletTime > 0 ? 0.35 : 1;
+  bulletTime = Math.max(0, bulletTime - dt);
+  comboTimer = Math.max(0, comboTimer - dt);
+  if (comboTimer <= 0 && combo > 0) combo = Math.max(0, combo - 1);
+
+  nitro = keys["ShiftLeft"] || keys["ShiftRight"];
+  if (nitro && nitroFuel > 0) {
+    nitroFuel = Math.max(0, nitroFuel - dt * 35);
+  } else {
+    nitro = false;
+    nitroFuel = Math.min(100, nitroFuel + dt * 12);
+  }
+
+  var speed = baseSpeed / (nitro ? 2.2 : 1);
+  moveTimer += dt * timeScale;
+  while (moveTimer >= speed) {
+    moveTimer -= speed;
+    dir = nextDir;
+    var head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+    if (head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS) { die(); return; }
+    for (var i = 0; i < snake.length; i++) {
+      if (snake[i].x === head.x && snake[i].y === head.y) { die(); return; }
+    }
+    snake.unshift(head);
+    if (head.x === food.x && head.y === food.y) {
+      combo++;
+      comboTimer = 4;
+      var mult = 1 + combo * 0.5;
+      var pts = Math.floor(10 * mult * (food.type === "combo" ? 2 : 1));
+      score += pts;
+      RNF.sfx.combo(combo);
+      shell.triggerShake(3, 0.12);
+      particles.burst(head.x * GRID + GRID / 2, head.y * GRID + GRID / 2, food.type === "combo" ? "#fbbf24" : "#22d3ee", 16);
+      spawnFood();
+      baseSpeed = Math.max(0.05, baseSpeed - 0.002);
+    } else {
+      snake.pop();
+    }
+    checkNearMiss();
+  }
+
+  var hx = snake[0].x * GRID + GRID / 2, hy = snake[0].y * GRID + GRID / 2;
+  particles.trail(hx, hy, nitro ? "#f472b6" : "#22d3ee");
+  if (nitro && RNF.isHighQuality()) particles.trail(hx, hy, "#a78bfa");
+
+  particles.update(dt);
+  draw();
+  updateHud();
+  animId = requestAnimationFrame(loop);
+}
+
+function drawBg() {
+  ctx.fillStyle = "#060a12";
+  ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = "rgba(34,211,238,0.06)";
+  ctx.lineWidth = 1;
+  for (var x = 0; x <= W; x += GRID) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+  for (var y = 0; y <= H; y += GRID) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+  if (bulletTime > 0) {
+    ctx.fillStyle = "rgba(244,114,182,0.08)";
+    ctx.fillRect(0, 0, W, H);
+  }
+}
+
+function draw() {
+  ctx.save();
+  shell.applyShake(ctx);
+  drawBg();
+  food.pulse += 0.08;
+  var fp = Math.sin(food.pulse) * 0.15 + 0.85;
+  var fx = food.x * GRID + GRID / 2, fy = food.y * GRID + GRID / 2;
+  ctx.shadowBlur = 16;
+  ctx.shadowColor = food.type === "combo" ? "#fbbf24" : "#22d3ee";
+  ctx.fillStyle = food.type === "combo" ? "#fbbf24" : "#22d3ee";
+  ctx.beginPath();
+  ctx.arc(fx, fy, GRID * 0.35 * fp, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  snake.forEach(function (seg, i) {
+    var t = i / snake.length;
+    var r = Math.floor(34 + t * 80), g = Math.floor(211 - t * 60), b = Math.floor(238 - t * 100);
+    ctx.fillStyle = "rgb(" + r + "," + g + "," + b + ")";
+    ctx.shadowBlur = i === 0 ? 14 : 6;
+    ctx.shadowColor = "#22d3ee";
+    var sx = seg.x * GRID + 1, sy = seg.y * GRID + 1;
+    var sz = GRID - 2;
+    ctx.beginPath();
+    ctx.roundRect(sx, sy, sz, sz, 4);
+    ctx.fill();
+    if (i === 0) {
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(sx + sz * 0.6, sy + sz * 0.25, 3, 3);
+      ctx.fillRect(sx + sz * 0.75, sy + sz * 0.25, 3, 3);
+    }
+  });
+  ctx.shadowBlur = 0;
+  particles.draw(ctx);
+  if (nitro) {
+    ctx.globalAlpha = 0.3;
+    ctx.fillStyle = "#f472b6";
+    ctx.fillRect(0, H - 4, W * (nitroFuel / 100), 4);
+    ctx.globalAlpha = 1;
+  }
+  ctx.restore();
+}
+</script>
+</body>
+</html>

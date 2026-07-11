@@ -236,6 +236,8 @@ export const RAINYNIGHTFROG_EXPAND_REQUEST = "rainynightfrog:expand-request";
 export const RAINYNIGHTFROG_PLAY_MODE_MESSAGE = "rainynightfrog:play-mode";
 export const RAINYNIGHTFROG_API_PROXY_REQUEST = "rainynightfrog:api-proxy-request";
 export const RAINYNIGHTFROG_API_PROXY_RESPONSE = "rainynightfrog:api-proxy-response";
+export const RNF_SUBMIT_SCORE_MESSAGE = "RNF_SUBMIT_SCORE";
+export const RNF_SAVE_DATA_MESSAGE = "RNF_SAVE_DATA";
 
 /** @deprecated Use RAINYNIGHTFROG_AUTH_MESSAGE */
 export const NEXUSPLAY_AUTH_MESSAGE = RAINYNIGHTFROG_AUTH_MESSAGE;

@@ -10,6 +10,7 @@ import { TAG_COLORS, type Game } from "@/lib/games";
 import { useGameI18n } from "@/hooks/use-game-i18n";
 import { useFormatCount } from "@/hooks/use-format-count";
 import { cn } from "@/lib/utils";
+import { resolveDisplayFavoriteCount } from "@/lib/virtual-games-seed-data";
 
 const ACCENT_STYLES = {
   cyan: {
@@ -110,7 +111,9 @@ export function FeaturedGames({
           const href = game.id > 0 ? `/game/${game.id}/forum` : "#";
           const isClickable = game.id > 0 && !loading;
           const favoriteCount =
-            game.id > 0 ? (favoriteCounts[game.id] ?? game.likes) : game.likes;
+            game.id > 0
+              ? resolveDisplayFavoriteCount(favoriteCounts[game.id], game.likes)
+              : game.likes;
           const favorited = game.id > 0 && favoritedIds.has(game.id);
           const favoriteBusy = favoriteBusyId === game.id;
 

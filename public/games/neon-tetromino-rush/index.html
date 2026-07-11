@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Neon Tetromino Rush · 霓虹方塊衝刺</title>
+</head>
+<body>
+<script src="/sdk/rnf-game-sdk.js"></script>
+<script>
+RNF.init();
+var shell = RNF.buildShell({
+  title: "Neon Tetromino Rush",
+  creator: "RetroGrid_Dev",
+  subtitle: "←→ 移動 · ↑ 旋轉 · ↓ 軟降 · 空白 硬降 · C 保留 · 消除霓虹波紋特效",
+  width: 960,
+  height: 520,
+  bgmStyle: "pulse",
+  onStart: startGame
+});
+
+var COLS = 10, ROWS = 20, BS = 24;
+var BOARD_X = 320, BOARD_Y = 20;
+var ctx, particles, running, loopId, lastT;
+var board, score, level, lines, piece, next, hold, canHold, dropTimer, dropInterval;
+var waveFx = [];
+var keys = {}, keyLock = {};
+
+var SHAPES = {
+  I: { c: "#22d3ee", m: [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]] },
+  O: { c: "#fbbf24", m: [[1,1],[1,1]] },
+  T: { c: "#a78bfa", m: [[0,1,0],[1,1,1],[0,0,0]] },
+  S: { c: "#4ade80", m: [[0,1,1],[1,1,0],[0,0,0]] },
+  Z: { c: "#f472b6", m: [[1,1,0],[0,1,1],[0,0,0]] },
+  J: { c: "#60a5fa", m: [[1,0,0],[1,1,1],[0,0,0]] },
+  L: { c: "#fb923c", m: [[0,0,1],[1,1,1],[0,0,0]] }
+};
+var NAMES = ["I","O","T","S","Z","J","L"];
+
+function cleanup() {
+  running = false;
+  if (loopId) cancelAnimationFrame(loopId);
+  loopId = null;
+  window.removeEventListener("keydown", onKeyDown);
+  window.removeEventListener("keyup", onKeyUp);
+}
+
+function startGame() {
+  cleanup();
+  ctx = shell.ctx;
+  particles = shell.particles;
+  board = Array.from({ length: ROWS }, function () { return Array(COLS).fill(0); });
+  score = 0; level = 1; lines = 0;
+  hold = null; canHold = true;
+  dropInterval = 800;
+  waveFx = [];
+  next = randomPiece();
+  spawnPiece();
+  updateHud();
+  running = true;
+  lastT = performance.now();
+  window.addEventListener("keydown", onKeyDown);
+  window.addEventListener("keyup", onKeyUp);
+  loopId = requestAnimationFrame(loop);
+}
+
+function randomPiece() {
+  var n = NAMES[Math.floor(Math.random() * NAMES.length)];
+  return { name: n, m: clone(SHAPES[n].m), c: SHAPES[n].c, x: 3, y: 0 };
+}
+
+function clone(m) { return m.map(function (r) { return r.slice(); }); }
+
+function spawnPiece() {
+  piece = next;
+  next = randomPiece();
+  canHold = true;
+  if (collides(piece.m, piece.x, piece.y)) {
+    shell.gameOver(score, { lines: lines, level: level });
+  }
+}
+
+function collides(m, px, py) {
+  for (var r = 0; r < m.length; r++)
+    for (var c = 0; c < m[r].length; c++)
+      if (m[r][c]) {
+        var x = px + c, y = py + r;
+        if (x < 0 || x >= COLS || y >= ROWS) return true;
+        if (y >= 0 && board[y][x]) return true;
+      }
+  return false;
+}
+
+function rotate(m) {
+  var n = m.length, out = Array.from({ length: n }, function () { return Array(n).fill(0); });
+  for (var r = 0; r < n; r++)
+    for (var c = 0; c < n; c++) out[c][n - 1 - r] = m[r][c];
+  return out;
+}
+
+function lockPiece() {
+  var m = piece.m;
+  for (var r = 0; r < m.length; r++)
+    for (var c = 0; c < m[r].length; c++)
+      if (m[r][c] && piece.y + r >= 0) board[piece.y + r][piece.x + c] = piece.c;
+  var cleared = clearLines();
+  if (cleared > 0) {
+    var pts = [0, 100, 300, 500, 800][cleared] * level;
+    score += pts;
+    lines += cleared;
+    level = Math.floor(lines / 10) + 1;
+    dropInterval = Math.max(100, 800 - (level - 1) * 60);
+    RNF.sfx.combo(cleared);
+    shell.triggerShake(4 + cleared, 0.2);
+    for (var i = 0; i < cleared; i++)
+      waveFx.push({ row: ROWS - 1 - i, t: 0, color: piece.c });
+  } else RNF.sfx.hit();
+  spawnPiece();
+  updateHud();
+}
+
+function clearLines() {
+  var n = 0;
+  for (var r = ROWS - 1; r >= 0; r--) {
+    if (board[r].every(function (c) { return c; })) {
+      board.splice(r, 1);
+      board.unshift(Array(COLS).fill(0));
+      n++; r++;
+    }
+  }
+  return n;
+}
+
+function ghostY() {
+  var gy = piece.y;
+  while (!collides(piece.m, piece.x, gy + 1)) gy++;
+  return gy;
+}
+
+function hardDrop() {
+  var gy = ghostY();
+  var dist = gy - piece.y;
+  score += dist * 2;
+  piece.y = gy;
+  shell.triggerShake(8, 0.18);
+  RNF.sfx.power();
+  lockPiece();
+}
+
+function tryMove(dx, dy) {
+  if (!collides(piece.m, piece.x + dx, piece.y + dy)) {
+    piece.x += dx; piece.y += dy;
+    if (dy) RNF.sfx.click();
+    return true;
+  }
+  return false;
+}
+
+function tryRotate() {
+  var rm = rotate(piece.m);
+  var kicks = [0, -1, 1, -2, 2];
+  for (var i = 0; i < kicks.length; i++) {
+    if (!collides(rm, piece.x + kicks[i], piece.y)) {
+      piece.m = rm; piece.x += kicks[i];
+      RNF.sfx.click();
+      return;
+    }
+  }
+}
+
+function doHold() {
+  if (!canHold) return;
+  canHold = false;
+  if (!hold) {
+    hold = { name: piece.name, m: clone(SHAPES[piece.name].m), c: piece.c, x: 3, y: 0 };
+    spawnPiece();
+  } else {
+    var tmp = hold;
+    hold = { name: piece.name, m: clone(SHAPES[piece.name].m), c: piece.c, x: 3, y: 0 };
+    piece = { name: tmp.name, m: clone(tmp.m), c: tmp.c, x: 3, y: 0 };
+  }
+  RNF.sfx.power();
+}
+
+function onKeyDown(e) {
+  if (!running) return;
+  keys[e.code] = true;
+  if (keyLock[e.code]) return;
+  keyLock[e.code] = true;
+  if (e.code === "ArrowLeft") tryMove(-1, 0);
+  else if (e.code === "ArrowRight") tryMove(1, 0);
+  else if (e.code === "ArrowDown") { tryMove(0, 1); score += 1; updateHud(); }
+  else if (e.code === "ArrowUp") tryRotate();
+  else if (e.code === "Space") { e.preventDefault(); hardDrop(); }
+  else if (e.code === "KeyC") doHold();
+}
+
+function onKeyUp(e) { keys[e.code] = false; keyLock[e.code] = false; }
+
+function updateHud() {
+  shell.setHud(
+    '<div><span>分數</span><b>' + score.toLocaleString() + '</b></div>' +
+    '<div><span>等級</span><b>' + level + '</b></div>' +
+    '<div><span>消除行</span><b>' + lines + '</b></div>' +
+    '<div><span>保留</span><b>' + (canHold ? "就緒" : "已用") + '</b></div>'
+  );
+}
+
+function drawBg() {
+  ctx.fillStyle = "#060a12";
+  ctx.fillRect(0, 0, 960, 520);
+  ctx.strokeStyle = "rgba(34,211,238,0.08)";
+  for (var i = 0; i < 960; i += 40) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 520); ctx.stroke(); }
+  for (var j = 0; j < 520; j += 40) { ctx.beginPath(); ctx.moveTo(0, j); ctx.lineTo(960, j); ctx.stroke(); }
+}
+
+function drawPanel(x, y, w, h, label) {
+  ctx.fillStyle = "rgba(0,0,0,0.5)";
+  ctx.strokeStyle = "rgba(34,211,238,0.35)";
+  ctx.lineWidth = 1;
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeRect(x, y, w, h);
+  ctx.fillStyle = "#64748b";
+  ctx.font = "11px 'Segoe UI','Microsoft JhengHei',sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText(label, x + w / 2, y + 16);
+}
+
+function drawMini(m, c, ox, oy, cell) {
+  cell = cell || 18;
+  for (var r = 0; r < m.length; r++)
+    for (var col = 0; col < m[r].length; col++)
+      if (m[r][col]) drawBlock(ox + col * cell, oy + r * cell, cell - 2, c, 0.85);
+}
+
+function drawBlock(x, y, s, color, alpha) {
+  ctx.globalAlpha = alpha == null ? 1 : alpha;
+  ctx.fillStyle = color;
+  ctx.shadowBlur = shell.isHighQuality() ? 10 : 0;
+  ctx.shadowColor = color;
+  ctx.fillRect(x, y, s, s);
+  ctx.strokeStyle = "rgba(255,255,255,0.25)";
+  ctx.strokeRect(x + 0.5, y + 0.5, s - 1, s - 1);
+  ctx.shadowBlur = 0;
+  ctx.globalAlpha = 1;
+}
+
+function drawBoard() {
+  drawPanel(BOARD_X - 8, BOARD_Y - 8, COLS * BS + 16, ROWS * BS + 16, "矩陣戰場");
+  for (var r = 0; r < ROWS; r++)
+    for (var c = 0; c < COLS; c++) {
+      var x = BOARD_X + c * BS, y = BOARD_Y + r * BS;
+      ctx.strokeStyle = "rgba(34,211,238,0.06)";
+      ctx.strokeRect(x, y, BS, BS);
+      if (board[r][c]) drawBlock(x + 1, y + 1, BS - 2, board[r][c]);
+    }
+  waveFx.forEach(function (w) {
+    var y = BOARD_Y + w.row * BS;
+    var prog = w.t / 0.6;
+    ctx.save();
+    ctx.globalAlpha = 1 - prog;
+    var grad = ctx.createLinearGradient(BOARD_X, y, BOARD_X + COLS * BS, y);
+    grad.addColorStop(0, "transparent");
+    grad.addColorStop(0.5, w.color);
+    grad.addColorStop(1, "transparent");
+    ctx.fillStyle = grad;
+    ctx.fillRect(BOARD_X, y - 4 + prog * 20, COLS * BS, BS + 8);
+    ctx.restore();
+  });
+  if (piece) {
+    var gy = ghostY();
+    for (var gr = 0; gr < piece.m.length; gr++)
+      for (var gc = 0; gc < piece.m[gr].length; gc++)
+        if (piece.m[gr][gc])
+          drawBlock(BOARD_X + (piece.x + gc) * BS + 1, BOARD_Y + (gy + gr) * BS + 1, BS - 2, piece.c, 0.22);
+    for (var pr = 0; pr < piece.m.length; pr++)
+      for (var pc = 0; pc < piece.m[pr].length; pc++)
+        if (piece.m[pr][pc])
+          drawBlock(BOARD_X + (piece.x + pc) * BS + 1, BOARD_Y + (piece.y + pr) * BS + 1, BS - 2, piece.c);
+  }
+}
+
+function drawSide() {
+  drawPanel(80, 60, 140, 120, "下一個");
+  if (next) drawMini(next.m, next.c, 110, 90);
+  drawPanel(80, 200, 140, 120, "保留 (C)");
+  if (hold) drawMini(hold.m, hold.c, 110, 230);
+  ctx.fillStyle = "#a78bfa";
+  ctx.font = "bold 22px 'Segoe UI','Microsoft JhengHei',sans-serif";
+  ctx.textAlign = "left";
+  ctx.fillText("RETRO GRID", 620, 80);
+  ctx.fillStyle = "#64748b";
+  ctx.font = "13px sans-serif";
+  ctx.fillText("霓虹方塊衝刺", 620, 105);
+  ctx.fillText("空白鍵：硬降震動", 620, 140);
+  ctx.fillText("↑：旋轉  ↓：加速", 620, 165);
+}
+
+function loop(now) {
+  if (!running) return;
+  var dt = Math.min(0.05, (now - lastT) / 1000);
+  lastT = now;
+  dropTimer = (dropTimer || 0) + dt * 1000;
+  if (keys["ArrowDown"]) dropTimer += dt * 500;
+  if (dropTimer >= dropInterval) { dropTimer = 0; if (!tryMove(0, 1)) lockPiece(); }
+  waveFx.forEach(function (w) { w.t += dt; });
+  waveFx = waveFx.filter(function (w) { return w.t < 0.6; });
+  particles.update(dt);
+  ctx.save();
+  shell.applyShake(ctx);
+  drawBg();
+  drawSide();
+  drawBoard();
+  particles.draw(ctx);
+  ctx.restore();
+  loopId = requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>

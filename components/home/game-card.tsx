@@ -9,6 +9,7 @@ import { TAG_COLORS, type Game } from "@/lib/games";
 import { useGameI18n } from "@/hooks/use-game-i18n";
 import { useFormatCount } from "@/hooks/use-format-count";
 import { cn } from "@/lib/utils";
+import { resolveDisplayFavoriteCount } from "@/lib/virtual-games-seed-data";
 
 const MotionLink = motion.create(Link);
 
@@ -40,7 +41,7 @@ export function GameCard({
   const t = useTranslations("home");
   const { localizedTag } = useGameI18n();
   const { formatCount } = useFormatCount();
-  const displayFavoriteCount = favoriteCount ?? game.likes;
+  const displayFavoriteCount = resolveDisplayFavoriteCount(favoriteCount, game.likes);
 
   return (
     <MotionLink

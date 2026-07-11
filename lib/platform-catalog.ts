@@ -1,4 +1,5 @@
 import type { GameRecord } from "@/lib/supabase";
+import { VIRTUAL_GAMES_SEED } from "@/lib/virtual-games-seed-data";
 
 export type PlatformGameMeta = {
   slug: string;
@@ -29,6 +30,24 @@ export type PlatformGameMeta = {
 };
 
 export const VOID_GACHA_TITLE = "VOID GACHA";
+
+const VIRTUAL_PLATFORM_GAMES: PlatformGameMeta[] = VIRTUAL_GAMES_SEED.map((game) => ({
+  slug: game.slug,
+  title: game.title,
+  creator: game.creatorName,
+  categories: [game.category],
+  description: game.description,
+  coverPath: `/covers/${game.slug}-cover.png`,
+  playsCount: game.playsCount,
+  likesCount: game.likesCount,
+  sharesCount: game.sharesCount,
+  ratingAvg: game.ratingAvg,
+  featured: false,
+  featuredAccent: "cyan" as const,
+  demoUrl: `/games/${game.slug}/index.html`,
+  viewportWidth: 960,
+  viewportHeight: 600,
+}));
 
 export const PLATFORM_GAMES: PlatformGameMeta[] = [
   {
@@ -245,6 +264,7 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
       },
     ],
   },
+  ...VIRTUAL_PLATFORM_GAMES,
 ];
 
 export const PLATFORM_GAME_BY_TITLE = new Map(
