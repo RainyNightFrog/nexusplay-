@@ -6,6 +6,7 @@ import { resolveUserRole, hasCreatorDashboardAccess } from "@/lib/auth-profile";
 import { isAdminUser } from "@/lib/admin-auth";
 import { ANALYTICS_SESSION_COOKIE } from "@/lib/analytics-service";
 import {
+  buildSubdomainCanonicalRedirectPath,
   buildSubdomainRewritePath,
   resolveSubdomainFromHost,
 } from "@/lib/subdomain";
@@ -132,6 +133,28 @@ export async function middleware(request: NextRequest) {
         },
       }
     );
+
+    let routeKind: "game" | "creator" = "game";
+    try {
+      const resolved = await resolveSubdomainRoute(lookupClient, subdomainLabel);
+      if (resolved) routeKind = resolved;
+    } catch {
+      routeKind = "game";
+    }
+
+    const canonicalRedirect = buildSubdomainCanonicalRedirectPath(
+      request.nextUrl.pathname,
+      subdomainLabel,
+      routeKind
+    );
+    if (
+      canonicalRedirect &&
+      canonicalRedirect !== request.nextUrl.pathname
+    ) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = canonicalRedirect;
+      return NextResponse.redirect(redirectUrl);
+    }
 
     try {
       const resolved = await resolveSubdomainRewrite(request, lookupClient);

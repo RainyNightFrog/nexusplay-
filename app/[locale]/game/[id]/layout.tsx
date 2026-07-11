@@ -7,7 +7,7 @@ import {
   notFoundMetadata,
 } from "@/lib/page-metadata";
 import { buildVideoGameJsonLd } from "@/lib/structured-data";
-import { getPublicGameById } from "@/lib/games-service";
+import { getPublicGameByRouteParam } from "@/lib/games-service";
 
 type Props = {
   params: Promise<{ locale: string; id: string }>;
@@ -16,15 +16,10 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, id } = await params;
-  const gameId = Number.parseInt(id, 10);
   const t = await getTranslations("seo");
 
-  if (!Number.isFinite(gameId)) {
-    return notFoundMetadata(t("gameNotFound"));
-  }
-
   try {
-    const game = await getPublicGameById(gameId);
+    const game = await getPublicGameByRouteParam(id);
     if (!game) {
       return notFoundMetadata(t("gameNotFound"));
     }
@@ -43,18 +38,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function GameLayout({ params, children }: Props) {
   const { locale, id } = await params;
-  const gameId = Number.parseInt(id, 10);
   let jsonLd = null;
 
-  if (Number.isFinite(gameId)) {
-    try {
-      const game = await getPublicGameById(gameId);
-      if (game) {
-        jsonLd = buildVideoGameJsonLd({ game, locale });
-      }
-    } catch {
-      jsonLd = null;
+  try {
+    const game = await getPublicGameByRouteParam(id);
+    if (game) {
+      jsonLd = buildVideoGameJsonLd({ game, locale });
     }
+  } catch {
+    jsonLd = null;
   }
 
   return (

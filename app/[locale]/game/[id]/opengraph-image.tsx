@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { getPublicGameById } from "@/lib/games-service";
+import { getPublicGameByRouteParam } from "@/lib/games-service";
 import { getSiteUrl } from "@/lib/site-url";
 
 export const runtime = "edge";
@@ -12,8 +12,7 @@ type Props = {
 
 export default async function Image({ params }: Props) {
   const { id } = await params;
-  const gameId = Number.parseInt(id, 10);
-  const game = Number.isFinite(gameId) ? await getPublicGameById(gameId) : null;
+  const game = await getPublicGameByRouteParam(id);
 
   const title = game?.title ?? "RainyNightFrog";
   const subtitle = game?.creator ? `by ${game.creator}` : "Web Game";

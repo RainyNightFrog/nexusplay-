@@ -130,6 +130,33 @@ export function buildSubdomainRewritePath(
   return applyLocalePrefix(rewritten, locale);
 }
 
+/**
+ * 子網域根路徑或僅語言前綴（/、/zh-CN）時，導向含 slug 的正式路徑，避免 rewrite 後 params 錯亂。
+ */
+export function buildSubdomainCanonicalRedirectPath(
+  pathname: string,
+  subdomain: string,
+  kind: "game" | "creator" = "game"
+): string | null {
+  const { locale, pathname: path } = splitLocaleFromPath(pathname);
+  const base = kind === "creator" ? `/creator/${subdomain}` : `/game/${subdomain}`;
+  const canonical = applyLocalePrefix(base, locale);
+
+  if (pathname === canonical || pathname.startsWith(`${canonical}/`)) {
+    return null;
+  }
+
+  if (path.startsWith("/game/") || path.startsWith("/creator/")) {
+    return null;
+  }
+
+  if (path === "/") {
+    return canonical;
+  }
+
+  return null;
+}
+
 export function buildGameSubdomainUrl(slug: string) {
   const normalized = slug.trim().toLowerCase();
   const rootDomain = getRootDomain();

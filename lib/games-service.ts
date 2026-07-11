@@ -1,3 +1,4 @@
+import { resolveGameRecordByRouteParam } from "@/lib/game-slug";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { mapRecordToGame } from "@/lib/games-data";
 import type { Game, SortOption } from "@/lib/games";
@@ -95,6 +96,23 @@ export async function getPublicGameById(id: number): Promise<Game | null> {
   }
 
   return data ? mapRecordToGame(data) : null;
+}
+
+export async function getPublicGameByRouteParam(
+  param: string
+): Promise<Game | null> {
+  const supabase = createServerSupabase();
+  const { record } = await resolveGameRecordByRouteParam(supabase, param);
+
+  if (
+    !record ||
+    record.publish_status !== "public" ||
+    record.status !== "approved"
+  ) {
+    return null;
+  }
+
+  return mapRecordToGame(record);
 }
 
 export async function getGameById(id: number): Promise<Game | null> {
