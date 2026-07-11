@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import type { PublishMonetizationValues } from "@/components/dashboard/publish-monetization-fields";
 import type { GamePublishMetadata } from "@/lib/game-metadata";
+import type { GamePricingValues } from "@/lib/game-pricing";
 import {
   clearGameEditDraft,
   clearGameUploadDraft,
@@ -17,6 +18,7 @@ type SharedDraftFields = {
   form: PersistedGameFormState;
   metadata: GamePublishMetadata;
   monetization: PublishMonetizationValues;
+  pricing: GamePricingValues;
   devlogTitle?: string;
   devlogContent?: string;
 };
@@ -43,6 +45,7 @@ export function useGameFormDraft(options: UseGameFormDraftOptions) {
     form,
     metadata,
     monetization,
+    pricing,
     devlogTitle,
     devlogContent,
     mode,
@@ -64,6 +67,7 @@ export function useGameFormDraft(options: UseGameFormDraftOptions) {
         form,
         metadata,
         monetization,
+        pricing,
         devlogTitle,
         devlogContent,
       };
@@ -88,6 +92,7 @@ export function useGameFormDraft(options: UseGameFormDraftOptions) {
     form,
     metadata,
     monetization,
+    pricing,
     devlogTitle,
     devlogContent,
     mode,

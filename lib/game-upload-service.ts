@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { extractAndUploadGameBuild } from "@/lib/extract-game-zip";
 import { parseMonetizationFromFormData, parsePublishStatus } from "@/lib/game-publish";
+import { parsePricingFromFormData } from "@/lib/game-pricing";
 import { GAME_GENRES } from "@/lib/game-metadata";
 import {
   createDraftPlaceholderCoverBuffer,
@@ -194,6 +195,11 @@ export async function uploadCreatorGameFromFormData(params: {
     return { ok: false, status: 400, error: monetization.error };
   }
 
+  const pricing = parsePricingFromFormData(formData);
+  if (!pricing.ok) {
+    return { ok: false, status: 400, error: pricing.error };
+  }
+
   const metadataResult = parsePublishMetadataFromFormData(formData);
   if (!metadataResult.ok) {
     return { ok: false, status: 400, error: metadataResult.error };
@@ -254,6 +260,10 @@ export async function uploadCreatorGameFromFormData(params: {
         publish_status: monetization.data.publish_status,
         tips_enabled: monetization.data.tips_enabled,
         suggested_tip_amount: monetization.data.suggested_tip_amount,
+        pricing_type: pricing.data.pricing_type,
+        price: pricing.data.price,
+        currency: pricing.data.currency,
+        min_price: pricing.data.min_price,
         status: "pending",
         gallery_urls: galleryUrls,
         devlog_entries: [],

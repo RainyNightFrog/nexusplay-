@@ -1,5 +1,11 @@
 import type { PublishMonetizationValues } from "@/components/dashboard/publish-monetization-fields";
 import {
+  defaultGamePricingValues,
+  parsePricingType,
+  pricingValuesFromRecord,
+  type GamePricingValues,
+} from "@/lib/game-pricing";
+import {
   AI_CONTENT_TYPES,
   clampViewportHeight,
   clampViewportWidth,
@@ -26,6 +32,7 @@ export type GameFormDraftPayload = {
   form: PersistedGameFormState;
   metadata: GamePublishMetadata;
   monetization: PublishMonetizationValues;
+  pricing: GamePricingValues;
   existingGalleryUrls?: string[];
   devlogTitle?: string;
   devlogContent?: string;
@@ -92,6 +99,38 @@ function parseMetadata(value: unknown): GamePublishMetadata {
   };
 }
 
+function parsePricing(value: unknown): GamePricingValues {
+  if (!isRecord(value)) {
+    return defaultGamePricingValues();
+  }
+
+  const pricingType =
+    typeof value.pricingType === "string" ? value.pricingType : undefined;
+
+  if (pricingType) {
+    return {
+      pricingType: parsePricingType(pricingType),
+      priceAmount:
+        typeof value.priceAmount === "string" ? value.priceAmount : "",
+      minPriceAmount:
+        typeof value.minPriceAmount === "string" ? value.minPriceAmount : "",
+      currency:
+        typeof value.currency === "string" && value.currency.trim()
+          ? value.currency.trim().toUpperCase()
+          : defaultGamePricingValues().currency,
+    };
+  }
+
+  return pricingValuesFromRecord({
+    pricing_type:
+      typeof value.pricing_type === "string" ? value.pricing_type : undefined,
+    price: typeof value.price === "number" ? value.price : undefined,
+    min_price:
+      typeof value.min_price === "number" ? value.min_price : undefined,
+    currency: typeof value.currency === "string" ? value.currency : undefined,
+  });
+}
+
 function parseMonetization(value: unknown): PublishMonetizationValues {
   if (!isRecord(value)) {
     return {
@@ -131,6 +170,7 @@ function parseDraft(raw: unknown): GameFormDraftPayload | null {
   const form = parseForm(raw.form);
   const metadata = parseMetadata(raw.metadata);
   const monetization = parseMonetization(raw.monetization);
+  const pricing = parsePricing(raw.pricing);
 
   const existingGalleryUrls = Array.isArray(raw.existingGalleryUrls)
     ? raw.existingGalleryUrls
@@ -142,6 +182,7 @@ function parseDraft(raw: unknown): GameFormDraftPayload | null {
     form,
     metadata,
     monetization,
+    pricing,
     existingGalleryUrls,
     devlogTitle:
       typeof raw.devlogTitle === "string" ? raw.devlogTitle : undefined,

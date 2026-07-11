@@ -7,6 +7,7 @@ import {
   MAX_DEVLOG_TITLE_LENGTH,
   MAX_GALLERY_IMAGES,
 } from "@/lib/game-page-content";
+import { appendPricingToFormData, type GamePricingValues } from "@/lib/game-pricing";
 import { readApiJson } from "@/lib/fetch-api-json";
 
 export type UpdateGameInput = {
@@ -19,6 +20,7 @@ export type UpdateGameInput = {
   publishStatus: GamePublishStatus;
   tipsEnabled: boolean;
   suggestedTipAmount: string;
+  pricing: GamePricingValues;
   galleryUrls?: string[];
   galleryFiles?: File[];
   devlogTitle?: string;
@@ -50,6 +52,10 @@ export type UpdateGameResult = {
     ai_content_types?: unknown;
     details_html?: string;
     platform_fee_percent?: number | null;
+    pricing_type?: "free" | "fixed" | "pwyw";
+    price?: number;
+    currency?: string;
+    min_price?: number;
   };
 };
 
@@ -62,7 +68,7 @@ function appendMonetizationFields(
   formData: FormData,
   input: Pick<
     UpdateGameInput,
-    "publishStatus" | "tipsEnabled" | "suggestedTipAmount"
+    "publishStatus" | "tipsEnabled" | "suggestedTipAmount" | "pricing"
   >
 ) {
   formData.append("publishStatus", input.publishStatus);
@@ -70,6 +76,7 @@ function appendMonetizationFields(
   if (input.tipsEnabled && input.suggestedTipAmount.trim()) {
     formData.append("suggestedTipAmount", input.suggestedTipAmount.trim());
   }
+  appendPricingToFormData(formData, input.pricing);
 }
 
 export async function fetchManageGame(

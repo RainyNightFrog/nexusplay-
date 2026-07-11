@@ -44,4 +44,8 @@ export type GameRecord = {
   ai_content_types?: unknown;
   details_html?: string;
   platform_fee_percent?: number | null;
+  price?: number;
+  currency?: string;
+  pricing_type?: "free" | "fixed" | "pwyw";
+  min_price?: number;
 };

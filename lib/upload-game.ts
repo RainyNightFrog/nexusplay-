@@ -1,6 +1,7 @@
 import type { GamePublishStatus } from "@/lib/game-publish";
 import type { GamePublishMetadata } from "@/lib/game-metadata";
 import { appendPublishMetadataToFormData } from "@/lib/game-metadata";
+import { appendPricingToFormData, type GamePricingValues } from "@/lib/game-pricing";
 import { readApiJson } from "@/lib/fetch-api-json";
 
 export type UploadGameInput = {
@@ -12,6 +13,7 @@ export type UploadGameInput = {
   publishStatus: GamePublishStatus;
   tipsEnabled: boolean;
   suggestedTipAmount: string;
+  pricing: GamePricingValues;
   metadata: GamePublishMetadata;
 };
 
@@ -28,6 +30,10 @@ export type UploadGameResult = {
     publish_status: GamePublishStatus;
     tips_enabled: boolean;
     suggested_tip_amount: number | null;
+    pricing_type?: "free" | "fixed" | "pwyw";
+    price?: number;
+    currency?: string;
+    min_price?: number;
   };
 };
 
@@ -50,6 +56,7 @@ export async function uploadGame(
   if (input.tipsEnabled && input.suggestedTipAmount.trim()) {
     formData.append("suggestedTipAmount", input.suggestedTipAmount.trim());
   }
+  appendPricingToFormData(formData, input.pricing);
   appendPublishMetadataToFormData(formData, input.metadata);
 
   onProgress?.("正在上傳遊戲壓縮檔...");

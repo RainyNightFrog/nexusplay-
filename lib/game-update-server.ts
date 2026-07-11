@@ -15,6 +15,7 @@ import {
   parseMonetizationFromFormData,
   resolveApprovalStatusAfterCreatorUpdate,
 } from "@/lib/game-publish";
+import { parsePricingFromFormData } from "@/lib/game-pricing";
 import { triggerNewGameFollowerNotify } from "@/lib/creator-follow-notify";
 import { onCreatorGameWentLive } from "@/lib/achievement-unlock-service";
 import { isGamePubliclyLive } from "@/lib/game-live-service";
@@ -54,6 +55,10 @@ function buildCreatorUpdatePayload(
     publishStatus: "draft" | "public";
     tipsEnabled: boolean;
     suggestedTipAmount: number | null;
+    pricingType: "free" | "fixed" | "pwyw";
+    price: number;
+    currency: string;
+    minPrice: number;
     galleryUrls: string[];
     devlogEntries: unknown;
     metadataPayload: Record<string, unknown>;
@@ -74,6 +79,10 @@ function buildCreatorUpdatePayload(
     publish_status: input.publishStatus,
     tips_enabled: input.tipsEnabled,
     suggested_tip_amount: input.suggestedTipAmount,
+    pricing_type: input.pricingType,
+    price: input.price,
+    currency: input.currency,
+    min_price: input.minPrice,
     gallery_urls: input.galleryUrls,
     devlog_entries: input.devlogEntries,
     ...input.metadataPayload,
@@ -174,6 +183,11 @@ export async function patchCreatorGame(input: {
   const monetization = parseMonetizationFromFormData(formData);
   if (!monetization.ok) {
     return NextResponse.json({ error: monetization.error }, { status: 400 });
+  }
+
+  const pricing = parsePricingFromFormData(formData);
+  if (!pricing.ok) {
+    return NextResponse.json({ error: pricing.error }, { status: 400 });
   }
 
   const isPublic = monetization.data.publish_status === "public";
@@ -343,6 +357,10 @@ export async function patchCreatorGame(input: {
         publishStatus: monetization.data.publish_status,
         tipsEnabled: monetization.data.tips_enabled,
         suggestedTipAmount: monetization.data.suggested_tip_amount,
+        pricingType: pricing.data.pricing_type,
+        price: pricing.data.price,
+        currency: pricing.data.currency,
+        minPrice: pricing.data.min_price,
         galleryUrls,
         devlogEntries,
         metadataPayload,
@@ -381,6 +399,9 @@ export async function patchCreatorGame(input: {
             : updateError.message.includes("tags") &&
                 updateError.message.includes("schema cache")
               ? " 請先在 Supabase SQL Editor 執行 supabase/game-publish-metadata.sql（或 npm run db:publish-metadata）。"
+              : updateError.message.includes("pricing_type") &&
+                updateError.message.includes("schema cache")
+              ? " 請先在 Supabase SQL Editor 執行 supabase/add-game-pricing.sql（或 npm run db:pricing）。"
               : "";
       throw new Error(`資料庫更新失敗：${updateError.message}${hint}`);
     }

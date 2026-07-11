@@ -32,6 +32,7 @@ import {
   PublishMonetizationFields,
   type PublishMonetizationValues,
 } from "@/components/dashboard/publish-monetization-fields";
+import { GamePricingFields } from "@/components/dashboard/game-pricing-fields";
 import { PublishStatusFields } from "@/components/dashboard/publish-status-fields";
 import { PlatformAuthNotice } from "@/components/dashboard/platform-auth-notice";
 import { RequiredFieldLabel } from "@/components/dashboard/required-field-label";
@@ -48,6 +49,10 @@ import {
 import { fetchManageGame, updateGame } from "@/lib/update-game";
 import { parseStringArray } from "@/lib/game-page-content";
 import { DEFAULT_PUBLISH_STATUS, normalizePublishStatus } from "@/lib/game-publish";
+import {
+  defaultGamePricingValues,
+  pricingValuesFromRecord,
+} from "@/lib/game-pricing";
 import {
   getPublishValidationIssues,
   type PublishValidationField,
@@ -288,6 +293,7 @@ export default function EditGamePage() {
     tipsEnabled: false,
     suggestedTipAmount: "",
   });
+  const [pricing, setPricing] = useState(defaultGamePricingValues());
   const [lockedPlatformFeePercent, setLockedPlatformFeePercent] = useState<
     number | null
   >(null);
@@ -347,6 +353,7 @@ export default function EditGamePage() {
               ? String(game.suggested_tip_amount)
               : "",
         });
+        setPricing(pricingValuesFromRecord(game));
         setLockedPlatformFeePercent(
           typeof game.platform_fee_percent === "number"
             ? game.platform_fee_percent
@@ -358,6 +365,7 @@ export default function EditGamePage() {
           setForm(draft.form);
           setMetadata(mergeGamePublishMetadata(serverMetadata, draft.metadata));
           setMonetization(draft.monetization);
+          setPricing(draft.pricing);
           if (draft.existingGalleryUrls) {
             setExistingGalleryUrls(draft.existingGalleryUrls);
           }
@@ -393,6 +401,7 @@ export default function EditGamePage() {
     form,
     metadata,
     monetization,
+    pricing,
     existingGalleryUrls,
     devlogTitle,
     devlogContent,
@@ -482,6 +491,9 @@ export default function EditGamePage() {
       aiContentTypes: metadata.aiContentTypes,
       tipsEnabled: monetization.tipsEnabled,
       suggestedTipAmount: monetization.suggestedTipAmount,
+      pricingType: pricing.pricingType,
+      priceAmount: pricing.priceAmount,
+      minPriceAmount: pricing.minPriceAmount,
     });
 
     if (issues.length > 0) {
@@ -525,6 +537,7 @@ export default function EditGamePage() {
           publishStatus: monetization.publishStatus,
           tipsEnabled: monetization.tipsEnabled,
           suggestedTipAmount: monetization.suggestedTipAmount,
+          pricing,
           galleryUrls: existingGalleryUrls,
           galleryFiles: newGalleryFiles,
           devlogTitle: publishVersion ? devlogTitle : undefined,
@@ -832,6 +845,12 @@ export default function EditGamePage() {
                 />
               )}
             </section>
+
+            <GamePricingFields
+              values={pricing}
+              onChange={setPricing}
+              disabled={isSubmitting}
+            />
 
             <PublishMonetizationFields
               values={monetization}

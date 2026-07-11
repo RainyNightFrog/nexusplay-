@@ -9,6 +9,7 @@ const FIELD_ELEMENT_IDS: Partial<Record<PublishValidationField, string>> = {
   aiDisclosure: "field-ai-disclosure",
   aiContentTypes: "field-ai-disclosure",
   suggestedTip: "suggested-tip-amount",
+  pricing: "field-pricing",
 };
 
 export function scrollToFirstValidationField(field: PublishValidationField) {

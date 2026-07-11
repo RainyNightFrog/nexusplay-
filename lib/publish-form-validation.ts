@@ -1,6 +1,7 @@
 import type { GameGenre } from "@/lib/game-metadata";
 import type { GamePublishStatus } from "@/lib/game-publish";
 import type { AiContentType } from "@/lib/game-metadata";
+import type { GamePricingType } from "@/lib/game-pricing";
 import { MIN_SUGGESTED_TIP_USD } from "@/lib/tip-limits";
 
 export type PublishFormValidationInput = {
@@ -16,6 +17,9 @@ export type PublishFormValidationInput = {
   aiContentTypes: AiContentType[];
   tipsEnabled: boolean;
   suggestedTipAmount: string;
+  pricingType: GamePricingType;
+  priceAmount: string;
+  minPriceAmount: string;
 };
 
 export type PublishValidationField =
@@ -26,12 +30,47 @@ export type PublishValidationField =
   | "gameZip"
   | "aiDisclosure"
   | "aiContentTypes"
-  | "suggestedTip";
+  | "suggestedTip"
+  | "pricing";
 
 export type PublishValidationIssue = {
   field: PublishValidationField;
   messageKey: string;
 };
+
+function appendPricingValidationIssues(
+  issues: PublishValidationIssue[],
+  input: Pick<
+    PublishFormValidationInput,
+    "pricingType" | "priceAmount" | "minPriceAmount"
+  >
+) {
+  if (input.pricingType === "fixed") {
+    if (!input.priceAmount.trim()) {
+      issues.push({ field: "pricing", messageKey: "alertPricingAmount" });
+      return;
+    }
+    const parsed = Number.parseFloat(input.priceAmount);
+    if (!Number.isFinite(parsed)) {
+      issues.push({ field: "pricing", messageKey: "alertPricingAmount" });
+    } else if (parsed < 0) {
+      issues.push({ field: "pricing", messageKey: "alertPricingNegative" });
+    } else if (parsed === 0) {
+      issues.push({ field: "pricing", messageKey: "alertPricingAmount" });
+    }
+    return;
+  }
+
+  if (input.pricingType === "pwyw") {
+    const raw = input.minPriceAmount.trim() || "0";
+    const parsed = Number.parseFloat(raw);
+    if (!Number.isFinite(parsed)) {
+      issues.push({ field: "pricing", messageKey: "alertPricingMinAmount" });
+    } else if (parsed < 0) {
+      issues.push({ field: "pricing", messageKey: "alertPricingNegative" });
+    }
+  }
+}
 
 export function getPublishValidationIssues(
   input: PublishFormValidationInput
@@ -56,6 +95,7 @@ export function getPublishValidationIssues(
         issues.push({ field: "suggestedTip", messageKey: "alertSuggestedTipMin" });
       }
     }
+    appendPricingValidationIssues(issues, input);
     return issues;
   }
 
@@ -88,6 +128,8 @@ export function getPublishValidationIssues(
       issues.push({ field: "suggestedTip", messageKey: "alertSuggestedTipMin" });
     }
   }
+
+  appendPricingValidationIssues(issues, input);
 
   return issues;
 }
