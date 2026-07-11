@@ -8,6 +8,7 @@ import { ANALYTICS_SESSION_COOKIE } from "@/lib/analytics-service";
 import {
   buildSubdomainCanonicalRedirectPath,
   buildSubdomainRewritePath,
+  isSubdomainCanonicalPath,
   resolveSubdomainFromHost,
 } from "@/lib/subdomain";
 import { resolveSubdomainRoute } from "@/lib/creator-username";
@@ -63,6 +64,10 @@ async function resolveSubdomainRewrite(
     if (resolved) routeKind = resolved;
   } catch {
     routeKind = "game";
+  }
+
+  if (isSubdomainCanonicalPath(request.nextUrl.pathname, subdomain, routeKind)) {
+    return { request, rewriteUrl: null as URL | null };
   }
 
   const rewriteUrl = request.nextUrl.clone();

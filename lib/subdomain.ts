@@ -157,6 +157,27 @@ export function buildSubdomainCanonicalRedirectPath(
   return null;
 }
 
+export function isSubdomainCanonicalPath(
+  pathname: string,
+  subdomain: string,
+  kind: "game" | "creator" = "game"
+) {
+  const { locale, pathname: path } = splitLocaleFromPath(pathname);
+  const base = kind === "creator" ? `/creator/${subdomain}` : `/game/${subdomain}`;
+  const canonical = applyLocalePrefix(base, locale);
+
+  if (pathname === canonical || pathname.startsWith(`${canonical}/`)) {
+    return true;
+  }
+
+  if (path.startsWith("/game/") || path.startsWith("/creator/")) {
+    const segment = path.split("/")[2];
+    return segment === subdomain;
+  }
+
+  return false;
+}
+
 export function buildGameSubdomainUrl(slug: string) {
   const normalized = slug.trim().toLowerCase();
   const rootDomain = getRootDomain();

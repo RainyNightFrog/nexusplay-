@@ -3,7 +3,8 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useLocale, useTranslations } from "next-intl";
-import { useParams, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { useGameRouteId } from "@/hooks/use-game-route-id";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
@@ -101,10 +102,9 @@ function GamePageContent() {
   const { formatCount } = useFormatCount();
   const { translateApiError } = useApiError();
   const { profile } = useAuth();
-  const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const gameId = params.id as string;
+  const gameId = useGameRouteId();
 
   const [game, setGame] = useState<Game | null>(null);
   const [loading, setLoading] = useState(true);
@@ -159,6 +159,8 @@ function GamePageContent() {
 
   useEffect(() => {
     let cancelled = false;
+
+    if (!gameId) return;
 
     async function loadGame() {
       setLoading(true);
