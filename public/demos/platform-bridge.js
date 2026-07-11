@@ -511,7 +511,8 @@
       "html.np-embed-compact .hud-stat b{font-size:.88rem}" +
       "html.np-embed-compact .game-toolbar{margin-bottom:.2rem}" +
       "html.np-embed-compact .lane-keys{margin-top:.2rem;font-size:.62rem}" +
-      "html.np-embed-compact .canvas-wrap{min-height:0}" +
+      "html.np-embed-compact .canvas-wrap{min-height:0;aspect-ratio:1/1;width:100%;max-width:100%;align-self:center}" +
+      "html.np-embed-compact .phase-banner{max-width:100%}" +
       "html.np-embed-compact .top-stat b{font-size:.92rem}" +
       "html.np-embed-compact .tower-bar,html.np-embed-compact .tactical-bar,html.np-embed-compact .action-bar{margin-bottom:.25rem}" +
       "html.np-embed-compact .threat-bar{margin-bottom:.22rem;font-size:.62rem}" +

@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Cyber Bubble Pop · 賽博泡泡</title>
-  <script src="/sdk/rnf-game-sdk.js"></script>
+  <script src="/sdk/rnf-game-sdk.js?v=20260715"></script>
 </head>
 <body>
 <script>
@@ -16,32 +16,56 @@ var shell = RNF.buildShell({
   width: 960,
   height: 520,
   bgmStyle: "ambient",
+  highlights: ["四段難度", "特殊泡泡", "連鎖消除", "排行榜"],
+  help: {
+    about: "經典泡泡龍的霓虹重製版。發射泡泡與上方同色泡泡相鄰三顆以上即可消除並得分，連鎖消除可觸發震屏與加分。",
+    features: [
+      "四段難度：影響初始列數、發射冷卻與警戒線高度",
+      "閃電球消除整行、黑洞球吸收同色、炸彈球清除範圍（困難+）",
+      "連鎖限時內繼續消除可維持 Combo 加成",
+      "設定可調瞄準靈敏度，分數上傳排行榜"
+    ],
+    controls: [
+      "← →：調整發射角度",
+      "空白鍵：發射泡泡",
+      "設定可調「操作靈敏度」改變瞄準速度"
+    ],
+    tips: [
+      "閃電球：消除整行並產生連鎖",
+      "黑洞球：吸收周圍同色泡泡",
+      "炸彈球（困難+）：清除小範圍泡泡",
+      "連擊限時內繼續消除可維持 Combo 加成"
+    ]
+  },
+  onStop: cleanup,
   onStart: startGame
 });
 
 var W = shell.width, H = shell.height;
 var ctx = shell.ctx;
 var particles = shell.particles;
-var animId = null, running = false, gameEnded = false;
+var animId = null, running = false, gameEnded = false, speedScale = 1, frameDt = 0.016;
 var COLORS = ["#22d3ee", "#a78bfa", "#f472b6", "#34d399", "#fbbf24", "#fb7185"];
 var RADIUS = 18, ROWS = 12, COLS = 16;
 var grid, shooter, aimAngle, currentBubble, nextBubble, score, combo, comboTimer;
 var falling = [], animating = false, shootCooldown = 0, projectile = null;
 
 function cleanup() {
+  shell.detachKeyboard();
   running = false;
   if (animId) cancelAnimationFrame(animId);
   animId = null;
-  window.removeEventListener("keydown", onKey);
+  window.removeEventListener("keydown", onKeyDown);
+  window.removeEventListener("keyup", onKeyUp);
 }
 
-function onKey(e) {
+var keys = {};
+function onKeyDown(e) {
   if (gameEnded || animating) return;
-  if (e.key === "ArrowLeft") aimAngle -= 0.04;
-  if (e.key === "ArrowRight") aimAngle += 0.04;
-  aimAngle = Math.max(-1.2, Math.min(1.2, aimAngle));
-  if (e.key === " " || e.code === "Space") { e.preventDefault(); shoot(); }
+  keys[e.code] = true;
+  if ((e.key === " " || e.code === "Space") && !e.repeat) { e.preventDefault(); shoot(); }
 }
+function onKeyUp(e) { keys[e.code] = false; }
 
 function makeBubble(c, r, color, special) {
   return { c: c, r: r, x: c * RADIUS * 2 + (r % 2 ? RADIUS : 0) + RADIUS, y: r * RADIUS * 1.732 + RADIUS + 10, color: color, special: special || null };
@@ -201,7 +225,7 @@ function shoot() {
   shootCooldown = 0.25;
   var sx = W / 2, sy = H - 40;
   var dx = Math.sin(aimAngle), dy = -Math.cos(aimAngle);
-  projectile = { x: sx, y: sy, vx: dx * 14, vy: dy * 14, color: currentBubble.color, special: currentBubble.special };
+  projectile = { x: sx, y: sy, vx: dx * 380 * speedScale, vy: dy * 380 * speedScale, color: currentBubble.color, special: currentBubble.special };
   currentBubble = null;
   RNF.sfx.laser();
 }
@@ -209,8 +233,8 @@ function shoot() {
 function updateProjectile() {
   if (!projectile) return;
   var f = projectile;
-  f.x += f.vx;
-  f.y += f.vy;
+  f.x += f.vx * frameDt;
+  f.y += f.vy * frameDt;
   if (f.x < RADIUS || f.x > W - RADIUS) f.vx *= -1;
   if (f.y < RADIUS + 10) { landBubble(f); return; }
   for (var i = 0; i < grid.length; i++) {
@@ -246,6 +270,7 @@ function updateHud() {
 
 function startGame() {
   cleanup();
+  speedScale = shell.getSpeedScale();
   score = 0; combo = 0; comboTimer = 0;
   aimAngle = 0; shootCooldown = 0;
   falling = []; gameEnded = false; animating = false; projectile = null;
@@ -253,7 +278,10 @@ function startGame() {
   currentBubble = randomBubble();
   nextBubble = randomBubble();
   running = true;
-  window.addEventListener("keydown", onKey);
+  keys = {};
+  shell.attachKeyboard(keys);
+  window.addEventListener("keydown", onKeyDown);
+  window.addEventListener("keyup", onKeyUp);
   lastTs = performance.now();
   animId = requestAnimationFrame(loop);
 }
@@ -264,18 +292,22 @@ function loop(ts) {
   if (!running) return;
   var dt = Math.min(0.05, (ts - lastTs) / 1000);
   lastTs = ts;
+  frameDt = dt;
   shootCooldown = Math.max(0, shootCooldown - dt);
   comboTimer = Math.max(0, comboTimer - dt);
   if (comboTimer <= 0 && combo > 0) combo = 0;
 
   falling.forEach(function (f) {
-    f.vy += 0.4;
-    f.y += f.vy;
+    f.vy += 280 * frameDt;
+    f.y += f.vy * frameDt;
     f.life -= dt;
     particles.trail(f.x, f.y, f.color);
   });
   falling = falling.filter(function (f) { return f.life > 0 && f.y < H + 20; });
 
+  if (keys["ArrowLeft"]) aimAngle -= 1.6 * frameDt * speedScale;
+  if (keys["ArrowRight"]) aimAngle += 1.6 * frameDt * speedScale;
+  aimAngle = Math.max(-1.2, Math.min(1.2, aimAngle));
   updateProjectile();
   particles.update(dt);
   draw();

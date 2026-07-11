@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Void Brick Breaker · 虛空打磚塊</title>
-  <script src="/sdk/rnf-game-sdk.js"></script>
+  <script src="/sdk/rnf-game-sdk.js?v=20260715"></script>
 </head>
 <body>
 <script>
@@ -16,6 +16,24 @@ var shell = RNF.buildShell({
   width: 960,
   height: 520,
   bgmStyle: "pulse",
+  highlights: ["四段難度", "多球／雷射", "不可破壞磚", "排行榜"],
+  help: {
+    about: "虛空矩陣中的經典打磚塊。用擋板反彈球體擊碎磚塊，清空可破壞磚即可過關。",
+    features: [
+      "四段難度調整球速與磚塊列數",
+      "多球分裂、磁力吸附、雷射冷卻射擊",
+      "極限模式有不可破壞灰色磚"
+    ],
+    controls: [
+      "← → 或 A D：移動擋板",
+      "空白鍵：發射雷射（有冷卻）"
+    ],
+    tips: [
+      "多球道具可同時破壞多排磚塊",
+      "磁力道具讓球偏向擋板方向"
+    ]
+  },
+  onStop: cleanup,
   onStart: startGame
 });
 
@@ -25,17 +43,52 @@ var particles = shell.particles;
 var animId = null, running = false, gameEnded = false, keys = {};
 var paddle, balls, bricks, lasers, powerups, score, lives, level;
 var laserCooldown = 0, magnetTimer = 0, stars = [];
+var speedScale = 1;
+var PADDLE_SPEED = 340;
+var BALL_SPEED = 230;
+
+function bindInput() {
+  shell.canvas.addEventListener("pointermove", onPointerMove);
+  shell.canvas.addEventListener("touchmove", onPointerMove, { passive: true });
+}
 
 function cleanup() {
+  shell.detachKeyboard();
   running = false;
   if (animId) cancelAnimationFrame(animId);
   animId = null;
-  window.removeEventListener("keydown", onKey);
-  window.removeEventListener("keyup", onKeyUp);
+  window.removeEventListener("keydown", onKey, true);
+  window.removeEventListener("keyup", onKeyUp, true);
+  if (shell && shell.canvas) {
+    shell.canvas.removeEventListener("pointermove", onPointerMove);
+    shell.canvas.removeEventListener("touchmove", onPointerMove);
+  }
 }
 
-function onKey(e) { keys[e.code] = true; if (e.code === "Space") e.preventDefault(); }
-function onKeyUp(e) { keys[e.code] = false; }
+function onKey(e) {
+  if (!running) return;
+  keys[e.code] = true;
+  if (e.code === "ArrowLeft" || e.code === "KeyA") keys.left = true;
+  if (e.code === "ArrowRight" || e.code === "KeyD") keys.right = true;
+  if (e.code === "Space") keys.fire = true;
+  if (e.code === "ArrowLeft" || e.code === "ArrowRight" || e.code === "Space") e.preventDefault();
+}
+
+function onKeyUp(e) {
+  keys[e.code] = false;
+  if (e.code === "ArrowLeft" || e.code === "KeyA") keys.left = false;
+  if (e.code === "ArrowRight" || e.code === "KeyD") keys.right = false;
+  if (e.code === "Space") keys.fire = false;
+}
+
+function onPointerMove(e) {
+  if (!running) return;
+  var rect = shell.canvas.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+  var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  var x = (clientX - rect.left) * (W / rect.width);
+  paddle.x = Math.max(10, Math.min(W - paddle.w - 10, x - paddle.w / 2));
+}
 
 function initStars() {
   stars = [];
@@ -66,21 +119,32 @@ function makeLevel(lv) {
 }
 
 function spawnBall(x, y, vx, vy) {
-  balls.push({ x: x || W/2, y: y || H - 80, vx: vx || (Math.random() - 0.5) * 6, vy: vy || -7, r: 7 });
+  var sm = speedScale;
+  balls.push({
+    x: x != null ? x : W / 2,
+    y: y != null ? y : H - 80,
+    vx: vx != null ? vx : (Math.random() - 0.5) * 150 * sm,
+    vy: vy != null ? vy : -BALL_SPEED * sm,
+    r: 7
+  });
 }
 
 function startGame() {
   cleanup();
+  speedScale = shell.getSpeedScale();
   score = 0; lives = 3; level = 1;
-  paddle = { x: W/2 - 55, w: 110, h: 14, laser: false };
+  keys = { left: false, right: false, fire: false };
+  shell.attachKeyboard(keys);
+  paddle = { x: W/2 - 55, y: H - 44, w: 110, h: 14, laser: false };
   balls = []; lasers = []; powerups = [];
   laserCooldown = 0; magnetTimer = 0; gameEnded = false;
   initStars();
   makeLevel(level);
   spawnBall();
   running = true;
-  window.addEventListener("keydown", onKey);
-  window.addEventListener("keyup", onKeyUp);
+  window.addEventListener("keydown", onKey, true);
+  window.addEventListener("keyup", onKeyUp, true);
+  bindInput();
   lastTs = performance.now();
   animId = requestAnimationFrame(loop);
 }
@@ -89,9 +153,10 @@ var lastTs = 0;
 
 function fireLaser() {
   if (laserCooldown > 0) return;
-  laserCooldown = 0.15;
-  lasers.push({ x: paddle.x + paddle.w / 2 - 2, y: paddle.y, w: 4, h: 16, vy: -14 });
-  lasers.push({ x: paddle.x + paddle.w / 2 + 2, y: paddle.y, w: 4, h: 16, vy: -14 });
+  laserCooldown = 0.22;
+  var vy = -480 * speedScale;
+  lasers.push({ x: paddle.x + paddle.w / 2 - 2, y: paddle.y, w: 4, h: 16, vy: vy });
+  lasers.push({ x: paddle.x + paddle.w / 2 + 2, y: paddle.y, w: 4, h: 16, vy: vy });
   RNF.sfx.laser();
 }
 
@@ -120,11 +185,11 @@ function loop(ts) {
   var dt = Math.min(0.05, (ts - lastTs) / 1000);
   lastTs = ts;
 
-  var spd = 420 * dt;
-  if (keys["ArrowLeft"] || keys["KeyA"]) paddle.x -= spd;
-  if (keys["ArrowRight"] || keys["KeyD"]) paddle.x += spd;
+  var spd = PADDLE_SPEED * speedScale * dt;
+  if (keys.left || keys["ArrowLeft"] || keys["KeyA"]) paddle.x -= spd;
+  if (keys.right || keys["ArrowRight"] || keys["KeyD"]) paddle.x += spd;
   paddle.x = Math.max(10, Math.min(W - paddle.w - 10, paddle.x));
-  if (keys["Space"]) fireLaser();
+  if (keys.fire || keys["Space"]) fireLaser();
 
   laserCooldown = Math.max(0, laserCooldown - dt);
   magnetTimer = Math.max(0, magnetTimer - dt);
@@ -133,10 +198,10 @@ function loop(ts) {
 
   balls.forEach(function (b) {
     if (magnetTimer > 0 && b.y > H * 0.5) {
-      b.vx += (paddle.x + paddle.w / 2 - b.x) * 0.08 * dt * 60;
+      b.vx += (paddle.x + paddle.w / 2 - b.x) * 2.8 * dt;
     }
-    b.x += b.vx;
-    b.y += b.vy;
+    b.x += b.vx * dt;
+    b.y += b.vy * dt;
     if (b.x < b.r || b.x > W - b.r) { b.vx *= -1; RNF.sfx.hit(); }
     if (b.y < b.r) { b.vy *= -1; }
     if (b.y > H + 30) b.dead = true;
@@ -145,7 +210,7 @@ function loop(ts) {
         b.x >= paddle.x && b.x <= paddle.x + paddle.w && b.vy > 0) {
       b.vy = -Math.abs(b.vy);
       var hit = (b.x - paddle.x) / paddle.w - 0.5;
-      b.vx = hit * 10;
+      b.vx = hit * 220 * speedScale;
       RNF.sfx.hit();
       particles.burst(b.x, b.y, "#22d3ee", 6);
     }
@@ -162,7 +227,7 @@ function loop(ts) {
           particles.burst(br.x + br.w/2, br.y + br.h/2, br.color, 14);
           RNF.sfx.pop();
           if (br.power) {
-            powerups.push({ x: br.x + br.w/2, y: br.y + br.h/2, vy: 2, type: br.power });
+            powerups.push({ x: br.x + br.w/2, y: br.y + br.h/2, vy: 95 * speedScale, type: br.power });
           }
         } else {
           RNF.sfx.hit();
@@ -181,7 +246,7 @@ function loop(ts) {
   }
 
   lasers.forEach(function (l) {
-    l.y += l.vy;
+    l.y += l.vy * dt;
     bricks.forEach(function (br) {
       if (br.dead) return;
       if (l.x + l.w > br.x && l.x < br.x + br.w && l.y < br.y + br.h && l.y + l.h > br.y) {
@@ -195,7 +260,7 @@ function loop(ts) {
   lasers = lasers.filter(function (l) { return !l.dead && l.y > -20; });
 
   powerups.forEach(function (p) {
-    p.y += p.vy;
+    p.y += p.vy * dt;
     if (p.x > paddle.x && p.x < paddle.x + paddle.w && p.y > paddle.y - 10 && p.y < paddle.y + paddle.h) {
       p.dead = true;
       RNF.sfx.power();
@@ -218,11 +283,11 @@ function loop(ts) {
     level++;
     RNF.sfx.score();
     makeLevel(level);
-    balls = [{ x: W/2, y: H - 80, vx: (Math.random()-0.5)*5, vy: -7, r: 7 }];
+    balls = [{ x: W/2, y: H - 80, vx: (Math.random()-0.5)*150*speedScale, vy: -BALL_SPEED*speedScale, r: 7 }];
   }
 
   stars.forEach(function (s) {
-    s.y += s.sp;
+    s.y += s.sp * 45 * dt;
     if (s.y > H) { s.y = 0; s.x = Math.random() * W; }
   });
 

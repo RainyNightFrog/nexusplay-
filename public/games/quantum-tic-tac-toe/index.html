@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Quantum Tic-Tac-Toe · 量子五子棋</title>
-  <script src="/sdk/rnf-game-sdk.js"></script>
+  <script src="/sdk/rnf-game-sdk.js?v=20260715"></script>
 </head>
 <body>
 <script>
@@ -16,13 +16,33 @@ var shell = RNF.buildShell({
   width: 960,
   height: 520,
   bgmStyle: "ambient",
+  highlights: ["四段難度", "強化 AI", "限時對局", "勝率統計"],
+  help: {
+    about: "5×5 量子棋盤上的連五對決。與 AI 輪流落子，先連成五子者獲勝。每回合有倒數計時，超時自動落子。",
+    features: [
+      "四段難度縮短回合限時（45 秒 → 15 秒）",
+      "困難以上 AI 會連五、擋招並搶佔中心與四角",
+      "本機勝率統計顯示於主選單 HUD",
+      "設定中的遊戲速度會加快倒數節奏"
+    ],
+    controls: [
+      "滑鼠左鍵：在空格落子",
+      "每回合倒數結束前必須落子，逾時會自動落子"
+    ],
+    tips: [
+      "困難以上 AI 會優先連五、阻擋你的連線",
+      "限時依難度縮短",
+      "設定中的「遊戲速度」會加快倒數節奏"
+    ]
+  },
+  onStop: cleanup,
   onStart: startGame
 });
 
 var W = shell.width, H = shell.height;
 var ctx = shell.ctx;
 var particles = shell.particles;
-var animId = null, running = false, gameEnded = false;
+var animId = null, running = false, gameEnded = false, speedScale = 1;
 var SIZE = 5, CELL, board, turn, timer, timerMax, heartbeatAcc, glitchT;
 var wins = 0, losses = 0, draws = 0;
 var save = shell.getSave();
@@ -31,6 +51,7 @@ if (save.losses) losses = save.losses;
 if (save.draws) draws = save.draws;
 
 function cleanup() {
+  shell.detachKeyboard();
   running = false;
   if (animId) cancelAnimationFrame(animId);
   animId = null;
@@ -168,6 +189,7 @@ function updateHud() {
 
 function startGame() {
   cleanup();
+  speedScale = shell.getSpeedScale();
   CELL = Math.min((W - 80) / SIZE, (H - 120) / SIZE);
   board = [];
   for (var r = 0; r < SIZE; r++) {
@@ -181,6 +203,7 @@ function startGame() {
   glitchT = 0;
   gameEnded = false;
   running = true;
+  shell.attachKeyboard({});
   shell.canvas.addEventListener("click", onClick);
   lastTs = performance.now();
   animId = requestAnimationFrame(loop);
@@ -196,7 +219,7 @@ function loop(ts) {
   glitchT += dt;
 
   if (turn === "X") {
-    timer -= dt;
+    timer -= dt * speedScale;
     heartbeatAcc += dt;
     if (timer < 15 && heartbeatAcc >= (timer < 5 ? 0.35 : 0.7)) {
       RNF.sfx.heartbeat();

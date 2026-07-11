@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Neon Snake Extreme · 霓虹貪食蛇</title>
-  <script src="/sdk/rnf-game-sdk.js"></script>
+  <title>Neon Snake Extreme � ?????</title>
+  <script src="/sdk/rnf-game-sdk.js?v=20260715"></script>
 </head>
 <body>
 <script>
@@ -16,6 +16,28 @@ var shell = RNF.buildShell({
   width: 960,
   height: 520,
   bgmStyle: "pulse",
+  highlights: ["四段難度", "子彈時間", "排行榜", "靈敏度／速度"],
+  help: {
+    about: "經典貪食蛇的賽博電競版。吃食物讓蛇身變長、分數提高；連續吃可累積連擊倍率。靠近危險時會觸發子彈時間慢動作。",
+    features: [
+      "四段難度選擇，結算分數依難度加成並上傳排行榜",
+      "瀕死子彈時間慢動作，爭取反應時間",
+      "困難以上出現障礙磚、金色 ★ 食物與 Combo 食物",
+      "設定可調操作靈敏度與遊戲速度"
+    ],
+    controls: [
+      "↑↓←→ 或 WASD：控制蛇的移動方向",
+      "Shift：氮氣加速（消耗氮氣條，鬆開後緩慢回復）",
+      "困難以上：地圖會出現靜態障礙磚，撞到即失敗"
+    ],
+    tips: [
+      "金色 ★ 食物得分為一般食物的 3 倍",
+      "Combo 食物（黃色）可延長連擊計時",
+      "主選單可調難度與操作靈敏度／遊戲速度",
+      "結算分數會依難度加成並上傳排行榜（需登入）"
+    ]
+  },
+  onStop: cleanup,
   onStart: startGame
 });
 
@@ -25,9 +47,10 @@ var particles = shell.particles;
 var animId = null, running = false, keys = {};
 var GRID = 20, COLS = W / GRID, ROWS = H / GRID;
 var snake, dir, nextDir, food, score, combo, comboTimer, nitro, nitroFuel;
-var bulletTime, nearMiss, tickAcc, baseSpeed, moveTimer, gameEnded;
+var bulletTime, nearMiss, tickAcc, baseSpeed, moveTimer, gameEnded, speedScale = 1;
 
 function cleanup() {
+  shell.detachKeyboard();
   running = false;
   if (animId) cancelAnimationFrame(animId);
   animId = null;
@@ -79,6 +102,7 @@ function checkNearMiss() {
 
 function startGame(isRetry) {
   cleanup();
+  speedScale = shell.getSpeedScale();
   snake = [{ x: Math.floor(COLS / 2), y: Math.floor(ROWS / 2) }];
   for (var i = 1; i < 4; i++) snake.push({ x: snake[0].x - i, y: snake[0].y });
   dir = { x: 1, y: 0 };
@@ -91,10 +115,12 @@ function startGame(isRetry) {
   bulletTime = 0;
   nearMiss = false;
   tickAcc = 0;
-  baseSpeed = 0.12;
+  baseSpeed = 0.18 / speedScale;
   moveTimer = 0;
   gameEnded = false;
   running = true;
+  keys = {};
+  shell.attachKeyboard(keys);
   spawnFood();
   window.addEventListener("keydown", onKey);
   window.addEventListener("keyup", onKeyUp);
@@ -145,7 +171,9 @@ function loop(ts) {
 
   var speed = baseSpeed / (nitro ? 2.2 : 1);
   moveTimer += dt * timeScale;
-  while (moveTimer >= speed) {
+  if (moveTimer > speed * 2) moveTimer = speed * 2;
+  var maxSteps = 2;
+  while (moveTimer >= speed && maxSteps-- > 0) {
     moveTimer -= speed;
     dir = nextDir;
     var head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };

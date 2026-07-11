@@ -238,6 +238,18 @@ export const RAINYNIGHTFROG_API_PROXY_REQUEST = "rainynightfrog:api-proxy-reques
 export const RAINYNIGHTFROG_API_PROXY_RESPONSE = "rainynightfrog:api-proxy-response";
 export const RNF_SUBMIT_SCORE_MESSAGE = "RNF_SUBMIT_SCORE";
 export const RNF_SAVE_DATA_MESSAGE = "RNF_SAVE_DATA";
+export const RAINYNIGHTFROG_SHOW_MENU_MESSAGE = "rainynightfrog:show-menu";
+export const RNF_SHOW_MENU_MESSAGE = "RNF_SHOW_MENU";
+
+export function postShowGameMenu(
+  iframe: HTMLIFrameElement | null | undefined
+): boolean {
+  const target = iframe?.contentWindow;
+  if (!target) return false;
+  target.postMessage({ type: RAINYNIGHTFROG_SHOW_MENU_MESSAGE }, "*");
+  target.postMessage({ type: RNF_SHOW_MENU_MESSAGE }, "*");
+  return true;
+}
 
 /** @deprecated Use RAINYNIGHTFROG_AUTH_MESSAGE */
 export const NEXUSPLAY_AUTH_MESSAGE = RAINYNIGHTFROG_AUTH_MESSAGE;

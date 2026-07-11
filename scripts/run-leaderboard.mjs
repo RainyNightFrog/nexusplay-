@@ -39,9 +39,13 @@ function buildConnectionCandidates() {
   const region = process.env.SUPABASE_DB_REGION ?? "ap-southeast-1";
 
   return [
+    process.env.SUPABASE_DB_URL,
+    `postgresql://postgres.${projectRef}:${encodedPassword}@aws-1-${region}.pooler.supabase.com:5432/postgres`,
+    `postgresql://postgres.${projectRef}:${encodedPassword}@aws-0-${region}.pooler.supabase.com:5432/postgres`,
+    `postgresql://postgres.${projectRef}:${encodedPassword}@aws-1-${region}.pooler.supabase.com:6543/postgres`,
     `postgresql://postgres.${projectRef}:${encodedPassword}@aws-0-${region}.pooler.supabase.com:6543/postgres`,
     `postgresql://postgres:${encodedPassword}@db.${projectRef}.supabase.co:5432/postgres`,
-  ];
+  ].filter(Boolean);
 }
 
 async function main() {

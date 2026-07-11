@@ -44,6 +44,24 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        source: "/sdk/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=0, must-revalidate",
+          },
+        ],
+      },
+      {
+        source: "/games/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=0, must-revalidate",
+          },
+        ],
+      },
+      {
         source: "/(.*)",
         headers: [
           { key: "X-Frame-Options", value: "SAMEORIGIN" },

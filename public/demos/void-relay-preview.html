@@ -109,7 +109,7 @@
       max-width: min(1100px, 100%); height: 100%; max-height: 100%; min-height: 0;
     }
     .top-bar {
-      flex-shrink: 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.3rem;
+      flex-shrink: 0; display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.3rem;
       padding: 0.42rem 0.55rem; background: rgba(0,0,0,0.55);
       border: 1px solid rgba(167,139,250,0.22); border-radius: 8px; margin-bottom: 0.35rem;
       font-size: 0.72rem;
@@ -199,11 +199,51 @@
       gap: 0.65rem; padding: 0.15rem 0; position: relative; z-index: 1;
     }
     .fighter {
-      flex: 1; min-width: 0; max-width: none; padding: 0.6rem 0.65rem;
-      background: rgba(0,0,0,0.5); border-radius: 12px;
-      border: 1px solid rgba(167,139,250,0.2);
+      flex: 1; min-width: 0; max-width: none; padding: 0.72rem 0.75rem;
+      background: rgba(0,0,0,0.55); border-radius: 12px;
+      border: 1px solid rgba(167,139,250,0.25);
       transition: transform 0.15s, box-shadow 0.15s;
-      box-shadow: inset 0 0 30px rgba(139,92,246,0.04);
+      box-shadow: inset 0 0 30px rgba(139,92,246,0.06);
+    }
+    .fighter.player {
+      border-color: rgba(34,211,238,0.35);
+      box-shadow: inset 0 0 24px rgba(34,211,238,0.05);
+    }
+    .fighter-role {
+      font-size: 0.58rem; letter-spacing: 0.14em; color: #7c6a9a;
+      margin-bottom: 0.2rem; text-transform: uppercase;
+    }
+    .fighter.player .fighter-role { color: #67e8f9; }
+    .fighter.enemy .fighter-role { color: #fca5a5; text-align: center; }
+    .fighter-trait {
+      font-size: 0.66rem; line-height: 1.45; color: #9ca3af;
+      padding: 0.35rem 0.45rem; margin: 0.35rem 0 0.4rem;
+      border-radius: 8px; background: rgba(0,0,0,0.35);
+      border: 1px solid rgba(167,139,250,0.14);
+    }
+    .fighter.enemy .fighter-trait {
+      text-align: center; width: 100%;
+      border-color: rgba(248,113,113,0.18);
+      background: rgba(248,113,113,0.06);
+    }
+    .fighter.player .fighter-trait { border-color: rgba(34,211,238,0.18); }
+    .intent-queue {
+      display: flex; flex-direction: column; gap: 0.28rem;
+      width: 100%; margin-top: 0.35rem;
+    }
+    .intent-next {
+      font-size: 0.62rem; color: #7c6a9a; text-align: center;
+      padding: 0.28rem 0.4rem; border-radius: 6px;
+      background: rgba(0,0,0,0.3); border: 1px dashed rgba(167,139,250,0.2);
+    }
+    .turn-banner {
+      font-size: 0.62rem; font-weight: 700; letter-spacing: 0.12em;
+      color: #67e8f9; text-align: center; margin-bottom: 0.35rem;
+      padding: 0.22rem 0.5rem; border-radius: 6px;
+      background: rgba(34,211,238,0.08); border: 1px solid rgba(34,211,238,0.25);
+    }
+    .turn-banner.enemy-turn {
+      color: #fca5a5; background: rgba(248,113,113,0.08); border-color: rgba(248,113,113,0.25);
     }
     .fighter.enraged {
       box-shadow: 0 0 24px rgba(248,113,113,0.35), inset 0 0 20px rgba(248,113,113,0.08);
@@ -228,7 +268,6 @@
     .fighter.enemy .status-row {
       justify-content: center;
     }
-    .fighter.player { border-color: rgba(34,211,238,0.3); }
     .fighter.hit { animation: hitShake 0.35s ease; }
     @keyframes hitShake {
       0%,100% { transform: translateX(0); }
@@ -318,21 +357,21 @@
       background: linear-gradient(180deg, transparent, rgba(0,0,0,0.25));
     }
     .hand-row {
-      flex-shrink: 0; min-height: clamp(178px, 26vh, 210px);
+      flex-shrink: 0; min-height: clamp(210px, 30vh, 248px);
       display: flex; align-items: flex-end;
-      justify-content: center; gap: 0.5rem;
-      padding: 1rem 0.35rem 0.25rem;
+      justify-content: center; gap: 0.55rem;
+      padding: 1.1rem 0.4rem 0.35rem;
       overflow-x: auto; overflow-y: visible;
     }
     .battle-card {
-      flex-shrink: 0; width: 132px; height: 186px; border-radius: 12px;
+      flex-shrink: 0; width: 158px; height: 228px; border-radius: 14px;
       background: linear-gradient(165deg, rgba(38,22,62,0.98) 0%, rgba(14,8,28,0.99) 55%, rgba(8,4,18,1) 100%);
       border: 2px solid rgba(167,139,250,0.45);
       cursor: pointer; position: relative; overflow: hidden;
       transition: box-shadow 0.2s, border-color 0.2s, filter 0.2s;
-      display: grid; grid-template-rows: auto auto 1fr auto auto;
-      padding: 0.35rem 0.45rem 0;
-      box-shadow: 0 6px 22px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
+      display: flex; flex-direction: column;
+      padding: 0.45rem 0.5rem 0.5rem;
+      box-shadow: 0 8px 26px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06);
       will-change: transform, opacity;
     }
     .battle-card::before {
@@ -366,14 +405,32 @@
       background: linear-gradient(165deg, rgba(42,32,12,0.98), rgba(18,12,6,0.99));
     }
     .card-header {
-      display: flex; justify-content: flex-end; align-items: center;
-      min-height: 1.35rem; position: relative; z-index: 2;
+      display: flex; justify-content: space-between; align-items: flex-start;
+      min-height: 1.5rem; position: relative; z-index: 2; margin-bottom: 0.2rem;
+      gap: 0.25rem;
+    }
+    .card-type-badge {
+      font-size: 0.58rem; font-weight: 800; letter-spacing: 0.1em;
+      padding: 0.18rem 0.42rem; border-radius: 6px; line-height: 1.2;
+      white-space: nowrap;
+    }
+    .card-type-badge.attack {
+      background: rgba(248,113,113,0.2); color: #fecaca;
+      border: 1px solid rgba(248,113,113,0.4);
+    }
+    .card-type-badge.skill {
+      background: rgba(34,211,238,0.15); color: #a5f3fc;
+      border: 1px solid rgba(34,211,238,0.35);
+    }
+    .card-type-badge.power {
+      background: rgba(251,191,36,0.18); color: #fde68a;
+      border: 1px solid rgba(251,191,36,0.38);
     }
     .card-cost {
       position: relative; top: auto; left: auto;
-      width: 24px; height: 24px; flex-shrink: 0;
+      width: 26px; height: 26px; flex-shrink: 0;
       border-radius: 50%; background: linear-gradient(135deg, #7c3aed, #a78bfa);
-      color: #fff; font-size: 0.78rem; font-weight: 800;
+      color: #fff; font-size: 0.82rem; font-weight: 800;
       display: flex; align-items: center; justify-content: center;
       border: 2px solid rgba(26,10,46,0.95); box-shadow: 0 0 8px rgba(139,92,246,0.45);
     }
@@ -390,40 +447,34 @@
       box-shadow: 0 0 8px rgba(251,191,36,0.35);
     }
     .card-name {
-      font-size: 0.88rem; font-weight: 800; color: #fff; line-height: 1.25;
-      margin: 0 0 0.15rem; letter-spacing: 0.02em;
-      text-shadow: 0 1px 3px rgba(0,0,0,0.65);
-      min-height: 2.15em;
+      font-size: 0.92rem; font-weight: 800; color: #fff; line-height: 1.28;
+      margin: 0 0 0.35rem; letter-spacing: 0.02em;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+      min-height: 2.4em;
       display: flex; align-items: center; justify-content: center;
-      text-align: center; padding: 0 0.15rem;
-    }
-    .card-icon {
-      font-size: 2.5rem; text-align: center;
-      display: flex; align-items: center; justify-content: center;
-      filter: drop-shadow(0 0 10px rgba(167,139,250,0.4));
-      margin: 0.1rem 0;
+      text-align: center; padding: 0 0.1rem;
+      flex-shrink: 0;
     }
     .card-desc {
-      font-size: 0.76rem; color: #e8e0f8; line-height: 1.35; text-align: center;
-      padding: 0.3rem 0.15rem 0.35rem;
+      flex: 1; min-height: 0;
+      font-size: 0.8rem; color: #f3eefc; line-height: 1.42; text-align: center;
+      padding: 0.35rem 0.2rem 0.45rem;
       font-weight: 500;
+      display: flex; align-items: center; justify-content: center;
+      overflow-y: auto;
+      word-break: break-word;
     }
-    .card-type-ribbon {
-      margin: 0 -0.45rem; padding: 0.38rem 0.25rem;
-      text-align: center; font-size: 0.74rem; font-weight: 800;
-      letter-spacing: 0.14em; border-radius: 0 0 10px 10px;
+    .card-footer {
+      flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+      margin-top: auto; padding-top: 0.25rem;
+      border-top: 1px solid rgba(255,255,255,0.06);
     }
-    .battle-card.attack .card-type-ribbon {
-      background: linear-gradient(180deg, rgba(248,113,113,0.22), rgba(220,38,38,0.35));
-      color: #fecaca; border-top: 1px solid rgba(248,113,113,0.35);
+    .card-icon {
+      font-size: 1.65rem; line-height: 1;
+      filter: drop-shadow(0 0 8px rgba(167,139,250,0.35));
     }
-    .battle-card.skill .card-type-ribbon {
-      background: linear-gradient(180deg, rgba(34,211,238,0.18), rgba(8,145,178,0.32));
-      color: #a5f3fc; border-top: 1px solid rgba(34,211,238,0.35);
-    }
-    .battle-card.power .card-type-ribbon {
-      background: linear-gradient(180deg, rgba(251,191,36,0.2), rgba(217,119,6,0.32));
-      color: #fde68a; border-top: 1px solid rgba(251,191,36,0.35);
+    .card-rarity {
+      font-size: 0.62rem; color: #fbbf24; letter-spacing: 0.08em; font-weight: 700;
     }
     .card-preview {
       position: fixed; z-index: 200; width: 168px; padding: 0.65rem;
@@ -480,7 +531,7 @@
     .draft-overlay h3 { color: #c4b5fd; margin-bottom: 0.5rem; font-size: 1rem; }
     .draft-overlay p { color: #9ca3af; font-size: 0.8rem; margin-bottom: 1rem; }
     .draft-cards { display: flex; gap: 0.6rem; flex-wrap: wrap; justify-content: center; }
-    .draft-cards .battle-card { width: 138px; height: 194px; }
+    .draft-cards .battle-card { width: 164px; height: 236px; }
     .result-overlay {
       position: fixed; inset: 0; z-index: 100; background: rgba(4,2,8,0.9);
       display: none; align-items: center; justify-content: center; padding: 1rem;
@@ -500,15 +551,16 @@
     .result-stats { display: flex; gap: 1rem; justify-content: center; margin: 1rem 0; font-size: 0.8rem; color: #9ca3af; }
     .result-stats b { display: block; font-size: 1.2rem; color: #c4b5fd; }
     .combat-log {
-      justify-self: end; width: auto; max-width: min(150px, 100%);
-      max-height: 2.6em; overflow: hidden;
-      font-size: 0.58rem; color: #7c6a9a; text-align: right;
-      pointer-events: none; line-height: 1.3;
+      justify-self: end; width: auto; max-width: min(220px, 100%);
+      max-height: 4.8em; overflow: hidden;
+      font-size: 0.62rem; color: #9ca3af; text-align: right;
+      pointer-events: none; line-height: 1.35;
     }
     .combat-log div { margin-bottom: 0.1rem; animation: logFade 3s ease forwards; }
     @keyframes logFade { 0% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; } }
 
     @media (max-width: 720px) {
+      .top-bar { grid-template-columns: repeat(3, 1fr); }
       .arena-header {
         grid-template-columns: 1fr 1fr;
         grid-template-rows: auto auto;
@@ -520,6 +572,9 @@
       .fighter { max-width: 100%; }
       .hand-footer { flex-direction: column; align-items: stretch; }
       .battle-actions { justify-content: center; }
+      .battle-card { width: 142px; height: 210px; }
+      .card-name { font-size: 0.86rem; }
+      .card-desc { font-size: 0.74rem; }
       .deck-info { text-align: center; }
     }
   </style>
@@ -568,7 +623,9 @@
           <li>每回合獲得 <b>3 點能量</b>，手牌上限 5 張。</li>
           <li>點擊卡牌消耗能量打出，結束回合後敵人依「意圖」行動。</li>
           <li>護盾可抵擋傷害，回合結束時護盾清零。</li>
-          <li>敵人頭上顯示下一動作預覽（攻擊、防禦、強化等）。</li>
+          <li>敵人頭上顯示<b>本回合意圖</b>與<b>下回合預告</b>，並有特性說明。</li>
+          <li>每 4 層出現<b>精英敵人</b>（更高 HP 與力量）。</li>
+          <li>每 3 層或擊敗首領後可進入<b>虛空營地</b>：治癒、精煉卡牌或提升最大 HP。</li>
           <li><b>虛空接力</b>：連續打出 3 張同類型卡牌觸發虛空脈衝（額外傷害與抽牌）。</li>
           <li>新狀態：<b>易傷</b>（受擊+50%）、<b>燃燒</b>（遞減灼傷）、<b>鏡盾</b>（反彈傷害）。</li>
           <li>首領生命低於 50% 會<b>狂暴</b>，永久提升攻擊力。</li>
@@ -614,6 +671,7 @@
         <div class="top-stat"><span class="label">能量</span><b id="hudEnergy">3/3</b></div>
         <div class="top-stat"><span class="label">護盾</span><b id="hudBlock">0</b></div>
         <div class="top-stat"><span class="label">得分</span><b id="hudScore">0</b></div>
+        <div class="top-stat"><span class="label">回合</span><b id="hudTurn">1</b></div>
       </div>
       <div class="game-toolbar">
         <button class="tool-btn" id="btnPause">⏸ 暫停</button>
@@ -638,21 +696,33 @@
         <div class="relay-surge" id="relaySurge">VOID SURGE!</div>
         <div class="fighters">
           <div class="fighter player" id="playerFighter">
+            <div class="fighter-role">VOID WALKER · 我方</div>
+            <div class="turn-banner" id="turnBanner">你的回合</div>
             <div class="fighter-name">◈ 虛空行者</div>
+            <div class="fighter-meta">
+              <div class="fighter-stat"><span class="label">力量</span><b id="playerStrength">0</b></div>
+              <div class="fighter-stat"><span class="label">護盾</span><b id="playerBlockStat">0</b></div>
+              <div class="fighter-stat"><span class="label">手牌</span><b id="playerHandStat">0</b></div>
+            </div>
             <div class="hp-bar-wrap"><div class="hp-fill" id="playerHpFill" style="width:100%"></div></div>
             <div class="hp-text" id="playerHpText">70 / 70</div>
             <div class="status-row" id="playerStatus"></div>
+            <div class="fighter-trait" id="playerTrait">虛空接力：連續 3 張同類型卡牌觸發脈衝加成</div>
           </div>
           <div class="fighter enemy" id="enemyFighter">
+            <div class="fighter-role">VOID HOSTILE · 敵方</div>
             <div class="fighter-name" id="enemyName">深淵爬行者</div>
             <div class="fighter-meta">
               <div class="fighter-stat"><span class="label">等級</span><b id="enemyLevel">Lv.1</b></div>
-              <div class="fighter-stat"><span class="label">能量</span><b id="enemyEnergy">2</b></div>
+              <div class="fighter-stat"><span class="label">力量</span><b id="enemyStrength">0</b></div>
+              <div class="fighter-stat"><span class="label">護盾</span><b id="enemyBlockStat">0</b></div>
             </div>
+            <div class="fighter-trait" id="enemyTrait">—</div>
             <div class="hp-bar-wrap"><div class="hp-fill" id="enemyHpFill" style="width:100%"></div></div>
             <div class="hp-text" id="enemyHpText">30 / 30</div>
             <div class="status-row" id="enemyStatus"></div>
             <div class="intent-box" id="enemyIntent"><span class="intent-icon">⚔</span>準備攻擊…</div>
+            <div class="intent-queue"><div class="intent-next" id="enemyNextIntent">下回合：—</div></div>
           </div>
         </div>
         <div class="battle-spacer" aria-hidden="true"></div>
@@ -669,6 +739,15 @@
           <h3>✦ 虛空饋贈 — 選擇一張卡牌</h3>
           <p>深淵認可你的勝利，贈予新力量</p>
           <div class="draft-cards" id="draftCards"></div>
+        </div>
+        <div class="draft-overlay" id="restOverlay">
+          <h3>◈ 虛空營地 — 選擇一項強化</h3>
+          <p>短暫喘息，深淵仍注視著你</p>
+          <div class="btn-row" style="margin-top:0.5rem;">
+            <button class="primary" id="restHeal">💚 深淵治癒（回復 25% HP）</button>
+            <button id="restUpgrade">📈 牌組精煉（隨機升級 1 張牌）</button>
+            <button id="restMaxHp">❤ 虛空烙印（最大 HP +8）</button>
+          </div>
         </div>
       </div>
     </div>
@@ -769,62 +848,86 @@
         play(s,e,st){ let d=6; if(st.relayBonus) d+=10; dealDmg(e,d,false,'attack'); } },
       void_lance:   { id:'void_lance',   name:'虛空長槍', type:'attack', cost:2, icon:'🔱', desc:'12 傷；易傷+50%', rarity:'uncommon',
         play(s,e,st){ let d=12; if(e.status.vulnerable>0) d=Math.floor(d*1.5); dealDmg(e,d,false,'attack'); } },
+      void_orb:     { id:'void_orb',     name:'虛空法球', type:'attack', cost:1, icon:'🔮', desc:'4 傷×2；抽 1 牌', rarity:'uncommon',
+        play(s,e,st){ dealDmg(e,4,false,'attack'); dealDmg(e,4,false,'attack'); drawCards(1); } },
+      blood_pact:   { id:'blood_pact',   name:'血契斬', type:'attack', cost:0, icon:'🩸', desc:'10 傷；自傷 4 HP', rarity:'uncommon',
+        play(s,e,st){ dealDmg(e,10,false,'attack'); playerHpDmg(4); } },
+      frost_bind:   { id:'frost_bind',   name:'霜縛', type:'skill', cost:1, icon:'❄', desc:'6 盾 + 虛弱1 + 抽1', rarity:'uncommon',
+        play(s,e,st){ addBlock(6); applyStatus(e,'weak',1); drawCards(1); } },
+      void_echo:    { id:'void_echo',    name:'虛空迴響', type:'power', cost:2, icon:'〰', desc:'本回合每張攻擊 +3 傷', rarity:'rare',
+        play(s,e,st){ applyStatus(player,'echo',1); st.echoActive=true; } },
     };
 
     const STARTER_DECK = ['strike','strike','strike','strike','shield','shield','shield','heal','void_slash','weaken'];
 
     const ENEMY_TYPES = {
-      crawler:  { name:'深淵爬行者', icon:'🪱', hpBase:28, patterns:[
-        { type:'attack', dmg:7, text:'攻擊 7' },
+      crawler:  { name:'深淵爬行者', icon:'🪱', hpBase:28, trait:'厚甲生物：交替攻擊與防禦，節奏穩定',
+        patterns:[
+        { type:'attack', dmg:7, text:'爪擊 7' },
         { type:'attack', dmg:9, text:'重擊 9' },
-        { type:'defend', block:8, text:'防禦 +8' },
+        { type:'defend', block:8, text:'蜷縮防禦 +8' },
       ]},
-      wraith:   { name:'幽影怨靈', icon:'👻', hpBase:24, patterns:[
-        { type:'attack', dmg:6, text:'攻擊 6' },
-        { type:'debuff', effect:'weak', val:1, text:'施加虛弱' },
-        { type:'attack', dmg:5, dmg2:5, text:'雙擊 5×2' },
+      wraith:   { name:'幽影怨靈', icon:'👻', hpBase:24, trait:'怨念纏身：常施虛弱，並以雙擊壓制',
+        patterns:[
+        { type:'attack', dmg:6, text:'幽爪 6' },
+        { type:'debuff', effect:'weak', val:1, text:'深淵低語（虛弱1）' },
+        { type:'attack', dmg:5, dmg2:5, text:'雙影襲 5×2' },
       ]},
-      sentinel: { name:'虛空哨兵', icon:'🤖', hpBase:32, patterns:[
-        { type:'defend', block:10, text:'防禦 +10' },
-        { type:'attack', dmg:8, text:'攻擊 8' },
-        { type:'buff', effect:'strength', val:2, text:'強化 +2' },
+      sentinel: { name:'虛空哨兵', icon:'🤖', hpBase:32, trait:'戰術型敵人：先防禦再強化，後續傷害遞增',
+        patterns:[
+        { type:'defend', block:10, text:'能量護盾 +10' },
+        { type:'attack', dmg:8, text:'光束炮 8' },
+        { type:'buff', effect:'strength', val:2, text:'超頻強化 +2' },
       ]},
-      leech:    { name:'吸血水蛭', icon:'🦠', hpBase:26, patterns:[
-        { type:'attack', dmg:6, heal:4, text:'攻擊6 吸血4' },
-        { type:'attack', dmg:8, text:'攻擊 8' },
-        { type:'defend', block:6, text:'防禦 +6' },
+      leech:    { name:'吸血水蛭', icon:'🦠', hpBase:26, trait:'嗜血：攻擊時回復生命，難以速殺',
+        patterns:[
+        { type:'attack', dmg:6, heal:4, text:'吸血爪 6（回4）' },
+        { type:'attack', dmg:8, text:'撕咬 8' },
+        { type:'defend', block:6, text:'黏液護層 +6' },
       ]},
-      bomber:   { name:'自爆蟲', icon:'💣', hpBase:20, patterns:[
-        { type:'attack', dmg:5, text:'攻擊 5' },
+      bomber:   { name:'自爆蟲', icon:'💣', hpBase:20, trait:'臨終反撲：第二動作會自爆造成高傷',
+        patterns:[
+        { type:'attack', dmg:5, text:'衝撞 5' },
         { type:'attack', dmg:14, text:'自爆 14！', suicide:true },
       ]},
-      moth:     { name:'虛空毒蛾', icon:'🦋', hpBase:22, patterns:[
-        { type:'attack', dmg:4, poison:3, text:'攻擊4 +毒3' },
-        { type:'debuff', effect:'poison', val:2, text:'噴灑毒霧' },
-        { type:'attack', dmg:7, text:'攻擊 7' },
+      moth:     { name:'虛空毒蛾', icon:'🦋', hpBase:22, trait:'劇毒散布：攻擊附毒並可噴灑毒霧',
+        patterns:[
+        { type:'attack', dmg:4, poison:3, text:'毒粉爪 4 + 中毒3' },
+        { type:'debuff', effect:'poison', val:2, text:'毒霧噴灑（中毒2）' },
+        { type:'attack', dmg:7, text:'振翅衝 7' },
       ]},
-      shade:    { name:'暗影刺客', icon:'🥷', hpBase:25, patterns:[
-        { type:'attack', dmg:4, hits:3, text:'三連擊 4×3' },
-        { type:'buff', effect:'strength', val:1, text:'強化 +1' },
+      shade:    { name:'暗影刺客', icon:'🥷', hpBase:25, trait:'高速連段：三連擊後暗殺一擊',
+        patterns:[
+        { type:'attack', dmg:4, hits:3, text:'影刃三連 4×3' },
+        { type:'buff', effect:'strength', val:1, text:'殺意凝聚 +1' },
         { type:'attack', dmg:11, text:'暗殺 11' },
       ]},
-      herald:   { name:'虛空先驅', icon:'👁', hpBase:55, boss:true, patterns:[
+      stalker:  { name:'深淵潛獵者', icon:'🐺', hpBase:30, trait:'獵殺本能：玩家 HP 低於 50% 時攻擊 +3',
+        patterns:[
+        { type:'attack', dmg:8, text:'撲擊 8' },
+        { type:'debuff', effect:'vulnerable', val:1, text:'破甲撕扯（易傷1）' },
+        { type:'attack', dmg:6, dmg2:6, text:'雙爪 6×2' },
+      ]},
+      herald:   { name:'虛空先驅', icon:'👁', hpBase:55, boss:true, trait:'首領：虛空護盾 + 雙重裂斬 + 深淵凝視',
+        patterns:[
         { type:'defend', block:15, text:'虛空護盾 +15' },
         { type:'attack', dmg:10, text:'虛空裂斬 10' },
-        { type:'debuff', effect:'weak', val:2, text:'深淵凝視' },
+        { type:'debuff', effect:'weak', val:2, text:'深淵凝視（虛弱2）' },
         { type:'attack', dmg:8, dmg2:8, text:'雙重裂斬 8×2' },
         { type:'attack', dmg:16, text:'虛空風暴 16' },
       ]},
-      titan:    { name:'深淵巨像', icon:'🗿', hpBase:70, boss:true, patterns:[
+      titan:    { name:'深淵巨像', icon:'🗿', hpBase:70, boss:true, trait:'首領：高防禦 + 踐踏多段 + 末日一擊',
+        patterns:[
         { type:'attack', dmg:12, text:'粉碎 12' },
         { type:'defend', block:20, text:'石化 +20' },
         { type:'buff', effect:'strength', val:3, text:'怒意 +3' },
         { type:'attack', dmg:8, hits:2, text:'踐踏 8×2' },
         { type:'attack', dmg:22, text:'末日一擊 22' },
       ]},
-      queen:    { name:'虛空女皇', icon:'👑', hpBase:65, boss:true, patterns:[
-        { type:'debuff', effect:'poison', val:4, text:'劇毒之吻' },
-        { type:'attack', dmg:7, heal:7, text:'攻擊7 吸血7' },
+      queen:    { name:'虛空女皇', icon:'👑', hpBase:65, boss:true, trait:'首領：劇毒 + 吸血 + 鞭撻連段',
+        patterns:[
+        { type:'debuff', effect:'poison', val:4, text:'劇毒之吻（中毒4）' },
+        { type:'attack', dmg:7, heal:7, text:'吸血之觸 7（回7）' },
         { type:'defend', block:12, text:'女皇護盾 +12' },
         { type:'attack', dmg:6, hits:3, text:'鞭撻 6×3' },
         { type:'attack', dmg:18, text:'虛空審判 18' },
@@ -833,7 +936,7 @@
 
     let difficulty = 'normal', config = DIFF.normal;
     let bestFloor = 0, bestScore = 0, bestGrade = '—';
-    let floor = 1, runScore = 0, paused = false, helpFromGame = false;
+    let floor = 1, runScore = 0, paused = false, helpFromGame = false, turnCount = 1;
     let player, enemy, deck = [], hand = [], discard = [];
     let turnState = {}, playerTurn = true, gameActive = false;
     let combatLogs = [];
@@ -1011,7 +1114,7 @@
     function flushCombatLog() {
       logDirty = false;
       const el = $('combatLog');
-      el.innerHTML = combatLogs.slice(0, 2).map(m => '<div>' + m + '</div>').join('');
+      el.innerHTML = combatLogs.slice(0, 4).map(m => '<div>' + m + '</div>').join('');
     }
 
     function animateCardDeal(el, delay) {
@@ -1104,7 +1207,7 @@
         const bosses = ['herald', 'titan', 'queen'];
         return bosses[Math.floor(f / 5) % bosses.length];
       }
-      const normals = ['crawler','wraith','sentinel','leech','bomber','moth','shade'];
+      const normals = ['crawler','wraith','sentinel','leech','bomber','moth','shade','stalker'];
       return normals[(f - 1) % normals.length];
     }
 
@@ -1117,19 +1220,33 @@
     }
 
     function enemyEnergyDisplay() {
-      return enemy.energy + (enemy.strength || 0);
+      return (enemy.strength || 0) + (enemy.enraged ? 2 : 0);
+    }
+
+    function getNextPatternPreview() {
+      if (!enemy || !enemy.patterns || !enemy.patterns.length) return '—';
+      const next = enemy.patterns[enemy.patternIdx % enemy.patterns.length];
+      return next ? next.text : '—';
+    }
+
+    function renderNextIntent() {
+      const el = $('enemyNextIntent');
+      if (!el) return;
+      el.textContent = '下回合：' + getNextPatternPreview();
     }
 
     function spawnEnemy(f) {
       const typeKey = floorEnemyType(f);
       const et = ENEMY_TYPES[typeKey];
       const scale = 1 + (f - 1) * 0.08;
-      const hp = Math.floor(et.hpBase * scale * config.hpMul * (et.boss ? 1 : 1));
+      const elite = !et.boss && f % 4 === 0;
+      const hp = Math.floor(et.hpBase * scale * config.hpMul * (elite ? 1.42 : 1));
       enemy = {
-        typeKey, name: et.name, icon: et.icon, boss: !!et.boss,
-        level: enemyLevelValue(f, et),
-        energy: enemyBaseEnergy(et),
-        hp, maxHp: hp, block: 0, strength: 0, enraged: false,
+        typeKey, name: (elite ? '精英·' : '') + et.name, icon: et.icon, boss: !!et.boss,
+        elite: elite,
+        level: enemyLevelValue(f, et) + (elite ? 2 : 0),
+        trait: et.trait || '無特殊能力',
+        hp, maxHp: hp, block: 0, strength: elite ? 1 : 0, enraged: false,
         status: {}, patterns: et.patterns.slice(), patternIdx: 0,
         intent: null,
       };
@@ -1161,6 +1278,7 @@
       lastIntentKey = key;
       el.className = 'intent-box ' + intentClass(it.type) + (changed ? ' intent-change' : '');
       el.innerHTML = '<span class="intent-icon">' + intentIcon(it.type) + '</span>' + it.text;
+      renderNextIntent();
       if (changed) {
         el.addEventListener('animationend', function onEnd() {
           el.classList.remove('intent-change');
@@ -1197,6 +1315,7 @@
       if (s.vulnerable > 0) s.vulnerable--;
       if (s.thorns > 0 && !isPlayer) s.thorns--;
       if (s.amplify > 0 && isPlayer) s.amplify--;
+      if (s.echo > 0 && isPlayer) s.echo--;
       if (s.mirror > 0 && isPlayer) s.mirror--;
     }
 
@@ -1210,6 +1329,7 @@
       if (status.thorns > 0) pills.push('<span class="status-pill">荊棘 ' + status.thorns + '</span>');
       if (status.mirror > 0) pills.push('<span class="status-pill mirror">鏡盾 ' + status.mirror + '</span>');
       if (status.amplify > 0) pills.push('<span class="status-pill">增幅</span>');
+      if (status.echo > 0) pills.push('<span class="status-pill">迴響</span>');
       return pills.join('');
     }
 
@@ -1245,6 +1365,7 @@
       let dmg = base;
       let crit = false;
       if (player.status.amplify > 0) { dmg = Math.floor(dmg * 1.5); player.status.amplify--; }
+      if (turnState.echoActive && cardType === 'attack') { dmg += 3; }
       if (target === enemy && enemy.status.vulnerable > 0) { dmg = Math.floor(dmg * 1.5); }
       if (target === enemy && enemy.hp / enemy.maxHp < 0.3 && base >= 8) { dmg = Math.floor(dmg * 1.25); crit = true; }
       if (enemy.strength > 0 && target === player) dmg += enemy.strength;
@@ -1353,7 +1474,7 @@
 
     function logMsg(msg) {
       combatLogs.unshift(msg);
-      if (combatLogs.length > 2) combatLogs.pop();
+      if (combatLogs.length > 4) combatLogs.pop();
       if (!logDirty) {
         logDirty = true;
         requestAnimationFrame(flushCombatLog);
@@ -1379,12 +1500,16 @@
       return { attack: '攻擊', skill: '技能', power: '能力' }[type] || '';
     }
 
-    function cardHtml(def, withRibbon) {
-      return '<div class="card-header"><span class="card-cost">' + def.cost + '</span></div>' +
+    function cardHtml(def) {
+      const typeLabel = cardTypeLabel(def.type);
+      const rarityMark = def.rarity === 'rare' ? '<span class="card-rarity">★ 傳說</span>' :
+        def.rarity === 'uncommon' ? '<span class="card-rarity">◆ 稀有</span>' : '';
+      return '<div class="card-header">' +
+        '<span class="card-type-badge ' + def.type + '">' + typeLabel + '</span>' +
+        '<span class="card-cost">' + def.cost + '</span></div>' +
         '<div class="card-name">' + def.name + '</div>' +
-        '<div class="card-icon">' + def.icon + '</div>' +
         '<div class="card-desc">' + def.desc + '</div>' +
-        (withRibbon !== false ? '<div class="card-type-ribbon">' + cardTypeLabel(def.type) + '</div>' : '');
+        '<div class="card-footer"><span class="card-icon">' + def.icon + '</span>' + rarityMark + '</div>';
     }
 
     function renderHand() {
@@ -1398,7 +1523,7 @@
         if (canPlay) el.onclick = () => playCard(idx);
         row.appendChild(el);
         animateCardDeal(el, idx * 42);
-        bindCardHover(el, card, false);
+        bindCardHover(el, card, true);
       });
     }
 
@@ -1435,11 +1560,12 @@
 
     function startPlayerTurn() {
       playerTurn = true;
+      turnCount++;
       player.energy = MAX_ENERGY;
       player.block = 0;
       relayChain = [];
       renderRelayMeter();
-      turnState = { attacksPlayed: 0, voidShieldTurn: false };
+      turnState = { attacksPlayed: 0, voidShieldTurn: false, echoActive: false };
       drawCards(HAND_SIZE - hand.length);
       tickStatus(player, true);
       tickStatus(enemy, false);
@@ -1452,6 +1578,7 @@
     function endPlayerTurn() {
       if (!playerTurn || paused || turnState.locked) return;
       playerTurn = false;
+      renderFighters();
       hand.forEach(c => discard.push(c));
       hand = [];
       renderHand();
@@ -1470,6 +1597,7 @@
         function hit() {
           if (i >= hits || !gameActive) { finish(); return; }
           let d = dmg + (enemy.strength || 0);
+          if (enemy.typeKey === 'stalker' && player.hp / player.maxHp < 0.5) d += 3;
           if (enemy.status && enemy.status.weak > 0) d = Math.floor(d * 0.75);
           playerHpDmg(d);
           i++;
@@ -1541,14 +1669,27 @@
         (player.block > 0 ? '<span class="status-pill block">護盾 ' + player.block + '</span>' : '');
       $('enemyStatus').innerHTML = statusHtml(enemy.status) +
         (enemy.block > 0 ? '<span class="status-pill block">護盾 ' + enemy.block + '</span>' : '') +
-        (enemy.strength > 0 ? '<span class="status-pill">力量 ' + enemy.strength + '</span>' : '');
+        (enemy.strength > 0 ? '<span class="status-pill">力量 ' + enemy.strength + '</span>' : '') +
+        (enemy.enraged ? '<span class="status-pill weak">狂暴</span>' : '') +
+        (enemy.elite ? '<span class="status-pill vuln">精英</span>' : '');
       const nameEl = $('enemyName');
       nameEl.textContent = enemy.icon + ' ' + enemy.name;
       nameEl.className = 'fighter-name' + (enemy.boss ? ' boss' : '');
       $('enemyLevel').textContent = 'Lv.' + enemy.level;
-      $('enemyEnergy').textContent = enemyEnergyDisplay();
+      $('enemyStrength').textContent = enemyEnergyDisplay();
+      $('enemyBlockStat').textContent = enemy.block || 0;
+      $('enemyTrait').textContent = enemy.trait || '—';
+      $('playerStrength').textContent = (turnState.attacksPlayed || 0) + (player.status.amplify > 0 ? ' +增' : '');
+      $('playerBlockStat').textContent = player.block || 0;
+      $('playerHandStat').textContent = hand.length;
+      const tb = $('turnBanner');
+      if (tb) {
+        tb.textContent = playerTurn ? '你的回合 · 第 ' + turnCount + ' 回合' : '敵方回合';
+        tb.className = 'turn-banner' + (playerTurn ? '' : ' enemy-turn');
+      }
       $('enemyFighter').classList.toggle('enraged', !!enemy.enraged);
       renderIntent();
+      renderNextIntent();
     }
 
     function updateHud() {
@@ -1557,6 +1698,7 @@
       $('hudEnergy').textContent = player.energy + '/' + MAX_ENERGY;
       $('hudBlock').textContent = player.block;
       $('hudScore').textContent = runScore;
+      $('hudTurn').textContent = turnCount;
       const banner = $('floorBanner');
       banner.textContent = enemy.boss ? '⚠ BOSS · FLOOR ' + floor : 'FLOOR ' + floor;
       banner.className = 'floor-banner' + (enemy.boss ? ' boss' : '');
@@ -1576,7 +1718,30 @@
         setTimeout(() => endRun(true), 600);
         return;
       }
-      setTimeout(showDraft, 700);
+      if (enemy.boss || floor % 3 === 0) setTimeout(showRest, 700);
+      else setTimeout(showDraft, 700);
+    }
+
+    function showRest() {
+      $('restOverlay').classList.add('show');
+    }
+
+    function finishRest() {
+      $('restOverlay').classList.remove('show');
+      showDraft();
+    }
+
+    function upgradeRandomCard() {
+      const pool = deck.concat(discard).filter(c => c.rarity !== 'rare');
+      if (!pool.length) { logMsg('牌組無可升級卡牌'); return; }
+      const pick = pool[Math.floor(Math.random() * pool.length)];
+      const upgraded = { ...pick, desc: pick.desc + '（精煉+2）', _bonus: 2 };
+      const replaceIn = (arr) => {
+        const i = arr.findIndex(c => c.uid === pick.uid);
+        if (i >= 0) arr[i] = upgraded;
+      };
+      replaceIn(deck); replaceIn(discard); replaceIn(hand);
+      logMsg('精煉卡牌：' + pick.name);
     }
 
     function showDraft() {
@@ -1633,7 +1798,7 @@
 
     function startGame() {
       config = DIFF[difficulty];
-      floor = 1; runScore = 0; gameActive = true; paused = false;
+      floor = 1; runScore = 0; gameActive = true; paused = false; turnCount = 1;
       PlatformBridge.setGameSessionActive(true);
       player = {
         hp: config.playerHp, maxHp: config.playerHp,
@@ -1647,6 +1812,7 @@
       relayChain = [];
       fxParticles = [];
       $('draftOverlay').classList.remove('show');
+      $('restOverlay').classList.remove('show');
       $('resultOverlay').classList.remove('show');
       showScreen('game');
       requestAnimationFrame(initFxCanvas);
@@ -1780,6 +1946,22 @@
     $('btnHelpClose').onclick = closeHelp;
     $('btnLeaveMenu').onclick = () => { PlatformBridge.leaveToPlatform({ confirm: true }); };
     $('btnEndTurn').onclick = endPlayerTurn;
+    $('restHeal').onclick = () => {
+      healPlayer(Math.max(8, Math.floor(player.maxHp * 0.25)));
+      finishRest();
+    };
+    $('restUpgrade').onclick = () => {
+      upgradeRandomCard();
+      finishRest();
+    };
+    $('restMaxHp').onclick = () => {
+      player.maxHp += 8;
+      player.hp += 8;
+      logMsg('最大 HP +8');
+      updateHud();
+      renderFighters();
+      finishRest();
+    };
     $('btnRetry').onclick = () => { $('resultOverlay').classList.remove('show'); startGame(); };
     $('btnMenu').onclick = () => { $('resultOverlay').classList.remove('show'); showScreen('menu'); };
     $('btnPause').onclick = () => {

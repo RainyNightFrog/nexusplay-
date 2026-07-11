@@ -39,6 +39,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { isDirectlyPlayable } from "@/lib/games-data";
 import { buildEmbedCode, IFRAME_SANDBOX } from "@/lib/iframe-sandbox";
 import { isSafeEmbedUrl } from "@/lib/embed-url";
+import { postShowGameMenu } from "@/lib/rainynightfrog-embed-sdk";
 import { TAG_COLORS, type Game } from "@/lib/games";
 import { useGameI18n } from "@/hooks/use-game-i18n";
 import { useAuth } from "@/hooks/use-auth";
@@ -363,11 +364,8 @@ function GamePageContent() {
 
   const iframeSrc = useMemo(() => {
     if (!trustedEmbedUrl || !game) return null;
-    if (trustedEmbedUrl.startsWith("/demos/")) {
-      const sep = trustedEmbedUrl.includes("?") ? "&" : "?";
-      return `${trustedEmbedUrl}${sep}gid=${game.id}`;
-    }
-    return trustedEmbedUrl;
+    const sep = trustedEmbedUrl.includes("?") ? "&" : "?";
+    return `${trustedEmbedUrl}${sep}gid=${game.id}`;
   }, [trustedEmbedUrl, game]);
 
   const embedCode = useMemo(() => {
@@ -468,6 +466,28 @@ function GamePageContent() {
     }
     await copyToClipboard(url, tc("linkCopied"));
   };
+
+  const showGameMenuButton = Boolean(
+    iframeSrc && playable && /\/games\/[^/?#]+\/index\.html/i.test(iframeSrc)
+  );
+
+  const handleBackToGameMenu = useCallback(() => {
+    const iframe = iframeRef.current;
+    if (!iframe) {
+      showToast(tc("backToGameMenuFailed"));
+      return;
+    }
+    iframe.focus();
+    const sent = postShowGameMenu(iframe);
+    if (!sent) {
+      showToast(tc("backToGameMenuFailed"));
+      return;
+    }
+    window.setTimeout(() => {
+      postShowGameMenu(iframe);
+    }, 120);
+    showToast(tc("backToGameMenuDone"));
+  }, [showToast, tc]);
 
   useEffect(() => {
     if (!showFullscreen) return;
@@ -595,15 +615,28 @@ function GamePageContent() {
                     </p>
                     <p className="text-xs text-zinc-500">{tc("fullscreenHint")}</p>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={closeFullscreen}
-                    className="shrink-0 text-zinc-400 hover:text-white"
-                    aria-label={tc("fullscreenHint")}
-                  >
-                    <X className="size-4" />
-                  </Button>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {showGameMenuButton && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleBackToGameMenu}
+                        className="gap-1.5 border-white/10 bg-white/5 text-zinc-300 hover:border-emerald-400/30 hover:text-white"
+                      >
+                        <Gamepad2 className="size-3.5" />
+                        {tc("backToGameMenu")}
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={closeFullscreen}
+                      className="shrink-0 text-zinc-400 hover:text-white"
+                      aria-label={tc("fullscreenHint")}
+                    >
+                      <X className="size-4" />
+                    </Button>
+                  </div>
                 </div>
               )}
 
@@ -746,6 +779,18 @@ function GamePageContent() {
                       <Share2 className="size-3.5" />
                       {tc("share")}
                     </Button>
+                    {showGameMenuButton && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleBackToGameMenu}
+                        disabled={!iframeSrc || !playable}
+                        className="gap-1.5 border-white/10 bg-white/5 text-zinc-300 hover:border-emerald-400/30 hover:text-white disabled:opacity-40"
+                      >
+                        <Gamepad2 className="size-3.5" />
+                        {tc("backToGameMenu")}
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"

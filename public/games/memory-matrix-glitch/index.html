@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
@@ -6,7 +6,7 @@
   <title>Memory Matrix Glitch · 記憶矩陣故障</title>
 </head>
 <body>
-<script src="/sdk/rnf-game-sdk.js"></script>
+<script src="/sdk/rnf-game-sdk.js?v=20260715"></script>
 <script>
 RNF.init();
 var shell = RNF.buildShell({
@@ -16,15 +16,34 @@ var shell = RNF.buildShell({
   width: 960,
   height: 520,
   bgmStyle: "ambient",
+  highlights: ["Glitch 特效", "Combo 音階", "限時關卡", "四段難度"],
+  help: {
+    about: "駭客風格的記憶翻牌。限時內配對相同圖案，連續配對可累積 Combo。",
+    features: [
+      "四段難度調整配對數與限時",
+      "極限模式 Glitch 故障翻轉",
+      "連續配對觸發音階特效"
+    ],
+    controls: [
+      "滑鼠左鍵：翻牌",
+      "Enter：快速翻牌"
+    ],
+    tips: [
+      "困難以上卡片數量增加",
+      "清空所有配對即過關"
+    ]
+  },
+  onStop: cleanup,
   onStart: startGame
 });
 
 var ctx, particles, running, loopId, lastT;
-var cards, selected, matched, combo, score, timeLeft, level, flipAnim;
+var cards, selected, matched, combo, score, timeLeft, level, flipAnim, speedScale = 1;
 var ICONS = ["◆", "★", "▲", "●", "■", "♦", "✦", "⬡", "◎", "✚", "▼", "◇"];
 var COLORS = ["#22d3ee", "#a78bfa", "#f472b6", "#4ade80", "#fbbf24", "#60a5fa", "#fb923c", "#e879f9"];
 
 function cleanup() {
+  shell.detachKeyboard();
   running = false;
   if (loopId) cancelAnimationFrame(loopId);
   loopId = null;
@@ -34,6 +53,7 @@ function cleanup() {
 
 function startGame() {
   cleanup();
+  speedScale = shell.getSpeedScale();
   ctx = shell.ctx;
   particles = shell.particles;
   level = 1;
@@ -46,6 +66,7 @@ function startGame() {
   buildLevel();
   updateHud();
   running = true;
+  shell.attachKeyboard({});
   lastT = performance.now();
   shell.canvas.addEventListener("click", onClick);
   window.addEventListener("keydown", onKeyDown);
@@ -163,7 +184,7 @@ function loop(now) {
   if (!running) return;
   var dt = Math.min(0.05, (now - lastT) / 1000);
   lastT = now;
-  timeLeft -= dt;
+  timeLeft -= dt * speedScale;
   if (timeLeft <= 0) {
     shell.gameOver(score, { level: level, combo: combo });
     return;

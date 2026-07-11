@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Rainy Frog Dash · 雨夜青蛙衝刺</title>
-  <script src="/sdk/rnf-game-sdk.js"></script>
+  <script src="/sdk/rnf-game-sdk.js?v=20260715"></script>
 </head>
 <body>
 <script>
@@ -16,17 +16,37 @@ var shell = RNF.buildShell({
   width: 960,
   height: 520,
   bgmStyle: "ambient",
+  highlights: ["二段跳", "護盾", "Combo 金幣", "四段難度"],
+  help: {
+    about: "雨夜霓虹賽道上的橫向跑酷。控制青蛙跳躍、滑翔與衝刺，收集金幣，避開障礙物。",
+    features: [
+      "二段跳、長按滑翔與 Z 鍵護盾",
+      "火箭道具短時間自動加速",
+      "連續收集金幣累積 Combo"
+    ],
+    controls: [
+      "空白鍵：跳躍（可二段跳）",
+      "長按空白：滑翔",
+      "Z：開啟護盾（有冷卻）"
+    ],
+    tips: [
+      "護盾可抵擋一次碰撞",
+      "難度越高障礙密度與移速越快"
+    ]
+  },
+  onStop: cleanup,
   onStart: startGame
 });
 
 var W = shell.width, H = shell.height;
 var ctx = shell.ctx;
 var particles = shell.particles;
-var animId = null, running = false, gameEnded = false, keys = {};
+var animId = null, running = false, gameEnded = false, keys = {}, speedScale = 1;
 var frog, obstacles, pickups, rain, score, speed, jumps, shield, rocketTimer;
 var groundY = H - 80, scrollX = 0;
 
 function cleanup() {
+  shell.detachKeyboard();
   running = false;
   if (animId) cancelAnimationFrame(animId);
   animId = null;
@@ -89,11 +109,12 @@ function spawnPickup() {
 
 function startGame() {
   cleanup();
+  speedScale = shell.getSpeedScale();
   frog = { x: 160, y: groundY - 30, vy: 0, r: 22, onGround: false, wingT: 0 };
   obstacles = [];
   pickups = [];
   score = 0;
-  speed = 4;
+  speed = 2.4 * speedScale;
   jumps = 0;
   shield = 0;
   rocketTimer = 0;
@@ -103,6 +124,8 @@ function startGame() {
   spawnTimer = 0;
   pickupTimer = 0;
   running = true;
+  keys = {};
+  shell.attachKeyboard(keys);
   window.addEventListener("keydown", onKey);
   window.addEventListener("keyup", onKeyUp);
   lastTs = performance.now();
@@ -137,12 +160,12 @@ function loop(ts) {
   lastTs = ts;
 
   var curSpeed = speed + (rocketTimer > 0 ? 5 : 0) + scrollX * 0.001;
-  scrollX += curSpeed * dt * 10;
+  scrollX += curSpeed * dt * 6;
   score += Math.floor(curSpeed * dt * 2);
 
-  frog.vy += 0.55;
+  frog.vy += 920 * dt;
   if (keys["Space"] && frog.vy > 0 && !frog.onGround) frog.vy *= 0.96;
-  frog.y += frog.vy;
+  frog.y += frog.vy * dt;
   frog.wingT += dt * 8;
 
   if (frog.y + frog.r >= groundY) {
@@ -168,7 +191,7 @@ function loop(ts) {
   if (pickupTimer > 2) { spawnPickup(); pickupTimer = 0; }
 
   obstacles.forEach(function (o) {
-    o.x -= curSpeed;
+    o.x -= curSpeed * 58 * dt;
     if (!o.passed && o.x + o.w < frog.x) {
       o.passed = true;
       score += 5;
@@ -190,7 +213,7 @@ function loop(ts) {
   obstacles = obstacles.filter(function (o) { return o.x > -100; });
 
   pickups.forEach(function (p) {
-    p.x -= curSpeed;
+    p.x -= curSpeed * 58 * dt;
     if (Math.hypot(p.x - frog.x, p.y - frog.y) < p.r + frog.r) {
       p.dead = true;
       if (p.type === "rocket") {
@@ -207,7 +230,7 @@ function loop(ts) {
   pickups = pickups.filter(function (p) { return !p.dead && p.x > -30; });
 
   rain.forEach(function (r) {
-    r.x -= curSpeed * 0.3;
+    r.x -= curSpeed * 0.3 * 58 * dt;
     r.y += r.sp;
     if (r.y > H) { r.y = -10; r.x = Math.random() * W; }
     if (r.x < 0) r.x = W;

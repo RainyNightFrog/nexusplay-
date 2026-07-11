@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
@@ -6,7 +6,7 @@
   <title>Cyber Neon Runner · 賽博霓虹跑酷</title>
 </head>
 <body>
-<script src="/sdk/rnf-game-sdk.js"></script>
+<script src="/sdk/rnf-game-sdk.js?v=20260715"></script>
 <script>
 RNF.init();
 var shell = RNF.buildShell({
@@ -16,13 +16,33 @@ var shell = RNF.buildShell({
   width: 960,
   height: 520,
   bgmStyle: "pulse",
+  highlights: ["雷射破障", "金幣磁吸", "視差背景", "四段難度"],
+  help: {
+    about: "賽博都市無盡跑酷。跳躍與滑行避開障礙，收集金幣，距離越遠分數越高。",
+    features: [
+      "Z 鍵雷射摧毀障礙",
+      "困難以上金幣磁吸",
+      "多層視差霓虹背景"
+    ],
+    controls: [
+      "空白鍵：跳躍",
+      "↓ 或 S：滑行",
+      "Z：發射雷射"
+    ],
+    tips: [
+      "連續收集金幣維持 Combo",
+      "碰撞即結束，分數上傳排行榜"
+    ]
+  },
+  onStop: cleanup,
   onStart: startGame
 });
 
 var ctx, particles, running, loopId, lastT, keys = {};
-var player, obstacles, coins, lasers, speed, score, dist, parallax, groundY, shootCd, slideT, spawnTimer;
+var player, obstacles, coins, lasers, speed, score, dist, parallax, groundY, shootCd, slideT, spawnTimer, speedScale = 1;
 
 function cleanup() {
+  shell.detachKeyboard();
   running = false;
   if (loopId) cancelAnimationFrame(loopId);
   loopId = null;
@@ -32,12 +52,13 @@ function cleanup() {
 
 function startGame() {
   cleanup();
+  speedScale = shell.getSpeedScale();
   ctx = shell.ctx;
   particles = shell.particles;
   groundY = 420;
   player = { x: 140, y: groundY - 48, w: 36, h: 48, vy: 0, onGround: true, sliding: false };
   obstacles = []; coins = []; lasers = [];
-  speed = 280; score = 0; dist = 0; shootCd = 0; slideT = 0;
+  speed = 190 * speedScale; score = 0; dist = 0; shootCd = 0; slideT = 0;
   parallax = [
     { color: "rgba(34,211,238,0.08)", spd: 0.2, h: 120, off: 0, blocks: [] },
     { color: "rgba(167,139,250,0.1)", spd: 0.45, h: 180, off: 0, blocks: [] },
@@ -50,6 +71,8 @@ function startGame() {
   spawnTimer = 0;
   updateHud();
   running = true;
+  keys = {};
+  shell.attachKeyboard(keys);
   lastT = performance.now();
   window.addEventListener("keydown", onKeyDown);
   window.addEventListener("keyup", onKeyUp);
@@ -123,7 +146,7 @@ function loop(now) {
   lastT = now;
   dist += speed * dt * 0.1;
   score += Math.floor(speed * dt * 0.05);
-  speed = Math.min(520, 280 + dist * 0.08);
+  speed = Math.min(360 * speedScale, 190 * speedScale + dist * 0.045);
   shootCd = Math.max(0, shootCd - dt);
   if (slideT > 0) { slideT -= dt; if (slideT <= 0 && !keys["ArrowDown"]) { player.sliding = false; player.h = 48; player.y = groundY - player.h; } }
 

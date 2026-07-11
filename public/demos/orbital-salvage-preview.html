@@ -118,23 +118,25 @@
     .tool-btn.upgrade-btn.on { background: rgba(192,132,252,0.28); border-color: rgba(192,132,252,0.55); color: #e9d5ff; }
     .canvas-wrap {
       position: relative; flex: 1 1 auto; min-height: 0; width: 100%;
+      max-width: min(100%, 560px); max-height: 100%; aspect-ratio: 1 / 1;
+      margin: 0 auto; align-self: center;
       display: flex; align-items: center; justify-content: center;
       border-radius: 50%; overflow: hidden;
       box-shadow: 0 0 50px rgba(34,211,238,0.12), 0 4px 24px rgba(0,0,0,0.55);
     }
     canvas {
-      display: block; cursor: crosshair; width: auto; height: 100%;
-      max-width: 100%; max-height: 100%; aspect-ratio: 1 / 1; background: #060a12;
+      display: block; cursor: crosshair; width: 100%; height: 100%;
+      aspect-ratio: 1 / 1; background: #060a12;
     }
     .hint { flex-shrink: 0; font-size: 0.72rem; color: #6e7681; margin-top: 0.45rem; text-align: center; letter-spacing: 0.03em; }
     .threat-bar { flex-shrink: 0; font-size: 0.68rem; color: #6e7681; text-align: center; margin-bottom: 0.3rem; letter-spacing: 0.12em; }
     .threat-bar b { color: #ff8c5a; }
     .phase-banner {
-      position: absolute; top: 0; left: 0; right: 0; z-index: 14;
-      text-align: center; padding: 0.42rem 0.55rem;
-      background: linear-gradient(180deg, rgba(0,0,0,0.88), rgba(0,0,0,0.55));
-      border-bottom: 1px solid rgba(34,211,238,0.25);
-      font-size: 0.78rem; line-height: 1.45; pointer-events: none; color: #67e8f9; letter-spacing: 0.04em;
+      flex-shrink: 0; width: 100%; max-width: min(100%, 560px); margin: 0 auto 0.35rem;
+      text-align: center; padding: 0.38rem 0.55rem;
+      background: rgba(0,0,0,0.55);
+      border: 1px solid rgba(34,211,238,0.22); border-radius: 8px;
+      font-size: 0.76rem; line-height: 1.45; pointer-events: none; color: #67e8f9; letter-spacing: 0.04em;
     }
     .phase-banner.deploy { color: #86efac; border-color: rgba(134,239,172,0.28); }
     .phase-banner.hidden { display: none; }
@@ -167,6 +169,10 @@
     .overlay-grade { font-size: 3.5rem; font-weight: 900; margin: 0.5rem 0; color: #ffd700; text-shadow: 0 0 30px rgba(255,215,0,0.5); }
     .overlay-stats { display: flex; gap: 1.5rem; justify-content: center; margin: 1rem 0; font-size: 0.78rem; color: #6e7681; }
     .overlay-stats b { display: block; color: #67e8f9; font-size: 1.1rem; margin-top: 0.15rem; }
+    html.in-game .game-wrap { flex: 1; min-height: 0; overflow: hidden; }
+    html.np-embed-mode.in-game .canvas-wrap { min-height: 160px; }
+    html.np-embed-compact .action-bar { margin-bottom: 0.28rem; }
+    html.np-embed-compact .phase-banner { font-size: 0.68rem; padding: 0.28rem 0.45rem; margin-bottom: 0.25rem; }
     @media (max-width: 520px) {
       .top-bar { grid-template-columns: repeat(3, 1fr); }
       .tool-btn { padding: 0.4rem 0.55rem; font-size: 0.7rem; }
@@ -289,8 +295,8 @@
         <button class="tool-btn" id="btnQuit">🏠 主選單</button>
         <button class="tool-btn" id="btnLeaveGame">← 離開</button>
       </div>
+      <div class="phase-banner deploy" id="phaseBanner">在環形槽位部署砲塔，點「▶ 開始」進入戰鬥</div>
       <div class="canvas-wrap">
-        <div class="phase-banner deploy" id="phaseBanner">在環形槽位部署砲塔，點「▶ 開始」進入戰鬥</div>
         <canvas id="canvas" width="640" height="640"></canvas>
       </div>
       <p class="hint">點環形槽位建造 → 升級模式可強化砲塔 → 攔截螺旋敵艦</p>
@@ -500,10 +506,7 @@
     function startGame() {
       config = DIFF[difficulty];
       canvas = $('canvas');
-      const sized = DemoEnhance.resizeCanvas(canvas, 640, 640);
-      ctx = sized.ctx;
-      canvasSize = { w: sized.w, h: sized.h };
-      buildSlots();
+      layoutCanvas();
       towers = []; enemies = []; bullets = []; particles = []; explosions = [];
       floatTexts = []; beams = []; scrapPopups = [];
       scrap = config.startScrap; kills = 0; score = 0; wave = 0;
@@ -518,10 +521,14 @@
       updateHud();
       showScreen('game');
       PlatformBridge.setGameSessionActive(true);
-      canvas.onmousemove = onMouseMove;
-      canvas.onmouseleave = () => { hoverSlot = null; };
-      canvas.onclick = onCanvasClick;
+      bindCanvasInput();
       if (gameLoopCtrl) gameLoopCtrl.stop();
+      if (!window.__orbitalResizeBound) {
+        window.__orbitalResizeBound = true;
+        window.addEventListener('resize', () => {
+          if ($('gameScreen').classList.contains('active')) layoutCanvas();
+        });
+      }
       gameLoopCtrl = DemoEnhance.createGameLoop((dt) => {
         if (!paused) update(dt);
         draw();
@@ -623,8 +630,46 @@
       return Math.floor(base * (0.65 + tower.level * 0.55));
     }
 
+    function layoutCanvas() {
+      if (!canvas) return;
+      const sized = DemoEnhance.resizeCanvas(canvas, 640, 640);
+      ctx = sized.ctx;
+      canvasSize = { w: sized.w, h: sized.h };
+      buildSlots();
+    }
+
+    function canvasPointFromEvent(e) {
+      const rect = canvas.getBoundingClientRect();
+      if (!rect.width || !rect.height) return { x: 0, y: 0 };
+      return {
+        x: (e.clientX - rect.left) / rect.width * canvasSize.w,
+        y: (e.clientY - rect.top) / rect.height * canvasSize.h,
+      };
+    }
+
+    function bindCanvasInput() {
+      canvas.onmousemove = onMouseMove;
+      canvas.onmouseleave = () => { hoverSlot = null; };
+      canvas.onclick = onCanvasClick;
+      canvas.ontouchstart = (e) => {
+        e.preventDefault();
+        if (!e.touches[0]) return;
+        const p = canvasPointFromEvent(e.touches[0]);
+        mouseX = p.x; mouseY = p.y;
+        hoverSlot = getSlotAt(mouseX, mouseY);
+        onCanvasClick();
+      };
+      canvas.ontouchmove = (e) => {
+        e.preventDefault();
+        if (!e.touches[0]) return;
+        const p = canvasPointFromEvent(e.touches[0]);
+        mouseX = p.x; mouseY = p.y;
+        hoverSlot = getSlotAt(mouseX, mouseY);
+      };
+    }
+
     function getSlotAt(mx, my) {
-      let best = null, minD = 22;
+      let best = null, minD = 30;
       slots.forEach(s => {
         const d = Math.hypot(mx - s.x, my - s.y);
         if (d < minD) { minD = d; best = s; }
@@ -633,9 +678,8 @@
     }
 
     function onMouseMove(e) {
-      const rect = canvas.getBoundingClientRect();
-      mouseX = (e.clientX - rect.left) / rect.width * canvasSize.w;
-      mouseY = (e.clientY - rect.top) / rect.height * canvasSize.h;
+      const p = canvasPointFromEvent(e);
+      mouseX = p.x; mouseY = p.y;
       hoverSlot = getSlotAt(mouseX, mouseY);
     }
 
@@ -1074,52 +1118,56 @@
       ctx.save();
       ctx.translate(e.x, e.y);
       ctx.rotate(e.angle + Math.PI / 2);
-      if (e.slowTimer > 0) { ctx.shadowColor = '#a5f3fc'; ctx.shadowBlur = 10; }
-      if (e.hitFlash > 0) ctx.globalAlpha = 0.5 + Math.sin(e.hitFlash * 0.2) * 0.5;
+      const glow = e.boss ? 18 : 12;
+      ctx.shadowColor = e.color;
+      ctx.shadowBlur = glow;
+      if (e.slowTimer > 0) { ctx.shadowColor = '#a5f3fc'; ctx.shadowBlur = 14; }
+      if (e.hitFlash > 0) ctx.globalAlpha = 0.55 + Math.sin(e.hitFlash * 0.2) * 0.45;
       ctx.fillStyle = e.color;
       ctx.strokeStyle = e.accent;
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = e.boss ? 2.5 : 2;
+      const drawR = e.radius * (e.boss ? 1.08 : 1.15);
       if (e.boss) {
         ctx.beginPath();
         for (let i = 0; i < 8; i++) {
           const a = (Math.PI / 4) * i - Math.PI / 8;
-          const px = Math.cos(a) * e.radius, py = Math.sin(a) * e.radius;
+          const px = Math.cos(a) * drawR, py = Math.sin(a) * drawR;
           i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
         }
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
         ctx.fillStyle = '#fff';
-        ctx.font = 'bold 8px sans-serif';
+        ctx.font = 'bold 9px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText('BOSS', 0, 3);
       } else if (e.type === 'ghost') {
         ctx.beginPath();
-        ctx.moveTo(0, -e.radius);
-        ctx.lineTo(e.radius * 0.7, 0);
-        ctx.lineTo(0, e.radius);
-        ctx.lineTo(-e.radius * 0.7, 0);
+        ctx.moveTo(0, -drawR);
+        ctx.lineTo(drawR * 0.7, 0);
+        ctx.lineTo(0, drawR);
+        ctx.lineTo(-drawR * 0.7, 0);
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
       } else if (e.type === 'armor') {
-        ctx.fillRect(-e.radius, -e.radius * 0.8, e.radius * 2, e.radius * 1.6);
-        ctx.strokeRect(-e.radius + 1, -e.radius * 0.8 + 1, e.radius * 2 - 2, e.radius * 1.6 - 2);
+        ctx.fillRect(-drawR, -drawR * 0.8, drawR * 2, drawR * 1.6);
+        ctx.strokeRect(-drawR + 1, -drawR * 0.8 + 1, drawR * 2 - 2, drawR * 1.6 - 2);
       } else if (e.type === 'shield') {
         ctx.beginPath();
-        ctx.arc(0, 0, e.radius, 0, Math.PI * 2);
+        ctx.arc(0, 0, drawR, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
         ctx.strokeStyle = '#88bbff';
         ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.arc(0, 0, e.radius + 4, 0, Math.PI * 2);
+        ctx.arc(0, 0, drawR + 4, 0, Math.PI * 2);
         ctx.stroke();
       } else {
         ctx.beginPath();
-        ctx.moveTo(0, -e.radius);
-        ctx.lineTo(e.radius * 0.85, e.radius * 0.6);
-        ctx.lineTo(-e.radius * 0.85, e.radius * 0.6);
+        ctx.moveTo(0, -drawR);
+        ctx.lineTo(drawR * 0.85, drawR * 0.6);
+        ctx.lineTo(-drawR * 0.85, drawR * 0.6);
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
@@ -1128,10 +1176,10 @@
       const barW = e.boss ? 38 : 26;
       ctx.shadowBlur = 0;
       ctx.globalAlpha = 1;
-      ctx.fillStyle = 'rgba(0,0,0,0.65)';
-      ctx.fillRect(-barW / 2, -e.radius - 11, barW, 4);
+      ctx.fillStyle = 'rgba(0,0,0,0.75)';
+      ctx.fillRect(-barW / 2, -drawR - 12, barW, 5);
       ctx.fillStyle = hpPct > 0.5 ? '#4ade80' : hpPct > 0.25 ? '#fbbf24' : '#f87171';
-      ctx.fillRect(-barW / 2, -e.radius - 11, barW * hpPct, 4);
+      ctx.fillRect(-barW / 2, -drawR - 12, barW * hpPct, 5);
       ctx.restore();
     }
 
@@ -1140,14 +1188,14 @@
       if (shake > 0) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
 
       ctx.fillStyle = '#060a12';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillRect(0, 0, canvasSize.w, canvasSize.h);
 
       const bgGrd = ctx.createRadialGradient(CX, CY, 20, CX, CY, OUTER_R + 40);
       bgGrd.addColorStop(0, 'rgba(255,140,50,0.06)');
       bgGrd.addColorStop(0.5, 'rgba(34,211,238,0.03)');
       bgGrd.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = bgGrd;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillRect(0, 0, canvasSize.w, canvasSize.h);
 
       drawOrbitRings();
       drawCore();
@@ -1242,7 +1290,7 @@
 
       if (paused && !$('overlay').classList.contains('show')) {
         ctx.fillStyle = 'rgba(0,0,0,0.45)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillRect(0, 0, canvasSize.w, canvasSize.h);
         ctx.fillStyle = '#fff';
         ctx.font = 'bold 22px sans-serif';
         ctx.textAlign = 'center';

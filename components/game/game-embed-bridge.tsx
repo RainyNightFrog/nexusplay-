@@ -135,7 +135,7 @@ export function GameEmbedBridge({
       if (!requestId || !data.path || !data.method) return;
 
       const allowedPath = new RegExp(
-        `^/api/games/${gameId}/save(?:/import-legacy)?$`
+        `^/api/games/${gameId}/(?:save(?:/import-legacy)?|leaderboard(?:\\?.*)?)$`
       );
       if (!allowedPath.test(data.path)) {
         respondApiProxy(requestId, {

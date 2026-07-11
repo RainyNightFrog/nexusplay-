@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
@@ -6,7 +6,7 @@
   <title>Galactic Invader 2026 · 銀河侵略者</title>
 </head>
 <body>
-<script src="/sdk/rnf-game-sdk.js"></script>
+<script src="/sdk/rnf-game-sdk.js?v=20260715"></script>
 <script>
 RNF.init();
 var shell = RNF.buildShell({
@@ -16,14 +16,33 @@ var shell = RNF.buildShell({
   width: 960,
   height: 520,
   bgmStyle: "ambient",
+  highlights: ["BOSS 波", "武器升級", "護盾道具", "四段難度"],
+  help: {
+    about: "復古射擊的星際強化版。操控戰機射擊，消滅入侵者與 BOSS。",
+    features: [
+      "多波敵人後出現 BOSS",
+      "擊破敵人掉落武器升級或護盾",
+      "四段難度調整敵速"
+    ],
+    controls: [
+      "← → 或 A D：移動戰機",
+      "空白鍵：連續射擊"
+    ],
+    tips: [
+      "護盾可吸收一次敵彈",
+      "每數波會出現 BOSS"
+    ]
+  },
+  onStop: cleanup,
   onStart: startGame
 });
 
 var ctx, particles, running, loopId, lastT, keys = {};
 var player, bullets, enemies, enemyBullets, powerUps, boss, wave, score, lives, shield;
-var weaponLevel, shootCd, enemyDir, moveTimer, bossActive;
+var weaponLevel, shootCd, enemyDir, moveTimer, bossActive, speedScale = 1;
 
 function cleanup() {
+  shell.detachKeyboard();
   running = false;
   if (loopId) cancelAnimationFrame(loopId);
   loopId = null;
@@ -33,15 +52,18 @@ function cleanup() {
 
 function startGame() {
   cleanup();
+  speedScale = shell.getSpeedScale();
   ctx = shell.ctx;
   particles = shell.particles;
   score = 0; lives = 3; wave = 1; weaponLevel = 1; shield = 0;
-  player = { x: 480, y: 460, w: 36, h: 28, speed: 280 };
+  player = { x: 480, y: 460, w: 36, h: 28, speed: 220 * speedScale };
   bullets = []; enemies = []; enemyBullets = []; powerUps = [];
   boss = null; bossActive = false; shootCd = 0; enemyDir = 1; moveTimer = 0;
   spawnWave();
   updateHud();
   running = true;
+  keys = {};
+  shell.attachKeyboard(keys);
   lastT = performance.now();
   window.addEventListener("keydown", onKeyDown);
   window.addEventListener("keyup", onKeyUp);
@@ -169,19 +191,19 @@ function loop(now) {
     });
   } else {
     moveTimer += dt;
-    if (moveTimer > 0.6) {
+    if (moveTimer > 0.72 / speedScale) {
       moveTimer = 0;
       var edge = false;
       enemies.forEach(function (e) {
-        e.x += enemyDir * 18;
+        e.x += enemyDir * 14 * speedScale;
         if (e.x < 50 || e.x > 910) edge = true;
       });
       if (edge) {
         enemyDir *= -1;
-        enemies.forEach(function (e) { e.y += 24; if (e.y > 420) hitPlayer(); });
+        enemies.forEach(function (e) { e.y += 20 * speedScale; if (e.y > 420) hitPlayer(); });
       }
       if (Math.random() < 0.02 + wave * 0.003 && enemies.length)
-        enemyBullets.push({ x: enemies[Math.floor(Math.random() * enemies.length)].x, y: enemies[0].y + 20, vx: 0, vy: 220, r: 4 });
+        enemyBullets.push({ x: enemies[Math.floor(Math.random() * enemies.length)].x, y: enemies[0].y + 20, vx: 0, vy: 180 * speedScale, r: 4 });
     }
     enemies.forEach(function (e, ei) {
       bullets.forEach(function (b, bi) {

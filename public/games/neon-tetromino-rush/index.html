@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
@@ -6,7 +6,7 @@
   <title>Neon Tetromino Rush · 霓虹方塊衝刺</title>
 </head>
 <body>
-<script src="/sdk/rnf-game-sdk.js"></script>
+<script src="/sdk/rnf-game-sdk.js?v=20260715"></script>
 <script>
 RNF.init();
 var shell = RNF.buildShell({
@@ -16,13 +16,34 @@ var shell = RNF.buildShell({
   width: 960,
   height: 520,
   bgmStyle: "pulse",
+  highlights: ["幽靈預覽", "方塊保留", "連消 Combo", "四段難度"],
+  help: {
+    about: "經典俄羅斯方塊的霓虹版。堆疊方塊並消除整行得分，方塊堆頂即失敗。",
+    features: [
+      "標準以上顯示幽靈落點",
+      "C 鍵保留／交換方塊",
+      "連續消行 Combo 加分"
+    ],
+    controls: [
+      "← →：移動",
+      "↑：旋轉",
+      "↓：軟降",
+      "空白鍵：硬降",
+      "C：保留（每顆方塊限一次）"
+    ],
+    tips: [
+      "一次消除多行得分更高",
+      "困難以上掉落速度更快"
+    ]
+  },
+  onStop: cleanup,
   onStart: startGame
 });
 
 var COLS = 10, ROWS = 20, BS = 24;
 var BOARD_X = 320, BOARD_Y = 20;
 var ctx, particles, running, loopId, lastT;
-var board, score, level, lines, piece, next, hold, canHold, dropTimer, dropInterval;
+var board, score, level, lines, piece, next, hold, canHold, dropTimer, dropInterval, speedScale = 1;
 var waveFx = [];
 var keys = {}, keyLock = {};
 
@@ -38,6 +59,7 @@ var SHAPES = {
 var NAMES = ["I","O","T","S","Z","J","L"];
 
 function cleanup() {
+  shell.detachKeyboard();
   running = false;
   if (loopId) cancelAnimationFrame(loopId);
   loopId = null;
@@ -47,17 +69,21 @@ function cleanup() {
 
 function startGame() {
   cleanup();
+  speedScale = shell.getSpeedScale();
   ctx = shell.ctx;
   particles = shell.particles;
   board = Array.from({ length: ROWS }, function () { return Array(COLS).fill(0); });
   score = 0; level = 1; lines = 0;
   hold = null; canHold = true;
-  dropInterval = 800;
+  dropInterval = Math.round(920 / speedScale);
   waveFx = [];
   next = randomPiece();
   spawnPiece();
   updateHud();
   running = true;
+  keys = {};
+  keyLock = {};
+  shell.attachKeyboard(keys);
   lastT = performance.now();
   window.addEventListener("keydown", onKeyDown);
   window.addEventListener("keyup", onKeyUp);
@@ -109,7 +135,7 @@ function lockPiece() {
     score += pts;
     lines += cleared;
     level = Math.floor(lines / 10) + 1;
-    dropInterval = Math.max(100, 800 - (level - 1) * 60);
+    dropInterval = Math.max(140, Math.round((920 - (level - 1) * 55) / speedScale));
     RNF.sfx.combo(cleared);
     shell.triggerShake(4 + cleared, 0.2);
     for (var i = 0; i < cleared; i++)

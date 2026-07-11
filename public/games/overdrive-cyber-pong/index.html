@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
@@ -6,7 +6,7 @@
   <title>Overdrive Cyber Pong · 超頻電競乒乓</title>
 </head>
 <body>
-<script src="/sdk/rnf-game-sdk.js"></script>
+<script src="/sdk/rnf-game-sdk.js?v=20260715"></script>
 <script>
 RNF.init();
 var shell = RNF.buildShell({
@@ -16,22 +16,51 @@ var shell = RNF.buildShell({
   width: 960,
   height: 520,
   bgmStyle: "pulse",
+  highlights: ["曲球軌跡", "重力場", "可點選模式", "雙人對戰"],
+  help: {
+    about: "霓虹風格的乒乓球對戰。先達到目標分數者獲勝。",
+    features: [
+      "開始後可點選畫面按鈕或按 1/2/3 選模式",
+      "曲球 spin 與重力場",
+      "四段難度調整 AI 與勝利分數"
+    ],
+    controls: [
+      "開始後點選畫面上的模式按鈕，或按 1 / 2 / 3",
+      "1：簡單 AI · 2：困難 AI · 3：本地雙人",
+      "單人對 AI：W / S 控制左側擋板",
+      "雙人：左 W/S · 右 ↑/↓"
+    ],
+    tips: [
+      "擊球角度取決於碰板位置",
+      "目標分數依難度：5～11 分"
+    ]
+  },
+  onStop: cleanup,
   onStart: startGame
 });
 
-var ctx, particles, running, loopId, lastT, keys = {};
+var ctx, particles, running, loopId, lastT, keys = {}, speedScale = 1;
 var mode, modePick, left, right, ball, scoreL, scoreR, gravityZones, serveDir, pickTimer;
 
+var MODE_BUTTONS = [
+  { id: "easy", label: "1 · 單人簡單 AI", x: 280, y: 228, w: 400, h: 44 },
+  { id: "hard", label: "2 · 單人困難 AI", x: 280, y: 278, w: 400, h: 44 },
+  { id: "2p", label: "3 · 本地雙人", x: 280, y: 328, w: 400, h: 44 }
+];
+
 function cleanup() {
+  shell.detachKeyboard();
   running = false;
   if (loopId) cancelAnimationFrame(loopId);
   loopId = null;
+  if (shell && shell.canvas) shell.canvas.removeEventListener("click", onCanvasClick);
   window.removeEventListener("keydown", onKeyDown);
   window.removeEventListener("keyup", onKeyUp);
 }
 
 function startGame() {
   cleanup();
+  speedScale = shell.getSpeedScale();
   ctx = shell.ctx;
   particles = shell.particles;
   mode = null;
@@ -47,15 +76,39 @@ function startGame() {
   resetBall(1);
   updateHud();
   running = true;
+  keys = {};
+  shell.attachKeyboard(keys);
   lastT = performance.now();
+  shell.canvas.setAttribute("tabindex", "0");
+  shell.canvas.focus();
+  shell.canvas.addEventListener("click", onCanvasClick);
   window.addEventListener("keydown", onKeyDown);
   window.addEventListener("keyup", onKeyUp);
   loopId = requestAnimationFrame(loop);
 }
 
+function pickMode(nextMode) {
+  if (!modePick) return;
+  mode = nextMode;
+  modePick = false;
+  RNF.sfx.confirm();
+  updateHud();
+}
+
+function onCanvasClick(e) {
+  if (!running || !modePick) return;
+  var rect = shell.canvas.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+  var x = (e.clientX - rect.left) * (960 / rect.width);
+  var y = (e.clientY - rect.top) * (520 / rect.height);
+  MODE_BUTTONS.forEach(function (btn) {
+    if (x >= btn.x && x <= btn.x + btn.w && y >= btn.y && y <= btn.y + btn.h) pickMode(btn.id);
+  });
+}
+
 function resetBall(dir) {
   ball = {
-    x: 480, y: 260, vx: dir * 320, vy: (Math.random() - 0.5) * 200,
+    x: 480, y: 260, vx: dir * 260 * speedScale, vy: (Math.random() - 0.5) * 160 * speedScale,
     r: 9, spin: 0, trail: []
   };
   serveDir = dir;
@@ -65,9 +118,9 @@ function onKeyDown(e) {
   if (!running) return;
   keys[e.code] = true;
   if (modePick) {
-    if (e.code === "Digit1") { mode = "easy"; modePick = false; RNF.sfx.confirm(); }
-    else if (e.code === "Digit2") { mode = "hard"; modePick = false; RNF.sfx.confirm(); }
-    else if (e.code === "Digit3") { mode = "2p"; modePick = false; RNF.sfx.confirm(); }
+    if (e.code === "Digit1" || e.code === "Numpad1" || e.key === "1") pickMode("easy");
+    else if (e.code === "Digit2" || e.code === "Numpad2" || e.key === "2") pickMode("hard");
+    else if (e.code === "Digit3" || e.code === "Numpad3" || e.key === "3") pickMode("2p");
   }
 }
 
@@ -85,7 +138,7 @@ function updateHud() {
 
 function aiMove(paddle, diff) {
   var target = ball.y - paddle.h / 2;
-  var spd = diff === "hard" ? 340 : 210;
+  var spd = (diff === "hard" ? 300 : 190) * speedScale;
   if (paddle.y + paddle.h / 2 < ball.y - 20) paddle.y += spd * 0.016;
   else if (paddle.y + paddle.h / 2 > ball.y + 20) paddle.y -= spd * 0.016;
   paddle.y = Math.max(20, Math.min(400, paddle.y));
@@ -104,13 +157,13 @@ function loop(now) {
   }
 
   if (mode === "2p") {
-    if (keys["KeyW"]) left.y -= 360 * dt;
-    if (keys["KeyS"]) left.y += 360 * dt;
-    if (keys["ArrowUp"]) right.y -= 360 * dt;
-    if (keys["ArrowDown"]) right.y += 360 * dt;
+    if (keys["KeyW"]) left.y -= 320 * speedScale * dt;
+    if (keys["KeyS"]) left.y += 320 * speedScale * dt;
+    if (keys["ArrowUp"]) right.y -= 320 * speedScale * dt;
+    if (keys["ArrowDown"]) right.y += 320 * speedScale * dt;
   } else {
-    if (keys["KeyW"]) left.y -= 360 * dt;
-    if (keys["KeyS"]) left.y += 360 * dt;
+    if (keys["KeyW"]) left.y -= 320 * speedScale * dt;
+    if (keys["KeyS"]) left.y += 320 * speedScale * dt;
     aiMove(right, mode);
   }
   left.y = Math.max(20, Math.min(400, left.y));
@@ -214,17 +267,26 @@ function draw(dt) {
   ctx.shadowBlur = 0;
 
   if (modePick) {
-    ctx.fillStyle = "rgba(0,0,0,0.65)";
+    ctx.fillStyle = "rgba(0,0,0,0.72)";
     ctx.fillRect(0, 0, 960, 520);
+    ctx.textAlign = "center";
     ctx.fillStyle = "#22d3ee";
     ctx.font = "bold 24px 'Microsoft JhengHei',sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText("選擇模式", 480, 200);
-    ctx.font = "16px sans-serif";
-    ctx.fillStyle = "#94a3b8";
-    ctx.fillText("1 — 單人簡單 AI", 480, 250);
-    ctx.fillText("2 — 單人困難 AI", 480, 280);
-    ctx.fillText("3 — 本地雙人 (W/S vs ↑↓)", 480, 310);
+    ctx.fillText("選擇對戰模式", 480, 190);
+    ctx.font = "14px sans-serif";
+    ctx.fillStyle = "#64748b";
+    ctx.fillText("點擊按鈕，或按鍵盤 1 / 2 / 3", 480, 218);
+    MODE_BUTTONS.forEach(function (btn, i) {
+      var pulse = 0.85 + Math.sin(pickTimer * 4 + i) * 0.15;
+      ctx.fillStyle = "rgba(34,211,238," + (0.12 * pulse) + ")";
+      ctx.strokeStyle = "rgba(34,211,238," + (0.55 * pulse) + ")";
+      ctx.lineWidth = 2;
+      ctx.fillRect(btn.x, btn.y, btn.w, btn.h);
+      ctx.strokeRect(btn.x + 1, btn.y + 1, btn.w - 2, btn.h - 2);
+      ctx.fillStyle = "#e2e8f0";
+      ctx.font = "bold 17px 'Microsoft JhengHei',sans-serif";
+      ctx.fillText(btn.label, btn.x + btn.w / 2, btn.y + btn.h / 2 + 6);
+    });
   }
 
   particles.draw(ctx);
