@@ -99,6 +99,7 @@ function GamePageContent() {
   const [forumPostCount, setForumPostCount] = useState(0);
   const [isDraftPreview, setIsDraftPreview] = useState(false);
   const [isPartnerPreview, setIsPartnerPreview] = useState(false);
+  const [ownerCreatorId, setOwnerCreatorId] = useState<string | null>(null);
 
   const [liked, setLiked] = useState(false);
   const [favorited, setFavorited] = useState(false);
@@ -148,6 +149,7 @@ function GamePageContent() {
         });
         const data = (await response.json()) as {
           game?: Game;
+          ownerCreatorId?: string | null;
           error?: string;
           isDraftPreview?: boolean;
           isPartnerPreview?: boolean;
@@ -187,6 +189,7 @@ function GamePageContent() {
 
         if (!cancelled) {
           setGame(loadedGame);
+          setOwnerCreatorId(data.ownerCreatorId ?? loadedGame.creatorId ?? null);
           setIsDraftPreview(Boolean(data.isDraftPreview));
           setIsPartnerPreview(Boolean(data.isPartnerPreview));
         }
@@ -353,7 +356,7 @@ function GamePageContent() {
   const playerMaxWidth = Math.min(viewportWidth, 1024);
   const showCreatorFullscreen = game?.fullscreenButton ?? true;
   const isGameOwner = Boolean(
-    profile?.id && game?.creatorId && profile.id === game.creatorId
+    profile?.id && ownerCreatorId && profile.id === ownerCreatorId
   );
   const editGameHref = game ? `/dashboard/edit/${game.id}` : "/dashboard";
 

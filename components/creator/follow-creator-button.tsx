@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Loader2, UserPlus, UserMinus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
+import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
@@ -81,11 +82,20 @@ export function FollowCreatorButton({
   if (profile?.id === creatorId && !localOnly) {
     if (!showFollowerCount) return null;
     return (
-      <div className={cn("flex flex-col gap-1", crossAxisAlign, className)}>
+      <div className={cn("flex flex-col gap-2", crossAxisAlign, className)}>
         <span className="text-xs font-medium text-zinc-500">{t("followersLabel")}</span>
         <p className="text-sm font-semibold text-zinc-200">
           {t("followerCount", { count: followerCount })}
         </p>
+        <Button
+          nativeButton={false}
+          render={<Link href={`/creator/${creatorId}`} />}
+          size={compact ? "sm" : "default"}
+          variant="outline"
+          className="h-8 gap-1.5 border-white/10 bg-white/5 px-3 text-xs text-zinc-200 sm:text-sm"
+        >
+          {t("viewCreatorPageBtn")}
+        </Button>
       </div>
     );
   }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { isAdminUser } from "@/lib/admin-auth";
 import { canViewGame } from "@/lib/game-publish";
 import { mapRecordToGame } from "@/lib/games-data";
+import { resolveGameCreator } from "@/lib/game-creator-resolver";
 import {
   hasStoredPartnerAccess,
   partnerAccessCookieName,
@@ -82,6 +83,12 @@ export async function GET(
     }
 
     const game = mapRecordToGame(record);
+    const creator = await resolveGameCreator(supabase, record);
+    const enrichedGame = {
+      ...game,
+      creatorId: creator.creatorId,
+      creator: creator.creatorName || game.creator,
+    };
     const isCreatorPreview =
       record.publish_status === "draft" && user?.id === record.creator_id;
     const isPartnerPreview =
@@ -90,7 +97,8 @@ export async function GET(
       user?.id !== record.creator_id;
 
     const response = NextResponse.json({
-      game,
+      game: enrichedGame,
+      ownerCreatorId: record.creator_id ?? null,
       isDraftPreview: isCreatorPreview,
       isPartnerPreview,
     });

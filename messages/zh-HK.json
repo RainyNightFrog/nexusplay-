@@ -1689,6 +1689,7 @@
     "followersLabel": "追蹤者",
     "followerCount": "{count} 位追蹤者",
     "followFailed": "追蹤操作失敗",
+    "viewCreatorPageBtn": "查看創作者頁面",
     "rssFeed": "訂閱作品 RSS",
     "atomFeed": "Atom 訂閱",
     "jsonFeed": "JSON 預覽"

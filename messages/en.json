@@ -1689,6 +1689,7 @@
     "followersLabel": "Followers",
     "followerCount": "{count} followers",
     "followFailed": "Follow action failed",
+    "viewCreatorPageBtn": "View creator page",
     "rssFeed": "Subscribe to games RSS",
     "atomFeed": "Atom feed",
     "jsonFeed": "JSON preview"

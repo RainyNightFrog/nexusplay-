@@ -1647,7 +1647,8 @@
     "unfollowBtn": "已追踪",
     "followersLabel": "追踪者",
     "followerCount": "{count} 位追踪者",
-    "followFailed": "追踪操作失败"
+    "followFailed": "追踪操作失败",
+    "viewCreatorPageBtn": "查看创作者页面"
   },
   "feeds": {
     "title": "订阅中心",
