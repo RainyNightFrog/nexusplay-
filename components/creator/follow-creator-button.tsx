@@ -72,16 +72,16 @@ export function FollowCreatorButton({
     setFollowerCount(initialFollowerCount);
   }, [initialFollowerCount, localOnly]);
 
+  const crossAxisAlign = centered
+    ? "items-center text-center"
+    : align === "end"
+      ? "items-end text-right"
+      : "items-start";
+
   if (profile?.id === creatorId && !localOnly) {
     if (!showFollowerCount) return null;
     return (
-      <div
-        className={cn(
-          "flex flex-col gap-1",
-          align === "end" ? "items-end text-right" : "items-start",
-          className
-        )}
-      >
+      <div className={cn("flex flex-col gap-1", crossAxisAlign, className)}>
         <span className="text-xs font-medium text-zinc-500">{t("followersLabel")}</span>
         <p className="text-sm font-semibold text-zinc-200">
           {t("followerCount", { count: followerCount })}
@@ -134,10 +134,8 @@ export function FollowCreatorButton({
   return (
     <div
       className={cn(
-        layout === "stacked"
-          ? cn("flex flex-col gap-1.5", align === "end" ? "items-end" : "items-start")
-          : "",
-        centered ? "flex flex-col items-center" : "",
+        layout === "stacked" ? cn("flex flex-col gap-1.5", crossAxisAlign) : "",
+        centered && layout !== "stacked" ? "flex flex-col items-center" : "",
         className
       )}
     >
@@ -145,8 +143,7 @@ export function FollowCreatorButton({
         className={cn(
           "flex flex-wrap items-center gap-2",
           centered && "justify-center",
-          layout === "stacked" &&
-            cn("flex-col gap-1.5", align === "end" ? "items-end" : "items-start")
+          layout === "stacked" && cn("flex-col gap-1.5", crossAxisAlign)
         )}
       >
         <Button
@@ -172,13 +169,7 @@ export function FollowCreatorButton({
         </Button>
         {showFollowerCount && (
           layout === "stacked" ? (
-            <div
-              className={cn(
-                "flex flex-col gap-0.5",
-                centered && "items-center text-center",
-                align === "end" && "items-end text-right"
-              )}
-            >
+            <div className={cn("flex flex-col gap-0.5", crossAxisAlign)}>
               <span className="text-xs font-medium text-zinc-500">
                 {t("followersLabel")}
               </span>
@@ -199,7 +190,14 @@ export function FollowCreatorButton({
         )}
       </div>
       {actionError && (
-        <p className="mt-1 max-w-[12rem] text-xs text-rose-300">{actionError}</p>
+        <p
+          className={cn(
+            "mt-1 max-w-[12rem] text-xs text-rose-300",
+            centered && "mx-auto text-center"
+          )}
+        >
+          {actionError}
+        </p>
       )}
     </div>
   );
