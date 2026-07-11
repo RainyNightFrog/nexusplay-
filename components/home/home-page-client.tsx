@@ -39,6 +39,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { FeaturedGames } from "@/components/home/featured-games";
 import { AnnouncementMarquee } from "@/components/home/announcement-marquee";
 import { HomePersonalizedSections } from "@/components/home/home-personalized-sections";
+import { PriceFilterSidebar } from "@/components/home/price-filter-sidebar";
 import {
   FILTER_CATEGORIES,
   SORT_OPTIONS,
@@ -47,6 +48,11 @@ import {
   type Game,
   type SortOption,
 } from "@/lib/games";
+import {
+  appendGamePriceFilterToSearchParams,
+  priceFilterIdToParams,
+  type PriceFilterId,
+} from "@/lib/game-price-filter";
 import { ALL_CATEGORY } from "@/lib/home-copy";
 import { useGameI18n } from "@/hooks/use-game-i18n";
 import { useFormatCount } from "@/hooks/use-format-count";
@@ -322,8 +328,14 @@ export function HomePageClient() {
   const [toast, setToast] = useState<string | null>(null);
   const [category, setCategory] = useState<FilterCategory>(ALL_CATEGORY);
   const [sort, setSort] = useState<SortOption>("latest");
+  const [priceFilter, setPriceFilter] = useState<PriceFilterId>("all");
 
-  const loadGames = useCallback(async (nextCategory: FilterCategory, nextSort: SortOption) => {
+  const loadGames = useCallback(
+    async (
+      nextCategory: FilterCategory,
+      nextSort: SortOption,
+      nextPriceFilter: PriceFilterId
+    ) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -333,6 +345,10 @@ export function HomePageClient() {
       if (nextSort !== "latest") {
         params.set("sort", nextSort);
       }
+      appendGamePriceFilterToSearchParams(
+        params,
+        priceFilterIdToParams(nextPriceFilter)
+      );
       const query = params.toString();
       const response = await fetch(`/api/games${query ? `?${query}` : ""}`);
       const data = (await response.json()) as { games?: Game[] };
@@ -344,7 +360,9 @@ export function HomePageClient() {
     } finally {
       setLoading(false);
     }
-  }, [loadFavoriteCounts]);
+  },
+    [loadFavoriteCounts]
+  );
 
   const showToast = useCallback((message: string) => {
     setToast(message);
@@ -360,10 +378,11 @@ export function HomePageClient() {
   );
 
   useEffect(() => {
-    loadGames(category, sort);
-  }, [category, sort, loadGames]);
+    loadGames(category, sort, priceFilter);
+  }, [category, sort, priceFilter, loadGames]);
 
   const activeSortLabel = t(`sort.${sort}`);
+  const activePriceFilterLabel = t(`priceFilter.${priceFilter}`);
   const categoryLabel = (value: FilterCategory) => localizedTag(value);
 
   return (
@@ -522,14 +541,32 @@ export function HomePageClient() {
             </h2>
             <p className="mt-1 text-sm text-zinc-500">
               {category === ALL_CATEGORY
-                ? t("gridDescAll", { sort: activeSortLabel })
-                : t("gridDescCategory", {
-                    category: categoryLabel(category),
-                    sort: activeSortLabel,
-                  })}
+                ? priceFilter === "all"
+                  ? t("gridDescAll", { sort: activeSortLabel })
+                  : t("gridDescPrice", {
+                      sort: activeSortLabel,
+                      price: activePriceFilterLabel,
+                    })
+                : priceFilter === "all"
+                  ? t("gridDescCategory", {
+                      category: categoryLabel(category),
+                      sort: activeSortLabel,
+                    })
+                  : t("gridDescCategoryPrice", {
+                      category: categoryLabel(category),
+                      sort: activeSortLabel,
+                      price: activePriceFilterLabel,
+                    })}
             </p>
           </div>
 
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+            <PriceFilterSidebar
+              value={priceFilter}
+              onChange={setPriceFilter}
+            />
+
+            <div className="min-w-0 flex-1">
           <FilterSortBar
             category={category}
             sort={sort}
@@ -550,7 +587,7 @@ export function HomePageClient() {
               </motion.div>
             ) : games.length > 0 ? (
               <motion.div
-                key={`${category}-${sort}-grid`}
+                key={`${category}-${sort}-${priceFilter}-grid`}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -580,25 +617,42 @@ export function HomePageClient() {
               >
                 <Gamepad2 className="mx-auto mb-4 size-10 text-zinc-600" />
                 <p className="text-lg font-medium text-white">
-                  {category === ALL_CATEGORY
-                    ? t("emptyAll")
-                    : t("emptyCategory", {
-                        category: categoryLabel(category),
-                      })}
+                  {priceFilter !== "all"
+                    ? t("emptyPrice", { price: activePriceFilterLabel })
+                    : category === ALL_CATEGORY
+                      ? t("emptyAll")
+                      : t("emptyCategory", {
+                          category: categoryLabel(category),
+                        })}
                 </p>
                 <p className="mt-2 text-sm text-zinc-500">
-                  {category === ALL_CATEGORY
-                    ? t("emptyHintAll")
-                    : t("emptyHintCategory")}
+                  {priceFilter !== "all"
+                    ? t("emptyHintPrice")
+                    : category === ALL_CATEGORY
+                      ? t("emptyHintAll")
+                      : t("emptyHintCategory")}
                 </p>
-                {category !== ALL_CATEGORY && (
-                  <Button
-                    variant="ghost"
-                    className="mt-4 text-zinc-400 hover:text-cyan-300"
-                    onClick={() => setCategory(ALL_CATEGORY)}
-                  >
-                    {t("viewAllCategories")}
-                  </Button>
+                {(category !== ALL_CATEGORY || priceFilter !== "all") && (
+                  <div className="mt-4 flex flex-wrap justify-center gap-2">
+                    {category !== ALL_CATEGORY && (
+                      <Button
+                        variant="ghost"
+                        className="text-zinc-400 hover:text-cyan-300"
+                        onClick={() => setCategory(ALL_CATEGORY)}
+                      >
+                        {t("viewAllCategories")}
+                      </Button>
+                    )}
+                    {priceFilter !== "all" && (
+                      <Button
+                        variant="ghost"
+                        className="text-zinc-400 hover:text-emerald-300"
+                        onClick={() => setPriceFilter("all")}
+                      >
+                        {t("viewAllPrices")}
+                      </Button>
+                    )}
+                  </div>
                 )}
                 <Link
                   href="/dashboard/upload"
@@ -609,6 +663,8 @@ export function HomePageClient() {
               </motion.div>
             )}
           </AnimatePresence>
+            </div>
+          </div>
         </section>
       </main>
     </div>

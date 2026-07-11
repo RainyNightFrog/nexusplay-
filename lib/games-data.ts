@@ -67,6 +67,11 @@ export function mapRecordToGame(record: GameRecord): Game {
     ratingAvg: meta?.ratingAvg ?? Number(enriched.rating_avg),
     tipsEnabled: enriched.tips_enabled ?? false,
     suggestedTipAmount: enriched.suggested_tip_amount ?? null,
+    price: enriched.price ?? 0,
+    pricingType: enriched.pricing_type ?? "free",
+    currency: enriched.currency ?? "USD",
+    minPrice: enriched.min_price ?? 0,
+    onSale: enriched.on_sale ?? false,
   };
 }
 

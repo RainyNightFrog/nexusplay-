@@ -48,4 +48,5 @@ export type GameRecord = {
   currency?: string;
   pricing_type?: "free" | "fixed" | "pwyw";
   min_price?: number;
+  on_sale?: boolean;
 };

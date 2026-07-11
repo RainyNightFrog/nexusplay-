@@ -1,10 +1,12 @@
 import { createServerSupabase } from "@/lib/supabase-server";
 import { mapRecordToGame } from "@/lib/games-data";
 import type { Game, SortOption } from "@/lib/games";
+import type { GamePriceFilterParams } from "@/lib/game-price-filter";
 
 export type GetGamesOptions = {
   category?: string;
   sort?: SortOption;
+  priceFilter?: GamePriceFilterParams;
 };
 
 const VALID_SORTS: SortOption[] = ["latest", "views", "rating"];
@@ -17,7 +19,7 @@ export function parseSortOption(value: string | null): SortOption {
 }
 
 export async function getGames(options: GetGamesOptions = {}): Promise<Game[]> {
-  const { category, sort = "latest" } = options;
+  const { category, sort = "latest", priceFilter = {} } = options;
   const supabase = createServerSupabase();
 
   let query = supabase
@@ -28,6 +30,22 @@ export async function getGames(options: GetGamesOptions = {}): Promise<Game[]> {
 
   if (category && category !== "全部") {
     query = query.eq("category", category);
+  }
+
+  if (priceFilter.isFree) {
+    query = query.or("pricing_type.eq.free,price.eq.0");
+  }
+
+  if (priceFilter.minPrice != null) {
+    query = query.gte("price", priceFilter.minPrice);
+  }
+
+  if (priceFilter.maxPrice != null) {
+    query = query.lte("price", priceFilter.maxPrice);
+  }
+
+  if (priceFilter.onSale) {
+    query = query.eq("on_sale", true);
   }
 
   switch (sort) {

@@ -28,6 +28,11 @@ export type Game = {
   ratingAvg?: number;
   tipsEnabled?: boolean;
   suggestedTipAmount?: number | null;
+  price?: number;
+  pricingType?: "free" | "fixed" | "pwyw";
+  currency?: string;
+  minPrice?: number;
+  onSale?: boolean;
 };
 
 export const FILTER_CATEGORIES = ["全部", ...GAME_GENRES] as const;
