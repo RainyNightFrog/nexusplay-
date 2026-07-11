@@ -5,6 +5,7 @@ import {
   useEffect,
   useRef,
   useState,
+  Suspense,
   type ChangeEvent,
   type DragEvent,
 } from "react";
@@ -33,6 +34,7 @@ import {
   type PublishMonetizationValues,
 } from "@/components/dashboard/publish-monetization-fields";
 import { GamePricingFields } from "@/components/dashboard/game-pricing-fields";
+import { StripeConnectBanner } from "@/components/dashboard/stripe-connect-banner";
 import { PublishStatusFields } from "@/components/dashboard/publish-status-fields";
 import { PlatformAuthNotice } from "@/components/dashboard/platform-auth-notice";
 import { RequiredFieldLabel } from "@/components/dashboard/required-field-label";
@@ -53,6 +55,7 @@ import {
   defaultGamePricingValues,
   pricingValuesFromRecord,
 } from "@/lib/game-pricing";
+import { pricingValuesRequireStripeConnect } from "@/lib/creator-stripe-gate";
 import {
   getPublishValidationIssues,
   type PublishValidationField,
@@ -294,6 +297,9 @@ export default function EditGamePage() {
     suggestedTipAmount: "",
   });
   const [pricing, setPricing] = useState(defaultGamePricingValues());
+  const [stripeConnectReady, setStripeConnectReady] = useState<boolean | null>(
+    null
+  );
   const [lockedPlatformFeePercent, setLockedPlatformFeePercent] = useState<
     number | null
   >(null);
@@ -494,6 +500,9 @@ export default function EditGamePage() {
       pricingType: pricing.pricingType,
       priceAmount: pricing.priceAmount,
       minPriceAmount: pricing.minPriceAmount,
+      stripeConnectReady:
+        !pricingValuesRequireStripeConnect({ pricingType: pricing.pricingType }) ||
+        stripeConnectReady === true,
     });
 
     if (issues.length > 0) {
@@ -851,6 +860,21 @@ export default function EditGamePage() {
               onChange={setPricing}
               disabled={isSubmitting}
             />
+
+            {pricingValuesRequireStripeConnect({ pricingType: pricing.pricingType }) && (
+              <div id="field-stripe-connect">
+                <Suspense fallback={null}>
+                  <StripeConnectBanner
+                    returnTo="edit"
+                    gameId={gameId}
+                    required
+                    onStatusChange={(status) =>
+                      setStripeConnectReady(status?.canReceivePaidPayments ?? false)
+                    }
+                  />
+                </Suspense>
+              </div>
+            )}
 
             <PublishMonetizationFields
               values={monetization}

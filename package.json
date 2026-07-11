@@ -12,6 +12,7 @@
     "db:stats": "node scripts/run-add-game-stats.mjs",
     "db:publish": "node scripts/run-add-publish-monetization.mjs",
     "db:pricing": "node scripts/run-add-game-pricing.mjs",
+    "db:stripe-user-fields": "node scripts/run-add-stripe-user-connect-fields.mjs",
     "db:status": "node scripts/run-add-game-status.mjs",
     "db:game-saves": "node scripts/run-game-saves.mjs",
     "db:legacy-imports": "node scripts/run-legacy-imports.mjs",

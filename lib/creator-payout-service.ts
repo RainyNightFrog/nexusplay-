@@ -18,16 +18,25 @@ import {
   syncPayoutStatusFromAccount,
 } from "@/lib/stripe-connect";
 import { computeCanWithdraw } from "@/lib/creator-payout-withdraw";
+import { resolveStripeAccountId } from "@/lib/creator-stripe-gate";
 import { createServerSupabase } from "@/lib/supabase-server";
 
 type ProfilePayoutRow = {
+  stripe_account_id: string | null;
   stripe_connect_account_id: string | null;
+  stripe_details_submitted: boolean;
   payout_status: string;
   creator_balance_usd: number | string | null;
   payout_onboarded_at: string | null;
   stripe_customer_id: string | null;
   display_name: string;
 };
+
+export type ConnectOnboardingReturnTo =
+  | "settings"
+  | "dashboard"
+  | "upload"
+  | "edit";
 
 export async function readCreatorPayoutRow(
   supabase: SupabaseClient,
@@ -36,7 +45,7 @@ export async function readCreatorPayoutRow(
   const { data, error } = await supabase
     .from("profiles")
     .select(
-      "stripe_connect_account_id, payout_status, creator_balance_usd, payout_onboarded_at, stripe_customer_id, display_name"
+      "stripe_account_id, stripe_connect_account_id, stripe_details_submitted, payout_status, creator_balance_usd, payout_onboarded_at, stripe_customer_id, display_name"
     )
     .eq("id", userId)
     .maybeSingle();
@@ -72,7 +81,8 @@ export function buildPayoutSnapshot(
 
   return {
     payoutStatus,
-    stripeConnectAccountId: row?.stripe_connect_account_id ?? null,
+    stripeConnectAccountId: resolveStripeAccountId(row),
+    stripeDetailsSubmitted: row?.stripe_details_submitted ?? false,
     creatorBalanceUsd: Math.round(balance * 100) / 100,
     payoutOnboardedAt: row?.payout_onboarded_at ?? null,
     stripeConfigured: isStripeConfigured(),
@@ -91,11 +101,15 @@ export function buildPayoutSnapshot(
 
 export async function syncConnectAccountStatus(userId: string, accountId: string) {
   const account = await fetchConnectAccount(accountId);
-  const { payoutStatus, onboardedAt } = syncPayoutStatusFromAccount(account);
+  const { payoutStatus, onboardedAt, stripeDetailsSubmitted } =
+    syncPayoutStatusFromAccount(account);
   const supabase = createServerSupabase();
 
   const updates: Record<string, unknown> = {
     payout_status: payoutStatus,
+    stripe_account_id: accountId,
+    stripe_connect_account_id: accountId,
+    stripe_details_submitted: stripeDetailsSubmitted,
   };
 
   if (onboardedAt && payoutStatus === "active") {
@@ -115,12 +129,46 @@ export async function syncConnectAccountStatus(userId: string, accountId: string
   return payoutStatus as PayoutStatus;
 }
 
+function resolveOnboardingPaths(params: {
+  returnTo: ConnectOnboardingReturnTo;
+  locale?: string;
+  gameId?: number;
+}) {
+  const localePrefix =
+    params.locale && params.locale !== "zh-HK" ? `/${params.locale}` : "";
+
+  switch (params.returnTo) {
+    case "dashboard":
+      return {
+        returnPath: `${localePrefix}/dashboard?stripeConnect=return`,
+        refreshPath: `${localePrefix}/dashboard?stripeConnect=refresh`,
+      };
+    case "upload":
+      return {
+        returnPath: `${localePrefix}/dashboard/upload?stripeConnect=return`,
+        refreshPath: `${localePrefix}/dashboard/upload?stripeConnect=refresh`,
+      };
+    case "edit":
+      return {
+        returnPath: `${localePrefix}/dashboard/edit/${params.gameId}?stripeConnect=return`,
+        refreshPath: `${localePrefix}/dashboard/edit/${params.gameId}?stripeConnect=refresh`,
+      };
+    default:
+      return {
+        returnPath: `${localePrefix}/settings/payout?onboard=return`,
+        refreshPath: `${localePrefix}/settings/payout?onboard=refresh`,
+      };
+  }
+}
+
 export async function startConnectOnboarding(params: {
   userId: string;
   email: string;
   displayName: string;
   origin: string;
   locale?: string;
+  returnTo?: ConnectOnboardingReturnTo;
+  gameId?: number;
 }) {
   if (!isStripeConfigured()) {
     return { mode: "preview" as const };
@@ -132,7 +180,7 @@ export async function startConnectOnboarding(params: {
 
   const supabase = createServerSupabase();
   const row = await readCreatorPayoutRow(supabase, params.userId);
-  let accountId = row?.stripe_connect_account_id ?? null;
+  let accountId = resolveStripeAccountId(row);
 
   if (!accountId) {
     const account = await createExpressConnectAccount({
@@ -145,17 +193,20 @@ export async function startConnectOnboarding(params: {
     await supabase
       .from("profiles")
       .update({
+        stripe_account_id: accountId,
         stripe_connect_account_id: accountId,
         payout_status: "pending",
+        stripe_details_submitted: false,
       })
       .eq("id", params.userId);
   }
 
   const siteUrl = resolveSiteUrl(params.origin);
-  const localePrefix =
-    params.locale && params.locale !== "zh-HK" ? `/${params.locale}` : "";
-  const returnPath = `${localePrefix}/settings/payout?onboard=return`;
-  const refreshPath = `${localePrefix}/settings/payout?onboard=refresh`;
+  const { returnPath, refreshPath } = resolveOnboardingPaths({
+    returnTo: params.returnTo ?? "settings",
+    locale: params.locale,
+    gameId: params.gameId,
+  });
 
   const link = await createConnectOnboardingLink({
     accountId,

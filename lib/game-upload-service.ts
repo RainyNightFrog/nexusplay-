@@ -2,6 +2,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { extractAndUploadGameBuild } from "@/lib/extract-game-zip";
 import { parseMonetizationFromFormData, parsePublishStatus } from "@/lib/game-publish";
 import { parsePricingFromFormData } from "@/lib/game-pricing";
+import {
+  canCreatorReceivePaidPayments,
+  paidPublishStripeConnectError,
+  pricingRequiresStripeConnect,
+} from "@/lib/creator-stripe-gate";
+import { readCreatorPayoutRow } from "@/lib/creator-payout-service";
 import { GAME_GENRES } from "@/lib/game-metadata";
 import {
   createDraftPlaceholderCoverBuffer,
@@ -198,6 +204,24 @@ export async function uploadCreatorGameFromFormData(params: {
   const pricing = parsePricingFromFormData(formData);
   if (!pricing.ok) {
     return { ok: false, status: 400, error: pricing.error };
+  }
+
+  if (
+    monetization.data.publish_status === "public" &&
+    pricingRequiresStripeConnect(pricing.data)
+  ) {
+    const supabaseForGate = params.supabase ?? createServerSupabase();
+    const payoutRow = await readCreatorPayoutRow(
+      supabaseForGate,
+      params.creatorId
+    );
+    if (!canCreatorReceivePaidPayments(payoutRow)) {
+      return {
+        ok: false,
+        status: 403,
+        error: paidPublishStripeConnectError(),
+      };
+    }
   }
 
   const metadataResult = parsePublishMetadataFromFormData(formData);

@@ -19,7 +19,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "需要創作者身分" }, { status: 403 });
     }
 
-    const body = (await request.json().catch(() => ({}))) as { locale?: string };
+    const body = (await request.json().catch(() => ({}))) as {
+      locale?: string;
+      returnTo?: "settings" | "dashboard" | "upload" | "edit";
+      gameId?: number;
+    };
     const origin = new URL(request.url).origin;
 
     const result = await startConnectOnboarding({
@@ -28,6 +32,11 @@ export async function POST(request: Request) {
       displayName: profile.display_name,
       origin,
       locale: body.locale,
+      returnTo: body.returnTo,
+      gameId:
+        typeof body.gameId === "number" && Number.isFinite(body.gameId)
+          ? body.gameId
+          : undefined,
     });
 
     if (result.mode === "preview") {

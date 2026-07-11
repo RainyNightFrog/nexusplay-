@@ -5,6 +5,7 @@ export type PayoutStatus = "none" | "pending" | "active" | "restricted";
 export type CreatorPayoutSnapshot = {
   payoutStatus: PayoutStatus;
   stripeConnectAccountId: string | null;
+  stripeDetailsSubmitted: boolean;
   creatorBalanceUsd: number;
   payoutOnboardedAt: string | null;
   stripeConfigured: boolean;

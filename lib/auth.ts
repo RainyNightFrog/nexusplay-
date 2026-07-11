@@ -20,6 +20,8 @@ export type UserProfile = {
   show_in_leaderboard: boolean;
   equipped_title_id: string | null;
   equipped_title: EquippedTitle | null;
+  stripe_account_id?: string | null;
+  stripe_details_submitted?: boolean;
 };
 
 export function getInitials(name: string) {

@@ -3,6 +3,7 @@ import {
   readCreatorPayoutRow,
   syncConnectAccountStatus,
 } from "@/lib/creator-payout-service";
+import { resolveStripeAccountId } from "@/lib/creator-stripe-gate";
 import { createServerSupabase } from "@/lib/supabase-server";
 
 export async function syncConnectAccountFromWebhook(account: Stripe.Account) {
@@ -11,10 +12,8 @@ export async function syncConnectAccountFromWebhook(account: Stripe.Account) {
 
   if (metadataUserId) {
     const row = await readCreatorPayoutRow(supabase, metadataUserId);
-    if (
-      row?.stripe_connect_account_id &&
-      row.stripe_connect_account_id !== account.id
-    ) {
+    const existingAccountId = resolveStripeAccountId(row);
+    if (existingAccountId && existingAccountId !== account.id) {
       console.warn(
         "[connect] metadata user account mismatch",
         metadataUserId,
@@ -30,7 +29,9 @@ export async function syncConnectAccountFromWebhook(account: Stripe.Account) {
   const { data: profile, error } = await supabase
     .from("profiles")
     .select("id")
-    .eq("stripe_connect_account_id", account.id)
+    .or(
+      `stripe_connect_account_id.eq.${account.id},stripe_account_id.eq.${account.id}`
+    )
     .maybeSingle();
 
   if (error) {

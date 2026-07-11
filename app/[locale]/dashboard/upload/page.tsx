@@ -5,6 +5,7 @@ import {
   useEffect,
   useRef,
   useState,
+  Suspense,
   type ChangeEvent,
   type DragEvent,
 } from "react";
@@ -33,6 +34,7 @@ import {
 import {
   GamePricingFields,
 } from "@/components/dashboard/game-pricing-fields";
+import { StripeConnectBanner } from "@/components/dashboard/stripe-connect-banner";
 import { PublishStatusFields } from "@/components/dashboard/publish-status-fields";
 import { PlatformAuthNotice } from "@/components/dashboard/platform-auth-notice";
 import { RequiredFieldLabel } from "@/components/dashboard/required-field-label";
@@ -43,6 +45,7 @@ import {
 import { uploadGame } from "@/lib/upload-game";
 import { DEFAULT_PUBLISH_STATUS } from "@/lib/game-publish";
 import { defaultGamePricingValues } from "@/lib/game-pricing";
+import { pricingValuesRequireStripeConnect } from "@/lib/creator-stripe-gate";
 import {
   getPublishValidationIssues,
   type PublishValidationField,
@@ -266,6 +269,9 @@ export default function UploadPage() {
     suggestedTipAmount: "",
   });
   const [pricing, setPricing] = useState(defaultGamePricingValues());
+  const [stripeConnectReady, setStripeConnectReady] = useState<boolean | null>(
+    null
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState("");
   const [toast, setToast] = useState<{
@@ -389,6 +395,9 @@ export default function UploadPage() {
       pricingType: pricing.pricingType,
       priceAmount: pricing.priceAmount,
       minPriceAmount: pricing.minPriceAmount,
+      stripeConnectReady:
+        !pricingValuesRequireStripeConnect({ pricingType: pricing.pricingType }) ||
+        stripeConnectReady === true,
     });
 
     if (issues.length > 0) {
@@ -651,6 +660,20 @@ export default function UploadPage() {
               onChange={setPricing}
               disabled={isSubmitting}
             />
+
+            {pricingValuesRequireStripeConnect({ pricingType: pricing.pricingType }) && (
+              <div id="field-stripe-connect">
+                <Suspense fallback={null}>
+                  <StripeConnectBanner
+                    returnTo="upload"
+                    required
+                    onStatusChange={(status) =>
+                      setStripeConnectReady(status?.canReceivePaidPayments ?? false)
+                    }
+                  />
+                </Suspense>
+              </div>
+            )}
 
             <PublishMonetizationFields
               values={monetization}

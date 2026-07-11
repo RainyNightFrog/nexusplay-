@@ -10,6 +10,7 @@ const FIELD_ELEMENT_IDS: Partial<Record<PublishValidationField, string>> = {
   aiContentTypes: "field-ai-disclosure",
   suggestedTip: "suggested-tip-amount",
   pricing: "field-pricing",
+  stripeConnect: "field-stripe-connect",
 };
 
 export function scrollToFirstValidationField(field: PublishValidationField) {

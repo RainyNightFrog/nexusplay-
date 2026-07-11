@@ -16,6 +16,12 @@ import {
   resolveApprovalStatusAfterCreatorUpdate,
 } from "@/lib/game-publish";
 import { parsePricingFromFormData } from "@/lib/game-pricing";
+import {
+  canCreatorReceivePaidPayments,
+  paidPublishStripeConnectError,
+  pricingRequiresStripeConnect,
+} from "@/lib/creator-stripe-gate";
+import { readCreatorPayoutRow } from "@/lib/creator-payout-service";
 import { triggerNewGameFollowerNotify } from "@/lib/creator-follow-notify";
 import { onCreatorGameWentLive } from "@/lib/achievement-unlock-service";
 import { isGamePubliclyLive } from "@/lib/game-live-service";
@@ -188,6 +194,19 @@ export async function patchCreatorGame(input: {
   const pricing = parsePricingFromFormData(formData);
   if (!pricing.ok) {
     return NextResponse.json({ error: pricing.error }, { status: 400 });
+  }
+
+  if (
+    monetization.data.publish_status === "public" &&
+    pricingRequiresStripeConnect(pricing.data)
+  ) {
+    const payoutRow = await readCreatorPayoutRow(supabase, user.id);
+    if (!canCreatorReceivePaidPayments(payoutRow)) {
+      return NextResponse.json(
+        { error: paidPublishStripeConnectError() },
+        { status: 403 }
+      );
+    }
   }
 
   const isPublic = monetization.data.publish_status === "public";

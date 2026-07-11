@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Image from "next/image";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { motion } from "framer-motion";
 import {
@@ -60,6 +60,7 @@ import { fetchDashboardRevenue } from "@/lib/fetch-dashboard-revenue";
 import type { DashboardRevenueAnalytics } from "@/lib/dashboard-revenue";
 import type { RevenueTrendDays } from "@/lib/dashboard-revenue-server";
 import { RevenuePanel } from "@/components/dashboard/revenue-panel";
+import { StripeConnectBanner } from "@/components/dashboard/stripe-connect-banner";
 import {
   fetchCreatorGames,
   type CreatorGameRecord,
@@ -363,6 +364,9 @@ export default function CreatorDashboardPage() {
       </SiteHeader>
 
       <main className="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+        <Suspense fallback={null}>
+          <StripeConnectBanner returnTo="dashboard" className="mb-6" />
+        </Suspense>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

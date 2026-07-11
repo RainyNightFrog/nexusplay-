@@ -152,12 +152,14 @@ export async function createConnectAccountPayout(params: {
 export function syncPayoutStatusFromAccount(account: Stripe.Account): {
   payoutStatus: PayoutStatus;
   onboardedAt: string | null;
+  stripeDetailsSubmitted: boolean;
 } {
   const payoutStatus = mapStripeAccountToPayoutStatus(account);
+  const stripeDetailsSubmitted = account.details_submitted === true;
   const onboardedAt =
-    payoutStatus === "active" && account.details_submitted
+    payoutStatus === "active" && stripeDetailsSubmitted
       ? new Date().toISOString()
       : null;
 
-  return { payoutStatus, onboardedAt };
+  return { payoutStatus, onboardedAt, stripeDetailsSubmitted };
 }

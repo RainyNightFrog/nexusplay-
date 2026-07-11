@@ -2,6 +2,7 @@ import type { GameGenre } from "@/lib/game-metadata";
 import type { GamePublishStatus } from "@/lib/game-publish";
 import type { AiContentType } from "@/lib/game-metadata";
 import type { GamePricingType } from "@/lib/game-pricing";
+import { pricingValuesRequireStripeConnect } from "@/lib/creator-stripe-gate";
 import { MIN_SUGGESTED_TIP_USD } from "@/lib/tip-limits";
 
 export type PublishFormValidationInput = {
@@ -20,6 +21,7 @@ export type PublishFormValidationInput = {
   pricingType: GamePricingType;
   priceAmount: string;
   minPriceAmount: string;
+  stripeConnectReady?: boolean;
 };
 
 export type PublishValidationField =
@@ -31,12 +33,29 @@ export type PublishValidationField =
   | "aiDisclosure"
   | "aiContentTypes"
   | "suggestedTip"
-  | "pricing";
+  | "pricing"
+  | "stripeConnect";
 
 export type PublishValidationIssue = {
   field: PublishValidationField;
   messageKey: string;
 };
+
+function appendStripeConnectValidationIssues(
+  issues: PublishValidationIssue[],
+  input: Pick<
+    PublishFormValidationInput,
+    "publishStatus" | "pricingType" | "stripeConnectReady"
+  >
+) {
+  if (input.publishStatus !== "public") return;
+  if (!pricingValuesRequireStripeConnect({ pricingType: input.pricingType })) {
+    return;
+  }
+  if (input.stripeConnectReady === false) {
+    issues.push({ field: "stripeConnect", messageKey: "alertStripeConnect" });
+  }
+}
 
 function appendPricingValidationIssues(
   issues: PublishValidationIssue[],
@@ -96,6 +115,7 @@ export function getPublishValidationIssues(
       }
     }
     appendPricingValidationIssues(issues, input);
+    appendStripeConnectValidationIssues(issues, input);
     return issues;
   }
 
@@ -130,6 +150,7 @@ export function getPublishValidationIssues(
   }
 
   appendPricingValidationIssues(issues, input);
+  appendStripeConnectValidationIssues(issues, input);
 
   return issues;
 }
