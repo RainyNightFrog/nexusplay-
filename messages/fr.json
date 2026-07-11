@@ -1744,7 +1744,7 @@
     "channelContacts": "Contacts",
     "contactsDesc": "DM virtual players — replies match their language style",
     "contactsBack": "Retour aux contacts",
-    "contactsVirtualHint": "Lecteur virtuel · réponse automatique",
+    "contactsVirtualHint": "Réponse automatique",
     "contactsEmptyThread": "Dites bonjour pour commencer à discuter",
     "contactsTyping": "Taper…",
     "contactsLoadFailed": "Échec du chargement des contacts",

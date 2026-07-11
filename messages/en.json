@@ -1735,7 +1735,7 @@
     "channelContacts": "Contacts",
     "contactsDesc": "Conversations you've started appear here",
     "contactsBack": "Back to contacts",
-    "contactsVirtualHint": "Virtual player · auto-reply",
+    "contactsVirtualHint": "Auto-reply",
     "contactsEmpty": "No direct messages yet",
     "contactsEmptyHint": "Click a player name in World or Creators to start a DM",
     "contactsEmptyThread": "Say hi to start chatting",

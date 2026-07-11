@@ -1744,7 +1744,7 @@
     "channelContacts": "연락처",
     "contactsDesc": "DM virtual players — replies match their language style",
     "contactsBack": "연락처로 돌아가기",
-    "contactsVirtualHint": "가상 플레이어 · 자동 응답",
+    "contactsVirtualHint": "자동 응답",
     "contactsEmptyThread": "인사하고 채팅을 시작하세요",
     "contactsTyping": "입력 중…",
     "contactsLoadFailed": "연락처를 로드하지 못했습니다.",

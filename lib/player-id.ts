@@ -13,6 +13,5 @@ export function formatPlayerNumber(
 export function formatPlayerIdLabel(
   playerNumber: number | string | null | undefined
 ): string | null {
-  const formatted = formatPlayerNumber(playerNumber);
-  return formatted ? `#${formatted}` : null;
+  return formatPlayerNumber(playerNumber);
 }

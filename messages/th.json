@@ -1744,7 +1744,7 @@
     "channelContacts": "รายชื่อผู้ติดต่อ",
     "contactsDesc": "DM virtual players — replies match their language style",
     "contactsBack": "กลับไปที่รายชื่อติดต่อ",
-    "contactsVirtualHint": "ผู้เล่นเสมือน · ตอบกลับอัตโนมัติ",
+    "contactsVirtualHint": "ตอบกลับอัตโนมัติ",
     "contactsEmptyThread": "ทักทายเพื่อเริ่มต้นการสนทนา",
     "contactsTyping": "กำลังพิมพ์...",
     "contactsLoadFailed": "โหลดที่อยู่ติดต่อไม่สำเร็จ",

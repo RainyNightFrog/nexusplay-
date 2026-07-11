@@ -1744,7 +1744,7 @@
     "channelContacts": "連絡先",
     "contactsDesc": "DM virtual players — replies match their language style",
     "contactsBack": "連絡先に戻る",
-    "contactsVirtualHint": "仮想プレーヤー・自動返信",
+    "contactsVirtualHint": "自動返信",
     "contactsEmptyThread": "こんにちはと言ってチャットを始めましょう",
     "contactsTyping": "入力中…",
     "contactsLoadFailed": "連絡先のロードに失敗しました",

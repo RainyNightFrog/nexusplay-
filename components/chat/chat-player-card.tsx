@@ -255,11 +255,7 @@ export function ChatPlayerCard({
                       {t("creatorBadge")}
                     </span>
                   )}
-                  {isVirtual ? (
-                    <span className="rounded-full bg-cyan-500/15 px-2 py-0.5 text-xs text-cyan-300">
-                      {t("playerCardVirtual")}
-                    </span>
-                  ) : (
+                  {!isVirtual && !isCreator && (
                     <span className="rounded-full bg-white/8 px-2 py-0.5 text-xs text-zinc-400">
                       {t("playerCardReal")}
                     </span>

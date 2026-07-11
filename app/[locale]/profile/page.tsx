@@ -16,7 +16,6 @@ import {
   Settings,
   Shield,
   UserRound,
-  Hash,
 } from "lucide-react";
 import { Link, useRouter } from "@/i18n/navigation";
 import { AchievementsModal } from "@/components/AchievementsModal";
@@ -382,7 +381,6 @@ export default function ProfilePage() {
                     "flex items-center justify-center gap-2 font-mono text-zinc-200"
                   )}
                 >
-                  <Hash className="size-4 shrink-0 text-cyan-400" />
                   <span id="playerId">
                     {formatPlayerIdLabel(profile.player_number) ?? "—"}
                   </span>

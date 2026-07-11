@@ -1737,7 +1737,7 @@
     "channelContacts": "通讯录",
     "contactsDesc": "DM virtual players — replies match their language style",
     "contactsBack": "返回通讯录",
-    "contactsVirtualHint": "虚拟玩家 · 自动回复",
+    "contactsVirtualHint": "自动回复",
     "contactsEmptyThread": "打个招呼开始聊天吧",
     "contactsTyping": "对方正在输入…",
     "contactsLoadFailed": "载入通讯录失败",

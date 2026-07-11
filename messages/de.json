@@ -1744,7 +1744,7 @@
     "channelContacts": "Kontakte",
     "contactsDesc": "DM virtual players — replies match their language style",
     "contactsBack": "Zurück zu den Kontakten",
-    "contactsVirtualHint": "Virtueller Player · automatische Antwort",
+    "contactsVirtualHint": "Automatische Antwort",
     "contactsEmptyThread": "Sagen Sie „Hallo“, um mit dem Chatten zu beginnen",
     "contactsTyping": "Tippen…",
     "contactsLoadFailed": "Kontakte konnten nicht geladen werden",
