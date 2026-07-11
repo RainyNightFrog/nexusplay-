@@ -3,6 +3,11 @@ import {
   createGameComment,
   getGameCommentsByGameId,
 } from "@/lib/game-comments-service";
+import {
+  checkRateLimit,
+  getClientIp,
+  rateLimitResponse,
+} from "@/lib/rate-limit";
 import { resolveRequestLocale } from "@/lib/request-locale";
 import { sanitizePlainText } from "@/lib/sanitize-plain";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
@@ -18,6 +23,12 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const ip = getClientIp(request);
+    const limit = checkRateLimit(`comments:get:${ip}`, 120, 60_000);
+    if (!limit.allowed) {
+      return rateLimitResponse(limit.retryAfterSec);
+    }
+
     const { id } = await params;
     const gameId = parseGameId(id);
 
@@ -39,6 +50,12 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const ip = getClientIp(request);
+    const limit = checkRateLimit(`comments:post:${ip}`, 10, 60_000);
+    if (!limit.allowed) {
+      return rateLimitResponse(limit.retryAfterSec);
+    }
+
     const { id } = await params;
     const gameId = parseGameId(id);
 

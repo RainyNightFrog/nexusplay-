@@ -16,7 +16,10 @@ import {
 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { buttonVariants } from "@/components/ui/button";
-import { CommunityForum } from "@/components/game/community-forum";
+import {
+  CommunityForum,
+  type CommunityForumThreadNavigation,
+} from "@/components/game/community-forum";
 import { GameFeedSubscribeSection } from "@/components/feeds/game-feed-subscribe-section";
 import { LeaderboardNavButton } from "@/components/LeaderboardModal";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
@@ -55,6 +58,8 @@ function GameForumContent() {
   const [game, setGame] = useState<Game | null>(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
+  const [threadNav, setThreadNav] =
+    useState<CommunityForumThreadNavigation | null>(null);
 
   const showToast = useCallback((message: string) => {
     setToast(message);
@@ -110,16 +115,30 @@ function GameForumContent() {
   return (
     <div className="dark relative min-h-full text-zinc-100">
       <SiteHeader>
-          <Link
-            href="/community"
-            className={cn(
-              buttonVariants({ variant: "ghost", size: "sm" }),
-              "gap-1.5 text-zinc-400 hover:text-violet-300"
-            )}
-          >
-            <ArrowLeft className="size-4" />
-            <span className="hidden sm:inline">{tCommunity("hub")}</span>
-          </Link>
+          {threadNav ? (
+            <button
+              type="button"
+              onClick={() => threadNav.exitThread()}
+              className={cn(
+                buttonVariants({ variant: "ghost", size: "sm" }),
+                "gap-1.5 text-zinc-400 hover:text-violet-300"
+              )}
+            >
+              <ArrowLeft className="size-4" />
+              <span className="hidden sm:inline">{tCommunity("hub")}</span>
+            </button>
+          ) : (
+            <Link
+              href="/community"
+              className={cn(
+                buttonVariants({ variant: "ghost", size: "sm" }),
+                "gap-1.5 text-zinc-400 hover:text-violet-300"
+              )}
+            >
+              <ArrowLeft className="size-4" />
+              <span className="hidden sm:inline">{tCommunity("hub")}</span>
+            </Link>
+          )}
 
           <div className="flex min-w-0 flex-1 items-center gap-2.5">
             <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-600 shadow-md shadow-violet-500/20">
@@ -205,6 +224,7 @@ function GameForumContent() {
             gameId={game.id}
             gameTitle={game.title}
             onToast={showToast}
+            onThreadNavigationChange={setThreadNav}
           />
         </motion.div>
       </main>

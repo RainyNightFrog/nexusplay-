@@ -24,6 +24,7 @@ import {
 } from "@/components/chat/chat-player-card";
 import {
   formatDonationAmount,
+  formatDonationTierLabel,
   formatDurationSeconds,
   LEADERBOARD_PAGE_SIZE,
   LEADERBOARD_POLL_MS,
@@ -129,7 +130,9 @@ function LeaderboardCard({
 
   const valueLabel =
     tab === "donated"
-      ? formatDonationAmount(entry.value, locale)
+      ? entry.isDonationMasked && entry.donationTier
+        ? formatDonationTierLabel(entry.donationTier, locale)
+        : formatDonationAmount(entry.value, locale)
       : formatDurationSeconds(entry.value, (key, values) => tcx(key, values));
 
   const cardBody = (

@@ -1,10 +1,12 @@
 /**
  * iframe sandbox tokens for embedded games.
- * Intentionally excludes allow-top-navigation and
- * allow-top-navigation-by-user-activation to prevent hijacking the parent page.
+ * Intentionally excludes allow-same-origin so sandboxed game JS cannot access
+ * the parent origin's localStorage, cookies, or Supabase session.
+ * Also excludes allow-top-navigation* to prevent hijacking the parent page.
+ * Cloud save/load is proxied via GameEmbedBridge postMessage.
  */
 export const IFRAME_SANDBOX =
-  "allow-scripts allow-same-origin allow-popups allow-forms allow-modals";
+  "allow-scripts allow-forms allow-pointer-lock";
 
 export function buildEmbedCode(
   embedUrl: string,

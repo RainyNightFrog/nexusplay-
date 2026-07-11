@@ -1,4 +1,12 @@
-import { getAmbientUserPlayerMap, getAmbientUserIdForVirtualPlayer } from "@/lib/ambient-user-index";
+import type { DonationPrivacyTier } from "@/lib/platform-leaderboard";
+import {
+  getAmbientUserPlayerMap,
+  getAmbientUserIdForVirtualPlayer,
+} from "@/lib/ambient-user-index";
+import {
+  maskDonationTotalForProfile,
+  resolveDonationTier,
+} from "@/lib/activity-stats-masking";
 import { getVirtualPlayerActivityStats } from "@/lib/platform-leaderboard-virtual";
 import { isUserOnline } from "@/lib/platform-leaderboard";
 import { resolveEquippedTitleForUser } from "@/lib/equipped-title-service";
@@ -35,7 +43,8 @@ export type ChatPlayerPublicProfile = {
   achievementCount: number;
   achievementHighlights: ChatPlayerAchievementHighlight[];
   forumPostCount: number;
-  donatedTotal: number;
+  donatedTotal: number | null;
+  donationTier?: DonationPrivacyTier;
   followerCount: number;
   publishedGames: number;
   onlineSeconds: number;
@@ -60,7 +69,8 @@ function readCountryCode(value: unknown): string | null {
 
 async function loadRealUserProfile(
   supabase: SupabaseClient,
-  userId: string
+  userId: string,
+  viewer?: { userId?: string | null; isAdmin?: boolean }
 ): Promise<ChatPlayerPublicProfile | null> {
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
@@ -107,7 +117,7 @@ async function loadRealUserProfile(
       .limit(5),
     supabase
       .from("user_achievements")
-      .select("id", { count: "exact", head: true })
+      .select("achievement_id", { count: "exact", head: true })
       .eq("user_id", userId),
     supabase
       .from("forum_posts")
@@ -121,7 +131,7 @@ async function loadRealUserProfile(
       .eq("status", "approved"),
     supabase
       .from("creator_follows")
-      .select("id", { count: "exact", head: true })
+      .select("follower_id", { count: "exact", head: true })
       .eq("creator_id", userId),
     resolveEquippedTitleForUser(supabase, userId),
   ]);
@@ -153,6 +163,12 @@ async function loadRealUserProfile(
       }));
   }
 
+  const rawDonated = Number(activity?.total_donated ?? 0);
+  const revealDonation = maskDonationTotalForProfile(rawDonated, {
+    isSelf: viewer?.userId === userId,
+    isAdmin: viewer?.isAdmin,
+  });
+
   return {
     userId,
     virtualPlayerId: null,
@@ -174,7 +190,8 @@ async function loadRealUserProfile(
     achievementCount: achievementCountRes.count ?? achievementHighlights.length,
     achievementHighlights,
     forumPostCount: forumPostsRes.count ?? 0,
-    donatedTotal: Number(activity?.total_donated ?? 0),
+    donatedTotal: revealDonation,
+    donationTier: resolveDonationTier(rawDonated),
     followerCount: followerCountRes.count ?? 0,
     publishedGames: publishedGamesRes.count ?? 0,
     onlineSeconds: activity?.total_online_time ?? 0,
@@ -272,8 +289,14 @@ export async function getChatPlayerPublicProfile(
     userId?: string | null;
     virtualPlayerId?: string | null;
     fallbackEquippedTitle?: EquippedTitle | null;
+    viewerUserId?: string | null;
+    viewerIsAdmin?: boolean;
   }
 ): Promise<ChatPlayerPublicProfile | null> {
+  const viewer = {
+    userId: options.viewerUserId,
+    isAdmin: options.viewerIsAdmin,
+  };
   let profile: ChatPlayerPublicProfile | null = null;
 
   if (options.userId) {
@@ -284,7 +307,11 @@ export async function getChatPlayerPublicProfile(
         supabase,
         options.virtualPlayerId ?? mappedVirtualId
       );
-      const realProfile = await loadRealUserProfile(supabase, options.userId);
+      const realProfile = await loadRealUserProfile(
+        supabase,
+        options.userId,
+        viewer
+      );
       if (profile) {
         const ambientUserId = await getAmbientUserIdForVirtualPlayer(
           supabase,
@@ -298,7 +325,7 @@ export async function getChatPlayerPublicProfile(
         };
       }
     } else {
-      profile = await loadRealUserProfile(supabase, options.userId);
+      profile = await loadRealUserProfile(supabase, options.userId, viewer);
     }
   }
 

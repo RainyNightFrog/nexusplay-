@@ -58,6 +58,10 @@ import { cn } from "@/lib/utils";
 
 type GameOption = { id: number; title: string };
 
+export type CommunityForumThreadNavigation = {
+  exitThread: () => void;
+};
+
 type CommunityForumProps = {
   gameId?: number;
   games?: GameOption[];
@@ -66,6 +70,7 @@ type CommunityForumProps = {
   onToast: (message: string) => void;
   onPostsChange?: (count: number) => void;
   onPostsLoaded?: (posts: ForumPostWithGame[]) => void;
+  onThreadNavigationChange?: (nav: CommunityForumThreadNavigation | null) => void;
 };
 
 type CategoryFilter = "all" | ForumCategory;
@@ -171,6 +176,7 @@ export function CommunityForum({
   onToast,
   onPostsChange,
   onPostsLoaded,
+  onThreadNavigationChange,
 }: CommunityForumProps) {
   const { profile, loading: authLoading } = useAuth();
   const t = useTranslations("forum");
@@ -438,6 +444,18 @@ export function CommunityForum({
     setThreadBodyReady(false);
     setSelectedPost(null);
   }, [clearThreadScrollTimers]);
+
+  useEffect(() => {
+    if (!onThreadNavigationChange) return;
+
+    if (selectedPost) {
+      onThreadNavigationChange({ exitThread: exitThreadView });
+    } else {
+      onThreadNavigationChange(null);
+    }
+
+    return () => onThreadNavigationChange(null);
+  }, [selectedPost, exitThreadView, onThreadNavigationChange]);
 
   useEffect(() => {
     return () => clearThreadScrollTimers();
@@ -717,11 +735,6 @@ export function CommunityForum({
                 <h4 className="mt-3 text-2xl font-bold tracking-tight text-white">
                   {selectedPost.title}
                 </h4>
-                {isSeedForumPostId(selectedPost.id) && (
-                  <p className="mt-3 rounded-lg border border-amber-400/20 bg-amber-500/5 px-3 py-2 text-xs leading-relaxed text-amber-100/90">
-                    {t("seedPost")}
-                  </p>
-                )}
                 <div className="mt-4 flex justify-center">
                   <AuthorChip
                     name={selectedPost.author_name}

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { parseGameTagsParam } from "@/lib/game-tag-filter";
 import { getGames, parseSortOption } from "@/lib/games-service";
 import { parseGamePriceFilterFromSearchParams } from "@/lib/game-price-filter";
 
@@ -8,13 +9,15 @@ export async function GET(request: Request) {
     const category = searchParams.get("category") ?? undefined;
     const sort = parseSortOption(searchParams.get("sort"));
     const priceFilter = parseGamePriceFilterFromSearchParams(searchParams);
+    const tags = parseGameTagsParam(searchParams);
 
-    const games = await getGames({ category, sort, priceFilter });
+    const games = await getGames({ category, sort, priceFilter, tags });
     return NextResponse.json({
       games,
       category: category ?? "全部",
       sort,
       priceFilter,
+      tags,
     });
   } catch (error) {
     const message =

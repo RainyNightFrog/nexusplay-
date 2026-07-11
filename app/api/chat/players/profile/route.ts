@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isAdminUser } from "@/lib/admin-auth";
 import {
   getChatPlayerPublicProfile,
   syncUserCountryFromRequest,
@@ -34,6 +35,8 @@ export async function GET(request: Request) {
     const profile = await getChatPlayerPublicProfile(supabase, {
       userId,
       virtualPlayerId,
+      viewerUserId: user.id,
+      viewerIsAdmin: isAdminUser(user),
     });
 
     if (!profile) {

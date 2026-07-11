@@ -8,6 +8,7 @@ export type GetGamesOptions = {
   category?: string;
   sort?: SortOption;
   priceFilter?: GamePriceFilterParams;
+  tags?: string[];
 };
 
 const VALID_SORTS: SortOption[] = ["latest", "views", "rating"];
@@ -20,7 +21,7 @@ export function parseSortOption(value: string | null): SortOption {
 }
 
 export async function getGames(options: GetGamesOptions = {}): Promise<Game[]> {
-  const { category, sort = "latest", priceFilter = {} } = options;
+  const { category, sort = "latest", priceFilter = {}, tags = [] } = options;
   const supabase = createServerSupabase();
 
   let query = supabase
@@ -31,6 +32,10 @@ export async function getGames(options: GetGamesOptions = {}): Promise<Game[]> {
 
   if (category && category !== "全部") {
     query = query.eq("category", category);
+  }
+
+  for (const tag of tags) {
+    query = query.contains("tags", [tag]);
   }
 
   if (priceFilter.isFree) {

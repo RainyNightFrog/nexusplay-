@@ -30,6 +30,17 @@ const RICH_HTML_OPTIONS: sanitizeHtml.IOptions = {
     img: ["http", "https"],
     a: ["http", "https", "mailto"],
   },
+  transformTags: {
+    a: (_tagName, attribs) => {
+      const nextAttribs: Record<string, string> = { ...attribs, rel: "noopener noreferrer" };
+      if (attribs.target === "_blank") {
+        nextAttribs.target = "_blank";
+      } else {
+        delete nextAttribs.target;
+      }
+      return { tagName: "a", attribs: nextAttribs };
+    },
+  },
 };
 
 /** Sanitize rich HTML from TipTap before storage. */
@@ -41,4 +52,9 @@ export function sanitizeRichHtml(html: string, maxLength: number): string {
   }
 
   return cleaned;
+}
+
+/** Defense-in-depth: re-sanitize HTML before client render. */
+export function sanitizeRichHtmlForRender(html: string): string {
+  return sanitizeHtml(html, RICH_HTML_OPTIONS);
 }

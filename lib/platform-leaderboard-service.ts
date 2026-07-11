@@ -6,6 +6,7 @@ import {
   type PlatformLeaderboardEntry,
   type PlatformLeaderboardsResponse,
 } from "@/lib/platform-leaderboard";
+import { maskDonationAmount } from "@/lib/activity-stats-masking";
 import { resolveEquippedTitles } from "@/lib/equipped-title-service";
 import { isAmbientLocalEmail } from "@/lib/ambient-local-email";
 import {
@@ -88,16 +89,31 @@ function mapEntries(
   profiles: Map<string, ProfileRow>,
   titleMap: Map<string, import("@/lib/titles").EquippedTitle | null>,
   valueKey: "total_online_time" | "total_play_time" | "total_donated",
-  currentUserId?: string | null
+  currentUserId?: string | null,
+  viewerIsAdmin = false
 ): PlatformLeaderboardEntry[] {
   const now = Date.now();
 
   return rows.map((row, index) => {
     const profile = profiles.get(row.user_id);
-    const value =
+    const isMe = currentUserId ? row.user_id === currentUserId : false;
+    let value =
       valueKey === "total_donated"
         ? Number(row.total_donated)
         : row[valueKey];
+
+    let isDonationMasked: boolean | undefined;
+    let donationTier: import("@/lib/platform-leaderboard").DonationPrivacyTier | undefined;
+
+    if (valueKey === "total_donated") {
+      const masked = maskDonationAmount(value, {
+        isSelf: isMe,
+        isAdmin: viewerIsAdmin,
+      });
+      value = masked.value;
+      isDonationMasked = masked.isMasked;
+      donationTier = masked.tier;
+    }
 
     return {
       rank: index + 1,
@@ -108,7 +124,9 @@ function mapEntries(
       value,
       lastActiveAt: row.last_active_at,
       isOnline: isUserOnline(row.last_active_at, now),
-      isMe: currentUserId ? row.user_id === currentUserId : undefined,
+      isMe: currentUserId ? isMe : undefined,
+      isDonationMasked,
+      donationTier,
     };
   });
 }
@@ -136,7 +154,8 @@ async function loadProfiles(
 
 export async function getPlatformLeaderboards(
   supabase: SupabaseClient,
-  currentUserId?: string | null
+  currentUserId?: string | null,
+  viewerIsAdmin = false
 ): Promise<PlatformLeaderboardsResponse> {
   await ensureActivityStatsBackfill(supabase);
 
@@ -163,14 +182,16 @@ export async function getPlatformLeaderboards(
     profiles,
     titleMap,
     "total_online_time",
-    currentUserId
+    currentUserId,
+    viewerIsAdmin
   );
   const realPlayTime = mapEntries(
     playRows,
     profiles,
     titleMap,
     "total_play_time",
-    currentUserId
+    currentUserId,
+    viewerIsAdmin
   );
 
   return {
@@ -189,7 +210,8 @@ export async function getPlatformLeaderboards(
       profiles,
       titleMap,
       "total_donated",
-      currentUserId
+      currentUserId,
+      viewerIsAdmin
     ),
     fetchedAt: new Date().toISOString(),
   };

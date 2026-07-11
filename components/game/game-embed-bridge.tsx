@@ -10,6 +10,8 @@ import {
   LEGACY_NEXUSPLAY_LEAVE_MESSAGE,
   LEGACY_NEXUSPLAY_READY_MESSAGE,
   RAINYNIGHTFROG_AUTH_MESSAGE,
+  RAINYNIGHTFROG_API_PROXY_REQUEST,
+  RAINYNIGHTFROG_API_PROXY_RESPONSE,
   RAINYNIGHTFROG_LEAVE_CONFIRM_REQUEST,
   RAINYNIGHTFROG_LEAVE_CONFIRM_RESPONSE,
   RAINYNIGHTFROG_LEAVE_MESSAGE,
@@ -64,6 +66,14 @@ export function GameEmbedBridge({
   );
   const leaveConfirmRef = useRef<PendingLeaveConfirm | null>(null);
 
+  const isMessageFromIframe = useCallback(
+    (event: MessageEvent) => {
+      const iframeWindow = iframeRef.current?.contentWindow;
+      return Boolean(iframeWindow && event.source === iframeWindow);
+    },
+    [iframeRef]
+  );
+
   const postAuth = useCallback(() => {
     const iframe = iframeRef.current;
     if (!iframe?.contentWindow) return;
@@ -78,7 +88,7 @@ export function GameEmbedBridge({
             ? `/dashboard/edit/${gameId}`
             : null,
       },
-      window.location.origin
+      "*"
     );
   }, [iframeRef, profile, gameId, creatorId]);
 
@@ -87,9 +97,95 @@ export function GameEmbedBridge({
       const iframe = iframeRef.current;
       const target = iframe?.contentWindow;
       if (!target) return;
-      target.postMessage(payload, window.location.origin);
+      target.postMessage(payload, "*");
     },
     [iframeRef]
+  );
+
+  const respondApiProxy = useCallback(
+    (
+      requestId: string,
+      result:
+        | { ok: true; status: number; data: unknown }
+        | { ok: false; status: number; error: string }
+    ) => {
+      const iframe = iframeRef.current;
+      iframe?.contentWindow?.postMessage(
+        {
+          type: RAINYNIGHTFROG_API_PROXY_RESPONSE,
+          requestId,
+          ...result,
+        },
+        "*"
+      );
+    },
+    [iframeRef]
+  );
+
+  const handleApiProxyRequest = useCallback(
+    async (data: {
+      requestId?: string;
+      method?: string;
+      path?: string;
+      body?: unknown;
+    }) => {
+      const requestId = data.requestId;
+      if (!requestId || !data.path || !data.method) return;
+
+      const allowedPath = new RegExp(
+        `^/api/games/${gameId}/save(?:/import-legacy)?$`
+      );
+      if (!allowedPath.test(data.path)) {
+        respondApiProxy(requestId, {
+          ok: false,
+          status: 403,
+          error: "不允許的 API 路徑",
+        });
+        return;
+      }
+
+      const method = data.method.toUpperCase();
+      if (!["GET", "PUT", "POST"].includes(method)) {
+        respondApiProxy(requestId, {
+          ok: false,
+          status: 405,
+          error: "不支援的 HTTP 方法",
+        });
+        return;
+      }
+
+      try {
+        const response = await fetch(data.path, {
+          method,
+          credentials: "include",
+          headers:
+            data.body != null ? { "Content-Type": "application/json" } : undefined,
+          body: data.body != null ? JSON.stringify(data.body) : undefined,
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (response.ok) {
+          respondApiProxy(requestId, {
+            ok: true,
+            status: response.status,
+            data: payload,
+          });
+          return;
+        }
+        respondApiProxy(requestId, {
+          ok: false,
+          status: response.status,
+          error: String((payload as { error?: string }).error ?? "請求失敗"),
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "代理請求失敗";
+        respondApiProxy(requestId, {
+          ok: false,
+          status: 500,
+          error: message,
+        });
+      }
+    },
+    [gameId, respondApiProxy]
   );
 
   const syncIframeLayout = useCallback(() => {
@@ -132,7 +228,7 @@ export function GameEmbedBridge({
           requestId: pending.requestId,
           confirmed,
         },
-        window.location.origin
+        "*"
       );
 
       leaveConfirmRef.current = null;
@@ -151,12 +247,20 @@ export function GameEmbedBridge({
 
   useEffect(() => {
     function onMessage(event: MessageEvent) {
-      if (event.origin !== window.location.origin) return;
+      if (!isMessageFromIframe(event)) return;
       const data = event.data as {
         type?: string;
         gameId?: number;
         requestId?: string;
+        method?: string;
+        path?: string;
+        body?: unknown;
       };
+
+      if (data?.type === RAINYNIGHTFROG_API_PROXY_REQUEST) {
+        void handleApiProxyRequest(data);
+        return;
+      }
 
       if (
         data?.type === RAINYNIGHTFROG_LEAVE_CONFIRM_REQUEST ||
@@ -203,7 +307,7 @@ export function GameEmbedBridge({
 
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [gameId, postAuth, postResize, router, onExpandRequest]);
+  }, [gameId, postAuth, postResize, router, onExpandRequest, isMessageFromIframe, handleApiProxyRequest]);
 
   useEffect(() => {
     if (!loading) {

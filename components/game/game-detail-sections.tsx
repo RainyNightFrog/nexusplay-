@@ -11,6 +11,7 @@ import type { GameComment, GameDevlogEntry } from "@/lib/game-page-content";
 import { isSupabaseImage } from "@/lib/games";
 import { useApiError } from "@/hooks/use-api-error";
 import { UserBadge } from "@/components/UserBadge";
+import { sanitizeRichHtmlForRender } from "@/lib/sanitize-rich-html";
 import { cn } from "@/lib/utils";
 
 type GameDetailSectionsProps = {
@@ -170,7 +171,9 @@ export function GameDetailSections({
                 "[&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-white",
                 "[&_p]:text-zinc-400 [&_a]:text-cyan-400 [&_li]:text-zinc-400"
               )}
-              dangerouslySetInnerHTML={{ __html: detailsHtml }}
+              dangerouslySetInnerHTML={{
+                __html: sanitizeRichHtmlForRender(detailsHtml),
+              }}
             />
           )}
 

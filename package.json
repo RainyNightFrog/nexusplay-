@@ -78,6 +78,7 @@
     "db:admin": "node scripts/run-admin-control-center.mjs",
     "db:analytics": "node scripts/run-analytics-events.mjs",
     "db:activity-stats": "node scripts/run-user-activity-stats.mjs",
+    "db:security": "node scripts/run-security-suite.mjs",
     "db:achievements": "node scripts/run-achievements-titles.mjs",
     "db:achievements-auto-unlock": "node scripts/run-achievements-auto-unlock.mjs",
     "db:achievements-expand": "node scripts/run-achievements-expand.mjs",

@@ -18,7 +18,10 @@ import {
 import { buttonVariants } from "@/components/ui/button";
 import { NavActions } from "@/components/layout/nav-actions";
 import { SiteHeader } from "@/components/layout/site-header";
-import { CommunityForum } from "@/components/game/community-forum";
+import {
+  CommunityForum,
+  type CommunityForumThreadNavigation,
+} from "@/components/game/community-forum";
 import { RssFeedLink } from "@/components/feeds/rss-feed-link";
 import { FEATURED_GAMES } from "@/lib/platform-catalog";
 import { isSupabaseImage, type Game } from "@/lib/games";
@@ -31,12 +34,15 @@ export default function CommunityPage() {
   const { localizedDescription } = useGameI18n();
   const { formatCount } = useFormatCount();
   const t = useTranslations("community");
+  const tForum = useTranslations("forum");
   const tNav = useTranslations("nav");
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [forumCounts, setForumCounts] = useState<Record<number, number>>({});
   const [totalPosts, setTotalPosts] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
+  const [threadNav, setThreadNav] =
+    useState<CommunityForumThreadNavigation | null>(null);
 
   const showToast = useCallback((message: string) => {
     setToast(message);
@@ -88,14 +94,34 @@ export default function CommunityPage() {
             <span className="hidden sm:inline">{tNav("home")}</span>
           </Link>
 
-          <div className="flex min-w-0 flex-1 items-center gap-2.5">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-600 shadow-md shadow-violet-500/20">
-              <MessagesSquare className="size-4 text-white" />
+          {threadNav ? (
+            <button
+              type="button"
+              onClick={() => threadNav.exitThread()}
+              className={cn(
+                "flex min-w-0 flex-1 items-center gap-2.5 rounded-lg text-left outline-none",
+                "transition-colors hover:opacity-90",
+                "focus-visible:ring-2 focus-visible:ring-violet-500/40"
+              )}
+              aria-label={tForum("backToList")}
+            >
+              <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-600 shadow-md shadow-violet-500/20">
+                <MessagesSquare className="size-4 text-white" />
+              </div>
+              <span className="truncate bg-gradient-to-r from-white via-violet-100 to-fuchsia-200 bg-clip-text text-base font-bold tracking-tight text-transparent">
+                {t("hub")}
+              </span>
+            </button>
+          ) : (
+            <div className="flex min-w-0 flex-1 items-center gap-2.5">
+              <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-600 shadow-md shadow-violet-500/20">
+                <MessagesSquare className="size-4 text-white" />
+              </div>
+              <span className="truncate bg-gradient-to-r from-white via-violet-100 to-fuchsia-200 bg-clip-text text-base font-bold tracking-tight text-transparent">
+                {t("hub")}
+              </span>
             </div>
-            <span className="truncate bg-gradient-to-r from-white via-violet-100 to-fuchsia-200 bg-clip-text text-base font-bold tracking-tight text-transparent">
-              {t("hub")}
-            </span>
-          </div>
+          )}
 
           <div className="ml-auto">
             <NavActions />
@@ -164,6 +190,7 @@ export default function CommunityPage() {
                 onToast={showToast}
                 onPostsChange={setTotalPosts}
                 onPostsLoaded={handlePostsLoaded}
+                onThreadNavigationChange={setThreadNav}
               />
             </motion.div>
 

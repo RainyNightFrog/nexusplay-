@@ -29,6 +29,7 @@ import type { EquippedTitle } from "@/lib/titles";
 import { formatCountryName } from "@/lib/request-geo";
 import {
   formatDonationAmount,
+  formatDonationTierLabel,
   formatDurationSeconds,
   type PlatformLeaderboardEntry,
 } from "@/lib/platform-leaderboard";
@@ -387,7 +388,13 @@ export function ChatPlayerCard({
                 <StatItem
                   icon={<Wallet className="size-3.5 shrink-0" />}
                   label={t("playerCardDonated")}
-                  value={formatDonationAmount(detail.donatedTotal, locale)}
+                  value={
+                    detail.donatedTotal != null
+                      ? formatDonationAmount(detail.donatedTotal, locale)
+                      : detail.donationTier && detail.donationTier !== "none"
+                        ? formatDonationTierLabel(detail.donationTier, locale)
+                        : "—"
+                  }
                 />
                 {detail.isCreator && (
                   <StatItem

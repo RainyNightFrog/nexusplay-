@@ -4,6 +4,7 @@ import {
   looksLikeForumHtml,
   stripHtmlForPreview,
 } from "@/lib/forum-content";
+import { sanitizeRichHtmlForRender } from "@/lib/sanitize-rich-html";
 import { cn } from "@/lib/utils";
 
 type ForumContentViewProps = {
@@ -42,7 +43,7 @@ export function ForumContentView({
           "game-details-content forum-content prose prose-invert prose-sm max-w-none text-sm leading-relaxed",
           className
         )}
-        dangerouslySetInnerHTML={{ __html: content }}
+        dangerouslySetInnerHTML={{ __html: sanitizeRichHtmlForRender(content) }}
       />
     );
   }

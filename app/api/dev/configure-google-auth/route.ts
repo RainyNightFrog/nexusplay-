@@ -8,11 +8,12 @@ import {
 const PROJECT_REF = "icydkixwynxizrgfzelq";
 
 function isSetupAllowed() {
+  if (process.env.ENABLE_OAUTH_SETUP === "true") {
+    return true;
+  }
   return (
     process.env.NODE_ENV === "development" ||
-    process.env.ENABLE_OAUTH_SETUP === "true" ||
-    process.env.VERCEL_ENV === "preview" ||
-    process.env.VERCEL_ENV === "production"
+    process.env.VERCEL_ENV === "preview"
   );
 }
 

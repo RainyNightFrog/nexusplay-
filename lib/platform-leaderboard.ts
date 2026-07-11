@@ -14,6 +14,13 @@ export type ActivityStatsRow = {
   last_active_at: string;
 };
 
+export type DonationPrivacyTier =
+  | "none"
+  | "supporter"
+  | "enthusiast"
+  | "patron"
+  | "legend";
+
 export type PlatformLeaderboardEntry = {
   rank: number;
   userId: string;
@@ -24,6 +31,9 @@ export type PlatformLeaderboardEntry = {
   lastActiveAt: string;
   isOnline: boolean;
   isMe?: boolean;
+  /** 打賞榜：非本人且非 admin 時為 true，UI 顯示區間而非精確金額 */
+  isDonationMasked?: boolean;
+  donationTier?: DonationPrivacyTier;
 };
 
 export type PlatformLeaderboardsResponse = {
@@ -69,4 +79,33 @@ export function formatDonationAmount(amount: number, locale: string): string {
   } catch {
     return `HK$${amount.toFixed(2)}`;
   }
+}
+
+const DONATION_TIER_LABELS: Record<
+  DonationPrivacyTier,
+  { "zh-HK": string; en: string; default: string }
+> = {
+  none: { "zh-HK": "—", en: "—", default: "—" },
+  supporter: { "zh-HK": "☕ 支持者", en: "☕ Supporter", default: "☕ Supporter" },
+  enthusiast: {
+    "zh-HK": "⭐ 熱心支持者",
+    en: "⭐ Enthusiast",
+    default: "⭐ Enthusiast",
+  },
+  patron: { "zh-HK": "💎 金牌贊助", en: "💎 Patron", default: "💎 Patron" },
+  legend: { "zh-HK": "👑 傳奇贊助", en: "👑 Legend", default: "👑 Legend" },
+};
+
+export function formatDonationTierLabel(
+  tier: DonationPrivacyTier,
+  locale: string
+): string {
+  const labels = DONATION_TIER_LABELS[tier];
+  if (locale.startsWith("zh")) {
+    return labels["zh-HK"];
+  }
+  if (locale.startsWith("en")) {
+    return labels.en;
+  }
+  return labels.default;
 }

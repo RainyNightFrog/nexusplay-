@@ -26,7 +26,10 @@ create policy "Public read games"
   for select
   to anon, authenticated
   using (
-    publish_status = 'public'
+    (
+      publish_status = 'public'
+      and status = 'approved'
+    )
     or (auth.uid() is not null and auth.uid() = creator_id)
   );
 

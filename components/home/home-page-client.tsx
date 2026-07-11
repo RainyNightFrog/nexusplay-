@@ -1,16 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { GameCoverImage } from "@/components/ui/game-cover-image";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Gamepad2,
   MessagesSquare,
   Upload,
-  Heart,
-  Share2,
-  Users,
   Sparkles,
   Zap,
   TrendingUp,
@@ -20,7 +16,6 @@ import {
 import { Link } from "@/i18n/navigation";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -41,13 +36,19 @@ import { AnnouncementMarquee } from "@/components/home/announcement-marquee";
 import { HomePersonalizedSections } from "@/components/home/home-personalized-sections";
 import { PriceFilterSidebar } from "@/components/home/price-filter-sidebar";
 import {
+  BentoGameGrid,
+  BentoGameGridSkeleton,
+} from "@/components/home/bento-game-grid";
+import { TagFilterBar } from "@/components/home/tag-filter-bar";
+import {
   FILTER_CATEGORIES,
   SORT_OPTIONS,
-  TAG_COLORS,
   type FilterCategory,
   type Game,
   type SortOption,
 } from "@/lib/games";
+import type { GameTag } from "@/lib/game-metadata";
+import { appendGameTagsToSearchParams } from "@/lib/game-tag-filter";
 import {
   appendGamePriceFilterToSearchParams,
   priceFilterIdToParams,
@@ -55,161 +56,8 @@ import {
 } from "@/lib/game-price-filter";
 import { ALL_CATEGORY } from "@/lib/home-copy";
 import { useGameI18n } from "@/hooks/use-game-i18n";
-import { useFormatCount } from "@/hooks/use-format-count";
 import { useGameFavoriteActions } from "@/hooks/use-game-favorite-actions";
 import { cn } from "@/lib/utils";
-
-const MotionLink = motion.create(Link);
-const SKELETON_COUNT = 8;
-
-function GameCard({
-  game,
-  index,
-  favoriteCount,
-  favorited,
-  favoriteBusy,
-  onFavoriteClick,
-}: {
-  game: Game;
-  index: number;
-  favoriteCount?: number;
-  favorited?: boolean;
-  favoriteBusy?: boolean;
-  onFavoriteClick?: (event: React.MouseEvent) => void;
-}) {
-  const t = useTranslations("home");
-  const { localizedTag } = useGameI18n();
-  const { formatCount } = useFormatCount();
-  const displayFavoriteCount = favoriteCount ?? game.likes;
-
-  return (
-    <MotionLink
-      href={`/game/${game.id}`}
-      initial={{ opacity: 0, y: 24 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.45, delay: index * 0.07, ease: "easeOut" }}
-      whileHover={{ y: -8, scale: 1.02 }}
-      whileTap={{ scale: 0.97 }}
-      className="group relative block cursor-pointer"
-    >
-      <div
-        className={cn(
-          "relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/60",
-          "shadow-lg shadow-black/40 backdrop-blur-sm",
-          "transition-[border-color,box-shadow] duration-300",
-          "group-hover:border-cyan-400/50 group-hover:shadow-cyan-500/10 group-hover:shadow-2xl"
-        )}
-      >
-        <div className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-          <div className="absolute inset-0 bg-gradient-to-t from-cyan-500/10 via-transparent to-violet-500/10" />
-          <div className="absolute inset-px rounded-[15px] ring-1 ring-inset ring-white/10 group-hover:ring-cyan-400/40" />
-        </div>
-
-        <div className="relative aspect-[16/10] overflow-hidden">
-          <GameCoverImage
-            src={game.image}
-            alt={game.title}
-            fill
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-            className="object-cover transition-transform duration-500 group-hover:scale-110"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/20 to-transparent" />
-        </div>
-
-        <div className="relative space-y-3 p-4 text-center">
-          <h3 className="text-base font-semibold tracking-tight text-white transition-colors group-hover:text-cyan-50">
-            {game.title}
-          </h3>
-
-          <div className="flex flex-wrap justify-center gap-1.5">
-            {game.tags
-              .filter((tag) => tag.trim())
-              .map((tag) => (
-              <span
-                key={tag}
-                className={cn(
-                  "rounded-md px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset",
-                  TAG_COLORS[tag] ?? "bg-zinc-700/50 text-zinc-300 ring-zinc-600/40"
-                )}
-              >
-                {localizedTag(tag)}
-              </span>
-            ))}
-          </div>
-
-          <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-zinc-400">
-            <span className="flex items-center gap-1.5">
-              <Users className="size-3.5 text-cyan-400/80" />
-              {formatCount(game.players)} {t("statsPlaying")}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <button
-                type="button"
-                disabled={favoriteBusy}
-                onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  onFavoriteClick?.(event);
-                }}
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-md transition",
-                  "hover:text-rose-300 disabled:opacity-50",
-                  onFavoriteClick && "cursor-pointer"
-                )}
-                aria-label={favorited ? t("statsFavorited") : t("statsFavorite")}
-              >
-                <Heart
-                  className={cn(
-                    "size-3.5",
-                    favorited ? "fill-rose-400 text-rose-400" : "text-rose-400/80"
-                  )}
-                />
-                {formatCount(displayFavoriteCount)} {t("statsFavorites")}
-              </button>
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Share2 className="size-3.5 text-fuchsia-400/80" />
-              {formatCount(game.shares)} {t("statsShares")}
-            </span>
-          </div>
-        </div>
-      </div>
-    </MotionLink>
-  );
-}
-
-function GameCardSkeleton() {
-  return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/60 shadow-lg shadow-black/20">
-      <Skeleton className="aspect-[16/10] w-full rounded-none bg-zinc-800/70" />
-      <div className="space-y-3 p-4">
-        <Skeleton className="mx-auto h-5 w-3/4 bg-zinc-800/70" />
-        <div className="flex justify-center gap-1.5">
-          <Skeleton className="h-5 w-12 rounded-md bg-zinc-800/70" />
-          <Skeleton className="h-5 w-10 rounded-md bg-zinc-800/70" />
-        </div>
-        <Skeleton className="mx-auto h-4 w-20 bg-zinc-800/70" />
-      </div>
-    </div>
-  );
-}
-
-function GameGridSkeleton() {
-  return (
-    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {Array.from({ length: SKELETON_COUNT }).map((_, index) => (
-        <motion.div
-          key={index}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.3, delay: index * 0.04 }}
-        >
-          <GameCardSkeleton />
-        </motion.div>
-      ))}
-    </div>
-  );
-}
 
 function FilterSortBar({
   category,
@@ -327,12 +175,14 @@ export function HomePageClient() {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
   const [category, setCategory] = useState<FilterCategory>(ALL_CATEGORY);
+  const [selectedTags, setSelectedTags] = useState<GameTag[]>([]);
   const [sort, setSort] = useState<SortOption>("latest");
   const [priceFilter, setPriceFilter] = useState<PriceFilterId>("all");
 
   const loadGames = useCallback(
     async (
       nextCategory: FilterCategory,
+      nextTags: GameTag[],
       nextSort: SortOption,
       nextPriceFilter: PriceFilterId
     ) => {
@@ -345,6 +195,7 @@ export function HomePageClient() {
       if (nextSort !== "latest") {
         params.set("sort", nextSort);
       }
+      appendGameTagsToSearchParams(params, nextTags);
       appendGamePriceFilterToSearchParams(
         params,
         priceFilterIdToParams(nextPriceFilter)
@@ -378,12 +229,16 @@ export function HomePageClient() {
   );
 
   useEffect(() => {
-    loadGames(category, sort, priceFilter);
-  }, [category, sort, priceFilter, loadGames]);
+    loadGames(category, selectedTags, sort, priceFilter);
+  }, [category, selectedTags, sort, priceFilter, loadGames]);
 
   const activeSortLabel = t(`sort.${sort}`);
   const activePriceFilterLabel = t(`priceFilter.${priceFilter}`);
   const categoryLabel = (value: FilterCategory) => localizedTag(value);
+  const selectedTagsLabel = useMemo(
+    () => selectedTags.map((tag) => localizedTag(tag)).join(" · "),
+    [selectedTags, localizedTag]
+  );
 
   return (
     <div className="dark relative min-h-full text-zinc-100">
@@ -540,7 +395,30 @@ export function HomePageClient() {
               {t("featuredGames")}
             </h2>
             <p className="mt-1 text-sm text-zinc-500">
-              {category === ALL_CATEGORY
+              {selectedTags.length > 0
+                ? category === ALL_CATEGORY
+                  ? priceFilter === "all"
+                    ? t("gridDescTags", {
+                        tags: selectedTagsLabel,
+                        sort: activeSortLabel,
+                      })
+                    : t("gridDescCategoryTags", {
+                        category: t("priceFilter.all"),
+                        tags: selectedTagsLabel,
+                        sort: activeSortLabel,
+                      })
+                  : priceFilter === "all"
+                    ? t("gridDescCategoryTags", {
+                        category: categoryLabel(category),
+                        tags: selectedTagsLabel,
+                        sort: activeSortLabel,
+                      })
+                    : t("gridDescCategoryTags", {
+                        category: `${categoryLabel(category)} · ${activePriceFilterLabel}`,
+                        tags: selectedTagsLabel,
+                        sort: activeSortLabel,
+                      })
+                : category === ALL_CATEGORY
                 ? priceFilter === "all"
                   ? t("gridDescAll", { sort: activeSortLabel })
                   : t("gridDescPrice", {
@@ -567,6 +445,11 @@ export function HomePageClient() {
               className="mb-6 min-[1600px]:absolute min-[1600px]:top-0 min-[1600px]:right-full min-[1600px]:z-10 min-[1600px]:mb-0 min-[1600px]:mr-4 min-[1600px]:w-36"
             />
 
+          <TagFilterBar
+            selectedTags={selectedTags}
+            onChange={setSelectedTags}
+          />
+
           <FilterSortBar
             category={category}
             sort={sort}
@@ -583,28 +466,23 @@ export function HomePageClient() {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
               >
-                <GameGridSkeleton />
+                <BentoGameGridSkeleton />
               </motion.div>
             ) : games.length > 0 ? (
               <motion.div
-                key={`${category}-${sort}-${priceFilter}-grid`}
+                key={`${category}-${selectedTags.join(",")}-${sort}-${priceFilter}-bento`}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.25 }}
-                className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
               >
-                {games.map((game, index) => (
-                  <GameCard
-                    key={game.id}
-                    game={game}
-                    index={index}
-                    favoriteCount={favoriteCounts[game.id]}
-                    favorited={favoritedIds.has(game.id)}
-                    favoriteBusy={favoriteBusyId === game.id}
-                    onFavoriteClick={() => void handleFavoriteClick(game.id)}
-                  />
-                ))}
+                <BentoGameGrid
+                  games={games}
+                  favoriteCounts={favoriteCounts}
+                  favoritedIds={favoritedIds}
+                  favoriteBusyId={favoriteBusyId}
+                  onFavoriteClick={(gameId) => void handleFavoriteClick(gameId)}
+                />
               </motion.div>
             ) : (
               <motion.div
@@ -617,7 +495,9 @@ export function HomePageClient() {
               >
                 <Gamepad2 className="mx-auto mb-4 size-10 text-zinc-600" />
                 <p className="text-lg font-medium text-white">
-                  {priceFilter !== "all"
+                  {selectedTags.length > 0
+                    ? t("emptyTags")
+                    : priceFilter !== "all"
                     ? t("emptyPrice", { price: activePriceFilterLabel })
                     : category === ALL_CATEGORY
                       ? t("emptyAll")
@@ -626,14 +506,27 @@ export function HomePageClient() {
                         })}
                 </p>
                 <p className="mt-2 text-sm text-zinc-500">
-                  {priceFilter !== "all"
+                  {selectedTags.length > 0
+                    ? t("emptyHintTags")
+                    : priceFilter !== "all"
                     ? t("emptyHintPrice")
                     : category === ALL_CATEGORY
                       ? t("emptyHintAll")
                       : t("emptyHintCategory")}
                 </p>
-                {(category !== ALL_CATEGORY || priceFilter !== "all") && (
+                {(category !== ALL_CATEGORY ||
+                  priceFilter !== "all" ||
+                  selectedTags.length > 0) && (
                   <div className="mt-4 flex flex-wrap justify-center gap-2">
+                    {selectedTags.length > 0 && (
+                      <Button
+                        variant="ghost"
+                        className="text-zinc-400 hover:text-fuchsia-300"
+                        onClick={() => setSelectedTags([])}
+                      >
+                        {t("viewAllTags")}
+                      </Button>
+                    )}
                     {category !== ALL_CATEGORY && (
                       <Button
                         variant="ghost"
