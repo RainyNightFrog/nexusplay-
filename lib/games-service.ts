@@ -41,7 +41,14 @@ export async function getGames(options: GetGamesOptions = {}): Promise<Game[]> {
   }
 
   if (priceFilter.maxPrice != null) {
-    query = query.lte("price", priceFilter.maxPrice);
+    if (priceFilter.excludeFree) {
+      const max = priceFilter.maxPrice;
+      query = query.or(
+        `and(pricing_type.eq.fixed,price.gte.1,price.lte.${max}),and(pricing_type.eq.pwyw,min_price.gte.1,min_price.lte.${max})`
+      );
+    } else {
+      query = query.lte("price", priceFilter.maxPrice);
+    }
   }
 
   if (priceFilter.onSale) {

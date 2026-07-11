@@ -5,6 +5,7 @@ export type GamePriceFilterParams = {
   minPrice?: number;
   maxPrice?: number;
   onSale?: boolean;
+  excludeFree?: boolean;
 };
 
 export const PRICE_FILTER_OPTIONS: Array<{
@@ -13,8 +14,8 @@ export const PRICE_FILTER_OPTIONS: Array<{
 }> = [
   { id: "all", params: {} },
   { id: "free", params: { isFree: true } },
-  { id: "under_5", params: { maxPrice: 500 } },
-  { id: "under_15", params: { maxPrice: 1500 } },
+  { id: "under_5", params: { maxPrice: 500, excludeFree: true } },
+  { id: "under_15", params: { maxPrice: 1500, excludeFree: true } },
   { id: "on_sale", params: { onSale: true } },
 ];
 
@@ -43,6 +44,7 @@ export function parseGamePriceFilterFromSearchParams(
     minPrice: parseOptionalCents(searchParams.get("min_price")),
     maxPrice: parseOptionalCents(searchParams.get("max_price")),
     onSale: parseOptionalBoolean(searchParams.get("on_sale")),
+    excludeFree: parseOptionalBoolean(searchParams.get("exclude_free")),
   };
 }
 
@@ -58,6 +60,9 @@ export function appendGamePriceFilterToSearchParams(
   }
   if (filter.maxPrice != null) {
     params.set("max_price", String(filter.maxPrice));
+  }
+  if (filter.excludeFree) {
+    params.set("exclude_free", "true");
   }
   if (filter.onSale) {
     params.set("on_sale", "true");
