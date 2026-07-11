@@ -1,4 +1,11 @@
 import type { DonationPrivacyTier } from "@/lib/platform-leaderboard";
+import { resolvePlayerLeaderboardRanks } from "@/lib/platform-leaderboard-ranks";
+import {
+  parseProfileShowcaseTags,
+  resolveProfileShowcaseTags,
+  type ProfileShowcaseTagId,
+  type ProfileShowcaseTagPayload,
+} from "@/lib/profile-showcase-tags";
 import {
   getAmbientUserPlayerMap,
   getAmbientUserIdForVirtualPlayer,
@@ -7,7 +14,11 @@ import {
   maskDonationTotalForProfile,
   resolveDonationTier,
 } from "@/lib/activity-stats-masking";
-import { getVirtualPlayerActivityStats } from "@/lib/platform-leaderboard-virtual";
+import {
+  getVirtualPlayerActivityStats,
+  isVirtualLeaderboardUserId,
+  VIRTUAL_LEADERBOARD_USER_PREFIX,
+} from "@/lib/platform-leaderboard-virtual";
 import { isUserOnline } from "@/lib/platform-leaderboard";
 import { resolveEquippedTitleForUser } from "@/lib/equipped-title-service";
 import { resolveVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
@@ -51,6 +62,8 @@ export type ChatPlayerPublicProfile = {
   playSeconds: number;
   lastActiveAt: string | null;
   countryCode: string | null;
+  isSupporter: boolean;
+  showcaseTags: ProfileShowcaseTagPayload[];
 };
 
 function readBoolean(value: unknown, fallback: boolean) {
@@ -74,7 +87,7 @@ async function loadRealUserProfile(
 ): Promise<ChatPlayerPublicProfile | null> {
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("id, display_name, avatar_url, role, bio, player_number")
+    .select("id, display_name, avatar_url, role, bio, player_number, is_supporter")
     .eq("id", userId)
     .maybeSingle();
 
@@ -198,6 +211,8 @@ async function loadRealUserProfile(
     playSeconds: activity?.total_play_time ?? 0,
     lastActiveAt,
     countryCode,
+    isSupporter: profile.is_supporter === true,
+    showcaseTags: [],
   };
 }
 
@@ -254,7 +269,62 @@ async function loadVirtualPlayerProfile(
     playSeconds: activity.playSeconds,
     lastActiveAt: activity.lastActiveAt,
     countryCode: getVirtualPlayerCountryCode(virtualPlayerId),
+    isSupporter: social.donatedTotal > 0,
+    showcaseTags: [],
   };
+}
+
+async function loadProfileShowcasePreferences(
+  supabase: SupabaseClient,
+  userId: string | null | undefined
+): Promise<ProfileShowcaseTagId[] | null> {
+  if (!userId) return null;
+
+  const { data: authData, error: authError } =
+    await supabase.auth.admin.getUserById(userId);
+  if (authError) throw new Error(authError.message);
+
+  return parseProfileShowcaseTags(
+    authData.user?.user_metadata?.profile_showcase_tags
+  );
+}
+
+async function enrichProfileWithShowcaseTags(
+  supabase: SupabaseClient,
+  profile: ChatPlayerPublicProfile,
+  options: {
+    viewerUserId?: string | null;
+    viewerIsAdmin?: boolean;
+    showcasePreferences?: ProfileShowcaseTagId[] | null;
+  }
+): Promise<ChatPlayerPublicProfile> {
+  const [ranks, showcasePreferences] = await Promise.all([
+    resolvePlayerLeaderboardRanks(supabase, {
+      userId: profile.userId,
+      virtualPlayerId: profile.virtualPlayerId,
+      viewerUserId: options.viewerUserId,
+      viewerIsAdmin: options.viewerIsAdmin,
+    }),
+    options.showcasePreferences !== undefined
+      ? Promise.resolve(options.showcasePreferences)
+      : loadProfileShowcasePreferences(supabase, profile.userId),
+  ]);
+
+  const showcaseTags = resolveProfileShowcaseTags(showcasePreferences, {
+    ranks,
+    isCreator: profile.isCreator,
+    isVirtual: profile.isVirtual,
+    isSupporter: profile.isSupporter,
+    isOnline: profile.isOnline,
+    achievementCount: profile.achievementCount,
+    forumPostCount: profile.forumPostCount,
+    followerCount: profile.followerCount,
+    publishedGames: profile.publishedGames,
+    countryCode: profile.countryCode,
+    donationTier: profile.donationTier,
+  });
+
+  return { ...profile, showcaseTags };
 }
 
 export async function syncUserCountryFromRequest(
@@ -299,38 +369,46 @@ export async function getChatPlayerPublicProfile(
   };
   let profile: ChatPlayerPublicProfile | null = null;
 
-  if (options.userId) {
+  let userId = options.userId?.trim() || null;
+  let virtualPlayerId = options.virtualPlayerId?.trim() || null;
+
+  if (userId && isVirtualLeaderboardUserId(userId)) {
+    virtualPlayerId = virtualPlayerId ?? userId.slice(VIRTUAL_LEADERBOARD_USER_PREFIX.length);
+    userId = null;
+  }
+
+  if (userId) {
     const ambientMap = await getAmbientUserPlayerMap(supabase);
-    const mappedVirtualId = ambientMap.get(options.userId);
+    const mappedVirtualId = ambientMap.get(userId);
     if (mappedVirtualId) {
       profile = await loadVirtualPlayerProfile(
         supabase,
-        options.virtualPlayerId ?? mappedVirtualId
+        virtualPlayerId ?? mappedVirtualId
       );
       const realProfile = await loadRealUserProfile(
         supabase,
-        options.userId,
+        userId,
         viewer
       );
       if (profile) {
         const ambientUserId = await getAmbientUserIdForVirtualPlayer(
           supabase,
-          options.virtualPlayerId ?? mappedVirtualId,
+          virtualPlayerId ?? mappedVirtualId,
           { preferCreator: profile.isCreator }
         );
         profile = {
           ...profile,
-          userId: ambientUserId ?? options.userId,
+          userId: ambientUserId ?? userId,
           ...(realProfile?.bio ? { bio: realProfile.bio } : {}),
         };
       }
     } else {
-      profile = await loadRealUserProfile(supabase, options.userId, viewer);
+      profile = await loadRealUserProfile(supabase, userId, viewer);
     }
   }
 
-  if (!profile && options.virtualPlayerId) {
-    profile = await loadVirtualPlayerProfile(supabase, options.virtualPlayerId);
+  if (!profile && virtualPlayerId) {
+    profile = await loadVirtualPlayerProfile(supabase, virtualPlayerId);
   }
 
   if (!profile) return null;
@@ -347,11 +425,14 @@ export async function getChatPlayerPublicProfile(
   }
 
   if (!profile.equippedTitle && options.fallbackEquippedTitle) {
-    return {
+    profile = {
       ...profile,
       equippedTitle: options.fallbackEquippedTitle,
     };
   }
 
-  return profile;
+  return enrichProfileWithShowcaseTags(supabase, profile, {
+    viewerUserId: options.viewerUserId,
+    viewerIsAdmin: options.viewerIsAdmin,
+  });
 }

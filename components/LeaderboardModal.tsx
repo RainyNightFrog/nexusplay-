@@ -137,9 +137,24 @@ function LeaderboardCard({
 
   const cardBody = (
     <div
+      role={onPlayerClick ? "button" : undefined}
+      tabIndex={onPlayerClick ? 0 : undefined}
+      onClick={onPlayerClick ? () => onPlayerClick(entry) : undefined}
+      onKeyDown={
+        onPlayerClick
+          ? (event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onPlayerClick(entry);
+              }
+            }
+          : undefined
+      }
       className={cn(
         "flex items-center gap-3 px-4 py-3 sm:gap-4 sm:px-5",
-        entry.isMe && "bg-cyan-500/5"
+        entry.isMe && "bg-cyan-500/5",
+        onPlayerClick &&
+          "cursor-pointer rounded-xl transition-colors hover:bg-white/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/40"
       )}
       key={`${animateKey}-${entry.userId}-${entry.rank}`}
     >
@@ -147,48 +162,38 @@ function LeaderboardCard({
         <RankBadge rank={entry.rank} />
       </div>
 
-      <button
-        type="button"
-        onClick={() => onPlayerClick?.(entry)}
-        disabled={!onPlayerClick}
-        className={cn(
-          "flex min-w-0 flex-1 items-center gap-3 text-left sm:gap-4",
-          onPlayerClick && "cursor-pointer rounded-xl transition-colors hover:bg-white/[0.03]"
-        )}
-      >
-        <PlayerAvatar
-          displayName={entry.displayName}
-          avatarUrl={entry.avatarUrl}
-          rank={entry.rank}
-        />
+      <PlayerAvatar
+        displayName={entry.displayName}
+        avatarUrl={entry.avatarUrl}
+        rank={entry.rank}
+      />
 
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <UserBadge
-              username={entry.displayName}
-              title={entry.equippedTitle}
-              animateTitle={false}
-              usernameClassName={cn(
-                "max-w-full truncate",
-                isTopThree ? "text-base sm:text-lg" : "text-sm sm:text-base",
-                "text-zinc-100"
-              )}
-              titleClassName="text-[10px] sm:text-xs"
-            />
-            <OnlineIndicator isOnline={entry.isOnline} />
-            {entry.isMe && (
-              <span className="shrink-0 rounded-full bg-cyan-500/15 px-2.5 py-0.5 text-xs font-semibold text-cyan-300 sm:text-sm">
-                你
-              </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <UserBadge
+            username={entry.displayName}
+            title={entry.equippedTitle}
+            animateTitle={false}
+            usernameClassName={cn(
+              "max-w-full truncate",
+              isTopThree ? "text-base sm:text-lg" : "text-sm sm:text-base",
+              "text-zinc-100"
             )}
-          </div>
-          {isTopThree && (
-            <p className="mt-1 text-sm text-zinc-500 sm:text-base">
-              #{entry.rank} · {entry.isOnline ? "競技中" : "稍後再戰"}
-            </p>
+            titleClassName="text-[10px] sm:text-xs"
+          />
+          <OnlineIndicator isOnline={entry.isOnline} />
+          {entry.isMe && (
+            <span className="shrink-0 rounded-full bg-cyan-500/15 px-2.5 py-0.5 text-xs font-semibold text-cyan-300 sm:text-sm">
+              你
+            </span>
           )}
         </div>
-      </button>
+        {isTopThree && (
+          <p className="mt-1 text-sm text-zinc-500 sm:text-base">
+            #{entry.rank} · {entry.isOnline ? "競技中" : "稍後再戰"}
+          </p>
+        )}
+      </div>
 
       <div className="shrink-0 text-right">
         <p
@@ -396,12 +401,33 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
   });
   const [playerPreview, setPlayerPreview] = useState<ChatPlayerPreview | null>(null);
   const [playerCardOpen, setPlayerCardOpen] = useState(false);
+  const [reopenLeaderboardAfterProfile, setReopenLeaderboardAfterProfile] =
+    useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const handlePlayerClick = useCallback((entry: PlatformLeaderboardEntry) => {
-    setPlayerPreview(leaderboardEntryToPlayerPreview(entry));
-    setPlayerCardOpen(true);
-  }, []);
+  const handlePlayerClick = useCallback(
+    (entry: PlatformLeaderboardEntry) => {
+      setPlayerPreview(leaderboardEntryToPlayerPreview(entry));
+      setReopenLeaderboardAfterProfile(open);
+      setOpen(false);
+      setPlayerCardOpen(true);
+    },
+    [open]
+  );
+
+  const handlePlayerCardOpenChange = useCallback(
+    (nextOpen: boolean) => {
+      setPlayerCardOpen(nextOpen);
+      if (!nextOpen) {
+        setPlayerPreview(null);
+        if (reopenLeaderboardAfterProfile) {
+          setOpen(true);
+          setReopenLeaderboardAfterProfile(false);
+        }
+      }
+    },
+    [reopenLeaderboardAfterProfile]
+  );
 
   const setTabPage = useCallback((tab: LeaderboardTab, page: number) => {
     setPageByTab((prev) => ({ ...prev, [tab]: page }));
@@ -634,7 +660,7 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
     <ChatPlayerCard
       player={playerPreview}
       open={playerCardOpen}
-      onOpenChange={setPlayerCardOpen}
+      onOpenChange={handlePlayerCardOpenChange}
     />
     </>
   );

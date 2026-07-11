@@ -1,4 +1,5 @@
 import type { EquippedTitle } from "@/lib/titles";
+import type { ProfileShowcaseTagId } from "@/lib/profile-showcase-tags";
 
 export type UserRole = "player" | "creator";
 
@@ -19,6 +20,7 @@ export type UserProfile = {
   support_email: string | null;
   profile_public: boolean;
   show_in_leaderboard: boolean;
+  profile_showcase_tags: ProfileShowcaseTagId[];
   equipped_title_id: string | null;
   equipped_title: EquippedTitle | null;
   stripe_account_id?: string | null;

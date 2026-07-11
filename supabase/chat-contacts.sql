@@ -8,7 +8,7 @@ create table if not exists public.chat_virtual_dm_messages (
   user_id uuid not null references auth.users (id) on delete cascade,
   virtual_player_id text not null,
   sender text not null check (sender in ('user', 'virtual')),
-  content text not null check (char_length(content) between 1 and 500),
+  content text not null check (char_length(content) between 1 and 200),
   created_at timestamptz not null default now()
 );
 

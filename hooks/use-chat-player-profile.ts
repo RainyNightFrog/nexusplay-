@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { ChatPlayerPreview } from "@/components/chat/chat-player-card";
+import { isVirtualLeaderboardUserId } from "@/lib/platform-leaderboard-virtual";
 import type { ChatPlayerPublicProfile } from "@/lib/chat-player-profile-service";
 
 export function useChatPlayerProfile(
@@ -24,7 +25,7 @@ export function useChatPlayerProfile(
       if (player.virtualPlayerId) {
         params.set("virtualPlayerId", player.virtualPlayerId);
       }
-      if (player.userId) {
+      if (player.userId && !isVirtualLeaderboardUserId(player.userId)) {
         params.set("userId", player.userId);
       }
 

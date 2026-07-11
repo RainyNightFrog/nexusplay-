@@ -1,3 +1,5 @@
+import { CHAT_LIMITS } from "@/lib/chat";
+
 export type VirtualDmMessage = {
   id: string;
   virtual_player_id: string;
@@ -7,7 +9,7 @@ export type VirtualDmMessage = {
 };
 
 export const VIRTUAL_DM_LIMITS = {
-  content: 500,
+  content: CHAT_LIMITS.content,
   historyDays: 90,
   pageSize: 80,
 } as const;

@@ -1,6 +1,7 @@
 import type { User } from "@supabase/supabase-js";
 import type { UserProfile, UserRole } from "@/lib/auth";
 import { resolveRoleFromPreferences } from "@/lib/profile-settings";
+import { parseProfileShowcaseTags } from "@/lib/profile-showcase-tags";
 
 function normalizeRole(value: unknown): UserRole {
   return value === "creator" ? "creator" : "player";
@@ -45,6 +46,9 @@ export function profileFromUserMetadata(user: User): UserProfile {
     support_email: null,
     profile_public: readBoolean(metadata.profile_public, true),
     show_in_leaderboard: readBoolean(metadata.show_in_leaderboard, true),
+    profile_showcase_tags: parseProfileShowcaseTags(
+      metadata.profile_showcase_tags
+    ),
     equipped_title_id: null,
     equipped_title: null,
     is_supporter: false,

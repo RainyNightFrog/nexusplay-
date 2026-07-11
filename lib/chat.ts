@@ -24,7 +24,7 @@ export type ChatMessage = ChatMessageRecord & {
 export const VALID_CHAT_CHANNELS: ChatChannel[] = ["world", "creator"];
 
 export const CHAT_LIMITS = {
-  content: 500,
+  content: 200,
   historyDays: 7,
   recallWindowMs: 2 * 60_000,
   minIntervalMs: 2_000,

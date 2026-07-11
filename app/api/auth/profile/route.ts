@@ -17,6 +17,10 @@ import {
   normalizeCreatorUsername,
   validateCreatorUsername,
 } from "@/lib/creator-username";
+import {
+  normalizeProfileShowcaseTags,
+  parseProfileShowcaseTags,
+} from "@/lib/profile-showcase-tags";
 
 type ProfilePatchBody = {
   display_name?: string;
@@ -29,6 +33,7 @@ type ProfilePatchBody = {
   support_email?: string;
   profile_public?: boolean;
   show_in_leaderboard?: boolean;
+  profile_showcase_tags?: string[];
 };
 
 export async function GET(request: Request) {
@@ -183,6 +188,10 @@ export async function PATCH(request: Request) {
       body.show_in_leaderboard !== undefined
         ? body.show_in_leaderboard !== false
         : currentProfile.show_in_leaderboard;
+    const profileShowcaseTags =
+      body.profile_showcase_tags !== undefined
+        ? normalizeProfileShowcaseTags(parseProfileShowcaseTags(body.profile_showcase_tags))
+        : currentProfile.profile_showcase_tags;
 
     const isAdmin = user.user_metadata?.role === "admin";
     const role = isAdmin
@@ -198,6 +207,7 @@ export async function PATCH(request: Request) {
       developing_games: developingGames,
       profile_public: profilePublic,
       show_in_leaderboard: showInLeaderboard,
+      profile_showcase_tags: profileShowcaseTags,
       role,
     };
 

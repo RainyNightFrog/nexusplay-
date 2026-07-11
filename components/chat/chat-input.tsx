@@ -78,6 +78,7 @@ export function ChatInput({
             }
             onKeyDown={handleKeyDown}
             disabled={disabled || sending}
+            maxLength={CHAT_LIMITS.content}
             rows={1}
             placeholder={t("placeholder")}
             className={cn(

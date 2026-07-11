@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, Eye, Loader2, Save, Trophy } from "lucide-react";
+import { Check, Eye, Loader2, Save, Tags, Trophy } from "lucide-react";
 import { useRouter } from "@/i18n/navigation";
 import { AccountSettingsPageHeader } from "@/components/settings/account-settings-layout";
+import { ProfileShowcaseTagsEditor } from "@/components/settings/profile-showcase-tags-editor";
 import {
   accountCardClassName,
   accountSectionCompactClassName,
@@ -16,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/hooks/use-auth";
 import { useApiError } from "@/hooks/use-api-error";
+import type { ProfileShowcaseTagId } from "@/lib/profile-showcase-tags";
 import { cn } from "@/lib/utils";
 
 export default function PrivacySettingsPage() {
@@ -26,6 +28,7 @@ export default function PrivacySettingsPage() {
 
   const [profilePublic, setProfilePublic] = useState(true);
   const [showInLeaderboard, setShowInLeaderboard] = useState(true);
+  const [showcaseTags, setShowcaseTags] = useState<ProfileShowcaseTagId[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -43,6 +46,7 @@ export default function PrivacySettingsPage() {
     }
     setProfilePublic(profile.profile_public);
     setShowInLeaderboard(profile.show_in_leaderboard);
+    setShowcaseTags(profile.profile_showcase_tags);
   }, [loading, profile, router]);
 
   async function handleSave() {
@@ -55,6 +59,7 @@ export default function PrivacySettingsPage() {
         body: JSON.stringify({
           profile_public: profilePublic,
           show_in_leaderboard: showInLeaderboard,
+          profile_showcase_tags: showcaseTags,
         }),
       });
 
@@ -132,6 +137,22 @@ export default function PrivacySettingsPage() {
               className="shrink-0 border-white/20 data-checked:border-amber-500 data-checked:bg-amber-500"
             />
           </label>
+
+          <section className="space-y-3 border-t border-white/8 pt-4">
+            <div>
+              <p className="flex items-center gap-2 text-sm font-medium text-zinc-200">
+                <Tags className="size-4 text-cyan-400" />
+                {t("showcaseTagsTitle")}
+              </p>
+              <p className="mt-0.5 text-xs leading-relaxed text-zinc-500">
+                {t("showcaseTagsDesc")}
+              </p>
+            </div>
+            <ProfileShowcaseTagsEditor
+              value={showcaseTags}
+              onChange={setShowcaseTags}
+            />
+          </section>
 
           {error && <p className="text-center text-sm text-rose-400">{error}</p>}
 

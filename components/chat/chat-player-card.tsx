@@ -22,10 +22,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { UserBadge } from "@/components/UserBadge";
+import { ProfileShowcaseTags } from "@/components/profile/profile-showcase-tags";
 import { useChatPlayerProfile } from "@/hooks/use-chat-player-profile";
 import type { ChatMessage } from "@/lib/chat";
 import type { EquippedTitle } from "@/lib/titles";
+import { getTitleDisplayClass } from "@/lib/titles";
 import { formatCountryName } from "@/lib/request-geo";
 import {
   formatDonationAmount,
@@ -259,26 +260,42 @@ export function ChatPlayerCard({
               </div>
 
               <div className="flex min-w-0 flex-col items-center sm:items-start sm:text-left">
-                <UserBadge
-                  username={displayName}
-                  title={equippedTitle}
-                  layout="stacked"
-                  className="sm:items-start"
-                  usernameClassName="text-lg font-semibold text-zinc-100 sm:text-xl"
-                  titleClassName="text-sm"
-                />
-                <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5 sm:justify-start">
-                  {isCreator && (
-                    <span className="rounded-full bg-violet-500/15 px-2 py-0.5 text-xs text-violet-300">
-                      {t("creatorBadge")}
+                <div className="inline-flex flex-col items-center gap-0.5 sm:items-start">
+                  <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 sm:justify-start">
+                    <span className="max-w-full truncate text-lg font-semibold text-zinc-100 sm:text-xl">
+                      {displayName}
                     </span>
-                  )}
-                  {!isVirtual && !isCreator && (
-                    <span className="rounded-full bg-white/8 px-2 py-0.5 text-xs text-zinc-400">
-                      {t("playerCardReal")}
+                    {isCreator && (
+                      <span className="shrink-0 rounded-full bg-violet-500/15 px-2 py-0.5 text-xs text-violet-300">
+                        {t("creatorBadge")}
+                      </span>
+                    )}
+                    {!isVirtual && !isCreator && (
+                      <span className="shrink-0 rounded-full bg-white/8 px-2 py-0.5 text-xs text-zinc-400">
+                        {t("playerCardReal")}
+                      </span>
+                    )}
+                  </div>
+                  {equippedTitle && (
+                    <span
+                      className={cn(
+                        "text-sm font-semibold tracking-wide",
+                        getTitleDisplayClass(
+                          equippedTitle.css_class,
+                          equippedTitle.rarity_tier
+                        )
+                      )}
+                    >
+                      「{equippedTitle.name}」
                     </span>
                   )}
                 </div>
+                {detail?.showcaseTags && detail.showcaseTags.length > 0 && (
+                  <ProfileShowcaseTags
+                    tags={detail.showcaseTags}
+                    className="mt-2"
+                  />
+                )}
                 {countryLabel && (
                   <p className="mt-1.5 text-xs text-zinc-500 sm:text-sm">
                     {t("playerCardRegion")}：{countryLabel}
