@@ -671,33 +671,36 @@ function GamePageContent() {
                 {game.title}
               </h2>
 
-              <div className="mt-3 flex items-center justify-center gap-2 text-sm text-zinc-400">
-                <User className="size-4 shrink-0 text-violet-400" />
-                <span>
-                  {tc("creator")}：
-                  {game.creatorId ? (
-                    <Link
-                      href={`/creator/${game.creatorId}`}
-                      className="ml-1 font-medium text-violet-300 hover:underline"
-                    >
-                      {game.creator || tc("defaultCreator")}
-                    </Link>
-                  ) : (
-                    <span className="ml-1 font-medium text-zinc-200">
-                      {game.creator || tc("defaultCreator")}
-                    </span>
-                  )}
-                </span>
-              </div>
+              <div className="mt-3 space-y-3 rounded-xl border border-white/5 bg-white/[0.02] px-4 py-3">
+                <div className="flex items-center justify-center gap-2 text-sm text-zinc-400">
+                  <User className="size-4 shrink-0 text-violet-400" />
+                  <span>
+                    {tc("creator")}：
+                    {game.creatorId ? (
+                      <Link
+                        href={`/creator/${game.creatorId}`}
+                        className="ml-1 font-medium text-violet-300 hover:underline"
+                      >
+                        {game.creator || tc("defaultCreator")}
+                      </Link>
+                    ) : (
+                      <span className="ml-1 font-medium text-zinc-200">
+                        {game.creator || tc("defaultCreator")}
+                      </span>
+                    )}
+                  </span>
+                </div>
 
-              {game.creatorId && !isGameOwner && (
-                <FollowCreatorButton
-                  creatorId={game.creatorId}
-                  compact
-                  centered
-                  className="mt-4"
-                />
-              )}
+                {game.creatorId && (
+                  <FollowCreatorButton
+                    creatorId={game.creatorId}
+                    compact
+                    centered
+                    layout="stacked"
+                    className="w-full"
+                  />
+                )}
+              </div>
 
               <div className="mt-3 flex items-center justify-center gap-2 text-sm text-zinc-400">
                 <Users className="size-4 shrink-0 text-cyan-400" />

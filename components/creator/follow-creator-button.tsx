@@ -171,14 +171,31 @@ export function FollowCreatorButton({
           {following ? t("unfollowBtn") : t("followBtn")}
         </Button>
         {showFollowerCount && (
-          <p
-            className={cn(
-              "text-xs text-zinc-500 sm:text-sm",
-              align === "end" && "text-right"
-            )}
-          >
-            {t("followerCount", { count: followerCount })}
-          </p>
+          layout === "stacked" ? (
+            <div
+              className={cn(
+                "flex flex-col gap-0.5",
+                centered && "items-center text-center",
+                align === "end" && "items-end text-right"
+              )}
+            >
+              <span className="text-xs font-medium text-zinc-500">
+                {t("followersLabel")}
+              </span>
+              <p className="text-sm font-semibold text-zinc-200">
+                {t("followerCount", { count: followerCount })}
+              </p>
+            </div>
+          ) : (
+            <p
+              className={cn(
+                "text-xs text-zinc-500 sm:text-sm",
+                align === "end" && "text-right"
+              )}
+            >
+              {t("followerCount", { count: followerCount })}
+            </p>
+          )
         )}
       </div>
       {actionError && (
