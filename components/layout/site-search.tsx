@@ -12,10 +12,16 @@ import {
   Search,
   Sparkles,
   UserRound,
+  X,
 } from "lucide-react";
 import { GAME_GENRES } from "@/lib/game-metadata";
 import { UserBadge } from "@/components/UserBadge";
-import { addSearchHistory, readSearchHistory } from "@/lib/search-history";
+import {
+  addSearchHistory,
+  clearSearchHistory,
+  readSearchHistory,
+  removeSearchHistoryItem,
+} from "@/lib/search-history";
 import type { SearchCreatorResult } from "@/lib/platform-search-service";
 import type { Game } from "@/lib/games";
 import { cn } from "@/lib/utils";
@@ -70,6 +76,19 @@ export function SiteSearch({
   const refreshRecentSearches = useCallback(() => {
     setRecentSearches(readSearchHistory().slice(0, 5));
   }, []);
+
+  const handleRemoveRecentSearch = useCallback(
+    (item: string) => {
+      removeSearchHistoryItem(item);
+      refreshRecentSearches();
+    },
+    [refreshRecentSearches]
+  );
+
+  const handleClearRecentSearches = useCallback(() => {
+    clearSearchHistory();
+    refreshRecentSearches();
+  }, [refreshRecentSearches]);
 
   const loadAssistData = useCallback(async () => {
     if (assistLoadedRef.current) return;
@@ -220,20 +239,41 @@ export function SiteSearch({
 
               {recentSearches.length > 0 && (
                 <section className="px-2 pb-1">
-                  <p className="flex items-center gap-1.5 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-                    <Clock className="size-3.5 text-cyan-400" />
-                    {ts("recentSearches")}
-                  </p>
-                  {recentSearches.map((item) => (
+                  <div className="flex items-center justify-between gap-2 px-2 py-1.5">
+                    <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                      <Clock className="size-3.5 text-cyan-400" />
+                      {ts("recentSearches")}
+                    </p>
                     <button
-                      key={item}
                       type="button"
-                      onClick={() => submit(item)}
-                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm text-zinc-200 hover:bg-white/5"
+                      onClick={handleClearRecentSearches}
+                      className="text-[11px] text-zinc-500 transition hover:text-violet-400"
                     >
-                      <Clock className="size-3.5 shrink-0 text-zinc-500" />
-                      <span className="truncate">{item}</span>
+                      {ts("clearHistory")}
                     </button>
+                  </div>
+                  {recentSearches.map((item) => (
+                    <div
+                      key={item}
+                      className="group flex items-center gap-1 rounded-lg hover:bg-white/5"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => submit(item)}
+                        className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2 text-left text-sm text-zinc-200"
+                      >
+                        <Clock className="size-3.5 shrink-0 text-zinc-500" />
+                        <span className="truncate">{item}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveRecentSearch(item)}
+                        className="mr-1 shrink-0 rounded-md p-1.5 text-zinc-500 opacity-0 transition hover:bg-white/10 hover:text-zinc-300 group-hover:opacity-100 focus-visible:opacity-100"
+                        aria-label={ts("removeHistoryItem", { query: item })}
+                      >
+                        <X className="size-3.5" />
+                      </button>
+                    </div>
                   ))}
                 </section>
               )}
