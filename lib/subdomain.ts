@@ -1,4 +1,6 @@
 /** 平台根網域（不含子網域前綴） */
+import { defaultLocale, locales, type AppLocale } from "@/i18n/routing";
+
 export function getRootDomain() {
   return (
     process.env.NEXT_PUBLIC_ROOT_DOMAIN?.trim().toLowerCase() ||
@@ -75,6 +77,36 @@ export function resolveSubdomainFromHost(host: string): string | null {
   return label;
 }
 
+function splitLocaleFromPath(pathname: string) {
+  const path = pathname || "/";
+
+  for (const locale of locales) {
+    if (path === `/${locale}`) {
+      return { locale: locale as AppLocale, pathname: "/" };
+    }
+    if (path.startsWith(`/${locale}/`)) {
+      return {
+        locale: locale as AppLocale,
+        pathname: path.slice(locale.length + 1) || "/",
+      };
+    }
+  }
+
+  return { locale: null as AppLocale | null, pathname: path };
+}
+
+function applyLocalePrefix(pathname: string, locale: AppLocale | null) {
+  if (!locale || locale === defaultLocale) {
+    return pathname;
+  }
+
+  if (pathname === "/") {
+    return `/${locale}`;
+  }
+
+  return `/${locale}${pathname}`;
+}
+
 /**
  * 將子網域請求路徑改寫為內部 `/game/[slug]` 路由（網址列維持子網域）。
  */
@@ -83,19 +115,19 @@ export function buildSubdomainRewritePath(
   subdomain: string,
   kind: "game" | "creator" = "game"
 ) {
-  const path = pathname || "/";
+  const { locale, pathname: path } = splitLocaleFromPath(pathname);
   const base = kind === "creator" ? `/creator/${subdomain}` : `/game/${subdomain}`;
+
+  let rewritten = base;
 
   if (path.startsWith("/game/") || path.startsWith("/creator/")) {
     const rest = path.replace(/^\/(game|creator)\/[^/]+/, "");
-    return `${base}${rest || ""}`;
+    rewritten = `${base}${rest || ""}`;
+  } else if (path !== "/") {
+    rewritten = `${base}${path}`;
   }
 
-  if (path === "/") {
-    return base;
-  }
-
-  return `${base}${path}`;
+  return applyLocalePrefix(rewritten, locale);
 }
 
 export function buildGameSubdomainUrl(slug: string) {
