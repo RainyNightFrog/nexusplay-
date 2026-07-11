@@ -1,16 +1,17 @@
 ---
-description: 每次完成程式修改後自動 commit 並 push 到 Git
+description: 每次完成程式修改後必須 commit 並 push 到 GitHub
 alwaysApply: true
 ---
 
-# 自動 Git 推送
+# 每次修改必須同步 Commit 與 Push
 
-完成任何**實作、修復、重構**類任務且工作區有變更時，**必須**在回覆使用者前自動提交並推送到遠端，無需再問「要不要 commit」。
+完成任何**實作、修復、重構、設定調整**且工作區有變更時，**必須**在本輪回覆使用者**之前**自動 `commit` 並 `push` 到遠端，無需再問「要不要 commit / push」。
 
 ## 何時執行
 
-- 已修改或新增專案檔案（含設定、腳本、文件若為任務一部分）
-- 任務可視為一個完整單元（一輪對話內的實作結束）
+- 已修改、新增或刪除專案檔案（含 `.cursor/rules/`、設定、腳本、文件若為任務一部分）
+- 一輪對話內的實作或修復已結束，即使只改一兩個檔案也要提交
+- 部署前修復（例如 `vercel.json`、build 錯誤）同樣必須提交，避免正式站與 GitHub 脫節
 
 ## 何時不執行
 
@@ -27,7 +28,7 @@ alwaysApply: true
 2. `git diff`（含 staged / unstaged）
 3. `git log -5 --oneline`（沿用既有 commit 風格）
 
-然後：
+然後依序：
 
 1. `git add` 相關檔案（排除敏感檔）
 2. 撰寫 1–2 句、說明 **why** 的 commit message（繁中或英文皆可，與近期 log 一致）
@@ -48,4 +49,4 @@ alwaysApply: true
 
 - branch 名稱
 - commit message
-- remote URL（若方便）
+- 若有部署相關變更，提醒 Vercel 是否會自動部署或需手動部署
