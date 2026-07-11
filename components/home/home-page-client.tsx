@@ -560,13 +560,14 @@ export function HomePageClient() {
             </p>
           </div>
 
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+          <div className="mx-auto grid w-full max-w-[95rem] grid-cols-1 gap-5 sm:gap-6 xl:grid-cols-[11rem_minmax(0,80rem)] xl:justify-center xl:gap-6">
             <PriceFilterSidebar
               value={priceFilter}
               onChange={setPriceFilter}
+              className="xl:justify-self-end"
             />
 
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 w-full max-w-7xl justify-self-center xl:max-w-none xl:justify-self-stretch">
           <FilterSortBar
             category={category}
             sort={sort}

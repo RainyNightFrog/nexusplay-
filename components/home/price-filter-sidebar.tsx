@@ -30,22 +30,22 @@ export function PriceFilterSidebar({
   return (
     <aside
       className={cn(
-        "w-full shrink-0 lg:w-56 xl:w-60",
+        "w-full shrink-0 xl:w-full xl:max-w-[11rem]",
         className
       )}
     >
       <div
         className={cn(
-          "rounded-2xl border border-white/10 bg-zinc-900/50 p-4 shadow-xl shadow-black/20 backdrop-blur-md",
+          "rounded-2xl border border-white/10 bg-zinc-900/50 p-3.5 shadow-xl shadow-black/20 backdrop-blur-md sm:p-4",
           "lg:sticky lg:top-24"
         )}
       >
-        <div className="mb-3 flex items-center justify-center gap-2 text-sm font-semibold text-emerald-300 lg:justify-start">
-          <BadgeDollarSign className="size-4" />
+        <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-emerald-300">
+          <BadgeDollarSign className="size-4 shrink-0" />
           <span>{t("priceFilterTitle")}</span>
         </div>
 
-        <nav className="flex flex-wrap justify-center gap-2 lg:flex-col lg:items-stretch">
+        <nav className="flex flex-wrap gap-2 xl:flex-col xl:items-stretch">
           {PRICE_FILTER_IDS.map((id) => {
             const active = value === id;
             return (
@@ -56,7 +56,8 @@ export function PriceFilterSidebar({
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 className={cn(
-                  "rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors",
+                  "rounded-xl border px-3 py-2 text-left text-sm font-medium transition-colors",
+                  "xl:px-3 xl:py-2.5",
                   active
                     ? "border-emerald-400/40 bg-emerald-500/15 text-emerald-100 shadow-[0_0_20px_rgba(52,211,153,0.12)]"
                     : "border-white/10 bg-white/[0.03] text-zinc-300 hover:border-white/20 hover:bg-white/[0.06] hover:text-white"
