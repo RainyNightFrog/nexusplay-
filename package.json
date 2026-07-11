@@ -86,7 +86,8 @@
     "setup:production-auth": "node scripts/configure-production-auth.mjs",
     "setup:resend-domain": "node scripts/setup-resend-domain.mjs",
     "check:resend-domain": "node scripts/setup-resend-domain.mjs --check",
-    "setup:subdomain-dns": "node scripts/setup-subdomain-dns.mjs"
+    "setup:subdomain-dns": "node scripts/setup-subdomain-dns.mjs",
+    "setup:game-subdomains-vercel": "node scripts/setup-game-subdomains-vercel.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
