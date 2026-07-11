@@ -2,9 +2,9 @@
 
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
-import { Globe2 } from "lucide-react";
 import { validateCreatorUsername, normalizeCreatorUsername } from "@/lib/creator-username";
 import { buildGameSubdomainUrl } from "@/lib/subdomain";
+import { SubdomainUrlPreview } from "@/components/subdomain-url-preview";
 import { cn } from "@/lib/utils";
 
 type CreatorUsernameFieldProps = {
@@ -57,10 +57,11 @@ export function CreatorUsernameField({
         </span>
       </div>
       <p className="text-center text-xs text-zinc-500">{t("creatorUsernameHint")}</p>
-      <div className="mx-auto flex max-w-lg items-center justify-center gap-2 rounded-xl border border-violet-400/20 bg-violet-500/5 px-4 py-3 text-xs text-violet-100/90">
-        <Globe2 className="size-3.5 shrink-0 text-violet-300/80" />
-        <span className="truncate font-mono">{previewUrl}</span>
-      </div>
+      <SubdomainUrlPreview
+        url={previewUrl}
+        note={t("creatorUsernamePreviewNote")}
+        tone="violet"
+      />
       {value.trim() && validation && !validation.ok ? (
         <p className="text-center text-xs text-amber-300/90">{validation.error}</p>
       ) : null}

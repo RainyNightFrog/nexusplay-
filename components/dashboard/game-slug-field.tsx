@@ -2,7 +2,6 @@
 
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
-import { Globe2 } from "lucide-react";
 import { RequiredFieldLabel } from "@/components/dashboard/required-field-label";
 import {
   GAME_SLUG_MAX_LENGTH,
@@ -10,6 +9,7 @@ import {
   validateGameSlug,
 } from "@/lib/game-slug";
 import { buildGameSubdomainUrl } from "@/lib/subdomain";
+import { SubdomainUrlPreview } from "@/components/subdomain-url-preview";
 import { cn } from "@/lib/utils";
 
 type GameSlugFieldProps = {
@@ -81,17 +81,7 @@ export function GameSlugField({
 
       <p className="text-center text-xs text-zinc-500">{t("gameSlugHint")}</p>
 
-      <div
-        className={cn(
-          "mx-auto flex max-w-lg items-center justify-center gap-2 rounded-xl border px-4 py-3 text-xs",
-          normalized && validation && !validation.ok
-            ? "border-amber-400/25 bg-amber-500/5 text-amber-200/90"
-            : "border-cyan-400/20 bg-cyan-500/5 text-cyan-100/90"
-        )}
-      >
-        <Globe2 className="size-3.5 shrink-0 text-cyan-300/80" />
-        <span className="truncate font-mono">{previewUrl}</span>
-      </div>
+      <SubdomainUrlPreview url={previewUrl} note={t("gameSlugPreviewNote")} />
 
       {normalized && validation && !validation.ok ? (
         <p className="text-center text-xs text-amber-300/90">{validation.error}</p>

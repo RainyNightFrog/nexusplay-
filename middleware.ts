@@ -110,6 +110,15 @@ function finalizeMiddlewareResponse(
   return rewriteResponse;
 }
 
+function sanitizePathname(pathname: string) {
+  if (!/[^\x00-\x7F]/.test(pathname)) {
+    return pathname;
+  }
+
+  const cleaned = pathname.replace(/[^\x00-\x7F].*$/, "");
+  return cleaned || "/";
+}
+
 export async function middleware(request: NextRequest) {
   if (
     request.nextUrl.pathname === "/zh-TW" ||
@@ -118,6 +127,13 @@ export async function middleware(request: NextRequest) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname =
       redirectUrl.pathname.replace(/^\/zh-TW(?=\/|$)/, "") || "/";
+    return NextResponse.redirect(redirectUrl);
+  }
+
+  const sanitizedPathname = sanitizePathname(request.nextUrl.pathname);
+  if (sanitizedPathname !== request.nextUrl.pathname) {
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.pathname = sanitizedPathname;
     return NextResponse.redirect(redirectUrl);
   }
 
