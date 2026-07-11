@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import { isAdminUser } from "@/lib/admin-auth";
-import { canViewGame } from "@/lib/game-publish";
-import { hasGameEntitlement, resolvePurchaseEntitlementForGame } from "@/lib/game-entitlement-service";
-import { mapRecordToGame } from "@/lib/games-data";
+import {
+  gameRequiresPurchase,
+  resolvePurchaseEntitlementForGame,
+} from "@/lib/game-entitlement-service";
+import {
+  canAccessGameStorePage,
+  canPlayGame,
+} from "@/lib/game-publish";
+import { mapRecordToGame, stripPlayAccessFromGame } from "@/lib/games-data";
 import { resolveGameCreator } from "@/lib/game-creator-resolver";
 import {
   hasStoredPartnerAccess,
@@ -74,29 +80,41 @@ export async function GET(
       }
     }
 
+    const accessOptions = {
+      isAdmin: isAdminUser(user),
+      hasPartnerAccess,
+    };
+
+    if (!canAccessGameStorePage(record, user?.id, accessOptions)) {
+      return NextResponse.json({ error: "找不到此遊戲" }, { status: 404 });
+    }
+
     const hasPurchaseEntitlement = await resolvePurchaseEntitlementForGame(
       supabase,
       numericId,
       user?.id
     );
 
-    if (
-      !canViewGame(record, user?.id, {
-        isAdmin: isAdminUser(user),
-        hasPartnerAccess,
-        hasPurchaseEntitlement,
-      })
-    ) {
-      return NextResponse.json({ error: "找不到此遊戲" }, { status: 404 });
-    }
+    const requiresPurchase = gameRequiresPurchase(record);
+    const canPlay = canPlayGame(record, user?.id, {
+      ...accessOptions,
+      hasPurchaseEntitlement,
+    });
 
     const game = mapRecordToGame(record);
     const creator = await resolveGameCreator(supabase, record);
-    const enrichedGame = {
-      ...game,
-      creatorId: creator.creatorId,
-      creator: creator.creatorName || game.creator,
-    };
+    const enrichedGame = canPlay
+      ? {
+          ...game,
+          creatorId: creator.creatorId,
+          creator: creator.creatorName || game.creator,
+        }
+      : stripPlayAccessFromGame({
+          ...game,
+          creatorId: creator.creatorId,
+          creator: creator.creatorName || game.creator,
+        });
+
     const isCreatorPreview =
       record.publish_status === "draft" && user?.id === record.creator_id;
     const isPartnerPreview =
@@ -109,6 +127,9 @@ export async function GET(
       ownerCreatorId: record.creator_id ?? null,
       isDraftPreview: isCreatorPreview,
       isPartnerPreview,
+      canPlay,
+      requiresPurchase,
+      hasPurchased: hasPurchaseEntitlement,
     });
 
     if (partnerCodeForCookie) {

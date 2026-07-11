@@ -5,6 +5,7 @@ import {
   parsePlatformTipInput,
   type StripeConnectAmounts,
 } from "@/lib/checkout-order";
+import { grantGameEntitlement } from "@/lib/game-entitlement-service";
 import { canCreatorReceivePaidPayments } from "@/lib/creator-stripe-gate";
 import {
   parseDisplayAmountToCents,
@@ -470,6 +471,12 @@ export async function recordPreviewCheckout(params: {
   if (error) {
     throw new Error(error.message);
   }
+
+  await grantGameEntitlement({
+    userId: params.buyerId,
+    gameId: game.id,
+    orderId: data.id,
+  });
 
   return {
     mode: "preview" as const,

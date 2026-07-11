@@ -89,5 +89,12 @@ export function resolvePlayUrl(gameUrl: string, gameId?: number) {
 }
 
 export function isDirectlyPlayable(gameUrl: string) {
-  return !gameUrl.toLowerCase().endsWith(".zip");
+  return Boolean(gameUrl?.trim()) && !gameUrl.toLowerCase().endsWith(".zip");
+}
+
+export function stripPlayAccessFromGame(game: Game): Game {
+  return {
+    ...game,
+    embedUrl: "",
+  };
 }

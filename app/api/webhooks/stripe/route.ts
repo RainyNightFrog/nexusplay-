@@ -4,12 +4,14 @@ import { syncConnectAccountFromWebhook } from "@/lib/creator-connect-webhook";
 import { syncCreatorPayoutFromStripeEvent } from "@/lib/creator-payout-webhook";
 import { finalizeTipPayment } from "@/lib/tip-checkout-service";
 import { handleCheckoutSessionCompleted } from "@/lib/checkout-session-webhook";
+import { handleCheckoutSessionExpired } from "@/lib/checkout-order-webhook";
 import {
   handleTipDisputeClosed,
   handleTipDisputeCreated,
   handleTipRefund,
   markTipPaymentFailed,
 } from "@/lib/tip-payment-webhook";
+import { handleSupporterSubscriptionDeleted } from "@/lib/supporter-subscription-webhook";
 import { getStripeClient, isStripeConfigured } from "@/lib/stripe-connect";
 import { claimStripeWebhookEvent } from "@/lib/stripe-webhook-dedup";
 
@@ -48,6 +50,16 @@ export async function POST(request: Request) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
         await handleCheckoutSessionCompleted(session);
+        break;
+      }
+      case "checkout.session.expired": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        await handleCheckoutSessionExpired(session);
+        break;
+      }
+      case "customer.subscription.deleted": {
+        const subscription = event.data.object as Stripe.Subscription;
+        await handleSupporterSubscriptionDeleted(subscription);
         break;
       }
       case "payment_intent.succeeded": {

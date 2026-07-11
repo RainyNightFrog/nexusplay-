@@ -66,13 +66,12 @@ export function parseMonetizationFromFormData(
   };
 }
 
-export function canViewGame(
-  record: Pick<GameRecord, "publish_status" | "creator_id" | "status" | "pricing_type" | "price" | "min_price">,
+export function canAccessGameStorePage(
+  record: Pick<GameRecord, "publish_status" | "creator_id" | "status">,
   userId?: string | null,
   options?: {
     isAdmin?: boolean;
     hasPartnerAccess?: boolean;
-    hasPurchaseEntitlement?: boolean;
   }
 ) {
   if (options?.isAdmin) {
@@ -88,11 +87,36 @@ export function canViewGame(
   }
 
   const approvalStatus = record.status ?? "approved";
-  const publiclyVisible =
-    record.publish_status === "public" && approvalStatus === "approved";
+  return record.publish_status === "public" && approvalStatus === "approved";
+}
 
-  if (!publiclyVisible) {
+export function canPlayGame(
+  record: Pick<
+    GameRecord,
+    | "publish_status"
+    | "creator_id"
+    | "status"
+    | "pricing_type"
+    | "price"
+    | "min_price"
+  >,
+  userId?: string | null,
+  options?: {
+    isAdmin?: boolean;
+    hasPartnerAccess?: boolean;
+    hasPurchaseEntitlement?: boolean;
+  }
+) {
+  if (!canAccessGameStorePage(record, userId, options)) {
     return false;
+  }
+
+  if (options?.isAdmin) {
+    return true;
+  }
+
+  if (userId && record.creator_id && userId === record.creator_id) {
+    return true;
   }
 
   if (gameRequiresPurchase(record)) {
@@ -100,6 +124,27 @@ export function canViewGame(
   }
 
   return true;
+}
+
+/** @deprecated Prefer `canPlayGame` for embed/play or `canAccessGameStorePage` for listings. */
+export function canViewGame(
+  record: Pick<
+    GameRecord,
+    | "publish_status"
+    | "creator_id"
+    | "status"
+    | "pricing_type"
+    | "price"
+    | "min_price"
+  >,
+  userId?: string | null,
+  options?: {
+    isAdmin?: boolean;
+    hasPartnerAccess?: boolean;
+    hasPurchaseEntitlement?: boolean;
+  }
+) {
+  return canPlayGame(record, userId, options);
 }
 
 export function normalizePublishStatus(

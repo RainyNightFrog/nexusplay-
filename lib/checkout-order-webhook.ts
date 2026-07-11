@@ -130,6 +130,38 @@ export async function markOrderSucceeded(
   return Boolean(data);
 }
 
+export async function markOrderCancelledBySessionId(sessionId: string) {
+  const supabase = createServerSupabase();
+  const { data, error } = await supabase
+    .from("orders")
+    .update({ status: "cancelled" })
+    .eq("stripe_session_id", sessionId)
+    .eq("status", "pending")
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return Boolean(data);
+}
+
+export async function handleCheckoutSessionExpired(
+  session: Stripe.Checkout.Session
+) {
+  if (!session.id) {
+    return { handled: false as const, orderCancelled: false };
+  }
+
+  const orderCancelled = await markOrderCancelledBySessionId(session.id);
+
+  return {
+    handled: orderCancelled,
+    orderCancelled,
+  };
+}
+
 export type CheckoutSessionWebhookResult = {
   handled: boolean;
   duplicate: boolean;

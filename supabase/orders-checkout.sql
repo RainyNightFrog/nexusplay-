@@ -15,7 +15,7 @@ create table if not exists public.orders (
     check (total_amount_cents >= 0),
   stripe_session_id text,
   status text not null default 'pending'
-    check (status in ('pending', 'succeeded', 'failed', 'refunded')),
+    check (status in ('pending', 'succeeded', 'failed', 'refunded', 'cancelled')),
   created_at timestamptz not null default now(),
   constraint orders_total_amount_check
     check (total_amount_cents = game_price_cents + platform_tip_cents),

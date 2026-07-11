@@ -128,6 +128,9 @@ function GamePageContent() {
   const [toast, setToast] = useState<string | null>(null);
   const [supporterWallRefreshKey, setSupporterWallRefreshKey] = useState(0);
   const [paymentMethodsRefreshKey, setPaymentMethodsRefreshKey] = useState(0);
+  const [canPlay, setCanPlay] = useState(true);
+  const [requiresPurchase, setRequiresPurchase] = useState(false);
+  const [hasPurchased, setHasPurchased] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const showToast = useCallback((message: string) => {
@@ -171,6 +174,9 @@ function GamePageContent() {
           error?: string;
           isDraftPreview?: boolean;
           isPartnerPreview?: boolean;
+          canPlay?: boolean;
+          requiresPurchase?: boolean;
+          hasPurchased?: boolean;
         };
 
         if (!response.ok || !data.game) {
@@ -182,8 +188,9 @@ function GamePageContent() {
         }
 
         let loadedGame = data.game;
+        const userCanPlay = data.canPlay !== false;
 
-        if (!isDirectlyPlayable(loadedGame.embedUrl)) {
+        if (userCanPlay && !isDirectlyPlayable(loadedGame.embedUrl)) {
           if (!cancelled) setMigrating(true);
 
           const migrateResponse = await fetch(`/api/games/${gameId}/migrate`, {
@@ -210,6 +217,9 @@ function GamePageContent() {
           setOwnerCreatorId(data.ownerCreatorId ?? loadedGame.creatorId ?? null);
           setIsDraftPreview(Boolean(data.isDraftPreview));
           setIsPartnerPreview(Boolean(data.isPartnerPreview));
+          setCanPlay(userCanPlay);
+          setRequiresPurchase(Boolean(data.requiresPurchase));
+          setHasPurchased(Boolean(data.hasPurchased));
         }
       } catch {
         if (!cancelled) {
@@ -316,7 +326,8 @@ function GamePageContent() {
   }, [game?.title, game?.id, searchParams, showToast, td]);
 
   useEffect(() => {
-    if (!game?.id) return;
+    if (!game?.id || !canPlay) return;
+    if (!isDirectlyPlayable(game.embedUrl)) return;
     fetch(`/api/games/${game.id}/play?locale=${encodeURIComponent(locale)}`, {
       method: "POST",
       credentials: "same-origin",
@@ -325,7 +336,7 @@ function GamePageContent() {
       game_id: game.id,
       game_title: game.title,
     });
-  }, [game?.id, game?.title, locale]);
+  }, [game?.id, game?.title, game?.embedUrl, canPlay, locale]);
 
   useEffect(() => {
     if (!game?.id) return;
@@ -344,7 +355,7 @@ function GamePageContent() {
     }
   }, [gameId, router]);
 
-  const playable = game ? isDirectlyPlayable(game.embedUrl) : false;
+  const playable = game ? canPlay && isDirectlyPlayable(game.embedUrl) : false;
   const trustedEmbedUrl =
     game && playable && isSafeEmbedUrl(game.embedUrl) ? game.embedUrl : null;
 
@@ -378,20 +389,50 @@ function GamePageContent() {
   );
   const showCheckout =
     game != null &&
+    requiresPurchase &&
+    !canPlay &&
+    !isGameOwner &&
     (game.pricingType === "pwyw" ||
       (game.pricingType === "fixed" && (game.price ?? 0) > 0));
+  const showPurchaseGate = showCheckout;
   const editGameHref = game ? `/dashboard/edit/${game.id}` : "/dashboard";
+
+  const refreshGameAfterPurchase = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/games/${gameId}`, {
+        credentials: "same-origin",
+      });
+      const data = (await response.json()) as {
+        game?: Game;
+        ownerCreatorId?: string | null;
+        canPlay?: boolean;
+        requiresPurchase?: boolean;
+        hasPurchased?: boolean;
+      };
+
+      if (!data.game) return;
+
+      setGame(data.game);
+      setOwnerCreatorId(data.ownerCreatorId ?? data.game.creatorId ?? null);
+      setCanPlay(data.canPlay !== false);
+      setRequiresPurchase(Boolean(data.requiresPurchase));
+      setHasPurchased(Boolean(data.hasPurchased));
+    } catch {
+      // ignore refresh errors; user can reload manually
+    }
+  }, [gameId]);
 
   useEffect(() => {
     const checkoutState = searchParams.get("checkout");
     if (checkoutState === "success") {
       showToast(t("checkoutSuccessLive"));
       router.replace(`/game/${gameId}`, { scroll: false });
+      void refreshGameAfterPurchase();
     } else if (checkoutState === "cancelled") {
       showToast(t("checkoutCancelled"));
       router.replace(`/game/${gameId}`, { scroll: false });
     }
-  }, [searchParams, showToast, t, router, gameId]);
+  }, [searchParams, showToast, t, router, gameId, refreshGameAfterPurchase]);
 
   const openCreatorProfile = useCallback(() => {
     if (!game?.creatorId) return;
@@ -572,15 +613,48 @@ function GamePageContent() {
                     : "mx-auto max-h-[80vh]"
                 )}
                 style={
-                  showFullscreen || !iframeSrc
+                  showFullscreen
                     ? undefined
-                    : {
-                        aspectRatio: `${viewportWidth} / ${viewportHeight}`,
-                        width: `min(100%, ${playerMaxWidth}px)`,
-                      }
+                    : iframeSrc || showPurchaseGate
+                      ? {
+                          aspectRatio: `${viewportWidth} / ${viewportHeight}`,
+                          width: `min(100%, ${playerMaxWidth}px)`,
+                        }
+                      : undefined
                 }
               >
-                {iframeSrc ? (
+                {showPurchaseGate ? (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 bg-zinc-950/90 px-6 py-10 text-center">
+                    <div
+                      className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-20"
+                      style={{ backgroundImage: `url(${game.image})` }}
+                      aria-hidden
+                    />
+                    <div className="relative z-10 max-w-md space-y-3">
+                      <h3 className="text-lg font-semibold text-white">
+                        {t("purchaseRequiredTitle")}
+                      </h3>
+                      <p className="text-sm leading-relaxed text-zinc-400">
+                        {t("purchaseRequiredDesc")}
+                      </p>
+                    </div>
+                    <div className="relative z-10 w-full max-w-sm">
+                      <GameCheckoutPanel
+                        embedded
+                        gameId={game.id}
+                        gameTitle={game.title}
+                        pricingType={
+                          game.pricingType === "pwyw" ? "pwyw" : "fixed"
+                        }
+                        priceCents={game.price ?? 0}
+                        minPriceCents={game.minPrice ?? 0}
+                        currency={game.currency ?? "USD"}
+                        isGameOwner={isGameOwner}
+                        onCheckoutSuccess={() => void refreshGameAfterPurchase()}
+                      />
+                    </div>
+                  </div>
+                ) : iframeSrc ? (
                   <>
                     <iframe
                       ref={iframeRef}
@@ -642,7 +716,11 @@ function GamePageContent() {
               {!showFullscreen && (
                 <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/5 px-4 py-3">
                   <p className="text-xs text-zinc-500">
-                    {playable ? t("startPlayHint") : t("reuploadHint")}
+                    {showPurchaseGate
+                      ? t("purchaseRequiredDesc")
+                      : playable
+                        ? t("startPlayHint")
+                        : t("reuploadHint")}
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {isGameOwner && (
@@ -855,28 +933,6 @@ function GamePageContent() {
             </div>
           </motion.aside>
         </div>
-
-        {showCheckout && game && (
-          <motion.section
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45, delay: 0.05 }}
-            className="mt-10"
-          >
-            <div className="rounded-2xl border border-emerald-400/20 bg-zinc-900/60 p-6 sm:p-8 shadow-lg shadow-black/40">
-              <GameCheckoutPanel
-                embedded
-                gameId={game.id}
-                gameTitle={game.title}
-                pricingType={game.pricingType === "pwyw" ? "pwyw" : "fixed"}
-                priceCents={game.price ?? 0}
-                minPriceCents={game.minPrice ?? 0}
-                currency={game.currency ?? "USD"}
-                isGameOwner={isGameOwner}
-              />
-            </div>
-          </motion.section>
-        )}
 
         {game.tipsEnabled && (
           <GameSupportSection

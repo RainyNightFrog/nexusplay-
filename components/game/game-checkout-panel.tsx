@@ -42,6 +42,7 @@ type GameCheckoutPanelProps = {
   isGameOwner?: boolean;
   embedded?: boolean;
   className?: string;
+  onCheckoutSuccess?: () => void;
 };
 
 export function GameCheckoutPanel({
@@ -55,6 +56,7 @@ export function GameCheckoutPanel({
   isGameOwner = false,
   embedded = false,
   className,
+  onCheckoutSuccess,
 }: GameCheckoutPanelProps) {
   const t = useTranslations("game");
   const { translateApiError } = useApiError();
@@ -222,6 +224,7 @@ export function GameCheckoutPanel({
 
       if (data.mode === "preview") {
         setSuccess(true);
+        onCheckoutSuccess?.();
         return;
       }
 

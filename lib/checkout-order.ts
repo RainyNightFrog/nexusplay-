@@ -6,6 +6,7 @@ export const ORDER_STATUSES = [
   "succeeded",
   "failed",
   "refunded",
+  "cancelled",
 ] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 

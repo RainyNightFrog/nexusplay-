@@ -46,6 +46,22 @@ export async function grantSupporterStatus(params: {
   }
 }
 
+export async function revokeSupporterStatus(userId: string) {
+  const supabase = createServerSupabase();
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      is_supporter: false,
+      supporter_badge: null,
+    })
+    .eq("id", userId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
 function buildSupporterLineItem(
   tier: SupporterPassTier,
   productName: string
@@ -137,6 +153,20 @@ export async function createSupporterPassCheckoutSession(params: {
     customer: customerId,
     client_reference_id: params.userId,
     line_items: [buildSupporterLineItem(tier, productName)],
+    ...(tier.interval
+      ? {
+          subscription_data: {
+            metadata: {
+              nexusplay_user_id: params.userId,
+              order_type: "supporter_pass",
+              nexusplay_order_type: "supporter_pass",
+              supporter_tier_id: tier.id,
+              supporter_badge: tier.badge,
+              billing_interval: tier.interval,
+            },
+          },
+        }
+      : {}),
     metadata: {
       nexusplay_order_id: orderRow.id,
       order_type: "supporter_pass",

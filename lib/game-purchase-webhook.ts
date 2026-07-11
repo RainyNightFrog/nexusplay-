@@ -1,9 +1,76 @@
 import type Stripe from "stripe";
+import { computeStripeConnectAmounts } from "@/lib/checkout-order";
 import { grantGameEntitlement } from "@/lib/game-entitlement-service";
 import {
   markOrderSucceeded,
   type OrderRow,
 } from "@/lib/checkout-order-webhook";
+import { resolveEffectivePlatformFeePercent } from "@/lib/tip-fee-policy";
+import { createServerSupabase } from "@/lib/supabase-server";
+
+function roundUsd(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
+async function creditCreatorGamePurchasePayout(params: {
+  gameId: number;
+  gamePriceCents: number;
+  platformTipCents: number;
+}) {
+  const supabase = createServerSupabase();
+  const { data: game, error: gameError } = await supabase
+    .from("games")
+    .select("creator_id, platform_fee_percent")
+    .eq("id", params.gameId)
+    .maybeSingle();
+
+  if (gameError) {
+    throw new Error(gameError.message);
+  }
+
+  if (!game?.creator_id) {
+    return;
+  }
+
+  const platformCommissionRate =
+    resolveEffectivePlatformFeePercent(game.platform_fee_percent) / 100;
+  const amounts = computeStripeConnectAmounts({
+    gamePriceCents: params.gamePriceCents,
+    platformTipCents: params.platformTipCents,
+    platformCommissionRate,
+  });
+
+  const payoutUsd = roundUsd(amounts.creator_payout_cents / 100);
+  if (payoutUsd <= 0) {
+    return;
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("creator_balance_usd")
+    .eq("id", game.creator_id)
+    .maybeSingle();
+
+  if (profileError) {
+    throw new Error(profileError.message);
+  }
+
+  const current =
+    typeof profile?.creator_balance_usd === "number"
+      ? profile.creator_balance_usd
+      : Number.parseFloat(String(profile?.creator_balance_usd ?? 0)) || 0;
+
+  const nextBalance = roundUsd(current + payoutUsd);
+
+  const { error: updateError } = await supabase
+    .from("profiles")
+    .update({ creator_balance_usd: nextBalance })
+    .eq("id", game.creator_id);
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
+}
 
 function readMetadataCents(
   session: Stripe.Checkout.Session,
@@ -52,6 +119,14 @@ export async function finalizeGamePurchaseCheckout(
 
   if (!updated && order.status !== "succeeded") {
     throw new Error("無法更新遊戲購買訂單狀態");
+  }
+
+  if (updated) {
+    await creditCreatorGamePurchasePayout({
+      gameId: order.game_id,
+      gamePriceCents,
+      platformTipCents,
+    });
   }
 
   await grantGameEntitlement({

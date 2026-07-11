@@ -28,6 +28,7 @@
     "db:game-tips": "node scripts/run-game-tips.mjs",
     "db:profile-supporter": "node scripts/run-profile-supporter-fields.mjs",
     "db:orders-checkout": "node scripts/run-orders-checkout.mjs",
+    "db:orders-cancelled": "node scripts/run-orders-cancelled-status.mjs",
     "db:game-entitlements": "node scripts/run-game-entitlements.mjs",
     "db:payment-safety": "node scripts/run-payment-safety.mjs",
     "db:partner-access": "node scripts/run-game-partner-access.mjs",

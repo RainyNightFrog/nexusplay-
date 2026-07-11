@@ -15,6 +15,9 @@ import { spawnSync } from "node:child_process";
 import Stripe from "stripe";
 
 const WEBHOOK_EVENTS = [
+  "checkout.session.completed",
+  "checkout.session.expired",
+  "customer.subscription.deleted",
   "payment_intent.succeeded",
   "payment_intent.payment_failed",
   "charge.refunded",
