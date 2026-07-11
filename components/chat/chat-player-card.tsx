@@ -127,6 +127,23 @@ export function forumAuthorToPlayerPreview(
   };
 }
 
+export function creatorToPlayerPreview(
+  creatorId: string,
+  displayName: string,
+  options?: { isOwn?: boolean; avatarUrl?: string | null }
+): ChatPlayerPreview {
+  return {
+    userId: creatorId,
+    displayName,
+    avatarUrl: options?.avatarUrl ?? null,
+    equippedTitle: null,
+    isCreator: true,
+    isVirtual: false,
+    virtualPlayerId: null,
+    isOwn: options?.isOwn ?? false,
+  };
+}
+
 function StatItem({
   icon,
   label,

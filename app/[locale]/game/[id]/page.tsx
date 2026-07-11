@@ -25,6 +25,11 @@ import {
 } from "lucide-react";
 import { GameEmbedBridge } from "@/components/game/game-embed-bridge";
 import { FollowCreatorButton } from "@/components/creator/follow-creator-button";
+import {
+  ChatPlayerCard,
+  creatorToPlayerPreview,
+  type ChatPlayerPreview,
+} from "@/components/chat/chat-player-card";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { SiteHeader } from "@/components/layout/site-header";
 import { LeaderboardNavButton } from "@/components/LeaderboardModal";
@@ -79,6 +84,7 @@ export default function GamePage() {
 
 function GamePageContent() {
   const t = useTranslations("game");
+  const tChat = useTranslations("chat");
   const td = useTranslations("dashboard");
   const tc = useTranslations("common");
   const tn = useTranslations("nav");
@@ -100,6 +106,10 @@ function GamePageContent() {
   const [isDraftPreview, setIsDraftPreview] = useState(false);
   const [isPartnerPreview, setIsPartnerPreview] = useState(false);
   const [ownerCreatorId, setOwnerCreatorId] = useState<string | null>(null);
+  const [creatorProfileOpen, setCreatorProfileOpen] = useState(false);
+  const [creatorPreview, setCreatorPreview] = useState<ChatPlayerPreview | null>(
+    null
+  );
 
   const [liked, setLiked] = useState(false);
   const [favorited, setFavorited] = useState(false);
@@ -359,6 +369,18 @@ function GamePageContent() {
     profile?.id && ownerCreatorId && profile.id === ownerCreatorId
   );
   const editGameHref = game ? `/dashboard/edit/${game.id}` : "/dashboard";
+
+  const openCreatorProfile = useCallback(() => {
+    if (!game?.creatorId) return;
+    setCreatorPreview(
+      creatorToPlayerPreview(
+        game.creatorId,
+        game.creator || tc("defaultCreator"),
+        { isOwn: profile?.id === game.creatorId }
+      )
+    );
+    setCreatorProfileOpen(true);
+  }, [game?.creatorId, game?.creator, profile?.id, tc]);
 
   const handleShare = async () => {
     if (!game) return;
@@ -680,12 +702,14 @@ function GamePageContent() {
                   <span>
                     {tc("creator")}：
                     {game.creatorId ? (
-                      <Link
-                        href={`/creator/${game.creatorId}`}
-                        className="ml-1 font-medium text-violet-300 hover:underline"
+                      <button
+                        type="button"
+                        onClick={openCreatorProfile}
+                        className="ml-1 font-medium text-violet-300 transition-colors hover:text-violet-200 hover:underline"
+                        aria-label={tChat("playerCardViewProfile")}
                       >
                         {game.creator || tc("defaultCreator")}
-                      </Link>
+                      </button>
                     ) : (
                       <span className="ml-1 font-medium text-zinc-200">
                         {game.creator || tc("defaultCreator")}
@@ -700,6 +724,7 @@ function GamePageContent() {
                     compact
                     centered
                     layout="stacked"
+                    showCreatorPageLink
                     className="w-full"
                   />
                 )}
@@ -924,6 +949,12 @@ function GamePageContent() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ChatPlayerCard
+        player={creatorPreview}
+        open={creatorProfileOpen}
+        onOpenChange={setCreatorProfileOpen}
+      />
     </div>
   );
 }

@@ -20,6 +20,7 @@ type FollowCreatorButtonProps = {
   layout?: "inline" | "stacked";
   align?: "start" | "end";
   localOnly?: boolean;
+  showCreatorPageLink?: boolean;
 };
 
 export function FollowCreatorButton({
@@ -33,6 +34,7 @@ export function FollowCreatorButton({
   layout = "inline",
   align = "start",
   localOnly = false,
+  showCreatorPageLink = false,
 }: FollowCreatorButtonProps) {
   const t = useTranslations("creatorPublic");
   const router = useRouter();
@@ -197,6 +199,17 @@ export function FollowCreatorButton({
               {t("followerCount", { count: followerCount })}
             </p>
           )
+        )}
+        {showCreatorPageLink && (
+          <Button
+            nativeButton={false}
+            render={<Link href={`/creator/${creatorId}`} />}
+            size={compact ? "sm" : "default"}
+            variant="outline"
+            className="h-8 gap-1.5 border-white/10 bg-white/5 px-3 text-xs text-zinc-200 sm:text-sm"
+          >
+            {t("viewCreatorPageBtn")}
+          </Button>
         )}
       </div>
       {actionError && (
