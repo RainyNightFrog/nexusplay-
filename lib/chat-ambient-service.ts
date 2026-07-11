@@ -24,6 +24,7 @@ import {
   type VirtualPlayerLocale,
 } from "@/lib/virtual-players";
 import { resolveVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
+import { upsertBotProfile } from "@/lib/profile-player-number";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 const WORLD_DIALOGUE_CHANCE = 0.5;
@@ -164,16 +165,12 @@ async function syncAmbientPlayerProfile(
   options?: { asCreator?: boolean }
 ) {
   const role = options?.asCreator ? "creator" : "player";
-  const { error: profileError } = await supabase.from("profiles").upsert(
-    {
-      id: userId,
-      display_name: player.displayName,
-      avatar_url: resolveVirtualPlayerAvatarUrl(player.id),
-      role,
-    },
-    { onConflict: "id" }
-  );
-  if (profileError) throw new Error(profileError.message);
+  await upsertBotProfile(supabase, {
+    userId,
+    displayName: player.displayName,
+    avatarUrl: resolveVirtualPlayerAvatarUrl(player.id),
+    role,
+  });
 
   const { error: authError } = await supabase.auth.admin.updateUserById(userId, {
     user_metadata: {
@@ -225,24 +222,14 @@ async function ensureAmbientPlayer(
     if (existing) {
       cache.set(email, existing);
       cache.set(legacyEmail, existing);
+      await syncAmbientPlayerProfile(supabase, existing, player, options);
       return existing;
     }
     throw new Error(error.message);
   }
 
   const userId = data.user.id;
-  const { error: profileError } = await supabase.from("profiles").upsert(
-    {
-      id: userId,
-      display_name: player.displayName,
-      role: options?.asCreator ? "creator" : "player",
-    },
-    { onConflict: "id" }
-  );
-
-  if (profileError && !profileError.message.includes("duplicate")) {
-    throw new Error(profileError.message);
-  }
+  await syncAmbientPlayerProfile(supabase, userId, player, options);
 
   cache.set(email, userId);
   cache.set(legacyEmail, userId);

@@ -22,8 +22,11 @@ function historyCutoffIso() {
 function canSeed(channel: ChatChannel) {
   const last = lastSeedAt[channel] ?? 0;
   if (Date.now() - last < AMBIENT_SEED_COOLDOWN_MS) return false;
-  lastSeedAt[channel] = Date.now();
   return true;
+}
+
+function markSeeded(channel: ChatChannel) {
+  lastSeedAt[channel] = Date.now();
 }
 
 async function countRecentMessages(channel: ChatChannel) {
@@ -65,6 +68,7 @@ export async function maintainAmbientChat(channel: ChatChannel) {
     } else {
       await bootstrapAmbientCreatorChat(8);
     }
+    markSeeded(channel);
     return;
   }
 

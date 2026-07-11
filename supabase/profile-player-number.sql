@@ -69,3 +69,13 @@ begin
   return new;
 end;
 $$;
+
+-- 供虛擬聊天機器人等後台流程分配 player_number
+create or replace function public.allocate_profile_player_number()
+returns bigint
+language sql
+security definer
+set search_path = public
+as $$
+  select nextval('public.profile_player_number_seq');
+$$;
