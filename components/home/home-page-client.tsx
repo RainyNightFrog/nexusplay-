@@ -309,8 +309,8 @@ export function HomePageClient() {
               </span>
             </h1>
 
-            <p className="mx-auto mt-6 text-base leading-relaxed text-zinc-400 sm:text-lg">
-              <span className="block sm:whitespace-nowrap">{t("heroDesc1")}</span>
+            <p className="mx-auto mt-6 max-w-2xl text-center text-base leading-relaxed text-zinc-400 sm:text-lg">
+              <span className="block">{t("heroDesc1")}</span>
               <span className="block">{t("heroDesc2")}</span>
             </p>
 

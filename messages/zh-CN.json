@@ -320,7 +320,22 @@
     "socialFacebook": "RainyNightFrog official website",
     "socialBilibili": "RainyNightFrog official website",
     "socialDouyin": "RainyNightFrog official website",
-    "socialTiktok": "RainyNightFrog official website"
+    "socialTiktok": "RainyNightFrog official website",
+    "tagFilterLabel": "热门游戏标签",
+    "tagFilterExpand": "展开全部标签",
+    "tagFilterCollapse": "收起标签",
+    "tagFilterClear": "清除 {count} 个",
+    "tagFilterSelectedHint": "已选 {count} 个标签 · 需同时符合所有已选标签",
+    "tagGroupArtStyle": "美术风格",
+    "tagGroupGameplay": "玩法机制",
+    "tagGroupPlayMode": "游玩方式",
+    "tagGroupPerspective": "视角与维度",
+    "tagGroupMood": "氛围与受众",
+    "gridDescTags": "标签：{tags} · 按「{sort}」排序",
+    "gridDescCategoryTags": "「{category}」· 标签：{tags} · {sort}",
+    "emptyTags": "没有符合所选标签的游戏",
+    "emptyHintTags": "试试减少标签或清除筛选。",
+    "viewAllTags": "清除标签筛选"
   },
   "game": {
     "communityForum": "社区讨论区",
