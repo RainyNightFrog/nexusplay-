@@ -1,9 +1,10 @@
 import type { UserRole } from "@/lib/auth";
+import { sanitizeInternalRedirect } from "@/lib/safe-redirect";
 
 export type AccountIntent = UserRole;
 
 export function buildChooseRolePath(redirectTo: string) {
-  const safeRedirect = redirectTo.startsWith("/") ? redirectTo : "/";
+  const safeRedirect = sanitizeInternalRedirect(redirectTo);
   return `/auth/choose-role?redirect=${encodeURIComponent(safeRedirect)}`;
 }
 

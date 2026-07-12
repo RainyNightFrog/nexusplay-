@@ -41,6 +41,11 @@ export function getStableAuthCallbackUrl(windowOrigin: string) {
   return getAuthCallbackUrl(resolveAuthCallbackOrigin(windowOrigin));
 }
 
+export function buildPasswordResetCallbackUrl(windowOrigin: string) {
+  const resetRedirect = encodeURIComponent("/auth?mode=reset");
+  return `${getStableAuthCallbackUrl(windowOrigin)}?redirect=${resetRedirect}`;
+}
+
 export function getProductionSiteOrigins() {
   return [PRODUCTION_SITE_URL, `https://www.rainynightfrog.com`, LEGACY_PRODUCTION_SITE_URL];
 }

@@ -15,6 +15,7 @@ import {
 import { resolveSubdomainRoute } from "@/lib/creator-username";
 import { routing } from "@/i18n/routing";
 import createIntlMiddleware from "next-intl/middleware";
+import { sanitizeInternalRedirect } from "@/lib/safe-redirect";
 
 const intlMiddleware = createIntlMiddleware(routing);
 
@@ -380,9 +381,7 @@ export async function middleware(request: NextRequest) {
 
     if (shouldSkipAccountIntent(user)) {
       const redirectUrl = effectiveRequest.nextUrl.clone();
-      redirectUrl.pathname = redirectTarget.startsWith("/")
-        ? redirectTarget
-        : "/";
+      redirectUrl.pathname = sanitizeInternalRedirect(redirectTarget);
       redirectUrl.search = "";
       return finalizeMiddlewareResponse(
         request,

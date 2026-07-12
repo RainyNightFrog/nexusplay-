@@ -20,6 +20,8 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
 import { useApiError } from "@/hooks/use-api-error";
 import { TwoFactorPanel } from "@/components/settings/two-factor-panel";
+import { buildPasswordResetCallbackUrl } from "@/lib/auth-redirect-urls";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 export default function SecuritySettingsPage() {
@@ -98,11 +100,24 @@ export default function SecuritySettingsPage() {
     setError(null);
     setResetting(true);
     try {
-      const response = await fetch("/api/auth/password", { method: "PUT" });
-      const data = (await response.json()) as { error?: string };
-      if (!response.ok) {
-        throw new Error(data.error ?? t("resetEmailFailed"));
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user?.email) {
+        throw new Error(t("resetEmailFailed"));
       }
+
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+        user.email,
+        {
+          redirectTo: buildPasswordResetCallbackUrl(window.location.origin),
+        }
+      );
+
+      if (resetError) throw resetError;
+
       showToast(t("resetEmailSent"));
     } catch (resetError) {
       setError(

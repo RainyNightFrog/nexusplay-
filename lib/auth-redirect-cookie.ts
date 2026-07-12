@@ -1,11 +1,12 @@
 import type { NextRequest, NextResponse } from "next/server";
+import { sanitizeInternalRedirect } from "@/lib/safe-redirect";
 
 export const AUTH_REDIRECT_COOKIE = "auth_redirect";
 const AUTH_REDIRECT_MAX_AGE = 600;
 
 export function setAuthRedirectCookie(redirectTo: string) {
   if (typeof document === "undefined") return;
-  const safe = redirectTo.startsWith("/") ? redirectTo : "/";
+  const safe = sanitizeInternalRedirect(redirectTo);
   document.cookie = `${AUTH_REDIRECT_COOKIE}=${encodeURIComponent(safe)}; path=/; max-age=${AUTH_REDIRECT_MAX_AGE}; SameSite=Lax`;
 }
 
@@ -14,7 +15,7 @@ export function readAuthRedirectFromRequest(request: NextRequest): string {
   if (!raw) return "/";
   try {
     const decoded = decodeURIComponent(raw);
-    return decoded.startsWith("/") ? decoded : "/";
+    return sanitizeInternalRedirect(decoded);
   } catch {
     return "/";
   }

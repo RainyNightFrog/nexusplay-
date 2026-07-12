@@ -10,6 +10,7 @@ import {
   completeAuthCodeExchange,
   failAuthCodeExchange,
 } from "@/lib/auth-callback-exchange";
+import { sanitizeInternalRedirect } from "@/lib/safe-redirect";
 import { createClient } from "@/lib/supabase/client";
 import {
   clearPkceVerifierBackup,
@@ -26,7 +27,7 @@ function readAuthRedirectFromDocument(): string {
 
   try {
     const decoded = decodeURIComponent(match[1]);
-    return decoded.startsWith("/") ? decoded : "/";
+    return sanitizeInternalRedirect(decoded);
   } catch {
     return "/";
   }
@@ -36,6 +37,23 @@ function clearAuthRedirectCookie() {
   document.cookie = `${AUTH_REDIRECT_COOKIE}=; path=/; max-age=0; SameSite=Lax`;
 }
 
+function readHashParams(): URLSearchParams {
+  if (typeof window === "undefined" || !window.location.hash) {
+    return new URLSearchParams();
+  }
+
+  return new URLSearchParams(window.location.hash.replace(/^#/, ""));
+}
+
+function buildPostAuthPath(
+  user: { user_metadata?: Record<string, unknown> } | null | undefined,
+  safeRedirect: string
+) {
+  return user && shouldSkipAccountIntent(user)
+    ? safeRedirect
+    : buildChooseRolePath(safeRedirect);
+}
+
 const OAUTH_IN_FLIGHT_KEY = "oauth:in-flight";
 
 export function AuthCallbackClient() {
@@ -43,9 +61,9 @@ export function AuthCallbackClient() {
   const [message, setMessage] = useState("正在完成登入…");
 
   useEffect(() => {
-    const code = searchParams.get("code");
-    const redirectTo = searchParams.get("redirect") ?? readAuthRedirectFromDocument();
-    const safeRedirect = redirectTo.startsWith("/") ? redirectTo : "/";
+    const redirectTo =
+      searchParams.get("redirect") ?? readAuthRedirectFromDocument();
+    const safeRedirect = sanitizeInternalRedirect(redirectTo);
 
     const redirectToAuthError = (reason?: string) => {
       const failUrl = new URL("/auth", window.location.origin);
@@ -57,16 +75,106 @@ export function AuthCallbackClient() {
       window.location.replace(failUrl.toString());
     };
 
-    if (!code) {
-      redirectToAuthError();
-      return;
-    }
+    const redirectAfterSession = (
+      user: { user_metadata?: Record<string, unknown> } | null | undefined
+    ) => {
+      clearAuthRedirectCookie();
+      window.sessionStorage.removeItem(OAUTH_IN_FLIGHT_KEY);
+      window.location.replace(buildPostAuthPath(user, safeRedirect));
+    };
 
-    if (!beginAuthCodeExchange(code)) {
-      return;
-    }
+    const handleDuplicateExchange = () => {
+      void (async () => {
+        const supabase = createClient();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (session?.user) {
+          redirectAfterSession(session.user);
+          return;
+        }
+
+        redirectToAuthError("already_processed");
+      })();
+    };
+
+    const code = searchParams.get("code");
+    const tokenHash = searchParams.get("token_hash");
+    const otpType = searchParams.get("type");
+    const hashParams = readHashParams();
+    const hashAccessToken = hashParams.get("access_token");
+    const hashRefreshToken = hashParams.get("refresh_token");
+    const hashType = hashParams.get("type");
 
     void (async () => {
+      const supabase = createClient();
+
+      if (tokenHash && otpType === "recovery") {
+        try {
+          setMessage("正在驗證重設密碼連結…");
+          const { error } = await supabase.auth.verifyOtp({
+            token_hash: tokenHash,
+            type: "recovery",
+          });
+
+          if (error) {
+            redirectToAuthError(error.message);
+            return;
+          }
+
+          clearAuthRedirectCookie();
+          window.sessionStorage.removeItem(OAUTH_IN_FLIGHT_KEY);
+          window.location.replace("/auth?mode=reset");
+          return;
+        } catch (error) {
+          const reason =
+            error instanceof Error ? error.message : "Password recovery failed";
+          redirectToAuthError(reason);
+          return;
+        }
+      }
+
+      if (hashAccessToken && hashRefreshToken) {
+        try {
+          setMessage("正在驗證登入…");
+          const { error } = await supabase.auth.setSession({
+            access_token: hashAccessToken,
+            refresh_token: hashRefreshToken,
+          });
+
+          if (error) {
+            redirectToAuthError(error.message);
+            return;
+          }
+
+          clearAuthRedirectCookie();
+          window.sessionStorage.removeItem(OAUTH_IN_FLIGHT_KEY);
+          window.location.replace(
+            hashType === "recovery" ? "/auth?mode=reset" : buildPostAuthPath(
+              (await supabase.auth.getUser()).data.user,
+              safeRedirect
+            )
+          );
+          return;
+        } catch (error) {
+          const reason =
+            error instanceof Error ? error.message : "Auth callback failed";
+          redirectToAuthError(reason);
+          return;
+        }
+      }
+
+      if (!code) {
+        redirectToAuthError();
+        return;
+      }
+
+      if (!beginAuthCodeExchange(code)) {
+        handleDuplicateExchange();
+        return;
+      }
+
       try {
         setMessage("正在驗證登入…");
 
@@ -88,7 +196,6 @@ export function AuthCallbackClient() {
           return;
         }
 
-        const supabase = createClient();
         const { error: sessionError } = await supabase.auth.setSession({
           access_token: exchangeResult.access_token,
           refresh_token: exchangeResult.refresh_token,
@@ -102,15 +209,15 @@ export function AuthCallbackClient() {
 
         completeAuthCodeExchange(code);
         clearPkceVerifierBackup();
-        clearAuthRedirectCookie();
-        window.sessionStorage.removeItem(OAUTH_IN_FLIGHT_KEY);
 
-        const path =
-          exchangeResult.user && shouldSkipAccountIntent(exchangeResult.user)
-            ? safeRedirect
-            : buildChooseRolePath(safeRedirect);
+        if (safeRedirect === "/auth?mode=reset" || safeRedirect.startsWith("/auth?mode=reset&")) {
+          clearAuthRedirectCookie();
+          window.sessionStorage.removeItem(OAUTH_IN_FLIGHT_KEY);
+          window.location.replace("/auth?mode=reset");
+          return;
+        }
 
-        window.location.replace(path);
+        redirectAfterSession(exchangeResult.user);
       } catch (error) {
         failAuthCodeExchange(code);
         const reason =

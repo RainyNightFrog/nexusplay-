@@ -39,13 +39,14 @@ import {
   savePkceVerifierBackup,
   waitForPkceVerifierCookie,
 } from "@/lib/supabase/pkce";
-import { getAuthCallbackUrl } from "@/lib/auth-redirect-urls";
+import { getStableAuthCallbackUrl, buildPasswordResetCallbackUrl } from "@/lib/auth-redirect-urls";
 import {
   clearRememberedCredentials,
   readRememberedCredentials,
   saveRememberedCredentials,
 } from "@/lib/remembered-credentials";
 import { cn } from "@/lib/utils";
+import { sanitizeInternalRedirect } from "@/lib/safe-redirect";
 
 type AuthMode = "login" | "register";
 type AuthMethod = "password" | "magicLink";
@@ -83,7 +84,7 @@ export default function AuthPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const redirectTo = searchParams.get("redirect") ?? "/";
+  const redirectTo = sanitizeInternalRedirect(searchParams.get("redirect"));
   const hint = searchParams.get("hint");
   const callbackError = searchParams.get("error");
   const callbackReason = searchParams.get("reason");
@@ -221,7 +222,7 @@ export default function AuthPage() {
         await supabase.auth.signInWithOAuth({
           provider,
           options: {
-            redirectTo: getAuthCallbackUrl(window.location.origin),
+            redirectTo: getStableAuthCallbackUrl(window.location.origin),
             skipBrowserRedirect: true,
             ...(queryParams ? { queryParams } : {}),
           },
@@ -286,7 +287,7 @@ export default function AuthPage() {
 
       setAuthRedirectCookie(redirectTo);
 
-      const emailRedirectTo = `${getAuthCallbackUrl(window.location.origin)}?redirect=${encodeURIComponent(redirectTo)}`;
+      const emailRedirectTo = `${getStableAuthCallbackUrl(window.location.origin)}?redirect=${encodeURIComponent(redirectTo)}`;
       const options: {
         emailRedirectTo: string;
         shouldCreateUser: boolean;
@@ -335,17 +336,17 @@ export default function AuthPage() {
       return;
     }
 
-    try {
-      const response = await fetch("/api/auth/password", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: trimmedEmail }),
-      });
+    const supabase = createClient();
 
-      const data = (await response.json()) as { error?: string };
-      if (!response.ok) {
-        throw new Error(data.error ?? t("operationFailed"));
-      }
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+        trimmedEmail,
+        {
+          redirectTo: buildPasswordResetCallbackUrl(window.location.origin),
+        }
+      );
+
+      if (resetError) throw resetError;
 
       setMessage(t("resetEmailSent"));
     } catch (submitError) {
@@ -431,7 +432,7 @@ export default function AuthPage() {
               developing_games: role === "creator",
               account_intent_at: new Date().toISOString(),
             },
-            emailRedirectTo: `${getAuthCallbackUrl(window.location.origin)}?redirect=${encodeURIComponent(redirectTo)}`,
+            emailRedirectTo: `${getStableAuthCallbackUrl(window.location.origin)}?redirect=${encodeURIComponent(redirectTo)}`,
           },
         });
 

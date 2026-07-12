@@ -1,14 +1,20 @@
 import { NextResponse } from "next/server";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
+import {
+  buildPasswordResetCallbackUrl,
+  PRODUCTION_SITE_URL,
+} from "@/lib/auth-redirect-urls";
 import { createClient } from "@supabase/supabase-js";
 
 function getPasswordResetRedirectUrl(request: Request) {
   const redirectTo = new URL(request.url).searchParams.get("redirectTo");
   if (redirectTo) return redirectTo;
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? new URL(request.url).origin;
-  const resetPath = encodeURIComponent("/auth?mode=reset");
-  return `${baseUrl}/auth/callback?redirect=${resetPath}`;
+  const baseUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    new URL(request.url).origin ??
+    PRODUCTION_SITE_URL;
+  return buildPasswordResetCallbackUrl(baseUrl);
 }
 
 export async function POST(request: Request) {
