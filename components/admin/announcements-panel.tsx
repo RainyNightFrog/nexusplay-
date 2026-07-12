@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Loader2, Megaphone, RefreshCw, Trash2 } from "lucide-react";
+import { Loader2, Megaphone, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { AdminPanelFrame } from "@/components/admin/admin-panel-frame";
 
 type AnnouncementRow = {
   id: string;
@@ -148,14 +149,21 @@ export function AdminAnnouncementsPanel() {
   }
 
   return (
-    <div className="space-y-6">
+    <AdminPanelFrame
+      title={t("tabAnnouncements")}
+      description={t("announcementsDesc")}
+      onRefresh={() => void loadAnnouncements()}
+      refreshing={loading}
+      refreshLabel={t("refresh")}
+      error={error}
+      centerContent
+    >
       <Card className="border-white/10 bg-zinc-900/60">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-white">
             <Megaphone className="size-5 text-cyan-400" />
             {t("announcementsCreateTitle")}
           </CardTitle>
-          <CardDescription>{t("announcementsDesc")}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleCreate} className="space-y-4">
@@ -238,27 +246,11 @@ export function AdminAnnouncementsPanel() {
       </Card>
 
       <Card className="border-white/10 bg-zinc-900/60">
-        <CardHeader className="flex flex-row items-center justify-between gap-4">
-          <div>
-            <CardTitle className="text-white">{t("announcementsListTitle")}</CardTitle>
-            <CardDescription>{t("announcementsListDesc")}</CardDescription>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => void loadAnnouncements()}
-            disabled={loading}
-            className="gap-2 border-white/10"
-          >
-            <RefreshCw className={cn("size-4", loading && "animate-spin")} />
-            {t("refresh")}
-          </Button>
+        <CardHeader>
+          <CardTitle className="text-white">{t("announcementsListTitle")}</CardTitle>
+          <CardDescription>{t("announcementsListDesc")}</CardDescription>
         </CardHeader>
         <CardContent>
-          {error && (
-            <p className="mb-4 text-sm text-rose-400">{error}</p>
-          )}
           {loading ? (
             <div className="flex justify-center py-10">
               <Loader2 className="size-8 animate-spin text-cyan-400" />
@@ -328,6 +320,6 @@ export function AdminAnnouncementsPanel() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </AdminPanelFrame>
   );
 }

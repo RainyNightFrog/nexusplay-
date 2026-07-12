@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Clock, Loader2, Play, RefreshCw } from "lucide-react";
+import { Clock, Loader2, Play } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import type { AdminCronRunRecord } from "@/lib/admin-cron-service";
+import { AdminPanelFrame } from "@/components/admin/admin-panel-frame";
 import { cn } from "@/lib/utils";
 
 function formatDate(value: string, locale: string) {
@@ -98,27 +99,15 @@ export function AdminCronPanel() {
   }
 
   return (
-    <div className="space-y-6 text-left">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold text-white">{t("tabCron")}</h2>
-          <p className="mt-1 text-sm text-zinc-500">{t("cronDesc")}</p>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => void loadJobs()}
-          disabled={loading}
-          className="gap-2 border-white/10"
-        >
-          <RefreshCw className={cn("size-4", loading && "animate-spin")} />
-          {t("refresh")}
-        </Button>
-      </div>
-
-      {error && <p className="text-sm text-rose-400">{error}</p>}
-
+    <AdminPanelFrame
+      title={t("tabCron")}
+      description={t("cronDesc")}
+      onRefresh={() => void loadJobs()}
+      refreshing={loading}
+      refreshLabel={t("refresh")}
+      error={error}
+      centerContent
+    >
       <Card className="border-white/8 bg-zinc-900/60">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base text-white">
@@ -190,6 +179,6 @@ export function AdminCronPanel() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </AdminPanelFrame>
   );
 }

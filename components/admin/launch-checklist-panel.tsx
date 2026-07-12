@@ -9,7 +9,6 @@ import {
   CircleDashed,
   ExternalLink,
   Loader2,
-  RefreshCw,
   Rocket,
   ShieldCheck,
 } from "lucide-react";
@@ -27,6 +26,7 @@ import type {
   LaunchChecklistPhase,
   LaunchChecklistReport,
 } from "@/lib/launch-checklist-service";
+import { AdminPanelFrame } from "@/components/admin/admin-panel-frame";
 import { cn } from "@/lib/utils";
 
 function statusIcon(status: LaunchChecklistItem["status"]) {
@@ -143,24 +143,48 @@ export function AdminLaunchChecklistPanel({ onError }: LaunchChecklistPanelProps
 
   if (loading && !report) {
     return (
-      <div className="flex h-48 items-center justify-center">
-        <Loader2 className="size-8 animate-spin text-cyan-400" />
-      </div>
+      <AdminPanelFrame
+        title={t("tabLaunch")}
+        description={t("launchChecklistPhaseDesc_soft")}
+        onRefresh={() => void loadReport()}
+        refreshing={loading}
+        refreshLabel={t("refresh")}
+        centerContent
+      >
+        <div className="flex h-48 items-center justify-center">
+          <Loader2 className="size-8 animate-spin text-cyan-400" />
+        </div>
+      </AdminPanelFrame>
     );
   }
 
   if (!report) {
     return (
-      <Card className="border-white/10 bg-zinc-900/40">
-        <CardContent className="py-12 text-center text-sm text-zinc-500">
-          {t("launchChecklistLoadFailed")}
-        </CardContent>
-      </Card>
+      <AdminPanelFrame
+        title={t("tabLaunch")}
+        description={t("launchChecklistPhaseDesc_soft")}
+        onRefresh={() => void loadReport()}
+        refreshLabel={t("refresh")}
+        centerContent
+      >
+        <Card className="border-white/10 bg-zinc-900/40">
+          <CardContent className="py-12 text-center text-sm text-zinc-500">
+            {t("launchChecklistLoadFailed")}
+          </CardContent>
+        </Card>
+      </AdminPanelFrame>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <AdminPanelFrame
+      title={t("tabLaunch")}
+      description={t("launchChecklistPhaseDesc_soft")}
+      onRefresh={() => void loadReport()}
+      refreshing={loading}
+      refreshLabel={t("refresh")}
+      centerContent
+    >
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="border-cyan-400/20 bg-zinc-900/60">
           <CardHeader className="pb-2 text-center">
@@ -233,19 +257,6 @@ export function AdminLaunchChecklistPanel({ onError }: LaunchChecklistPanelProps
           ))}
         </div>
       )}
-
-      <div className="flex justify-center">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => void loadReport()}
-          disabled={loading}
-          className="border-white/10 bg-white/5"
-        >
-          <RefreshCw className={cn("size-4", loading && "animate-spin")} />
-          {t("refresh")}
-        </Button>
-      </div>
 
       {grouped.map(({ phase, items }) => (
         <Card key={phase} className="border-white/10 bg-zinc-900/60">
@@ -349,6 +360,6 @@ export function AdminLaunchChecklistPanel({ onError }: LaunchChecklistPanelProps
           </CardContent>
         </Card>
       ))}
-    </div>
+    </AdminPanelFrame>
   );
 }

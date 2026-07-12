@@ -32,6 +32,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { AdminUserDetail, AdminUserRecord } from "@/lib/admin-users-service";
+import {
+  AdminPanelHeader,
+  adminPanelCenteredCardsClass,
+} from "@/components/admin/admin-panel-header";
 import { cn } from "@/lib/utils";
 
 function formatDate(value: string, locale: string) {
@@ -204,26 +208,26 @@ export function AdminUsersPanel() {
   }
 
   return (
-    <div className="space-y-6 text-left">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold text-white">{t("tabUsers")}</h2>
-          <p className="mt-1 text-sm text-zinc-500">{t("usersDesc")}</p>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => void loadUsers()}
-          disabled={loading}
-          className="gap-2 border-white/10"
-        >
-          <RefreshCw className={cn("size-4", loading && "animate-spin")} />
-          {t("refresh")}
-        </Button>
-      </div>
+    <div className={cn("space-y-6", adminPanelCenteredCardsClass)}>
+      <AdminPanelHeader
+        title={t("tabUsers")}
+        description={t("usersDesc")}
+        actions={
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => void loadUsers()}
+            disabled={loading}
+            className="gap-2 border-white/10"
+          >
+            <RefreshCw className={cn("size-4", loading && "animate-spin")} />
+            {t("refresh")}
+          </Button>
+        }
+      />
 
-      {error && <p className="text-sm text-rose-400">{error}</p>}
+      {error && <p className="text-center text-sm text-rose-400">{error}</p>}
 
       <form onSubmit={handleSearchSubmit} className="flex gap-2">
         <div className="relative flex-1">

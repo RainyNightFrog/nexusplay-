@@ -13,6 +13,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import type { AdminTipRow, FinanceReconcileRow } from "@/lib/admin-finance-service";
+import {
+  AdminPanelHeader,
+  adminPanelCenteredCardsClass,
+} from "@/components/admin/admin-panel-header";
 import { cn } from "@/lib/utils";
 
 function formatDate(value: string, locale: string) {
@@ -100,26 +104,26 @@ export function AdminFinancePanel() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold text-white">{t("tabFinance")}</h2>
-          <p className="mt-1 text-sm text-zinc-500">{t("financeDesc")}</p>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => void loadFinance()}
-          disabled={loading}
-          className="gap-2 border-white/10"
-        >
-          <RefreshCw className={cn("size-4", loading && "animate-spin")} />
-          {t("refresh")}
-        </Button>
-      </div>
+    <div className={cn("space-y-6", adminPanelCenteredCardsClass)}>
+      <AdminPanelHeader
+        title={t("tabFinance")}
+        description={t("financeDesc")}
+        actions={
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => void loadFinance()}
+            disabled={loading}
+            className="gap-2 border-white/10"
+          >
+            <RefreshCw className={cn("size-4", loading && "animate-spin")} />
+            {t("refresh")}
+          </Button>
+        }
+      />
 
-      {error && <p className="text-sm text-rose-400">{error}</p>}
+      {error && <p className="text-center text-sm text-rose-400">{error}</p>}
 
       <Card className="border-white/8 bg-zinc-900/60">
         <CardHeader>

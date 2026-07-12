@@ -20,6 +20,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { AdminChatMessageRecord } from "@/lib/admin-chat-moderation-service";
+import {
+  AdminPanelHeader,
+  adminPanelCenteredCardsClass,
+} from "@/components/admin/admin-panel-header";
 import { cn } from "@/lib/utils";
 
 function formatDate(value: string, locale: string) {
@@ -94,26 +98,26 @@ export function AdminChatModerationPanel() {
   }
 
   return (
-    <div className="space-y-6 text-left">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold text-white">{t("tabChat")}</h2>
-          <p className="mt-1 text-sm text-zinc-500">{t("chatDesc")}</p>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => void loadMessages()}
-          disabled={loading}
-          className="gap-2 border-white/10"
-        >
-          <RefreshCw className={cn("size-4", loading && "animate-spin")} />
-          {t("refresh")}
-        </Button>
-      </div>
+    <div className={cn("space-y-6", adminPanelCenteredCardsClass)}>
+      <AdminPanelHeader
+        title={t("tabChat")}
+        description={t("chatDesc")}
+        actions={
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => void loadMessages()}
+            disabled={loading}
+            className="gap-2 border-white/10"
+          >
+            <RefreshCw className={cn("size-4", loading && "animate-spin")} />
+            {t("refresh")}
+          </Button>
+        }
+      />
 
-      {error && <p className="text-sm text-rose-400">{error}</p>}
+      {error && <p className="text-center text-sm text-rose-400">{error}</p>}
 
       <div className="flex items-center gap-3">
         <span className="text-sm text-zinc-400">{t("chatChannelFilter")}</span>

@@ -417,8 +417,9 @@ export default function AdminPage() {
         </Card>
       </div>
 
-      <Tabs defaultValue="games" className="mx-auto w-full">
-        <TabsList className="mx-auto mb-6 flex max-w-full overflow-x-auto border border-white/10 bg-zinc-900/80 p-1">
+      <Tabs defaultValue="games" className="mx-auto w-full min-w-0 gap-y-20">
+        <div className="w-full rounded-lg border border-white/10 bg-zinc-900/80 p-2">
+          <TabsList className="flex h-auto w-full flex-wrap justify-center gap-1.5 border-0 bg-transparent p-0 shadow-none [&_[data-slot=tabs-trigger]]:flex-none">
           <TabsTrigger value="games" className="gap-1.5 px-3 shrink-0">
             <ShieldAlert className="size-4" />
             {t("tabGames")}
@@ -455,6 +456,10 @@ export default function AdminPage() {
             <Banknote className="size-4" />
             {t("tabFinance")}
           </TabsTrigger>
+          <div
+            aria-hidden="true"
+            className="mt-2 h-0 w-full basis-full border-t border-white/10 pt-3"
+          />
           <TabsTrigger value="stripe" className="gap-1.5 px-3 shrink-0">
             <CreditCard className="size-4" />
             {t("tabStripe")}
@@ -483,7 +488,8 @@ export default function AdminPage() {
             <Mail className="size-4" />
             {t("tabDigest")}
           </TabsTrigger>
-        </TabsList>
+          </TabsList>
+        </div>
 
         <TabsContent value="games">
           <div className="mb-4 flex flex-wrap items-center justify-center gap-3">
@@ -922,7 +928,7 @@ export default function AdminPage() {
           <AdminUsersPanel />
         </TabsContent>
 
-        <TabsContent value="forum">
+        <TabsContent value="forum" className="flex-none text-left">
           <AdminForumModerationPanel />
         </TabsContent>
 
@@ -946,27 +952,27 @@ export default function AdminPage() {
           <AdminStripePanel />
         </TabsContent>
 
-        <TabsContent value="curation">
+        <TabsContent value="curation" className="flex-none pt-2 text-left">
           <AdminCurationPanel />
         </TabsContent>
 
-        <TabsContent value="announcements">
+        <TabsContent value="announcements" className="flex-none pt-2 text-left">
           <AdminAnnouncementsPanel />
         </TabsContent>
 
-        <TabsContent value="admins">
+        <TabsContent value="admins" className="flex-none pt-2 text-left">
           <AdminAdminsPanel />
         </TabsContent>
 
-        <TabsContent value="cron">
+        <TabsContent value="cron" className="flex-none pt-2 text-left">
           <AdminCronPanel />
         </TabsContent>
 
-        <TabsContent value="launch">
+        <TabsContent value="launch" className="flex-none pt-2 text-left">
           <AdminLaunchChecklistPanel onError={setPageError} />
         </TabsContent>
 
-        <TabsContent value="digest">
+        <TabsContent value="digest" className="flex-none pt-2 text-left">
           <AdminDigestReportPanel
             onError={setPageError}
             onSuccess={(message) => {

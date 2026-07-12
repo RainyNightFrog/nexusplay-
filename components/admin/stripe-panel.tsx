@@ -19,6 +19,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import type { AdminStripeWebhookRecord } from "@/lib/admin-stripe-service";
+import {
+  AdminPanelHeader,
+  adminPanelCenteredCardsClass,
+} from "@/components/admin/admin-panel-header";
 import { cn } from "@/lib/utils";
 
 function formatDate(value: string, locale: string) {
@@ -85,26 +89,26 @@ export function AdminStripePanel() {
   }, [loadStripe]);
 
   return (
-    <div className="space-y-6 text-left">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold text-white">{t("tabStripe")}</h2>
-          <p className="mt-1 text-sm text-zinc-500">{t("stripeDesc")}</p>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => void loadStripe()}
-          disabled={loading}
-          className="gap-2 border-white/10"
-        >
-          <RefreshCw className={cn("size-4", loading && "animate-spin")} />
-          {t("refresh")}
-        </Button>
-      </div>
+    <div className={cn("space-y-6", adminPanelCenteredCardsClass)}>
+      <AdminPanelHeader
+        title={t("tabStripe")}
+        description={t("stripeDesc")}
+        actions={
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => void loadStripe()}
+            disabled={loading}
+            className="gap-2 border-white/10"
+          >
+            <RefreshCw className={cn("size-4", loading && "animate-spin")} />
+            {t("refresh")}
+          </Button>
+        }
+      />
 
-      {error && <p className="text-sm text-rose-400">{error}</p>}
+      {error && <p className="text-center text-sm text-rose-400">{error}</p>}
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Card className="border-white/8 bg-zinc-900/60">

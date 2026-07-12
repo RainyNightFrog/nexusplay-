@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Loader2, Mail, Radio, RefreshCw, Zap } from "lucide-react";
+import { Loader2, Mail, Radio, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import type { ForumDigestAdminReport } from "@/lib/forum-digest-admin-service";
 import type { FeedHealthReport } from "@/lib/feed-health-service";
+import { AdminPanelFrame } from "@/components/admin/admin-panel-frame";
 import { cn } from "@/lib/utils";
 
 type AdminDigestReportPanelProps = {
@@ -92,81 +93,98 @@ export function AdminDigestReportPanel({ onError, onSuccess }: AdminDigestReport
 
   if (loading) {
     return (
-      <div className="flex h-40 items-center justify-center">
-        <Loader2 className="size-8 animate-spin text-violet-400" />
-      </div>
+      <AdminPanelFrame
+        title={t("tabDigest")}
+        description={t("digestRecentTitle")}
+        onRefresh={() => void loadReport()}
+        refreshing={loading}
+        refreshLabel={t("refresh")}
+        centerContent
+      >
+        <div className="flex h-40 items-center justify-center">
+          <Loader2 className="size-8 animate-spin text-violet-400" />
+        </div>
+      </AdminPanelFrame>
     );
   }
 
   if (!report) {
     return (
-      <Card className="border-white/10 bg-zinc-900/40">
-        <CardContent className="py-12 text-center text-sm text-zinc-500">
-          {t("digestReportEmpty")}
-        </CardContent>
-      </Card>
+      <AdminPanelFrame
+        title={t("tabDigest")}
+        description={t("digestRecentTitle")}
+        onRefresh={() => void loadReport()}
+        refreshLabel={t("refresh")}
+        centerContent
+      >
+        <Card className="border-white/10 bg-zinc-900/40">
+          <CardContent className="py-12 text-center text-sm text-zinc-500">
+            {t("digestReportEmpty")}
+          </CardContent>
+        </Card>
+      </AdminPanelFrame>
     );
   }
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap justify-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => void loadReport()}
-          disabled={loading}
-          className="border-white/10 bg-white/5"
-        >
-          <RefreshCw className={cn("size-4", loading && "animate-spin")} />
-          {t("refresh")}
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={Boolean(actionKey)}
-          onClick={() => void runAction("retry", "/api/admin/forum-digest/retry", "digestRetryTriggered")}
-          className="border-amber-400/20 bg-amber-500/10 text-amber-200"
-        >
-          {actionKey === "retry" ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <Zap className="size-4" />
-          )}
-          {t("digestRetryNow")}
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={Boolean(actionKey) || !report.websub.configured}
-          onClick={() =>
-            void runAction("websub-sub", "/api/admin/websub/subscribe", "websubSubscribeTriggered")
-          }
-          className="border-cyan-400/20 bg-cyan-500/10 text-cyan-200"
-        >
-          {actionKey === "websub-sub" ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <Radio className="size-4" />
-          )}
-          {t("websubSubscribeNow")}
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={Boolean(actionKey) || !report.websub.configured}
-          onClick={() => void runAction("websub-ping", "/api/admin/websub/ping", "websubPingTriggered")}
-          className="border-cyan-400/20 bg-cyan-500/10 text-cyan-200"
-        >
-          {actionKey === "websub-ping" ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <Radio className="size-4" />
-          )}
-          {t("websubPingNow")}
-        </Button>
-      </div>
+  const digestActions = (
+    <>
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={Boolean(actionKey)}
+        onClick={() => void runAction("retry", "/api/admin/forum-digest/retry", "digestRetryTriggered")}
+        className="border-amber-400/20 bg-amber-500/10 text-amber-200"
+      >
+        {actionKey === "retry" ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : (
+          <Zap className="size-4" />
+        )}
+        {t("digestRetryNow")}
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={Boolean(actionKey) || !report.websub.configured}
+        onClick={() =>
+          void runAction("websub-sub", "/api/admin/websub/subscribe", "websubSubscribeTriggered")
+        }
+        className="border-cyan-400/20 bg-cyan-500/10 text-cyan-200"
+      >
+        {actionKey === "websub-sub" ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : (
+          <Radio className="size-4" />
+        )}
+        {t("websubSubscribeNow")}
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={Boolean(actionKey) || !report.websub.configured}
+        onClick={() => void runAction("websub-ping", "/api/admin/websub/ping", "websubPingTriggered")}
+        className="border-cyan-400/20 bg-cyan-500/10 text-cyan-200"
+      >
+        {actionKey === "websub-ping" ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : (
+          <Radio className="size-4" />
+        )}
+        {t("websubPingNow")}
+      </Button>
+    </>
+  );
 
+  return (
+    <AdminPanelFrame
+      title={t("tabDigest")}
+      description={t("digestRecentTitle")}
+      onRefresh={() => void loadReport()}
+      refreshing={loading}
+      refreshLabel={t("refresh")}
+      actions={digestActions}
+      centerContent
+    >
       {health ? (
         <Card
           className={cn(
@@ -331,6 +349,6 @@ export function AdminDigestReportPanel({ onError, onSuccess }: AdminDigestReport
           )}
         </CardContent>
       </Card>
-    </div>
+    </AdminPanelFrame>
   );
 }

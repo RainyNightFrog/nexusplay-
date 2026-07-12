@@ -5,7 +5,6 @@ import { useTranslations } from "next-intl";
 import {
   AlertOctagon,
   Loader2,
-  RefreshCw,
   Sparkles,
   Star,
 } from "lucide-react";
@@ -21,6 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { AdminCurationGameRecord } from "@/lib/admin-curation-service";
+import { AdminPanelFrame } from "@/components/admin/admin-panel-frame";
 import { cn } from "@/lib/utils";
 
 export function AdminCurationPanel() {
@@ -129,27 +129,15 @@ export function AdminCurationPanel() {
   }
 
   return (
-    <div className="space-y-6 text-left">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold text-white">{t("tabCuration")}</h2>
-          <p className="mt-1 text-sm text-zinc-500">{t("curationDesc")}</p>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => void loadCuration()}
-          disabled={loading}
-          className="gap-2 border-white/10"
-        >
-          <RefreshCw className={cn("size-4", loading && "animate-spin")} />
-          {t("refresh")}
-        </Button>
-      </div>
-
-      {error && <p className="text-sm text-rose-400">{error}</p>}
-
+    <AdminPanelFrame
+      title={t("tabCuration")}
+      description={t("curationDesc")}
+      onRefresh={() => void loadCuration()}
+      refreshing={loading}
+      refreshLabel={t("refresh")}
+      error={error}
+      centerContent
+    >
       <Card className="border-white/8 bg-zinc-900/60">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base text-white">
@@ -303,6 +291,6 @@ export function AdminCurationPanel() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </AdminPanelFrame>
   );
 }

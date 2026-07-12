@@ -26,6 +26,10 @@ import type {
   AdminForumCommentRecord,
   AdminForumPostRecord,
 } from "@/lib/admin-forum-moderation-service";
+import {
+  AdminPanelHeader,
+  adminPanelCenteredCardsClass,
+} from "@/components/admin/admin-panel-header";
 import { cn } from "@/lib/utils";
 
 function formatDate(value: string, locale: string) {
@@ -58,8 +62,8 @@ export function AdminForumModerationPanel() {
     setError(null);
     try {
       const [postsRes, commentsRes] = await Promise.all([
-        fetch("/api/admin/forum/posts"),
-        fetch("/api/admin/forum/comments"),
+        fetch("/api/admin/forum/posts", { credentials: "same-origin" }),
+        fetch("/api/admin/forum/comments", { credentials: "same-origin" }),
       ]);
       const postsData = (await postsRes.json()) as {
         posts?: AdminForumPostRecord[];
@@ -144,34 +148,38 @@ export function AdminForumModerationPanel() {
   }
 
   return (
-    <div className="space-y-6 text-left">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold text-white">{t("tabForum")}</h2>
-          <p className="mt-1 text-sm text-zinc-500">{t("forumDesc")}</p>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => void loadForum()}
-          disabled={loading}
-          className="gap-2 border-white/10"
-        >
-          <RefreshCw className={cn("size-4", loading && "animate-spin")} />
-          {t("refresh")}
-        </Button>
-      </div>
+    <div className={cn("space-y-6", adminPanelCenteredCardsClass)}>
+      <AdminPanelHeader
+        title={t("tabForum")}
+        description={t("forumDesc")}
+        actions={
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => void loadForum()}
+            disabled={loading}
+            className="gap-2 border-white/10"
+          >
+            <RefreshCw className={cn("size-4", loading && "animate-spin")} />
+            {t("refresh")}
+          </Button>
+        }
+      />
 
-      {error && <p className="text-sm text-rose-400">{error}</p>}
+      {error && <p className="text-center text-sm text-rose-400">{error}</p>}
 
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="border border-white/10 bg-zinc-900/60">
-          <TabsTrigger value="posts">{t("forumTabPosts")}</TabsTrigger>
-          <TabsTrigger value="comments">{t("forumTabComments")}</TabsTrigger>
+      <Tabs value={tab} onValueChange={setTab} className="w-full">
+        <TabsList className="inline-flex h-auto w-full flex-wrap justify-center gap-1 border border-white/10 bg-zinc-900/60 p-1 [&_[data-slot=tabs-trigger]]:flex-none">
+          <TabsTrigger value="posts" className="flex-none px-4">
+            {t("forumTabPosts")}
+          </TabsTrigger>
+          <TabsTrigger value="comments" className="flex-none px-4">
+            {t("forumTabComments")}
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="posts" className="mt-4">
+        <TabsContent value="posts" className="mt-4 flex-none">
           <Card className="border-white/8 bg-zinc-900/60">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base text-white">
@@ -294,7 +302,7 @@ export function AdminForumModerationPanel() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="comments" className="mt-4">
+        <TabsContent value="comments" className="mt-4 flex-none">
           <Card className="border-white/8 bg-zinc-900/60">
             <CardHeader>
               <CardTitle className="text-base text-white">

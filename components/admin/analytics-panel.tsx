@@ -27,6 +27,10 @@ import type {
   AdminAnalyticsData,
   AnalyticsRange,
 } from "@/lib/analytics-service";
+import {
+  AdminPanelHeader,
+  adminPanelCenteredCardsClass,
+} from "@/components/admin/admin-panel-header";
 import { cn } from "@/lib/utils";
 
 type ChartTooltipProps = {
@@ -142,8 +146,24 @@ export function AdminAnalyticsPanel({ onError }: AdminAnalyticsPanelProps) {
     })) ?? [];
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col items-center gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
+    <div className={cn("space-y-6", adminPanelCenteredCardsClass)}>
+      <AdminPanelHeader
+        title={t("tabAnalytics")}
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void loadAnalytics()}
+            disabled={loading}
+            className="border-white/10 bg-white/5"
+          >
+            <RefreshCw className={cn("size-4", loading && "animate-spin")} />
+            {t("refresh")}
+          </Button>
+        }
+      />
+
+      <div className="flex flex-col items-center gap-3">
         <Tabs
           value={range}
           onValueChange={(value) => setRange(value as AnalyticsRange)}
@@ -161,28 +181,16 @@ export function AdminAnalyticsPanel({ onError }: AdminAnalyticsPanelProps) {
           </TabsList>
         </Tabs>
 
-        <div className="flex items-center gap-3">
-          {lastUpdated && (
-            <p className="text-xs text-zinc-500">
-              {t("analyticsUpdated")} ·{" "}
-              {new Intl.DateTimeFormat(locale, {
-                hour: "2-digit",
-                minute: "2-digit",
-                second: "2-digit",
-              }).format(lastUpdated)}
-            </p>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => void loadAnalytics()}
-            disabled={loading}
-            className="border-white/10 bg-white/5"
-          >
-            <RefreshCw className={cn("size-4", loading && "animate-spin")} />
-            {t("refresh")}
-          </Button>
-        </div>
+        {lastUpdated && (
+          <p className="text-center text-xs text-zinc-500">
+            {t("analyticsUpdated")} ·{" "}
+            {new Intl.DateTimeFormat(locale, {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            }).format(lastUpdated)}
+          </p>
+        )}
       </div>
 
       {loading && !analytics ? (
