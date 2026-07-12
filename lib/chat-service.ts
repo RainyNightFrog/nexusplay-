@@ -1,3 +1,4 @@
+import { assertCanPostChat } from "@/lib/account-status";
 import {
   CHAT_LIMITS,
   type ChatChannel,
@@ -214,6 +215,8 @@ export async function createChatMessage(
   if (!isValidChatChannel(input.channel)) {
     throw new Error("無效的聊天頻道");
   }
+
+  await assertCanPostChat(input.userId);
 
   await assertCanPostInChannel(supabase, input.userId, input.channel);
   await checkChatRateLimit(supabase, input.userId, input.content);

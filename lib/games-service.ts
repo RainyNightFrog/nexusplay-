@@ -69,7 +69,10 @@ export async function getGames(options: GetGamesOptions = {}): Promise<Game[]> {
       query = query.order("rating_avg", { ascending: false });
       break;
     default:
-      query = query.order("created_at", { ascending: false });
+      query = query
+        .order("is_featured", { ascending: false })
+        .order("featured_sort", { ascending: false })
+        .order("created_at", { ascending: false });
   }
 
   const { data, error } = await query;

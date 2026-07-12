@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cleanupExpiredChatMessages } from "@/lib/chat-service";
 import { cleanupExpiredVirtualDmMessages } from "@/lib/virtual-dm-service";
 import { verifyCronSecret } from "@/lib/cron-auth";
+import { recordCronRun } from "@/lib/cron-run-recorder";
 import { getPlatformModeStatus } from "@/lib/platform-mode";
 
 export async function GET(request: Request) {
@@ -9,10 +10,16 @@ export async function GET(request: Request) {
   if (authError) return authError;
 
   try {
+    const started = Date.now();
     const [channelChat, virtualDm] = await Promise.all([
       cleanupExpiredChatMessages(),
       cleanupExpiredVirtualDmMessages(),
     ]);
+    await recordCronRun({
+      jobName: "chat-cleanup",
+      status: "success",
+      durationMs: Date.now() - started,
+    });
     return NextResponse.json({
       channelChat,
       virtualDm,
@@ -21,6 +28,11 @@ export async function GET(request: Request) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Chat cleanup failed";
+    await recordCronRun({
+      jobName: "chat-cleanup",
+      status: "error",
+      error: message,
+    });
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

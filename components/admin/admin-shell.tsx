@@ -45,7 +45,7 @@ export function AdminShell({ title, description, children }: AdminShellProps) {
         </div>
       </SiteHeader>
 
-      <main className="relative mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
+      <main className="relative mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
         <div className="mb-8 text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/20 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-200">
             <Shield className="size-3.5" />

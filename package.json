@@ -79,6 +79,7 @@
     "upload:void-gacha": "npx tsx scripts/upload-void-gacha-zip.ts",
     "db:assign-creator": "node scripts/assign-game-creator.mjs",
     "db:admin": "node scripts/run-admin-control-center.mjs",
+    "db:admin-moderation": "node scripts/run-admin-moderation-suite.mjs",
     "db:analytics": "node scripts/run-analytics-events.mjs",
     "db:activity-stats": "node scripts/run-user-activity-stats.mjs",
     "db:security": "node scripts/run-security-suite.mjs",

@@ -50,4 +50,7 @@ export type GameRecord = {
   pricing_type?: "free" | "fixed" | "pwyw";
   min_price?: number;
   on_sale?: boolean;
+  is_featured?: boolean;
+  featured_badge?: string | null;
+  featured_sort?: number;
 };

@@ -1,9 +1,22 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth";
-import { resolveFeedback, writeAdminLog } from "@/lib/admin-service";
+import {
+  resolveFeedback,
+  writeAdminLog,
+  type FeedbackCategory,
+} from "@/lib/admin-service";
+
+const VALID_CATEGORIES = new Set<FeedbackCategory>([
+  "general",
+  "bug",
+  "suggestion",
+  "report",
+  "billing",
+  "other",
+]);
 
 export async function PATCH(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -11,13 +24,26 @@ export async function PATCH(
     if (auth.error) return auth.error;
 
     const { id } = await params;
-    const feedback = await resolveFeedback(auth.supabase!, id);
+    const body = (await request.json()) as {
+      category?: FeedbackCategory;
+      admin_notes?: string | null;
+      admin_reply?: string | null;
+    };
+
+    const feedback = await resolveFeedback(auth.supabase!, id, {
+      category:
+        body.category && VALID_CATEGORIES.has(body.category)
+          ? body.category
+          : undefined,
+      admin_notes: body.admin_notes,
+      admin_reply: body.admin_reply,
+    });
 
     await writeAdminLog(
       auth.supabase!,
       auth.user!.id,
       "resolve_feedback",
-      `反饋「${feedback.subject}」已標記為已處理`
+      `反饋「${feedback.subject}」已處理`
     );
 
     return NextResponse.json({ feedback });

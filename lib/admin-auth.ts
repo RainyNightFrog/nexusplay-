@@ -1,4 +1,5 @@
 import type { User } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
@@ -8,7 +9,7 @@ export function isAdminUser(user: User | null | undefined): boolean {
   return user.user_metadata?.role === "admin";
 }
 
-async function isAdminInDatabase(userId: string): Promise<boolean> {
+export async function isAdminInDatabase(userId: string): Promise<boolean> {
   try {
     const supabase = createServerSupabase();
     const { data, error } = await supabase
@@ -22,6 +23,28 @@ async function isAdminInDatabase(userId: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+export async function resolveAdminAccess(
+  user: User | null | undefined,
+  supabase?: SupabaseClient
+): Promise<boolean> {
+  if (!user) return false;
+  if (isAdminUser(user)) return true;
+
+  if (supabase) {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("is_admin")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (!error && data?.is_admin === true) {
+      return true;
+    }
+  }
+
+  return isAdminInDatabase(user.id);
 }
 
 export async function requireAdmin() {

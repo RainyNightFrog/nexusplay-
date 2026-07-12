@@ -8,6 +8,7 @@ import {
   type ForumPostWithGame,
   VALID_FORUM_CATEGORIES,
 } from "@/lib/forum";
+import { assertCanPostForum } from "@/lib/account-status";
 import {
   buildLocalizedForumComments,
   buildLocalizedForumPosts,
@@ -296,6 +297,7 @@ export async function getForumPostsByGameId(
     .from("forum_posts")
     .select("*")
     .eq("game_id", gameId)
+    .eq("is_hidden", false)
     .order("created_at", { ascending: false });
 
   if (!error) {
@@ -339,6 +341,7 @@ export async function getAllForumPosts(
     .from("forum_posts")
     .select("*")
     .in("game_id", gameIds)
+    .eq("is_hidden", false)
     .order("created_at", { ascending: false });
 
   const allPosts: ForumPostWithGame[] = [];
@@ -462,6 +465,7 @@ export async function getForumCommentsByPostId(
     .from("forum_comments")
     .select("*")
     .eq("post_id", postId)
+    .eq("is_hidden", false)
     .order("created_at", { ascending: true });
 
   if (error) {
@@ -488,6 +492,8 @@ export async function createForumPost(
   if (!VALID_FORUM_CATEGORIES.includes(input.category)) {
     throw new Error("無效的貼文分類");
   }
+
+  await assertCanPostForum(input.userId);
 
   const client = supabase ?? (await getAuthenticatedClient());
   const { data, error } = await client
@@ -519,7 +525,23 @@ export async function createForumComment(
   },
   supabase?: SupabaseClient
 ): Promise<ForumComment> {
+  await assertCanPostForum(input.userId);
+
   const client = supabase ?? (await getAuthenticatedClient());
+
+  const { data: postRow } = await client
+    .from("forum_posts")
+    .select("is_locked, is_hidden")
+    .eq("id", input.postId)
+    .maybeSingle();
+
+  if (!postRow || postRow.is_hidden === true) {
+    throw new Error("找不到此貼文");
+  }
+  if (postRow.is_locked === true) {
+    throw new Error("此貼文已被鎖定，無法回覆");
+  }
+
   const { data, error } = await client
     .from("forum_comments")
     .insert({

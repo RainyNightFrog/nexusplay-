@@ -82,6 +82,41 @@ export async function grantGameEntitlement(params: {
   return { granted: true, alreadyOwned: false };
 }
 
+export async function revokeGameEntitlement(params: {
+  userId: string;
+  gameId: number;
+}) {
+  const supabase = createServerSupabase();
+  const { error } = await supabase
+    .from("game_entitlements")
+    .delete()
+    .eq("user_id", params.userId)
+    .eq("game_id", params.gameId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+export async function grantManualGameEntitlement(params: {
+  userId: string;
+  gameId: number;
+}) {
+  const supabase = createServerSupabase();
+  const { error } = await supabase.from("game_entitlements").upsert(
+    {
+      user_id: params.userId,
+      game_id: params.gameId,
+      order_id: null,
+    },
+    { onConflict: "user_id,game_id", ignoreDuplicates: true }
+  );
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
 export async function resolvePurchaseEntitlementForGame(
   supabase: SupabaseClient,
   gameId: number,

@@ -62,8 +62,10 @@ export function mapRecordToGame(record: GameRecord): Game {
     fullscreenButton: publishMetadata.fullscreenButton,
     aiDisclosed: publishMetadata.aiDisclosed,
     aiContentTypes: publishMetadata.aiContentTypes,
-    featured: meta?.platformStar ?? meta?.featured,
-    featuredBadge: meta?.platformStar ? meta?.featuredBadge : undefined,
+    featured: record.is_featured === true || meta?.platformStar || meta?.featured,
+    featuredBadge:
+      (record.featured_badge as string | undefined) ??
+      (meta?.platformStar ? meta?.featuredBadge : undefined),
     featuredAccent: meta?.platformStar ? meta?.featuredAccent : undefined,
     ratingAvg: meta?.ratingAvg ?? Number(enriched.rating_avg),
     tipsEnabled: enriched.tips_enabled ?? false,

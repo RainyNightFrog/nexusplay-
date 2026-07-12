@@ -17,6 +17,14 @@ export type AdminGameRecord = {
   status: GameApprovalStatus;
 };
 
+export type FeedbackCategory =
+  | "general"
+  | "bug"
+  | "suggestion"
+  | "report"
+  | "billing"
+  | "other";
+
 export type AdminFeedbackRecord = {
   id: string;
   user_id: string | null;
@@ -24,7 +32,11 @@ export type AdminFeedbackRecord = {
   subject: string;
   message: string;
   status: FeedbackStatus;
+  category: FeedbackCategory;
+  admin_notes: string | null;
+  admin_reply: string | null;
   created_at: string;
+  updated_at: string | null;
 };
 
 export type AdminLogRecord = {
@@ -96,7 +108,9 @@ export async function listAdminFeedbacks(
 ): Promise<AdminFeedbackRecord[]> {
   let query = authClient
     .from("player_feedbacks")
-    .select("id, user_id, email, subject, message, status, created_at")
+    .select(
+      "id, user_id, email, subject, message, status, category, admin_notes, admin_reply, created_at, updated_at"
+    )
     .order("created_at", { ascending: false });
 
   if (status !== "all") {
@@ -113,13 +127,33 @@ export async function listAdminFeedbacks(
 
 export async function resolveFeedback(
   authClient: SupabaseClient,
-  feedbackId: string
+  feedbackId: string,
+  patch?: {
+    category?: FeedbackCategory;
+    admin_notes?: string | null;
+    admin_reply?: string | null;
+  }
 ) {
+  const updates: Record<string, unknown> = {
+    status: "resolved",
+    updated_at: new Date().toISOString(),
+  };
+
+  if (patch?.category) updates.category = patch.category;
+  if (patch?.admin_notes !== undefined) {
+    updates.admin_notes = patch.admin_notes?.trim() || null;
+  }
+  if (patch?.admin_reply !== undefined) {
+    updates.admin_reply = patch.admin_reply?.trim() || null;
+  }
+
   const { data, error } = await authClient
     .from("player_feedbacks")
-    .update({ status: "resolved" })
+    .update(updates)
     .eq("id", feedbackId)
-    .select("id, user_id, email, subject, message, status, created_at")
+    .select(
+      "id, user_id, email, subject, message, status, category, admin_notes, admin_reply, created_at, updated_at"
+    )
     .maybeSingle();
 
   if (error) {
@@ -135,19 +169,48 @@ export async function resolveFeedback(
 
 export async function listAdminLogs(
   authClient: SupabaseClient,
-  limit = 50
+  options: {
+    limit?: number;
+    action?: string | null;
+    offset?: number;
+  } = {}
 ): Promise<AdminLogRecord[]> {
-  const { data, error } = await authClient
+  const limit = Math.min(Math.max(options.limit ?? 50, 1), 500);
+  const offset = Math.max(options.offset ?? 0, 0);
+
+  let query = authClient
     .from("admin_logs")
     .select("id, admin_id, action, details, created_at")
     .order("created_at", { ascending: false })
-    .limit(limit);
+    .range(offset, offset + limit - 1);
+
+  if (options.action && options.action !== "all") {
+    query = query.eq("action", options.action);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     throw new Error(`讀取操作日誌失敗：${error.message}`);
   }
 
   return (data ?? []) as AdminLogRecord[];
+}
+
+export function adminLogsToCsv(logs: AdminLogRecord[]) {
+  const header = ["id", "admin_id", "action", "details", "created_at"];
+  const rows = logs.map((log) =>
+    [
+      log.id,
+      log.admin_id,
+      log.action,
+      (log.details ?? "").replace(/"/g, '""'),
+      log.created_at,
+    ]
+      .map((value) => `"${String(value).replace(/\n/g, " ")}"`)
+      .join(",")
+  );
+  return [header.join(","), ...rows].join("\n");
 }
 
 export async function writeAdminLog(

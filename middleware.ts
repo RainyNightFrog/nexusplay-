@@ -3,7 +3,8 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, NextRequest } from "next/server";
 import { shouldSkipAccountIntent } from "@/lib/account-intent";
 import { resolveUserRole, hasCreatorDashboardAccess } from "@/lib/auth-profile";
-import { isAdminUser } from "@/lib/admin-auth";
+import { resolveAdminAccess } from "@/lib/admin-auth";
+import { getAccountStatusRecord, isAccountRestricted } from "@/lib/account-status";
 import { ANALYTICS_SESSION_COOKIE } from "@/lib/analytics-service";
 import {
   buildSubdomainRedundantPathRedirect,
@@ -254,13 +255,50 @@ export async function middleware(request: NextRequest) {
       );
     }
 
-    if (!isAdminUser(user)) {
+    const isAdmin = await resolveAdminAccess(user, supabase);
+    if (!isAdmin) {
       redirectUrl.searchParams.set("hint", "admin");
       return finalizeMiddlewareResponse(
         request,
         NextResponse.redirect(redirectUrl),
         rewriteUrl
       );
+    }
+  }
+
+  if (
+    user &&
+    !pathnameWithoutLocale.startsWith("/auth") &&
+    !pathnameWithoutLocale.startsWith("/api/")
+  ) {
+    const accountStatus = await getAccountStatusRecord(user.id);
+    if (accountStatus && isAccountRestricted(accountStatus)) {
+      const restrictedPaths = [
+        "/dashboard",
+        "/settings",
+        "/community",
+        "/notifications",
+        "/profile",
+        "/supporter",
+      ];
+      const isRestricted =
+        restrictedPaths.some((prefix) =>
+          pathnameWithoutLocale.startsWith(prefix)
+        ) || pathnameWithoutLocale.includes("/forum");
+
+      if (isRestricted) {
+        const redirectUrl = effectiveRequest.nextUrl.clone();
+        redirectUrl.pathname = "/auth";
+        redirectUrl.searchParams.set("hint", "suspended");
+        if (accountStatus.ban_reason) {
+          redirectUrl.searchParams.set("reason", accountStatus.ban_reason);
+        }
+        return finalizeMiddlewareResponse(
+          request,
+          NextResponse.redirect(redirectUrl),
+          rewriteUrl
+        );
+      }
     }
   }
 

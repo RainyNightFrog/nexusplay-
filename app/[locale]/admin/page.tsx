@@ -17,6 +17,14 @@ import {
   Rocket,
   Trash2,
   TrendingUp,
+  Users,
+  MessagesSquare,
+  ShoppingCart,
+  CreditCard,
+  UserCog,
+  Timer,
+  Star,
+  Download,
   XCircle,
 } from "lucide-react";
 import { AdminAnalyticsPanel } from "@/components/admin/analytics-panel";
@@ -24,9 +32,17 @@ import { AdminFinancePanel } from "@/components/admin/finance-panel";
 import { AdminAnnouncementsPanel } from "@/components/admin/announcements-panel";
 import { AdminDigestReportPanel } from "@/components/admin/digest-report-panel";
 import { AdminLaunchChecklistPanel } from "@/components/admin/launch-checklist-panel";
+import { AdminUsersPanel } from "@/components/admin/users-panel";
+import { AdminForumModerationPanel } from "@/components/admin/forum-moderation-panel";
+import { AdminChatModerationPanel } from "@/components/admin/chat-moderation-panel";
+import { AdminOrdersPanel } from "@/components/admin/orders-panel";
+import { AdminStripePanel } from "@/components/admin/stripe-panel";
+import { AdminAdminsPanel } from "@/components/admin/admins-panel";
+import { AdminCronPanel } from "@/components/admin/cron-panel";
+import { AdminCurationPanel } from "@/components/admin/curation-panel";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -56,6 +72,7 @@ import type {
   AdminGameRecord,
   AdminLogRecord,
   FeedbackStatus,
+  FeedbackCategory,
   GameApprovalStatus,
 } from "@/lib/admin-service";
 import { cn } from "@/lib/utils";
@@ -122,6 +139,13 @@ export default function AdminPage() {
   const [feedbackFilter, setFeedbackFilter] = useState<FeedbackStatus | "all">(
     "unread"
   );
+  const [logActionFilter, setLogActionFilter] = useState("all");
+  const [feedbackDrafts, setFeedbackDrafts] = useState<
+    Record<
+      string,
+      { category: FeedbackCategory; admin_notes: string; admin_reply: string }
+    >
+  >({});
   const [loadingGames, setLoadingGames] = useState(true);
   const [loadingFeedbacks, setLoadingFeedbacks] = useState(true);
   const [loadingLogs, setLoadingLogs] = useState(true);
@@ -219,7 +243,11 @@ export default function AdminPage() {
   const loadLogs = useCallback(async () => {
     setLoadingLogs(true);
     try {
-      const response = await fetch("/api/admin/logs?limit=50", {
+      const params = new URLSearchParams({ limit: "100" });
+      if (logActionFilter !== "all") {
+        params.set("action", logActionFilter);
+      }
+      const response = await fetch(`/api/admin/logs?${params.toString()}`, {
         credentials: "same-origin",
       });
       const data = (await response.json()) as {
@@ -234,7 +262,7 @@ export default function AdminPage() {
     } finally {
       setLoadingLogs(false);
     }
-  }, [t]);
+  }, [logActionFilter, t]);
 
   useEffect(() => {
     void loadGames();
@@ -307,10 +335,17 @@ export default function AdminPage() {
 
   async function handleResolveFeedback(feedback: AdminFeedbackRecord) {
     setActionId(`feedback-${feedback.id}`);
+    const draft = feedbackDrafts[feedback.id] ?? {
+      category: (feedback.category ?? "general") as FeedbackCategory,
+      admin_notes: feedback.admin_notes ?? "",
+      admin_reply: feedback.admin_reply ?? "",
+    };
     try {
       const response = await fetch(`/api/admin/feedbacks/${feedback.id}`, {
         method: "PATCH",
         credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(draft),
       });
       const data = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(data.error ?? t("actionFailed"));
@@ -383,36 +418,68 @@ export default function AdminPage() {
       </div>
 
       <Tabs defaultValue="games" className="mx-auto w-full">
-        <TabsList className="mx-auto mb-6 flex w-fit border border-white/10 bg-zinc-900/80 p-1">
-          <TabsTrigger value="games" className="gap-1.5 px-4">
+        <TabsList className="mx-auto mb-6 flex max-w-full overflow-x-auto border border-white/10 bg-zinc-900/80 p-1">
+          <TabsTrigger value="games" className="gap-1.5 px-3 shrink-0">
             <ShieldAlert className="size-4" />
             {t("tabGames")}
           </TabsTrigger>
-          <TabsTrigger value="feedbacks" className="gap-1.5 px-4">
+          <TabsTrigger value="users" className="gap-1.5 px-3 shrink-0">
+            <Users className="size-4" />
+            {t("tabUsers")}
+          </TabsTrigger>
+          <TabsTrigger value="forum" className="gap-1.5 px-3 shrink-0">
+            <MessagesSquare className="size-4" />
+            {t("tabForum")}
+          </TabsTrigger>
+          <TabsTrigger value="chat" className="gap-1.5 px-3 shrink-0">
+            <MessageSquare className="size-4" />
+            {t("tabChat")}
+          </TabsTrigger>
+          <TabsTrigger value="orders" className="gap-1.5 px-3 shrink-0">
+            <ShoppingCart className="size-4" />
+            {t("tabOrders")}
+          </TabsTrigger>
+          <TabsTrigger value="feedbacks" className="gap-1.5 px-3 shrink-0">
             <MessageSquare className="size-4" />
             {t("tabFeedbacks")}
           </TabsTrigger>
-          <TabsTrigger value="logs" className="gap-1.5 px-4">
+          <TabsTrigger value="logs" className="gap-1.5 px-3 shrink-0">
             <ClipboardList className="size-4" />
             {t("tabLogs")}
           </TabsTrigger>
-          <TabsTrigger value="analytics" className="gap-1.5 px-4">
+          <TabsTrigger value="analytics" className="gap-1.5 px-3 shrink-0">
             <TrendingUp className="size-4" />
             {t("tabAnalytics")}
           </TabsTrigger>
-          <TabsTrigger value="finance" className="gap-1.5 px-4">
+          <TabsTrigger value="finance" className="gap-1.5 px-3 shrink-0">
             <Banknote className="size-4" />
             {t("tabFinance")}
           </TabsTrigger>
-          <TabsTrigger value="announcements" className="gap-1.5 px-4">
+          <TabsTrigger value="stripe" className="gap-1.5 px-3 shrink-0">
+            <CreditCard className="size-4" />
+            {t("tabStripe")}
+          </TabsTrigger>
+          <TabsTrigger value="curation" className="gap-1.5 px-3 shrink-0">
+            <Star className="size-4" />
+            {t("tabCuration")}
+          </TabsTrigger>
+          <TabsTrigger value="announcements" className="gap-1.5 px-3 shrink-0">
             <Megaphone className="size-4" />
             {t("tabAnnouncements")}
           </TabsTrigger>
-          <TabsTrigger value="launch" className="gap-1.5 px-4">
+          <TabsTrigger value="admins" className="gap-1.5 px-3 shrink-0">
+            <UserCog className="size-4" />
+            {t("tabAdmins")}
+          </TabsTrigger>
+          <TabsTrigger value="cron" className="gap-1.5 px-3 shrink-0">
+            <Timer className="size-4" />
+            {t("tabCron")}
+          </TabsTrigger>
+          <TabsTrigger value="launch" className="gap-1.5 px-3 shrink-0">
             <Rocket className="size-4" />
             {t("tabLaunch")}
           </TabsTrigger>
-          <TabsTrigger value="digest" className="gap-1.5 px-4">
+          <TabsTrigger value="digest" className="gap-1.5 px-3 shrink-0">
             <Mail className="size-4" />
             {t("tabDigest")}
           </TabsTrigger>
@@ -633,6 +700,116 @@ export default function AdminPage() {
                       {feedback.message}
                     </p>
                     {feedback.status === "unread" && (
+                      <div className="mx-auto max-w-lg space-y-3 text-left">
+                        <Select
+                          value={
+                            feedbackDrafts[feedback.id]?.category ??
+                            feedback.category ??
+                            "general"
+                          }
+                          onValueChange={(value) =>
+                            setFeedbackDrafts((prev) => ({
+                              ...prev,
+                              [feedback.id]: {
+                                category: value as FeedbackCategory,
+                                admin_notes:
+                                  prev[feedback.id]?.admin_notes ??
+                                  feedback.admin_notes ??
+                                  "",
+                                admin_reply:
+                                  prev[feedback.id]?.admin_reply ??
+                                  feedback.admin_reply ??
+                                  "",
+                              },
+                            }))
+                          }
+                        >
+                          <SelectTrigger className="border-white/10 bg-zinc-900/80 text-zinc-100">
+                            <SelectDisplayValue>
+                              {feedbackDrafts[feedback.id]?.category ??
+                                feedback.category ??
+                                "general"}
+                            </SelectDisplayValue>
+                          </SelectTrigger>
+                          <SelectContent className="border-white/10 bg-zinc-900 text-zinc-100">
+                            <SelectItem value="general">{t("feedbackCategoryGeneral")}</SelectItem>
+                            <SelectItem value="bug">{t("feedbackCategoryBug")}</SelectItem>
+                            <SelectItem value="suggestion">{t("feedbackCategorySuggestion")}</SelectItem>
+                            <SelectItem value="report">{t("feedbackCategoryReport")}</SelectItem>
+                            <SelectItem value="billing">{t("feedbackCategoryBilling")}</SelectItem>
+                            <SelectItem value="other">{t("feedbackCategoryOther")}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Textarea
+                          value={
+                            feedbackDrafts[feedback.id]?.admin_notes ??
+                            feedback.admin_notes ??
+                            ""
+                          }
+                          onChange={(event) =>
+                            setFeedbackDrafts((prev) => ({
+                              ...prev,
+                              [feedback.id]: {
+                                category:
+                                  prev[feedback.id]?.category ??
+                                  (feedback.category as FeedbackCategory) ??
+                                  "general",
+                                admin_notes: event.target.value,
+                                admin_reply:
+                                  prev[feedback.id]?.admin_reply ??
+                                  feedback.admin_reply ??
+                                  "",
+                              },
+                            }))
+                          }
+                          placeholder={t("feedbackAdminNotesPlaceholder")}
+                          className="min-h-20 border-white/10 bg-zinc-950/60 text-zinc-100"
+                        />
+                        <Textarea
+                          value={
+                            feedbackDrafts[feedback.id]?.admin_reply ??
+                            feedback.admin_reply ??
+                            ""
+                          }
+                          onChange={(event) =>
+                            setFeedbackDrafts((prev) => ({
+                              ...prev,
+                              [feedback.id]: {
+                                category:
+                                  prev[feedback.id]?.category ??
+                                  (feedback.category as FeedbackCategory) ??
+                                  "general",
+                                admin_notes:
+                                  prev[feedback.id]?.admin_notes ??
+                                  feedback.admin_notes ??
+                                  "",
+                                admin_reply: event.target.value,
+                              },
+                            }))
+                          }
+                          placeholder={t("feedbackAdminReplyPlaceholder")}
+                          className="min-h-20 border-white/10 bg-zinc-950/60 text-zinc-100"
+                        />
+                      </div>
+                    )}
+                    {(feedback.admin_notes || feedback.admin_reply) &&
+                      feedback.status === "resolved" && (
+                        <div className="mx-auto max-w-lg space-y-2 text-left text-sm text-zinc-400">
+                          {feedback.admin_notes && (
+                            <p>
+                              <span className="text-zinc-500">{t("feedbackAdminNotes")}: </span>
+                              {feedback.admin_notes}
+                            </p>
+                          )}
+                          {feedback.admin_reply && (
+                            <p>
+                              <span className="text-zinc-500">{t("feedbackAdminReply")}: </span>
+                              {feedback.admin_reply}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    {feedback.status === "unread" && (
                       <Button
                         size="sm"
                         disabled={actionId === `feedback-${feedback.id}`}
@@ -655,7 +832,25 @@ export default function AdminPage() {
         </TabsContent>
 
         <TabsContent value="logs">
-          <div className="mb-4 flex justify-center">
+          <div className="mb-4 flex flex-wrap items-center justify-center gap-3">
+            <Select
+              value={logActionFilter}
+              onValueChange={(value) => {
+                if (value) setLogActionFilter(value);
+              }}
+            >
+              <SelectTrigger className="w-48 border-white/10 bg-zinc-900/80 text-zinc-100">
+                <SelectDisplayValue>{logActionFilter}</SelectDisplayValue>
+              </SelectTrigger>
+              <SelectContent className="border-white/10 bg-zinc-900 text-zinc-100">
+                <SelectItem value="all">{t("logsFilterAll")}</SelectItem>
+                <SelectItem value="approve_game">{t("logsFilterApprove")}</SelectItem>
+                <SelectItem value="ban">{t("logsFilterBan")}</SelectItem>
+                <SelectItem value="suspend">{t("logsFilterSuspend")}</SelectItem>
+                <SelectItem value="refund_tip">{t("logsFilterRefundTip")}</SelectItem>
+                <SelectItem value="refund_order">{t("logsFilterRefundOrder")}</SelectItem>
+              </SelectContent>
+            </Select>
             <Button
               variant="outline"
               size="sm"
@@ -668,6 +863,21 @@ export default function AdminPage() {
               />
               {t("refresh")}
             </Button>
+            <a
+              href={`/api/admin/logs?limit=500&format=csv${
+                logActionFilter !== "all"
+                  ? `&action=${encodeURIComponent(logActionFilter)}`
+                  : ""
+              }`}
+              download="admin-logs.csv"
+              className={cn(
+                buttonVariants({ variant: "outline", size: "sm" }),
+                "inline-flex items-center gap-2 border-white/10 bg-white/5"
+              )}
+            >
+              <Download className="size-4" />
+              {t("logsExportCsv")}
+            </a>
           </div>
 
           {loadingLogs ? (
@@ -708,6 +918,22 @@ export default function AdminPage() {
           )}
         </TabsContent>
 
+        <TabsContent value="users">
+          <AdminUsersPanel />
+        </TabsContent>
+
+        <TabsContent value="forum">
+          <AdminForumModerationPanel />
+        </TabsContent>
+
+        <TabsContent value="chat">
+          <AdminChatModerationPanel />
+        </TabsContent>
+
+        <TabsContent value="orders">
+          <AdminOrdersPanel />
+        </TabsContent>
+
         <TabsContent value="analytics">
           <AdminAnalyticsPanel onError={setPageError} />
         </TabsContent>
@@ -716,8 +942,24 @@ export default function AdminPage() {
           <AdminFinancePanel />
         </TabsContent>
 
+        <TabsContent value="stripe">
+          <AdminStripePanel />
+        </TabsContent>
+
+        <TabsContent value="curation">
+          <AdminCurationPanel />
+        </TabsContent>
+
         <TabsContent value="announcements">
           <AdminAnnouncementsPanel />
+        </TabsContent>
+
+        <TabsContent value="admins">
+          <AdminAdminsPanel />
+        </TabsContent>
+
+        <TabsContent value="cron">
+          <AdminCronPanel />
         </TabsContent>
 
         <TabsContent value="launch">
