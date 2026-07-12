@@ -950,6 +950,7 @@
   "auth": {
     "callbackFailed": "登入驗證失敗，請再試一次",
     "creatorHint": "創作者後台僅限「創作者」身分帳號。請登入創作者帳號，或註冊時選擇創作者身分。",
+    "adminHint": "此帳號沒有超級管理員權限。若 Google 登入成功卻仍回到此頁，代表目前登入的 Email 尚未被指派為管理員。請聯絡平台擁有者執行 npm run db:assign-admin，或改用已授權的管理員帳號登入。",
     "displayNameRequired": "請輸入顯示名稱",
     "registerSuccess": "註冊成功！若已啟用 Email 驗證，請到信箱點擊連結後再登入。",
     "operationFailed": "操作失敗，請稍後再試",

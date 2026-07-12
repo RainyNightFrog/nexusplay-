@@ -950,6 +950,7 @@
   "auth": {
     "callbackFailed": "Login verification failed, please try again",
     "creatorHint": "Creator Dashboard is only available to Creator accounts. Please sign in with a creator account, or choose Creator when registering.",
+    "adminHint": "This account does not have super admin access. If Google sign-in succeeded but you returned here, the signed-in email has not been granted admin. Ask the platform owner to run npm run db:assign-admin, or sign in with an authorized admin account.",
     "displayNameRequired": "Please enter a display name",
     "registerSuccess": "Registration successful! If email verification is enabled, please check your inbox and click the link before signing in.",
     "operationFailed": "Operation failed, please try again later",

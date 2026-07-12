@@ -71,6 +71,9 @@ export default function AuthPage() {
   const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
 
   const hintMessage = useMemo(() => {
+    if (hint === "admin") {
+      return t("adminHint");
+    }
     if (hint === "creator") {
       return t("creatorHint");
     }

@@ -80,23 +80,46 @@ async function main() {
     user.email?.split("@")[0] ||
     "Admin";
 
-  const { error: profileError } = await admin.from("profiles").upsert(
-    {
-      id: user.id,
-      display_name: displayName,
-      role: "creator",
-    },
-    { onConflict: "id" }
-  );
+  const { data: existingProfile } = await admin
+    .from("profiles")
+    .select("id, player_number")
+    .eq("id", user.id)
+    .maybeSingle();
 
-  if (profileError) {
-    console.warn("profiles 同步警告：", profileError.message);
+  if (existingProfile) {
+    const { error: profileError } = await admin
+      .from("profiles")
+      .update({
+        display_name: displayName,
+        role: "creator",
+        is_admin: true,
+      })
+      .eq("id", user.id);
+
+    if (profileError) {
+      console.warn("profiles 更新警告：", profileError.message);
+    }
+  } else {
+    const { error: profileError } = await admin.from("profiles").upsert(
+      {
+        id: user.id,
+        display_name: displayName,
+        role: "creator",
+        is_admin: true,
+      },
+      { onConflict: "id" }
+    );
+
+    if (profileError) {
+      console.warn("profiles 同步警告：", profileError.message);
+    }
   }
 
   console.log("✓ 已設定為超級管理員");
   console.log(`  帳號：${data.user?.email ?? email}`);
   console.log(`  UID：${data.user?.id ?? user.id}`);
   console.log(`  user_metadata.role：${data.user?.user_metadata?.role ?? "admin"}`);
+  console.log(`  profiles.is_admin：true`);
   console.log("\n請在網站登出後重新登入，JWT 才會帶上 admin 權限。");
 }
 
