@@ -6,6 +6,41 @@ export function getAuthCallbackUrl(origin: string) {
   return `${origin.replace(/\/$/, "")}/auth/callback`;
 }
 
+/** OAuth 回呼一律用主網域，避免在 void-gacha 等子網域登入時 callback 不在白名單內 */
+export function resolveAuthCallbackOrigin(windowOrigin: string) {
+  const origin = windowOrigin.replace(/\/$/, "");
+  const rootDomain = (
+    process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "rainynightfrog.com"
+  )
+    .trim()
+    .toLowerCase();
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
+
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin)) {
+    return origin;
+  }
+
+  try {
+    const hostname = new URL(origin).hostname.toLowerCase();
+    const isSubdomain =
+      hostname.endsWith(`.${rootDomain}`) &&
+      hostname !== rootDomain &&
+      hostname !== `www.${rootDomain}`;
+
+    if (isSubdomain) {
+      return siteUrl ?? `https://${rootDomain}`;
+    }
+  } catch {
+    // fall through
+  }
+
+  return origin;
+}
+
+export function getStableAuthCallbackUrl(windowOrigin: string) {
+  return getAuthCallbackUrl(resolveAuthCallbackOrigin(windowOrigin));
+}
+
 export function getProductionSiteOrigins() {
   return [PRODUCTION_SITE_URL, `https://www.rainynightfrog.com`, LEGACY_PRODUCTION_SITE_URL];
 }
@@ -26,14 +61,13 @@ export function getAuthRedirectAllowList(siteUrl = PRODUCTION_SITE_URL) {
   return [...urls];
 }
 
-/** Split glued entries like `.../callbackhttp://localhost...` into separate URLs. */
+/** Split glued entries like `.../callbackhttps://localhost...` into separate URLs. */
 export function expandRedirectAllowListEntry(value: string): string[] {
   const trimmed = value.trim();
   if (!trimmed) return [];
-  return trimmed
-    .split(/(?<=\/auth\/callback)(?=https?:\/\/)/i)
-    .map((part) => part.trim())
-    .filter(Boolean);
+
+  const parts = trimmed.split(/[\n,]|(?=https?:\/\/)/i);
+  return parts.map((part) => part.trim()).filter(Boolean);
 }
 
 export function mergeAuthRedirectAllowList(
@@ -52,7 +86,7 @@ export function mergeAuthRedirectAllowList(
     values.add(url);
   }
 
-  return [...values].join("\n");
+  return [...values].join(",");
 }
 
 export const GOOGLE_AUTHORIZED_JAVASCRIPT_ORIGINS = [

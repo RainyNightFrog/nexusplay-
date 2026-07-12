@@ -2,6 +2,15 @@ import { NextResponse } from "next/server";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createClient } from "@supabase/supabase-js";
 
+function getPasswordResetRedirectUrl(request: Request) {
+  const redirectTo = new URL(request.url).searchParams.get("redirectTo");
+  if (redirectTo) return redirectTo;
+
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? new URL(request.url).origin;
+  const resetPath = encodeURIComponent("/auth?mode=reset");
+  return `${baseUrl}/auth/callback?redirect=${resetPath}`;
+}
+
 export async function POST(request: Request) {
   try {
     const supabase = await createAuthServerClient();
@@ -85,11 +94,43 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: "請先登入" }, { status: 401 });
     }
 
-    const redirectTo = new URL(request.url).searchParams.get("redirectTo");
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? new URL(request.url).origin;
-
     const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-      redirectTo: redirectTo ?? `${baseUrl}/auth?mode=reset`,
+      redirectTo: getPasswordResetRedirectUrl(request),
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "寄送重設郵件失敗";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const body = (await request.json()) as { email?: string };
+    const email = body.email?.trim() ?? "";
+
+    if (!email) {
+      return NextResponse.json({ error: "請輸入 Email" }, { status: 400 });
+    }
+
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!url || !anonKey) {
+      return NextResponse.json({ error: "伺服器設定不完整" }, { status: 500 });
+    }
+
+    const supabase = createClient(url, anonKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: getPasswordResetRedirectUrl(request),
     });
 
     if (error) {

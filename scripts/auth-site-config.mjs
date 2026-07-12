@@ -33,10 +33,9 @@ export function getAuthRedirectAllowList(siteUrl = PRODUCTION_SITE_URL) {
 export function expandRedirectAllowListEntry(value) {
   const trimmed = value.trim();
   if (!trimmed) return [];
-  return trimmed
-    .split(/(?<=\/auth\/callback)(?=https?:\/\/)/i)
-    .map((part) => part.trim())
-    .filter(Boolean);
+
+  const parts = trimmed.split(/[\n,]|(?=https?:\/\/)/i);
+  return parts.map((part) => part.trim()).filter(Boolean);
 }
 
 export function mergeAuthRedirectAllowList(existing, siteUrl = PRODUCTION_SITE_URL) {
@@ -52,7 +51,7 @@ export function mergeAuthRedirectAllowList(existing, siteUrl = PRODUCTION_SITE_U
     values.add(url);
   }
 
-  return [...values].join("\n");
+  return [...values].join(",");
 }
 
 export const GOOGLE_AUTHORIZED_JAVASCRIPT_ORIGINS = [

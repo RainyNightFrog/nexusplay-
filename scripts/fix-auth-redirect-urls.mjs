@@ -11,7 +11,6 @@ import { execSync } from "node:child_process";
 import {
   PRODUCTION_SITE_URL,
   getAuthRedirectAllowList,
-  mergeAuthRedirectAllowList,
 } from "./auth-site-config.mjs";
 
 const PROJECT_REF = "icydkixwynxizrgfzelq";
@@ -66,7 +65,7 @@ async function patchSupabase(accessToken) {
     throw new Error(current.message ?? `Supabase API ${currentResponse.status}`);
   }
 
-  const uriAllowList = mergeAuthRedirectAllowList(current.uri_allow_list);
+  const uriAllowList = getAuthRedirectAllowList().join(",");
   const patchResponse = await fetch(
     `https://api.supabase.com/v1/projects/${PROJECT_REF}/config/auth`,
     {

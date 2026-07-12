@@ -10,6 +10,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { usePathname } from "@/i18n/navigation";
 import type { UserProfile } from "@/lib/auth";
 import { profileFromUserMetadata } from "@/lib/profile-from-metadata";
 import { createClient } from "@/lib/supabase/client";
@@ -26,7 +27,13 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+function isAuthRoute(pathname: string | null) {
+  if (!pathname) return false;
+  return pathname === "/auth" || pathname.startsWith("/auth/");
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const hasResolvedOnce = useRef(false);
@@ -43,15 +50,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const supabase = createClient();
       const {
-        data: { user },
-      } = await supabase.auth.getUser();
+        data: { session },
+      } = await supabase.auth.getSession();
 
       if (generation !== loadGeneration.current) return;
 
-      if (!user) {
+      if (!session?.user) {
         setProfile(null);
         return;
       }
+
+      const user = session.user;
 
       const response = await fetch("/api/auth/profile", {
         credentials: "same-origin",
@@ -77,6 +86,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (isAuthRoute(pathname)) {
+      setLoading(false);
+      return;
+    }
+
     void loadProfile({ silent: false });
 
     const supabase = createClient();
@@ -98,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, [loadProfile]);
+  }, [loadProfile, pathname]);
 
   const signOut = useCallback(async () => {
     const supabase = createClient();

@@ -1,4 +1,3 @@
-import createIntlMiddleware from "next-intl/middleware";
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, NextRequest } from "next/server";
 import { shouldSkipAccountIntent } from "@/lib/account-intent";
@@ -6,6 +5,7 @@ import { resolveUserRole, hasCreatorDashboardAccess } from "@/lib/auth-profile";
 import { resolveAdminAccess } from "@/lib/admin-auth";
 import { getAccountStatusRecord, isAccountRestricted } from "@/lib/account-status";
 import { ANALYTICS_SESSION_COOKIE } from "@/lib/analytics-service";
+import { getSupabaseCookieOptions } from "@/lib/supabase/cookie-options";
 import {
   buildSubdomainRedundantPathRedirect,
   buildSubdomainRewritePath,
@@ -14,6 +14,7 @@ import {
 } from "@/lib/subdomain";
 import { resolveSubdomainRoute } from "@/lib/creator-username";
 import { routing } from "@/i18n/routing";
+import createIntlMiddleware from "next-intl/middleware";
 
 const intlMiddleware = createIntlMiddleware(routing);
 
@@ -147,6 +148,7 @@ export async function middleware(request: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
+        cookieOptions: getSupabaseCookieOptions(),
         cookies: {
           getAll() {
             return request.cookies.getAll();
@@ -215,10 +217,15 @@ export async function middleware(request: NextRequest) {
     });
   }
 
+  const isAuthLoginPage =
+    pathnameWithoutLocale === "/auth" &&
+    effectiveRequest.nextUrl.searchParams.get("mode") !== "reset";
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      cookieOptions: getSupabaseCookieOptions(),
       cookies: {
         getAll() {
           return effectiveRequest.cookies.getAll();
@@ -233,9 +240,16 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // 登入頁不跑 getUser，避免伺服器端 session 清理誤刪 PKCE verifier cookie
+  let user: Awaited<
+    ReturnType<ReturnType<typeof createServerClient>["auth"]["getUser"]>
+  >["data"]["user"] = null;
+
+  if (!isAuthLoginPage) {
+    ({
+      data: { user },
+    } = await supabase.auth.getUser());
+  }
 
   if (pathnameWithoutLocale.startsWith("/admin")) {
     const redirectUrl = effectiveRequest.nextUrl.clone();

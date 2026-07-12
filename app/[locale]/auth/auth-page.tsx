@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
@@ -26,16 +26,30 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import type { UserRole } from "@/lib/auth";
 import { buildChooseRolePath, shouldSkipAccountIntent } from "@/lib/account-intent";
+import { waitForAuthStorageFlush } from "@/lib/auth-callback-exchange";
+import { setAuthRedirectCookie } from "@/lib/auth-redirect-cookie";
 import { MfaChallengePanel } from "@/components/auth/mfa-challenge-panel";
 import { createClient } from "@/lib/supabase/client";
-import { setAuthRedirectCookie } from "@/lib/auth-redirect-cookie";
+import {
+  clearPkceVerifierBackup,
+  clearStaleSupabaseSessionCookies,
+  savePkceVerifierBackup,
+  waitForPkceVerifierCookie,
+} from "@/lib/supabase/pkce";
 import { getAuthCallbackUrl } from "@/lib/auth-redirect-urls";
+import {
+  clearRememberedCredentials,
+  readRememberedCredentials,
+  saveRememberedCredentials,
+} from "@/lib/remembered-credentials";
 import { cn } from "@/lib/utils";
 
 type AuthMode = "login" | "register";
 type AuthMethod = "password" | "magicLink";
+type AuthView = "form" | "forgot" | "reset";
 type OAuthProvider = "google" | "discord" | "github" | "twitch";
 
 const OAUTH_SETUP_SCRIPTS: Record<OAuthProvider, string> = {
@@ -52,6 +66,12 @@ const OAUTH_PROVIDER_LABELS: Record<OAuthProvider, string> = {
   twitch: "Twitch",
 };
 
+const OAUTH_QUERY_PARAMS: Partial<Record<OAuthProvider, Record<string, string>>> = {
+  google: { prompt: "select_account" },
+};
+
+const OAUTH_IN_FLIGHT_KEY = "oauth:in-flight";
+
 const authInputClassName = cn(
   "h-11 rounded-xl border-white/10 bg-white/5 text-zinc-100 placeholder:text-zinc-500",
   "focus-visible:border-cyan-400/40 focus-visible:ring-cyan-500/20"
@@ -67,12 +87,20 @@ export default function AuthPage() {
   const hint = searchParams.get("hint");
   const callbackError = searchParams.get("error");
   const callbackReason = searchParams.get("reason");
+  const urlMode = searchParams.get("mode");
 
+  const [authView, setAuthView] = useState<AuthView>(() =>
+    urlMode === "reset" ? "reset" : "form"
+  );
   const [mode, setMode] = useState<AuthMode>("login");
   const [authMethod, setAuthMethod] = useState<AuthMethod>("password");
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberPassword, setRememberPassword] = useState(false);
+  const [resetNewPassword, setResetNewPassword] = useState("");
+  const [resetConfirmPassword, setResetConfirmPassword] = useState("");
+  const [resetSessionReady, setResetSessionReady] = useState<boolean | null>(null);
   const [role, setRole] = useState<UserRole>("player");
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<OAuthProvider | null>(null);
@@ -87,6 +115,67 @@ export default function AuthPage() {
     return t("callbackFailed");
   });
   const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (callbackError) {
+      window.sessionStorage.removeItem(OAUTH_IN_FLIGHT_KEY);
+      clearPkceVerifierBackup();
+    }
+  }, [callbackError]);
+
+  useEffect(() => {
+    if (urlMode === "reset" || callbackError) return;
+
+    const timeout = window.setTimeout(() => {
+      if (window.sessionStorage.getItem(OAUTH_IN_FLIGHT_KEY) === "1") return;
+
+      const supabase = createClient();
+      void supabase.auth.getSession().then(({ data: { session } }) => {
+        if (window.sessionStorage.getItem(OAUTH_IN_FLIGHT_KEY) === "1") return;
+        if (session?.user) {
+          router.replace(redirectTo);
+          router.refresh();
+        }
+      });
+    }, 800);
+
+    return () => window.clearTimeout(timeout);
+  }, [callbackError, redirectTo, router, urlMode]);
+
+  useEffect(() => {
+    const remembered = readRememberedCredentials();
+    if (!remembered) return;
+
+    setEmail(remembered.email);
+    setPassword(remembered.password);
+    setRememberPassword(true);
+  }, []);
+
+  useEffect(() => {
+    if (urlMode !== "reset") return;
+
+    setAuthView("reset");
+
+    const supabase = createClient();
+    void supabase.auth.getSession().then(({ data: { session } }) => {
+      setResetSessionReady(Boolean(session?.user));
+    });
+  }, [urlMode]);
+
+  const cardTitle = useMemo(() => {
+    if (authView === "forgot") return t("forgotPasswordTitle");
+    if (authView === "reset") return t("resetPasswordTitle");
+    return mode === "login" ? t("welcomeBack") : t("createAccount");
+  }, [authView, mode, t]);
+
+  const cardDescription = useMemo(() => {
+    if (authView === "forgot") return t("forgotPasswordDesc");
+    if (authView === "reset") return t("resetPasswordDesc");
+    if (authMethod === "magicLink") {
+      return mode === "login" ? t("loginMagicDesc") : t("registerMagicDesc");
+    }
+    return mode === "login" ? t("loginDesc") : t("registerDesc");
+  }, [authView, authMethod, mode, t]);
 
   const hintMessage = useMemo(() => {
     if (hint === "admin") {
@@ -119,19 +208,47 @@ export default function AuthPage() {
     setError(null);
     setMessage(null);
 
+    window.sessionStorage.setItem(OAUTH_IN_FLIGHT_KEY, "1");
+
     const supabase = createClient();
 
     try {
+      clearStaleSupabaseSessionCookies();
       setAuthRedirectCookie(redirectTo);
-      const { error: oauthError } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: getAuthCallbackUrl(window.location.origin),
-        },
-      });
+
+      const queryParams = OAUTH_QUERY_PARAMS[provider];
+      const { data: oauthData, error: oauthError } =
+        await supabase.auth.signInWithOAuth({
+          provider,
+          options: {
+            redirectTo: getAuthCallbackUrl(window.location.origin),
+            skipBrowserRedirect: true,
+            ...(queryParams ? { queryParams } : {}),
+          },
+        });
 
       if (oauthError) throw oauthError;
+      if (!oauthData?.url) {
+        throw new Error(t("operationFailed"));
+      }
+
+      const verifierReady = await waitForPkceVerifierCookie();
+      if (!verifierReady) {
+        throw new Error(
+          "PKCE code verifier not found in storage. This can happen if the auth flow was initiated in a different browser or device, or if the storage was cleared. For SSR frameworks (Next.js)"
+        );
+      }
+
+      if (!savePkceVerifierBackup()) {
+        throw new Error(
+          "PKCE code verifier not found in storage. This can happen if the auth flow was initiated in a different browser or device, or if the storage was cleared. For SSR frameworks (Next.js)"
+        );
+      }
+
+      await waitForAuthStorageFlush();
+      window.location.assign(oauthData.url);
     } catch (submitError) {
+      window.sessionStorage.removeItem(OAUTH_IN_FLIGHT_KEY);
       const message =
         submitError instanceof Error ? submitError.message : t("operationFailed");
       const providerLabel = OAUTH_PROVIDER_LABELS[provider].toLowerCase();
@@ -205,6 +322,84 @@ export default function AuthPage() {
     }
   }
 
+  async function handleForgotPassword(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setLoading(true);
+    setError(null);
+    setMessage(null);
+
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setError(t("magicLinkEmailRequired"));
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/auth/password", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: trimmedEmail }),
+      });
+
+      const data = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        throw new Error(data.error ?? t("operationFailed"));
+      }
+
+      setMessage(t("resetEmailSent"));
+    } catch (submitError) {
+      setError(
+        submitError instanceof Error ? submitError.message : t("operationFailed")
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleResetPassword(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setLoading(true);
+    setError(null);
+    setMessage(null);
+
+    if (resetNewPassword.length < 8) {
+      setError(t("resetPasswordMinLength"));
+      setLoading(false);
+      return;
+    }
+
+    if (resetNewPassword !== resetConfirmPassword) {
+      setError(t("passwordMismatch"));
+      setLoading(false);
+      return;
+    }
+
+    const supabase = createClient();
+
+    try {
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: resetNewPassword,
+      });
+
+      if (updateError) throw updateError;
+
+      setMessage(t("resetPasswordSuccess"));
+      setResetNewPassword("");
+      setResetConfirmPassword("");
+
+      window.setTimeout(() => {
+        void goAfterAuth();
+      }, 1200);
+    } catch (submitError) {
+      setError(
+        submitError instanceof Error ? submitError.message : t("operationFailed")
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -258,6 +453,12 @@ export default function AuthPage() {
       });
 
       if (signInError) throw signInError;
+
+      if (rememberPassword) {
+        saveRememberedCredentials(email.trim(), password);
+      } else {
+        clearRememberedCredentials();
+      }
 
       const { data: aal, error: aalError } =
         await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
@@ -363,41 +564,35 @@ export default function AuthPage() {
               <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/60 to-transparent" />
 
               <CardHeader className="gap-4 px-6 pt-6 pb-0">
-                <div className="flex rounded-xl border border-white/10 bg-white/5 p-1">
-                  {(["login", "register"] as const).map((tab) => (
-                    <button
-                      key={tab}
-                      type="button"
-                      onClick={() => {
-                        setMode(tab);
-                        setAuthMethod("password");
-                        setError(null);
-                        setMessage(null);
-                      }}
-                      className={cn(
-                        "flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-all",
-                        mode === tab
-                          ? "bg-gradient-to-r from-cyan-500 to-violet-600 text-white shadow-md shadow-violet-500/20"
-                          : "text-zinc-400 hover:text-zinc-200"
-                      )}
-                    >
-                      {tab === "login" ? t("login") : t("register")}
-                    </button>
-                  ))}
-                </div>
+                {authView === "form" && (
+                  <div className="flex rounded-xl border border-white/10 bg-white/5 p-1">
+                    {(["login", "register"] as const).map((tab) => (
+                      <button
+                        key={tab}
+                        type="button"
+                        onClick={() => {
+                          setMode(tab);
+                          setAuthMethod("password");
+                          setError(null);
+                          setMessage(null);
+                        }}
+                        className={cn(
+                          "flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-all",
+                          mode === tab
+                            ? "bg-gradient-to-r from-cyan-500 to-violet-600 text-white shadow-md shadow-violet-500/20"
+                            : "text-zinc-400 hover:text-zinc-200"
+                        )}
+                      >
+                        {tab === "login" ? t("login") : t("register")}
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 <div className="text-center">
-                  <CardTitle className="text-2xl text-white">
-                    {mode === "login" ? t("welcomeBack") : t("createAccount")}
-                  </CardTitle>
+                  <CardTitle className="text-2xl text-white">{cardTitle}</CardTitle>
                   <CardDescription className="mt-1 text-zinc-400">
-                    {authMethod === "magicLink"
-                      ? mode === "login"
-                        ? t("loginMagicDesc")
-                        : t("registerMagicDesc")
-                      : mode === "login"
-                        ? t("loginDesc")
-                        : t("registerDesc")}
+                    {cardDescription}
                   </CardDescription>
                 </div>
               </CardHeader>
@@ -434,6 +629,143 @@ export default function AuthPage() {
                       void createClient().auth.signOut();
                     }}
                   />
+                ) : authView === "forgot" ? (
+                  <form onSubmit={handleForgotPassword} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="forgot-email" className="block text-center text-zinc-300">
+                        Email
+                      </Label>
+                      <div className="relative">
+                        <Mail className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-zinc-500" />
+                        <Input
+                          id="forgot-email"
+                          type="email"
+                          autoComplete="email"
+                          value={email}
+                          onChange={(event) => setEmail(event.target.value)}
+                          placeholder="you@example.com"
+                          required
+                          className={cn(authInputClassName, "pl-10")}
+                        />
+                      </div>
+                    </div>
+
+                    <Button
+                      type="submit"
+                      disabled={loading}
+                      className={cn(
+                        "mt-2 h-11 w-full rounded-xl border-0 text-base font-semibold",
+                        "bg-gradient-to-r from-cyan-500 via-violet-600 to-fuchsia-600 text-white",
+                        "shadow-lg shadow-violet-500/25 hover:from-cyan-400 hover:to-violet-500"
+                      )}
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 className="size-4 animate-spin" />
+                          {tCommon("processing")}
+                        </>
+                      ) : (
+                        t("sendResetLink")
+                      )}
+                    </Button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAuthView("form");
+                        setError(null);
+                        setMessage(null);
+                      }}
+                      className="w-full text-center text-sm text-cyan-400 hover:text-cyan-300 hover:underline"
+                    >
+                      {t("backToLogin")}
+                    </button>
+                  </form>
+                ) : authView === "reset" ? (
+                  resetSessionReady === false ? (
+                    <div className="space-y-4 text-center">
+                      <p className="text-sm text-zinc-400">{t("resetSessionRequired")}</p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAuthView("forgot");
+                          setError(null);
+                          setMessage(null);
+                        }}
+                        className="text-sm text-cyan-400 hover:text-cyan-300 hover:underline"
+                      >
+                        {t("sendResetLink")}
+                      </button>
+                    </div>
+                  ) : resetSessionReady === null ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="size-6 animate-spin text-violet-400" />
+                    </div>
+                  ) : (
+                    <form onSubmit={handleResetPassword} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="reset-password" className="block text-center text-zinc-300">
+                          {t("newPassword")}
+                        </Label>
+                        <div className="relative">
+                          <Lock className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-zinc-500" />
+                          <Input
+                            id="reset-password"
+                            type="password"
+                            autoComplete="new-password"
+                            value={resetNewPassword}
+                            onChange={(event) => setResetNewPassword(event.target.value)}
+                            placeholder={t("resetPasswordMinLength")}
+                            minLength={8}
+                            required
+                            className={cn(authInputClassName, "pl-10")}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor="reset-confirm-password"
+                          className="block text-center text-zinc-300"
+                        >
+                          {t("confirmPassword")}
+                        </Label>
+                        <div className="relative">
+                          <Lock className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-zinc-500" />
+                          <Input
+                            id="reset-confirm-password"
+                            type="password"
+                            autoComplete="new-password"
+                            value={resetConfirmPassword}
+                            onChange={(event) => setResetConfirmPassword(event.target.value)}
+                            placeholder={t("confirmPassword")}
+                            minLength={8}
+                            required
+                            className={cn(authInputClassName, "pl-10")}
+                          />
+                        </div>
+                      </div>
+
+                      <Button
+                        type="submit"
+                        disabled={loading}
+                        className={cn(
+                          "mt-2 h-11 w-full rounded-xl border-0 text-base font-semibold",
+                          "bg-gradient-to-r from-cyan-500 via-violet-600 to-fuchsia-600 text-white",
+                          "shadow-lg shadow-violet-500/25 hover:from-cyan-400 hover:to-violet-500"
+                        )}
+                      >
+                        {loading ? (
+                          <>
+                            <Loader2 className="size-4 animate-spin" />
+                            {tCommon("processing")}
+                          </>
+                        ) : (
+                          t("resetPasswordBtn")
+                        )}
+                      </Button>
+                    </form>
+                  )
                 ) : (
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <AnimatePresence mode="wait">
@@ -572,6 +904,31 @@ export default function AuthPage() {
                       <p className="rounded-xl border border-cyan-400/15 bg-cyan-500/5 px-3 py-2.5 text-center text-xs leading-relaxed text-cyan-100/90">
                         {t("magicLinkHint")}
                       </p>
+                    )}
+
+                    {mode === "login" && authMethod === "password" && (
+                      <div className="flex items-center justify-between gap-3 pt-1">
+                        <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-400">
+                          <Checkbox
+                            checked={rememberPassword}
+                            onCheckedChange={(checked) =>
+                              setRememberPassword(checked === true)
+                            }
+                          />
+                          <span>{t("rememberPassword")}</span>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAuthView("forgot");
+                            setError(null);
+                            setMessage(null);
+                          }}
+                          className="text-xs text-cyan-400 hover:text-cyan-300 hover:underline"
+                        >
+                          {t("forgotPassword")}
+                        </button>
+                      </div>
                     )}
                   </div>
 
