@@ -14,6 +14,7 @@ import { resolveAdminDisplayRole } from "@/lib/admin-display-role";
 import { resolveSupporterProfiles } from "@/lib/supporter-profile";
 import { getVirtualPlayerSupporterFlags } from "@/lib/virtual-player-supporter";
 import { createServerSupabase } from "@/lib/supabase-server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 type AuthorProfile = {
   display_name: string | null;
