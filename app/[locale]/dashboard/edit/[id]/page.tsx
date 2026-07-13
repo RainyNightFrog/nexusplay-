@@ -620,34 +620,7 @@ export default function EditGamePage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="dark flex min-h-full flex-col items-center justify-center text-zinc-100">
-        <Loader2 className="mb-4 size-10 animate-spin text-cyan-400" />
-        <p className="text-sm text-zinc-400">{tCommon("loadingGameData")}</p>
-      </div>
-    );
-  }
-
-  if (loadError) {
-    return (
-      <div className="dark flex min-h-full flex-col items-center justify-center px-4 text-zinc-100">
-        <AlertCircle className="mb-4 size-10 text-rose-400" />
-        <h1 className="text-xl font-semibold text-white">
-          {tCommon("cannotEdit")}
-        </h1>
-        <p className="mt-2 text-sm text-zinc-500">{loadError}</p>
-        <Link href="/dashboard" className={cn(buttonVariants(), "mt-6")}>
-          {tCommon("backDashboard")}
-        </Link>
-      </div>
-    );
-  }
-
-  const coverDisplayUrl = coverPreview ?? existingCoverUrl;
-  const isDraftEdit = monetization.publishStatus === "draft";
-  const isPublicEdit = !isDraftEdit;
-
+  // 必須在任何 early return 之前呼叫 hooks，否則 loading 結束後會 Hooks 數量不一致而整頁崩潰
   const checklistInput = useMemo(
     () => ({
       mode: "edit" as const,
@@ -686,6 +659,33 @@ export default function EditGamePage() {
     ]
   );
 
+  if (loading) {
+    return (
+      <div className="dark flex min-h-full flex-col items-center justify-center text-zinc-100">
+        <Loader2 className="mb-4 size-10 animate-spin text-cyan-400" />
+        <p className="text-sm text-zinc-400">{tCommon("loadingGameData")}</p>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="dark flex min-h-full flex-col items-center justify-center px-4 text-zinc-100">
+        <AlertCircle className="mb-4 size-10 text-rose-400" />
+        <h1 className="text-xl font-semibold text-white">
+          {tCommon("cannotEdit")}
+        </h1>
+        <p className="mt-2 text-sm text-zinc-500">{loadError}</p>
+        <Link href="/dashboard" className={cn(buttonVariants(), "mt-6")}>
+          {tCommon("backDashboard")}
+        </Link>
+      </div>
+    );
+  }
+
+  const coverDisplayUrl = coverPreview ?? existingCoverUrl;
+  const isDraftEdit = monetization.publishStatus === "draft";
+  const isPublicEdit = !isDraftEdit;
   const coverPreviewUrl = coverPreview ?? existingCoverUrl;
   const pricingPreviewLabel =
     pricing.pricingType === "free"
