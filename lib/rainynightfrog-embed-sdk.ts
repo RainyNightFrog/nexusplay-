@@ -112,7 +112,7 @@ export function buildRainyNightFrogEmbedSdkScript() {
       document.documentElement.style.setProperty('--np-embed-height',(d.height||0)+'px');
       document.documentElement.classList.toggle('np-embed-expanded',!!d.expanded);
     }
-    window.dispatchEvent(new Event('resize'));
+    /* 勿再 dispatch resize：會與 boot 的 __voidRnfSyncExpandGate 互相回撞造成堆疊溢位 */
   });
 
   function waitForAuth(ms){
