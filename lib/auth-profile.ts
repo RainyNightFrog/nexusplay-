@@ -40,7 +40,7 @@ export async function resolveUserProfile(
     .maybeSingle();
 
   if (!error && profile) {
-    const isAdmin = profile.is_admin === true || metadataProfile.is_admin;
+    const isAdmin = isAdminUser(user) || metadataProfile.is_admin === true;
     const developingGames =
       metadataProfile.developing_games || normalizeRole(profile.role) === "creator";
     const equippedTitle = profile.equipped_title_id
