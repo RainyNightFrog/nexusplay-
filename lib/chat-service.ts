@@ -10,14 +10,16 @@ import { getAmbientUserPlayerMap } from "@/lib/ambient-user-index";
 import { resolveVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
 import { resolveEquippedTitles } from "@/lib/equipped-title-service";
 import { formatForumAuthor } from "@/lib/forum";
+import { resolveAdminDisplayRole } from "@/lib/admin-display-role";
 import { resolveSupporterProfiles } from "@/lib/supporter-profile";
+import { getVirtualPlayerSupporterFlags } from "@/lib/virtual-player-supporter";
 import { createServerSupabase } from "@/lib/supabase-server";
-import type { SupabaseClient } from "@supabase/supabase-js";
 
 type AuthorProfile = {
   display_name: string | null;
   avatar_url: string | null;
   role: string | null;
+  is_admin: boolean;
 };
 
 function historyCutoffIso() {
@@ -35,7 +37,7 @@ async function resolveAuthorProfiles(userIds: string[]) {
 
   const { data: profiles } = await supabase
     .from("profiles")
-    .select("id, display_name, avatar_url, role")
+    .select("id, display_name, avatar_url, role, is_admin")
     .in("id", uniqueIds);
 
   for (const userId of uniqueIds) {
@@ -44,6 +46,7 @@ async function resolveAuthorProfiles(userIds: string[]) {
       display_name: profile?.display_name ?? null,
       avatar_url: profile?.avatar_url ?? null,
       role: profile?.role ?? null,
+      is_admin: profile?.is_admin === true,
     });
   }
 
@@ -62,6 +65,9 @@ function mapChatMessage(
   const supporter = supporterMap.get(record.user_id);
   const displayName = profile?.display_name ?? null;
   const virtualPlayerId = ambientMap.get(record.user_id) ?? null;
+  const virtualSupporter = virtualPlayerId
+    ? getVirtualPlayerSupporterFlags(virtualPlayerId)
+    : null;
 
   return {
     ...record,
@@ -70,8 +76,11 @@ function mapChatMessage(
       ? resolveVirtualPlayerAvatarUrl(virtualPlayerId)
       : (profile?.avatar_url ?? null),
     author_equipped_title: titleMap.get(record.user_id) ?? null,
-    author_is_supporter: supporter?.isSupporter === true,
-    author_supporter_badge: supporter?.badge ?? null,
+    author_is_supporter:
+      virtualSupporter?.isSupporter === true || supporter?.isSupporter === true,
+    author_supporter_badge:
+      virtualSupporter?.badge ?? supporter?.badge ?? null,
+    author_admin_role: resolveAdminDisplayRole(profile?.is_admin === true, false),
     is_creator: profile?.role === "creator",
     is_own: viewerId ? record.user_id === viewerId : false,
     is_virtual: Boolean(virtualPlayerId),

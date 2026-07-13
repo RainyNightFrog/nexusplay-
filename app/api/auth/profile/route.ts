@@ -53,11 +53,13 @@ export async function GET(request: Request) {
         : null;
 
     const detectedCountry = getCountryCodeFromRequest(request);
-    if (detectedCountry) {
-      if (countryCode !== detectedCountry) {
-        await syncUserCountryFromRequest(createServerSupabase(), user.id, request);
-        countryCode = detectedCountry;
-      }
+    if (detectedCountry && countryCode !== detectedCountry) {
+      void syncUserCountryFromRequest(
+        createServerSupabase(),
+        user.id,
+        request
+      ).catch(() => undefined);
+      countryCode = detectedCountry;
     }
 
     const profile = await resolveUserProfile(supabase, user);

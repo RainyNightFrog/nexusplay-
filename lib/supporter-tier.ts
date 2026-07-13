@@ -1,4 +1,6 @@
 import { DEFAULT_SUPPORTER_BADGE } from "@/lib/checkout-order";
+import type { UserProfile } from "@/lib/auth";
+import type { EquippedTitle } from "@/lib/titles";
 
 export const SUPPORTER_BADGE_V1 = DEFAULT_SUPPORTER_BADGE;
 export const SUPPORTER_BADGE_V2 = "supporter_v2" as const;
@@ -14,12 +16,50 @@ export function isPremiumSupporterBadge(
   return badge === SUPPORTER_BADGE_V2;
 }
 
+function hasSupporterBadge(badge: string | null | undefined) {
+  return typeof badge === "string" && badge.trim().length > 0;
+}
+
+function isSupporterEquippedTitle(title: EquippedTitle | null | undefined) {
+  if (!title?.name) return false;
+  return title.name === SUPPORTER_TITLE_V1 || title.name === SUPPORTER_TITLE_V2;
+}
+
+/** 支援 is_supporter、徽章或支持者稱號任一條件 */
+export function isSupporterMember(
+  isSupporter: boolean | null | undefined,
+  badge: string | null | undefined,
+  equippedTitle?: EquippedTitle | null
+) {
+  if (isSupporter === true) return true;
+  if (hasSupporterBadge(badge)) return true;
+  return isSupporterEquippedTitle(equippedTitle);
+}
+
 export function getSupporterDisplayTier(
   isSupporter: boolean,
-  badge: string | null | undefined
+  badge: string | null | undefined,
+  equippedTitle?: EquippedTitle | null
 ): SupporterDisplayTier {
-  if (!isSupporter) return "none";
-  return isPremiumSupporterBadge(badge) ? "premium" : "basic";
+  if (!isSupporterMember(isSupporter, badge, equippedTitle)) return "none";
+  return isPremiumSupporterBadge(badge) ||
+    equippedTitle?.name === SUPPORTER_TITLE_V2
+    ? "premium"
+    : "basic";
+}
+
+export function getSupporterDisplayTierFromProfile(
+  profile: Pick<
+    UserProfile,
+    "is_supporter" | "supporter_badge" | "equipped_title"
+  > | null | undefined
+): SupporterDisplayTier {
+  if (!profile) return "none";
+  return getSupporterDisplayTier(
+    profile.is_supporter === true,
+    profile.supporter_badge,
+    profile.equipped_title
+  );
 }
 
 export function getSupporterTitleNameForBadge(badge: string): string {
@@ -29,14 +69,29 @@ export function getSupporterTitleNameForBadge(badge: string): string {
 }
 
 export const supporterUsernameClassByTier = {
+  basic: "font-semibold text-amber-300 drop-shadow-[0_0_8px_rgba(251,191,36,0.35)]",
+  premium: "supporter-username supporter-username-premium font-semibold",
+} as const;
+
+export const supporterMessageContentClassByTier = {
   basic:
-    "bg-gradient-to-r from-amber-100 via-rose-100 to-violet-200 bg-clip-text text-transparent",
-  premium:
-    "supporter-username-premium bg-gradient-to-r from-amber-200 via-rose-200 to-violet-300 bg-clip-text text-transparent",
+    "font-semibold text-amber-300 drop-shadow-[0_0_8px_rgba(251,191,36,0.35)]",
+  premium: "supporter-username supporter-username-premium font-semibold",
+} as const;
+
+/** 僅 SVIP 打字需鏡像層（彩虹漸層）；VIP 直接在 textarea 顯示金色 */
+export const supporterComposerMirrorClassByTier = {
+  basic: "font-medium text-amber-300",
+  premium: "supporter-username supporter-username-premium font-semibold",
+} as const;
+
+export const supporterComposerTextClassByTier = {
+  basic: "text-amber-300 caret-amber-300",
+  premium: "text-transparent caret-violet-300",
 } as const;
 
 export const supporterAvatarRingClassByTier = {
-  basic: "ring-2 ring-amber-400/35",
+  basic: "ring-2 ring-amber-400/55 shadow-[0_0_18px_rgba(251,191,36,0.28)]",
   premium:
-    "ring-2 ring-amber-300/50 shadow-[0_0_20px_rgba(251,191,36,0.22)]",
+    "ring-2 ring-violet-300/55 shadow-[0_0_22px_rgba(167,139,250,0.35)]",
 } as const;

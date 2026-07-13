@@ -54,6 +54,7 @@ import {
   priceFilterIdToParams,
   type PriceFilterId,
 } from "@/lib/game-price-filter";
+import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
 import { ALL_CATEGORY } from "@/lib/home-copy";
 import { useGameI18n } from "@/hooks/use-game-i18n";
 import { useGameFavoriteActions } from "@/hooks/use-game-favorite-actions";
@@ -203,9 +204,12 @@ export function HomePageClient({ initialGames }: HomePageClientProps) {
       nextCategory: FilterCategory,
       nextTags: GameTag[],
       nextSort: SortOption,
-      nextPriceFilter: PriceFilterId
+      nextPriceFilter: PriceFilterId,
+      options?: { silent?: boolean }
     ) => {
-    setLoading(true);
+    if (!options?.silent) {
+      setLoading(true);
+    }
     try {
       const params = new URLSearchParams();
       if (nextCategory !== ALL_CATEGORY) {
@@ -220,7 +224,11 @@ export function HomePageClient({ initialGames }: HomePageClientProps) {
         priceFilterIdToParams(nextPriceFilter)
       );
       const query = params.toString();
-      const response = await fetch(`/api/games${query ? `?${query}` : ""}`);
+      const response = await fetchWithTimeout(
+        `/api/games${query ? `?${query}` : ""}`,
+        undefined,
+        12_000
+      );
       const data = (await response.json()) as { games?: Game[] };
       const nextGames = data.games ?? [];
       setGames(nextGames);
@@ -258,7 +266,9 @@ export function HomePageClient({ initialGames }: HomePageClientProps) {
       return;
     }
 
-    void loadGames(category, selectedTags, sort, priceFilter);
+    void loadGames(category, selectedTags, sort, priceFilter, {
+      silent: hasInitialGames && isDefaultHomeQuery(category, selectedTags, sort, priceFilter),
+    });
   }, [
     category,
     selectedTags,

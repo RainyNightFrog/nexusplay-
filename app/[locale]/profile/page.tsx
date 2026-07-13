@@ -38,6 +38,7 @@ import {
   accountSectionTitleClassName,
 } from "@/components/settings/account-shell";
 import { UserBadge } from "@/components/UserBadge";
+import { SupporterAvatarInsignia } from "@/components/supporter/supporter-avatar-insignia";
 import {
   getSupporterDisplayTier,
   supporterAvatarRingClassByTier,
@@ -226,19 +227,26 @@ export default function ProfilePage() {
       >
         <div className={accountCardClassName}>
           <div className="mb-8 flex flex-col items-center">
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={avatarUploading}
-              className={cn(
-                "group relative size-28 overflow-hidden rounded-full",
-                "border-2 border-white/10 transition-all duration-300",
-                "hover:border-cyan-400/70 hover:shadow-lg hover:shadow-cyan-500/25",
-                supporterTier !== "none" &&
-                  supporterAvatarRingClassByTier[supporterTier],
-                avatarUploading && "pointer-events-none opacity-70"
-              )}
-            >
+            <div className="relative">
+              <SupporterAvatarInsignia
+                isSupporter={profile.is_supporter}
+                supporterBadge={profile.supporter_badge}
+                tier={supporterTier}
+                size="md"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={avatarUploading}
+                className={cn(
+                  "group relative mt-1 size-28 overflow-hidden rounded-full",
+                  "border-2 border-white/10 transition-all duration-300",
+                  "hover:border-cyan-400/70 hover:shadow-lg hover:shadow-cyan-500/25",
+                  supporterTier !== "none" &&
+                    supporterAvatarRingClassByTier[supporterTier],
+                  avatarUploading && "pointer-events-none opacity-70"
+                )}
+              >
               {avatarPreview ? (
                 <Image
                   src={avatarPreview}
@@ -260,6 +268,7 @@ export default function ProfilePage() {
                 )}
               </div>
             </button>
+            </div>
 
             <input
               ref={fileInputRef}
@@ -277,6 +286,7 @@ export default function ProfilePage() {
                 title={profile.equipped_title}
                 isSupporter={profile.is_supporter}
                 supporterBadge={profile.supporter_badge}
+                showSupporterBadge={false}
                 usernameClassName="text-lg font-semibold text-zinc-100"
                 titleClassName="text-xs"
               />

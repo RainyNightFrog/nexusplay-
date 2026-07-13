@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   Suspense,
@@ -83,6 +84,11 @@ import {
 } from "@/lib/upload-limits";
 import { isZipFileAsync, validateGameZipFile, ZIP_FILE_ACCEPT } from "@/lib/zip-file-validation";
 import { cn } from "@/lib/utils";
+import { PublishAssistantSidebar } from "@/components/creator-tools/publish-assistant-sidebar";
+import { ZipInspectorPanel } from "@/components/creator-tools/zip-inspector-panel";
+import { StorePreviewPanel } from "@/components/creator-tools/store-preview-panel";
+import { SdkCheckerPanel } from "@/components/creator-tools/sdk-checker-panel";
+import type { ZipInspectorReport } from "@/lib/creator-tools/zip-inspector";
 
 type FormState = {
   title: string;
@@ -288,6 +294,7 @@ export default function EditGamePage() {
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [gameZip, setGameZip] = useState<File | null>(null);
+  const [zipReport, setZipReport] = useState<ZipInspectorReport | null>(null);
   const [existingGalleryUrls, setExistingGalleryUrls] = useState<string[]>([]);
   const [newGalleryFiles, setNewGalleryFiles] = useState<File[]>([]);
   const [devlogTitle, setDevlogTitle] = useState("");
@@ -641,6 +648,54 @@ export default function EditGamePage() {
   const isDraftEdit = monetization.publishStatus === "draft";
   const isPublicEdit = !isDraftEdit;
 
+  const checklistInput = useMemo(
+    () => ({
+      mode: "edit" as const,
+      publishStatus: monetization.publishStatus,
+      publishVersion: Boolean(gameZip),
+      title: form.title,
+      slug: form.slug,
+      description: form.description,
+      genre: form.genre,
+      hasCover: Boolean(coverFile || existingCoverUrl),
+      hasGameZip: Boolean(gameZip),
+      tags: metadata.tags,
+      aiDisclosed: metadata.aiDisclosed,
+      aiContentTypes: metadata.aiContentTypes,
+      tipsEnabled: monetization.tipsEnabled,
+      suggestedTipAmount: monetization.suggestedTipAmount,
+      pricingType: pricing.pricingType,
+      priceAmount: pricing.priceAmount,
+      minPriceAmount: pricing.minPriceAmount,
+      stripeConnectReady:
+        !pricingValuesRequireStripeConnect({ pricingType: pricing.pricingType }) ||
+        stripeConnectReady === true,
+      detailsHtml: metadata.detailsHtml,
+      viewportWidth: metadata.viewportWidth,
+      viewportHeight: metadata.viewportHeight,
+    }),
+    [
+      monetization,
+      gameZip,
+      form,
+      coverFile,
+      existingCoverUrl,
+      metadata,
+      pricing,
+      stripeConnectReady,
+    ]
+  );
+
+  const coverPreviewUrl = coverPreview ?? existingCoverUrl;
+  const pricingPreviewLabel =
+    pricing.pricingType === "free"
+      ? undefined
+      : pricing.pricingType === "fixed" && pricing.priceAmount
+        ? `$${pricing.priceAmount}`
+        : pricing.pricingType === "pwyw"
+          ? `PWYW $${pricing.minPriceAmount || "0"}+`
+          : undefined;
+
   return (
     <div className="dark relative min-h-full text-zinc-100">
       <SiteHeader>
@@ -687,6 +742,10 @@ export default function EditGamePage() {
                 {t("orphanGameHint", { title: form.title || t("editGame") })}
               </p>
             )}
+          </div>
+
+          <div className="mb-6 2xl:hidden">
+            <PublishAssistantSidebar checklistInput={checklistInput} />
           </div>
 
           <form
@@ -758,6 +817,8 @@ export default function EditGamePage() {
             <GamePublishMetadataFields
               genre={form.genre}
               metadata={metadata}
+              title={form.title}
+              description={form.description}
               onGenreChange={(genre) =>
                 setForm((prev) => ({ ...prev, genre }))
               }
@@ -808,10 +869,21 @@ export default function EditGamePage() {
                 file={gameZip}
                 icon={FileArchive}
                 onFileSelect={handleZipSelect}
-                onClear={() => setGameZip(null)}
+                onClear={() => {
+                  setGameZip(null);
+                  setZipReport(null);
+                }}
                 optional
               />
               </div>
+
+              {gameZip && (
+                <ZipInspectorPanel file={gameZip} compact onReport={setZipReport} />
+              )}
+
+              {zipReport?.sdkSignals && zipReport.sdkSignals.length > 0 && (
+                <SdkCheckerPanel sdkSignals={zipReport.sdkSignals} compact />
+              )}
 
               <GalleryUploadFields
                 label={t("screenshotGallery")}
@@ -858,6 +930,15 @@ export default function EditGamePage() {
                 />
               )}
             </section>
+
+            <StorePreviewPanel
+              title={form.title}
+              description={form.description}
+              genre={form.genre}
+              tags={metadata.tags}
+              coverPreviewUrl={coverPreviewUrl}
+              pricingLabel={pricingPreviewLabel}
+            />
 
             <GamePricingFields
               values={pricing}
@@ -978,6 +1059,12 @@ export default function EditGamePage() {
           </form>
         </motion.div>
       </main>
+
+      <PublishAssistantSidebar
+        checklistInput={checklistInput}
+        fixed
+        className="hidden 2xl:block"
+      />
 
       <AnimatePresence>
         {toast && (

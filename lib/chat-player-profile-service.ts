@@ -29,8 +29,13 @@ import {
   getVirtualPlayerCountryCode,
 } from "@/lib/request-geo";
 import { getVirtualPlayerById } from "@/lib/virtual-players";
+import { getVirtualPlayerSupporterFlags } from "@/lib/virtual-player-supporter";
 import { getVirtualPlayerBio } from "@/lib/virtual-player-bios";
 import type { EquippedTitle } from "@/lib/titles";
+import {
+  resolveAdminDisplayRole,
+  type AdminDisplayRole,
+} from "@/lib/admin-display-role";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type ChatPlayerAchievementHighlight = {
@@ -47,6 +52,7 @@ export type ChatPlayerPublicProfile = {
   avatarUrl: string | null;
   equippedTitle: EquippedTitle | null;
   isCreator: boolean;
+  adminRole: AdminDisplayRole;
   isVirtual: boolean;
   isOnline: boolean;
   bio: string | null;
@@ -64,6 +70,7 @@ export type ChatPlayerPublicProfile = {
   lastActiveAt: string | null;
   countryCode: string | null;
   isSupporter: boolean;
+  supporterBadge: string | null;
   showcaseTags: ProfileShowcaseTagPayload[];
 };
 
@@ -88,7 +95,7 @@ async function loadRealUserProfile(
 ): Promise<ChatPlayerPublicProfile | null> {
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("id, display_name, avatar_url, role, bio, player_number, is_supporter")
+    .select("id, display_name, avatar_url, role, bio, player_number, is_supporter, supporter_badge, is_admin")
     .eq("id", userId)
     .maybeSingle();
 
@@ -196,6 +203,10 @@ async function loadRealUserProfile(
     avatarUrl: profile.avatar_url ?? null,
     equippedTitle,
     isCreator: profile.role === "creator",
+    adminRole: resolveAdminDisplayRole(
+      profile.is_admin === true,
+      authData.user?.user_metadata?.role === "admin"
+    ),
     isVirtual: false,
     isOnline: lastActiveAt ? isUserOnline(lastActiveAt) : false,
     bio,
@@ -213,6 +224,7 @@ async function loadRealUserProfile(
     lastActiveAt,
     countryCode,
     isSupporter: profile.is_supporter === true,
+    supporterBadge: readOptionalString(profile.supporter_badge),
     showcaseTags: [],
   };
 }
@@ -243,6 +255,8 @@ async function loadVirtualPlayerProfile(
     }
   }
 
+  const virtualSupporterFlags = getVirtualPlayerSupporterFlags(virtualPlayerId);
+
   return {
     userId: null,
     virtualPlayerId,
@@ -251,6 +265,7 @@ async function loadVirtualPlayerProfile(
     avatarUrl: resolveVirtualPlayerAvatarUrl(virtualPlayerId),
     equippedTitle: null,
     isCreator,
+    adminRole: "none",
     isVirtual: true,
     isOnline: activity.isOnline,
     bio: getVirtualPlayerBio(virtualPlayerId),
@@ -270,7 +285,8 @@ async function loadVirtualPlayerProfile(
     playSeconds: activity.playSeconds,
     lastActiveAt: activity.lastActiveAt,
     countryCode: getVirtualPlayerCountryCode(virtualPlayerId),
-    isSupporter: social.donatedTotal > 0,
+    isSupporter: virtualSupporterFlags?.isSupporter === true,
+    supporterBadge: virtualSupporterFlags?.badge ?? null,
     showcaseTags: [],
   };
 }

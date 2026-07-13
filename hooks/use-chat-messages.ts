@@ -13,6 +13,9 @@ export const CHAT_POLL_INTERVAL_MS = 60_000;
 const CHAT_FETCH_TIMEOUT_MS = 15_000;
 const REALTIME_RELOAD_DEBOUNCE_MS = 400;
 
+/** 開發熱更新時保留聊天內容，避免每次改程式都清空並轉圈 */
+const chatMessageCache = new Map<ChatChannel, ChatMessage[]>();
+
 /** 對非當前分頁的頻道背景輪詢，確保世界／創作者頻道虛擬發言在本機也能觸發 */
 export function useAmbientChatBackgroundPoll(
   channels: ChatChannel[],
@@ -74,8 +77,12 @@ function mergeMessages(existing: ChatMessage[], incoming: ChatMessage[]) {
 
 export function useChatMessages(channel: ChatChannel, enabled: boolean) {
   const t = useTranslations("chat");
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>(
+    () => chatMessageCache.get(channel) ?? []
+  );
+  const [loading, setLoading] = useState(
+    () => enabled && (chatMessageCache.get(channel)?.length ?? 0) === 0
+  );
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -100,7 +107,9 @@ export function useChatMessages(channel: ChatChannel, enabled: boolean) {
       if (!enabled) return;
 
       const generation = ++loadGenerationRef.current;
-      const silent = options?.silent ?? false;
+      const silent =
+        options?.silent ??
+        (chatMessageCache.get(channel)?.length ?? 0) > 0;
 
       if (!silent) setLoading(true);
       setError(null);
@@ -115,6 +124,7 @@ export function useChatMessages(channel: ChatChannel, enabled: boolean) {
         const incoming = await fetchChatMessages(channel, controller.signal);
         if (generation !== loadGenerationRef.current) return;
 
+        chatMessageCache.set(channel, incoming);
         setMessages(incoming);
       } catch (err) {
         if (generation !== loadGenerationRef.current) return;
@@ -133,13 +143,19 @@ export function useChatMessages(channel: ChatChannel, enabled: boolean) {
     loadGenerationRef.current += 1;
 
     if (!enabled) {
-      setMessages([]);
       setLoading(false);
       setError(null);
       return;
     }
 
-    setMessages([]);
+    const cached = chatMessageCache.get(channel);
+    if (cached?.length) {
+      setMessages(cached);
+      setLoading(false);
+      void loadMessages({ silent: true });
+      return;
+    }
+
     void loadMessages();
   }, [channel, enabled, loadMessages]);
 
@@ -213,7 +229,11 @@ export function useChatMessages(channel: ChatChannel, enabled: boolean) {
         }
 
         if (data.message) {
-          setMessages((prev) => mergeMessages(prev, [data.message!]));
+          setMessages((prev) => {
+            const next = mergeMessages(prev, [data.message!]);
+            chatMessageCache.set(channel, next);
+            return next;
+          });
         } else {
           await loadMessages({ silent: true });
         }

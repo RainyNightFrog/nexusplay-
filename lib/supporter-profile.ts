@@ -20,9 +20,10 @@ export async function resolveSupporterProfiles(
 
   for (const userId of uniqueIds) {
     const profile = profiles?.find((row) => row.id === userId);
+    const badge = profile?.supporter_badge ?? null;
     flags.set(userId, {
-      isSupporter: profile?.is_supporter === true,
-      badge: profile?.supporter_badge ?? null,
+      isSupporter: profile?.is_supporter === true || Boolean(badge?.trim()),
+      badge,
     });
   }
 

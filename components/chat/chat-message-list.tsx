@@ -5,6 +5,13 @@ import { Loader2, Undo2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ChatMessage } from "@/lib/chat";
 import { UserBadge } from "@/components/UserBadge";
+import { SupporterAvatarInsignia } from "@/components/supporter/supporter-avatar-insignia";
+import {
+  supporterMessageContentClassByTier,
+  type SupporterDisplayTier,
+} from "@/lib/supporter-tier";
+import { resolveChatAuthorRoleFallback } from "@/lib/admin-display-role";
+import { resolveChatMessageSupporterTier } from "@/lib/virtual-player-supporter";
 import { cn } from "@/lib/utils";
 
 function formatChatTime(value: string) {
@@ -31,6 +38,8 @@ type ChatMessageListProps = {
   onRecall: (messageId: string) => void;
   onAuthorClick?: (message: ChatMessage) => void;
   scrollToLatestKey?: number;
+  viewerSupporterTier?: SupporterDisplayTier;
+  viewerSupporterBadge?: string | null;
 };
 
 export function ChatMessageList({
@@ -40,6 +49,8 @@ export function ChatMessageList({
   onRecall,
   onAuthorClick,
   scrollToLatestKey = 0,
+  viewerSupporterTier = "none",
+  viewerSupporterBadge = null,
 }: ChatMessageListProps) {
   const t = useTranslations("chat");
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -112,6 +123,27 @@ export function ChatMessageList({
       {messages.map((message) => {
         const recalled = Boolean(message.recalled_at);
         const showRecall = canRecall(message);
+        const { tier: supporterTier, badge: supporterBadge } =
+          resolveChatMessageSupporterTier(
+            message,
+            viewerSupporterTier,
+            viewerSupporterBadge
+          );
+        const isSupporterAuthor = supporterTier !== "none";
+        const isSupporterMessage = isSupporterAuthor && !recalled;
+        const authorRole = resolveChatAuthorRoleFallback(
+          {
+            equippedTitle: message.author_equipped_title,
+            adminRole: message.author_admin_role ?? "none",
+            isCreator: message.is_creator,
+          },
+          {
+            superAdmin: t("roleSuperAdmin"),
+            admin: t("rolePlatformAdmin"),
+            creator: t("roleCreator"),
+            player: t("rolePlayer"),
+          }
+        );
 
         return (
           <div
@@ -121,30 +153,41 @@ export function ChatMessageList({
               message.is_own ? "flex-row-reverse" : "flex-row"
             )}
           >
-            <button
-              type="button"
-              onClick={() => onAuthorClick?.(message)}
-              disabled={!onAuthorClick}
-              className={cn(
-                "flex size-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold uppercase transition-opacity",
-                message.is_creator
-                  ? "bg-gradient-to-br from-violet-500/30 to-cyan-500/30 text-cyan-100 ring-1 ring-cyan-400/20"
-                  : "bg-white/8 text-zinc-300",
-                onAuthorClick && "cursor-pointer hover:opacity-80"
-              )}
-              aria-label={message.author_name}
-            >
-              {message.author_avatar_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={message.author_avatar_url}
-                  alt=""
-                  className="size-7 rounded-full object-cover"
-                />
-              ) : (
-                message.author_name.slice(0, 1)
-              )}
-            </button>
+            <div className="relative shrink-0 pt-1.5">
+              <SupporterAvatarInsignia
+                tier={supporterTier}
+                size="xs"
+                className="scale-90"
+              />
+              <button
+                type="button"
+                onClick={() => onAuthorClick?.(message)}
+                disabled={!onAuthorClick}
+                className={cn(
+                  "flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full text-[10px] font-semibold uppercase transition-opacity",
+                  message.is_creator
+                    ? "bg-gradient-to-br from-violet-500/30 to-cyan-500/30 text-cyan-100 ring-1 ring-cyan-400/20"
+                    : supporterTier === "premium"
+                      ? "ring-1 ring-violet-300/40"
+                      : supporterTier === "basic"
+                        ? "ring-1 ring-amber-400/40"
+                        : "bg-white/8 text-zinc-300",
+                  onAuthorClick && "cursor-pointer hover:opacity-80"
+                )}
+                aria-label={message.author_name}
+              >
+                {message.author_avatar_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={message.author_avatar_url}
+                    alt=""
+                    className="size-7 rounded-full object-cover"
+                  />
+                ) : (
+                  message.author_name.slice(0, 1)
+                )}
+              </button>
+            </div>
 
             <div
               className={cn(
@@ -167,8 +210,11 @@ export function ChatMessageList({
                     <UserBadge
                       username={message.is_own ? t("you") : message.author_name}
                       title={message.author_equipped_title}
-                      isSupporter={message.author_is_supporter}
-                      supporterBadge={message.author_supporter_badge}
+                      fallbackRoleLabel={authorRole.label}
+                      fallbackRoleRainbow={authorRole.rainbow}
+                      isSupporter={isSupporterAuthor}
+                      supporterBadge={supporterBadge}
+                      showSupporterBadge={false}
                       animateTitle={false}
                       usernameClassName="text-zinc-400 hover:text-cyan-300"
                       titleClassName="text-[9px]"
@@ -178,17 +224,15 @@ export function ChatMessageList({
                   <UserBadge
                     username={message.is_own ? t("you") : message.author_name}
                     title={message.author_equipped_title}
-                    isSupporter={message.author_is_supporter}
-                    supporterBadge={message.author_supporter_badge}
+                    fallbackRoleLabel={authorRole.label}
+                    fallbackRoleRainbow={authorRole.rainbow}
+                    isSupporter={isSupporterAuthor}
+                    supporterBadge={supporterBadge}
+                    showSupporterBadge={false}
                     animateTitle={false}
                     usernameClassName="text-zinc-400"
                     titleClassName="text-[9px]"
                   />
-                )}
-                {message.is_creator && !message.is_own && (
-                  <span className="rounded-full bg-violet-500/15 px-1.5 py-0.5 text-[9px] text-violet-300">
-                    {t("creatorBadge")}
-                  </span>
                 )}
                 <span>{formatChatTime(message.created_at)}</span>
               </div>
@@ -199,11 +243,23 @@ export function ChatMessageList({
                   recalled
                     ? "border border-dashed border-white/10 bg-white/3 italic text-zinc-500"
                     : message.is_own
-                      ? "bg-gradient-to-br from-cyan-600/80 to-violet-600/80 text-white"
-                      : "border border-white/8 bg-zinc-900/80 text-zinc-100"
+                      ? "bg-gradient-to-br from-cyan-600/80 to-violet-600/80"
+                      : "border border-white/8 bg-zinc-900/80"
                 )}
               >
-                {recalled ? t("recalled") : message.content}
+                <span
+                  className={cn(
+                    recalled
+                      ? undefined
+                      : isSupporterMessage
+                        ? supporterMessageContentClassByTier[supporterTier]
+                        : message.is_own
+                          ? "text-white"
+                          : "text-zinc-100"
+                  )}
+                >
+                  {recalled ? t("recalled") : message.content}
+                </span>
               </div>
 
               {showRecall && (

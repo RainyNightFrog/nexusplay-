@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -13,6 +14,12 @@ import {
 import { usePathname } from "@/i18n/navigation";
 import type { UserProfile } from "@/lib/auth";
 import { profileFromUserMetadata } from "@/lib/profile-from-metadata";
+import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
+import {
+  clearProfileSessionCache,
+  readProfileSessionCache,
+  writeProfileSessionCache,
+} from "@/lib/profile-session-cache";
 import { createClient } from "@/lib/supabase/client";
 
 type AuthContextValue = {
@@ -27,6 +34,8 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+const PROFILE_FETCH_TIMEOUT_MS = 10_000;
+
 function isAuthRoute(pathname: string | null) {
   if (!pathname) return false;
   return pathname === "/auth" || pathname.startsWith("/auth/");
@@ -39,59 +48,120 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const hasResolvedOnce = useRef(false);
   const loadGeneration = useRef(0);
 
-  const loadProfile = useCallback(async (options?: { silent?: boolean }) => {
-    const silent = options?.silent ?? hasResolvedOnce.current;
-    const generation = ++loadGeneration.current;
-
-    if (!silent) {
-      setLoading(true);
-    }
-
-    try {
-      const supabase = createClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (generation !== loadGeneration.current) return;
-
-      if (!session?.user) {
-        setProfile(null);
-        return;
-      }
-
-      const user = session.user;
-
-      const response = await fetch("/api/auth/profile", {
-        credentials: "same-origin",
-      });
-      if (generation !== loadGeneration.current) return;
-
-      if (response.ok) {
-        const data = (await response.json()) as { profile?: UserProfile | null };
-        setProfile(data.profile ?? profileFromUserMetadata(user));
-      } else {
-        setProfile(profileFromUserMetadata(user));
-      }
-    } catch {
-      if (generation === loadGeneration.current) {
-        setProfile(null);
-      }
-    } finally {
-      if (generation === loadGeneration.current) {
-        setLoading(false);
-        hasResolvedOnce.current = true;
-      }
-    }
+  const finishInitialLoad = useCallback(() => {
+    setLoading(false);
+    hasResolvedOnce.current = true;
   }, []);
 
-  useEffect(() => {
+  const loadProfile = useCallback(
+    async (options?: { silent?: boolean }) => {
+      const generation = ++loadGeneration.current;
+      const silent = options?.silent ?? hasResolvedOnce.current;
+
+      if (!silent && !hasResolvedOnce.current) {
+        setLoading(true);
+      }
+
+      try {
+        const supabase = createClient();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (generation !== loadGeneration.current) return;
+
+        if (!session?.user) {
+          setProfile(null);
+          clearProfileSessionCache();
+          return;
+        }
+
+        const user = session.user;
+        const cachedProfile = readProfileSessionCache();
+        if (cachedProfile?.id === user.id) {
+          setProfile(cachedProfile);
+        } else {
+          setProfile(profileFromUserMetadata(user));
+        }
+
+        if (!silent) {
+          finishInitialLoad();
+        }
+
+        const response = await fetchWithTimeout(
+          "/api/auth/profile",
+          { credentials: "same-origin" },
+          PROFILE_FETCH_TIMEOUT_MS
+        );
+        if (generation !== loadGeneration.current) return;
+
+        if (response.ok) {
+          const data = (await response.json()) as { profile?: UserProfile | null };
+          const nextProfile = data.profile ?? profileFromUserMetadata(user);
+          setProfile(nextProfile);
+          writeProfileSessionCache(nextProfile);
+        } else if (!cachedProfile || cachedProfile.id !== user.id) {
+          const fallback = profileFromUserMetadata(user);
+          setProfile(fallback);
+          writeProfileSessionCache(fallback);
+        }
+      } catch {
+        // 保留 session / 快取 / metadata 的暫時 profile，避免刷新卡住
+      } finally {
+        if (generation === loadGeneration.current) {
+          finishInitialLoad();
+        }
+      }
+    },
+    [finishInitialLoad]
+  );
+
+  useLayoutEffect(() => {
     if (isAuthRoute(pathname)) {
-      setLoading(false);
+      finishInitialLoad();
       return;
     }
 
-    void loadProfile({ silent: false });
+    const cachedProfile = readProfileSessionCache();
+    if (cachedProfile) {
+      setProfile(cachedProfile);
+      finishInitialLoad();
+      return;
+    }
+
+    let cancelled = false;
+    const supabase = createClient();
+
+    void supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        if (cancelled) return;
+
+        if (!session?.user) {
+          setProfile(null);
+          finishInitialLoad();
+          return;
+        }
+
+        setProfile(profileFromUserMetadata(session.user));
+        finishInitialLoad();
+      })
+      .catch(() => {
+        if (cancelled) return;
+        finishInitialLoad();
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pathname, finishInitialLoad]);
+
+  useEffect(() => {
+    if (isAuthRoute(pathname)) {
+      return;
+    }
+
+    void loadProfile({ silent: hasResolvedOnce.current });
 
     const supabase = createClient();
     const {
@@ -99,8 +169,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_OUT") {
         setProfile(null);
-        hasResolvedOnce.current = true;
-        setLoading(false);
+        clearProfileSessionCache();
+        finishInitialLoad();
         return;
       }
 
@@ -112,16 +182,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, [loadProfile, pathname]);
+  }, [loadProfile, pathname, finishInitialLoad]);
 
   const signOut = useCallback(async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
     setProfile(null);
-    hasResolvedOnce.current = true;
-    setLoading(false);
+    clearProfileSessionCache();
+    finishInitialLoad();
     window.location.href = "/";
-  }, []);
+  }, [finishInitialLoad]);
 
   const refreshProfile = useCallback(async () => {
     await loadProfile({ silent: true });

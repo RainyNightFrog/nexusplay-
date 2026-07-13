@@ -14,6 +14,10 @@ export type GetGamesOptions = {
 
 const VALID_SORTS: SortOption[] = ["latest", "views", "rating"];
 
+/** 首頁列表不需 gallery / devlog / details_html，避免每次刷新拉大量 JSON */
+const GAME_LIST_SELECT =
+  "id, title, slug, description, category, cover_url, game_url, creator_id, created_at, plays_count, rating_avg, publish_status, tips_enabled, suggested_tip_amount, status, tags, viewport_width, viewport_height, fullscreen_button, ai_disclosed, ai_content_types, price, currency, pricing_type, min_price, on_sale, is_featured, featured_badge, featured_sort";
+
 export function parseSortOption(value: string | null): SortOption {
   if (value && VALID_SORTS.includes(value as SortOption)) {
     return value as SortOption;
@@ -26,13 +30,34 @@ function buildGamesCacheKey(options: GetGamesOptions) {
   return JSON.stringify({ category, sort, priceFilter, tags });
 }
 
+/** 開發環境用記憶體快取，避免 unstable_cache 在 HMR 後反覆打 DB */
+const devGamesCache = new Map<string, { data: Game[]; expiresAt: number }>();
+const DEV_GAMES_CACHE_TTL_MS = 20_000;
+
+async function getGamesWithDevCache(
+  cacheKey: string,
+  options: GetGamesOptions
+): Promise<Game[]> {
+  const hit = devGamesCache.get(cacheKey);
+  if (hit && hit.expiresAt > Date.now()) {
+    return hit.data;
+  }
+
+  const data = await queryGamesFromDb(options);
+  devGamesCache.set(cacheKey, {
+    data,
+    expiresAt: Date.now() + DEV_GAMES_CACHE_TTL_MS,
+  });
+  return data;
+}
+
 async function queryGamesFromDb(options: GetGamesOptions = {}): Promise<Game[]> {
   const { category, sort = "latest", priceFilter = {}, tags = [] } = options;
   const supabase = createServerSupabase();
 
   let query = supabase
     .from("games")
-    .select("*")
+    .select(GAME_LIST_SELECT)
     .eq("publish_status", "public")
     .eq("status", "approved");
 
@@ -96,11 +121,12 @@ async function queryGamesFromDb(options: GetGamesOptions = {}): Promise<Game[]> 
 }
 
 export async function getGames(options: GetGamesOptions = {}): Promise<Game[]> {
+  const cacheKey = buildGamesCacheKey(options);
+
   if (process.env.NODE_ENV === "development") {
-    return queryGamesFromDb(options);
+    return getGamesWithDevCache(cacheKey, options);
   }
 
-  const cacheKey = buildGamesCacheKey(options);
   return unstable_cache(() => queryGamesFromDb(options), ["games-list", cacheKey], {
     revalidate: 60,
     tags: ["games"],

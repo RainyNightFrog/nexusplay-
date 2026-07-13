@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   Suspense,
@@ -71,6 +72,11 @@ import {
 import { isZipFileAsync, validateGameZipFile, ZIP_FILE_ACCEPT } from "@/lib/zip-file-validation";
 import { suggestGameSlugFromTitle } from "@/lib/game-slug";
 import { cn } from "@/lib/utils";
+import { PublishAssistantSidebar } from "@/components/creator-tools/publish-assistant-sidebar";
+import { ZipInspectorPanel } from "@/components/creator-tools/zip-inspector-panel";
+import { StorePreviewPanel } from "@/components/creator-tools/store-preview-panel";
+import { SdkCheckerPanel } from "@/components/creator-tools/sdk-checker-panel";
+import type { ZipInspectorReport } from "@/lib/creator-tools/zip-inspector";
 
 type FormState = {
   title: string;
@@ -248,6 +254,7 @@ function DropZone({
 
 export default function UploadPage() {
   const t = useTranslations("dashboard");
+  const tTools = useTranslations("creatorTools");
   const tErrors = useTranslations("errors");
   const tCommon = useTranslations("common");
   const { translateApiError } = useApiError();
@@ -288,6 +295,7 @@ export default function UploadPage() {
   >({});
   const [validationMessages, setValidationMessages] = useState<string[]>([]);
   const [draftReady, setDraftReady] = useState(false);
+  const [zipReport, setZipReport] = useState<ZipInspectorReport | null>(null);
 
   useEffect(() => {
     const draft = restoreGameUploadDraft();
@@ -493,6 +501,51 @@ export default function UploadPage() {
   const isDraftUpload = monetization.publishStatus === "draft";
   const isPublicUpload = !isDraftUpload;
 
+  const checklistInput = useMemo(
+    () => ({
+      mode: "upload" as const,
+      publishStatus: monetization.publishStatus,
+      title: form.title,
+      slug: form.slug,
+      description: form.description,
+      genre: form.genre,
+      hasCover: Boolean(coverFile),
+      hasGameZip: Boolean(gameZip),
+      tags: metadata.tags,
+      aiDisclosed: metadata.aiDisclosed,
+      aiContentTypes: metadata.aiContentTypes,
+      tipsEnabled: monetization.tipsEnabled,
+      suggestedTipAmount: monetization.suggestedTipAmount,
+      pricingType: pricing.pricingType,
+      priceAmount: pricing.priceAmount,
+      minPriceAmount: pricing.minPriceAmount,
+      stripeConnectReady:
+        !pricingValuesRequireStripeConnect({ pricingType: pricing.pricingType }) ||
+        stripeConnectReady === true,
+      detailsHtml: metadata.detailsHtml,
+      viewportWidth: metadata.viewportWidth,
+      viewportHeight: metadata.viewportHeight,
+    }),
+    [
+      monetization,
+      form,
+      coverFile,
+      gameZip,
+      metadata,
+      pricing,
+      stripeConnectReady,
+    ]
+  );
+
+  const pricingPreviewLabel =
+    pricing.pricingType === "free"
+      ? undefined
+      : pricing.pricingType === "fixed" && pricing.priceAmount
+        ? `$${pricing.priceAmount}`
+        : pricing.pricingType === "pwyw"
+          ? `PWYW $${pricing.minPriceAmount || "0"}+`
+          : undefined;
+
   return (
     <div className="dark relative min-h-full text-zinc-100">
       {/* Header */}
@@ -516,6 +569,17 @@ export default function UploadPage() {
               {t("creatorHub")}
             </span>
           </div>
+
+          <Link
+            href="/dashboard/tools"
+            className={cn(
+              buttonVariants({ variant: "ghost", size: "sm" }),
+              "ml-auto hidden gap-1.5 text-zinc-400 hover:text-violet-300 sm:inline-flex"
+            )}
+          >
+            <Sparkles className="size-4" />
+            {tTools("toolsNavLink")}
+          </Link>
       </SiteHeader>
 
       <main className="relative mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
@@ -535,6 +599,10 @@ export default function UploadPage() {
             <p className="mx-auto mt-2 max-w-lg text-sm leading-relaxed text-zinc-400">
               {t("uploadDesc")}
             </p>
+          </div>
+
+          <div className="mb-6 2xl:hidden">
+            <PublishAssistantSidebar checklistInput={checklistInput} />
           </div>
 
           <form
@@ -630,6 +698,8 @@ export default function UploadPage() {
             <GamePublishMetadataFields
               genre={form.genre}
               metadata={metadata}
+              title={form.title}
+              description={form.description}
               onGenreChange={(genre) =>
                 setForm((prev) => ({ ...prev, genre }))
               }
@@ -676,12 +746,32 @@ export default function UploadPage() {
                 file={gameZip}
                 icon={FileArchive}
                 onFileSelect={handleZipSelect}
-                onClear={() => setGameZip(null)}
+                onClear={() => {
+                  setGameZip(null);
+                  setZipReport(null);
+                }}
                 required
                 hasError={fieldErrors.gameZip}
               />
               </div>
+
+              {gameZip && (
+                <ZipInspectorPanel file={gameZip} compact onReport={setZipReport} />
+              )}
+
+              {zipReport?.sdkSignals && zipReport.sdkSignals.length > 0 && (
+                <SdkCheckerPanel sdkSignals={zipReport.sdkSignals} compact />
+              )}
             </section>
+
+            <StorePreviewPanel
+              title={form.title}
+              description={form.description}
+              genre={form.genre}
+              tags={metadata.tags}
+              coverPreviewUrl={coverPreview}
+              pricingLabel={pricingPreviewLabel}
+            />
 
             <GamePricingFields
               values={pricing}
@@ -756,6 +846,12 @@ export default function UploadPage() {
           </form>
         </motion.div>
       </main>
+
+      <PublishAssistantSidebar
+        checklistInput={checklistInput}
+        fixed
+        className="hidden 2xl:block"
+      />
 
       {/* Toast notifications */}
       <AnimatePresence>

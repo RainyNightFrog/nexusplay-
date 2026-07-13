@@ -20,6 +20,8 @@ type ProfileRow = {
   id: string;
   display_name: string;
   avatar_url: string | null;
+  is_supporter: boolean | null;
+  supporter_badge: string | null;
 };
 
 const LEADERBOARD_LIMIT = LEADERBOARD_TOP_LIMIT;
@@ -260,6 +262,8 @@ function mapEntries(
       isMe: currentUserId ? isMe : undefined,
       isDonationMasked,
       donationTier,
+      isSupporter: profile?.is_supporter === true,
+      supporterBadge: profile?.supporter_badge ?? null,
     };
   });
 }
@@ -273,7 +277,7 @@ async function loadProfiles(
   const uniqueIds = [...new Set(userIds)];
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, display_name, avatar_url")
+    .select("id, display_name, avatar_url, is_supporter, supporter_badge")
     .in("id", uniqueIds);
 
   if (error) {

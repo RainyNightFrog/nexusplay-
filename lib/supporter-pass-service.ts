@@ -48,6 +48,7 @@ export async function grantSupporterStatus(params: {
     supabase,
     userId: params.userId,
     badge: params.badge || DEFAULT_SUPPORTER_BADGE,
+    autoEquip: true,
   });
 }
 

@@ -7,6 +7,7 @@ import {
   type GamePublishMetadata,
 } from "@/lib/game-metadata";
 import { GenreTagPicker } from "@/components/dashboard/genre-tag-picker";
+import { TagRecommendationPanel } from "@/components/creator-tools/tag-recommendation-panel";
 import { ViewportSettingsFields } from "@/components/dashboard/viewport-settings-fields";
 import { AiDisclosureFields } from "@/components/dashboard/ai-disclosure-fields";
 import { GameRichTextEditor } from "@/components/dashboard/game-rich-text-editor";
@@ -19,6 +20,8 @@ export type GamePublishMetadataFieldsProps = {
   disabled?: boolean;
   isPublicPublish?: boolean;
   fieldErrors?: Partial<Record<"genre" | "aiDisclosure" | "aiContentTypes", boolean>>;
+  title?: string;
+  description?: string;
 };
 
 export function GamePublishMetadataFields({
@@ -29,6 +32,8 @@ export function GamePublishMetadataFields({
   disabled,
   isPublicPublish = true,
   fieldErrors,
+  title = "",
+  description = "",
 }: GamePublishMetadataFieldsProps) {
   const t = useTranslations("dashboard");
 
@@ -46,6 +51,21 @@ export function GamePublishMetadataFields({
           disabled={disabled}
           genreRequired={isPublicPublish}
           genreError={fieldErrors?.genre}
+        />
+        <TagRecommendationPanel
+          title={title}
+          description={description}
+          genre={genre}
+          selectedTags={metadata.tags}
+          onApplyTag={(tag) => {
+            if (metadata.tags.includes(tag)) return;
+            onMetadataChange({ ...metadata, tags: [...metadata.tags, tag] });
+          }}
+          onApplyAll={(tags) => {
+            const merged = [...new Set([...metadata.tags, ...tags])];
+            onMetadataChange({ ...metadata, tags: merged });
+          }}
+          compact
         />
       </section>
 

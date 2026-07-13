@@ -85,6 +85,22 @@ export function getVirtualPlayerById(playerId: string) {
   return VIRTUAL_PLAYERS.find((player) => player.id === playerId) ?? null;
 }
 
+/** 通訊錄空白時推薦的虛擬玩家（方便直接發起私訊） */
+export const VIRTUAL_CHAT_DISCOVER_IDS = [
+  "hk-03",
+  "hk-06",
+  "cn-18",
+  "cn-21",
+  "en-05",
+  "en-13",
+] as const;
+
+export function listVirtualChatDiscoverPlayers(): VirtualPlayer[] {
+  return VIRTUAL_CHAT_DISCOVER_IDS.map((id) => getVirtualPlayerById(id)).filter(
+    (player): player is VirtualPlayer => player != null
+  );
+}
+
 export function parseAmbientPlayerIdFromEmail(
   email: string | null | undefined
 ): string | null {

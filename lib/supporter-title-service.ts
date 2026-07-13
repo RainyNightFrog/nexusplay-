@@ -134,6 +134,8 @@ export async function grantSupporterTitlesForBadge(params: {
   supabase: SupabaseClient;
   userId: string;
   badge: string;
+  /** 僅在首次成為支持者／升級時自動佩戴，日常同步不應強制戴上 */
+  autoEquip?: boolean;
 }) {
   const titleMap = await loadSupporterTitleIds(params.supabase);
   if (!titleMap) {
@@ -160,11 +162,13 @@ export async function grantSupporterTitlesForBadge(params: {
     return { synced: false, reason: "grant_failed" as const };
   }
 
-  await maybeAutoEquipSupporterTitle(
-    params.supabase,
-    params.userId,
-    primaryTitleId
-  );
+  if (params.autoEquip) {
+    await maybeAutoEquipSupporterTitle(
+      params.supabase,
+      params.userId,
+      primaryTitleId
+    );
+  }
 
   return { synced: true as const, titleId: primaryTitleId };
 }
@@ -187,6 +191,7 @@ export async function syncSupporterTitlesIfNeeded(params: {
     supabase: params.supabase,
     userId: params.userId,
     badge: profile.supporter_badge ?? "supporter_v1",
+    autoEquip: false,
   });
 }
 

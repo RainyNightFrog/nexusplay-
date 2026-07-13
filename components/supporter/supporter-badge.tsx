@@ -1,6 +1,5 @@
 "use client";
 
-import { Crown, Sparkles } from "lucide-react";
 import { useTranslations } from "next-intl";
 import {
   getSupporterDisplayTier,
@@ -20,7 +19,7 @@ type SupporterBadgeProps = {
 export function SupporterBadge({
   className,
   size = "sm",
-  showLabel = false,
+  showLabel = true,
   isSupporter = false,
   supporterBadge = null,
   tier,
@@ -34,37 +33,29 @@ export function SupporterBadge({
   }
 
   const isPremium = displayTier === "premium";
+  const label = isPremium ? t("badgeLabelPremium") : t("badgeLabel");
 
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center gap-1 rounded-full border font-medium",
+        "inline-flex shrink-0 items-center rounded-full border font-bold uppercase tracking-wider",
         isPremium
-          ? "border-violet-300/40 bg-gradient-to-r from-amber-500/20 via-rose-500/15 to-violet-500/20 text-violet-100 shadow-[0_0_14px_rgba(167,139,250,0.18)]"
-          : "border-amber-400/30 bg-amber-500/10 text-amber-100",
-        size === "sm" ? "px-1.5 py-0.5 text-[10px]" : "px-2 py-0.5 text-xs",
+          ? "border-violet-300/40 bg-zinc-950/75 shadow-[0_0_12px_rgba(167,139,250,0.2)]"
+          : "border-amber-400/40 bg-amber-500/10 text-amber-200",
+        size === "sm" ? "px-1.5 py-0.5 text-[9px]" : "px-2 py-0.5 text-[10px]",
         className
       )}
       title={isPremium ? t("badgeTitlePremium") : t("badgeTitle")}
     >
-      {isPremium ? (
-        <Crown
-          className={cn(
-            "text-violet-200",
-            size === "sm" ? "size-3" : "size-3.5"
-          )}
-        />
-      ) : (
-        <Sparkles
-          className={cn(
-            "text-amber-300",
-            size === "sm" ? "size-3" : "size-3.5"
-          )}
-        />
-      )}
-      {showLabel && (
-        <span>{isPremium ? t("badgeLabelPremium") : t("badgeLabel")}</span>
-      )}
+      {showLabel ? (
+        isPremium ? (
+          <span className="supporter-username supporter-username-premium">
+            {label}
+          </span>
+        ) : (
+          label
+        )
+      ) : null}
     </span>
   );
 }

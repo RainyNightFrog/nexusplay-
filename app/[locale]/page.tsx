@@ -28,12 +28,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function HomePage({ params }: Props) {
   const { locale } = await params;
 
-  let initialGames: Awaited<ReturnType<typeof getGames>> = [];
-  try {
-    initialGames = await getGames();
-  } catch {
-    // 伺服器預載失敗時由客戶端改走 /api/games
-  }
+  // 遊戲列表改由客戶端 /api/games 載入，避免 SSR 查 DB 拖慢刷新（含測試站）
+  const initialGames: Awaited<ReturnType<typeof getGames>> = [];
 
   return (
     <>

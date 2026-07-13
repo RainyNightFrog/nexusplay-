@@ -18,6 +18,7 @@ import {
   Sparkles,
   Trash2,
   TrendingUp,
+  Wrench,
   Upload,
   Users,
 } from "lucide-react";
@@ -138,6 +139,7 @@ function formatUploadDate(date: string, locale: string) {
 
 export default function CreatorDashboardPage() {
   const t = useTranslations("dashboard");
+  const tTools = useTranslations("creatorTools");
   const tNav = useTranslations("nav");
   const tCommon = useTranslations("common");
   const locale = useLocale();
@@ -349,6 +351,16 @@ export default function CreatorDashboardPage() {
 
           <div className="ml-auto flex items-center gap-2">
             <LanguageSwitcher />
+            <Link
+              href="/dashboard/tools"
+              className={cn(
+                buttonVariants({ variant: "outline", size: "sm" }),
+                "hidden gap-1.5 border-white/10 bg-white/5 text-zinc-300 hover:border-violet-400/30 hover:text-white sm:inline-flex"
+              )}
+            >
+              <Wrench className="size-4" />
+              {tTools("toolsNavLink")}
+            </Link>
             <Link
               href="/dashboard/upload"
               className={cn(

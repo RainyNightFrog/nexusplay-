@@ -773,20 +773,48 @@
 }
 
 /* ── 平台支持者視覺特效 ── */
-@keyframes supporter-username-shimmer {
-  0%,
-  100% {
+@keyframes supporter-username-rainbow {
+  0% {
     background-position: 0% 50%;
   }
-  50% {
-    background-position: 100% 50%;
+  100% {
+    background-position: 300% 50%;
   }
 }
 
+.supporter-username {
+  display: inline-block;
+  background-image: linear-gradient(
+    90deg,
+    #f43f5e,
+    #f59e0b,
+    #84cc16,
+    #22d3ee,
+    #3b82f6,
+    #a78bfa,
+    #f472b6,
+    #f43f5e
+  );
+  background-size: 300% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: supporter-username-rainbow 5s linear infinite;
+}
+
 .supporter-username-premium {
-  background-size: 200% auto;
-  animation: supporter-username-shimmer 4s ease-in-out infinite;
-  filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.28));
+  background-image: linear-gradient(
+    90deg,
+    #ff6b6b,
+    #ffd93d,
+    #6bcb77,
+    #4d96ff,
+    #c56cf0,
+    #ff8fab,
+    #ff6b6b
+  );
+  animation-duration: 3.5s;
+  filter: drop-shadow(0 0 10px rgba(167, 139, 250, 0.45));
 }
 
 .title-supporter-v1 {

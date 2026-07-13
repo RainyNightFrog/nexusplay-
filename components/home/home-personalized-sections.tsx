@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { HomeGameRow } from "@/components/home/home-game-row";
 import type { Game } from "@/lib/games";
+import { deferClientTask } from "@/lib/defer-client";
 import { useGameFavoriteActions } from "@/hooks/use-game-favorite-actions";
 
 type HomePersonalizedSectionsProps = {
@@ -26,49 +27,51 @@ export function HomePersonalizedSections({ profileId }: HomePersonalizedSections
       return;
     }
 
-    fetch("/api/auth/favorites")
-      .then((response) => (response.ok ? response.json() : null))
-      .then((data: { games?: Game[] } | null) => {
-        setFavorites(data?.games?.slice(0, 8) ?? []);
-      })
-      .catch(() => setFavorites([]));
+    return deferClientTask(() => {
+      fetch("/api/auth/favorites")
+        .then((response) => (response.ok ? response.json() : null))
+        .then((data: { games?: Game[] } | null) => {
+          setFavorites(data?.games?.slice(0, 8) ?? []);
+        })
+        .catch(() => setFavorites([]));
 
-    fetch("/api/auth/following/feed")
-      .then((response) => (response.ok ? response.json() : null))
-      .then((data: { games?: Game[] } | null) => {
-        const nextGames = data?.games?.slice(0, 8) ?? [];
-        setFollowingFeed(nextGames);
-        if (nextGames.length > 0) {
-          fetch("/api/auth/notifications", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ markKind: "followed_new_game" }),
-          })
-            .then((response) => (response.ok ? response.json() : null))
-            .then(
-              (payload: {
-                unreadByKind?: { followed_new_game?: number };
-              } | null) => {
-                setNewGameUnreadCount(
-                  payload?.unreadByKind?.followed_new_game ?? 0
-                );
-              }
-            )
-            .catch(() => undefined);
-        }
-      })
-      .catch(() => setFollowingFeed([]));
+      fetch("/api/auth/following/feed")
+        .then((response) => (response.ok ? response.json() : null))
+        .then((data: { games?: Game[] } | null) => {
+          const nextGames = data?.games?.slice(0, 8) ?? [];
+          setFollowingFeed(nextGames);
+          if (nextGames.length > 0) {
+            fetch("/api/auth/notifications", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ markKind: "followed_new_game" }),
+            })
+              .then((response) => (response.ok ? response.json() : null))
+              .then(
+                (payload: {
+                  unreadByKind?: { followed_new_game?: number };
+                } | null) => {
+                  setNewGameUnreadCount(
+                    payload?.unreadByKind?.followed_new_game ?? 0
+                  );
+                }
+              )
+              .catch(() => undefined);
+          }
+        })
+        .catch(() => setFollowingFeed([]));
 
-    fetch("/api/auth/notifications")
-      .then((response) => (response.ok ? response.json() : null))
-      .then(
-        (data: {
-          unreadByKind?: { followed_new_game?: number };
-        } | null) => {
-          setNewGameUnreadCount(data?.unreadByKind?.followed_new_game ?? 0);
-        }
-      )
-      .catch(() => setNewGameUnreadCount(0));
+      fetch("/api/auth/notifications")
+        .then((response) => (response.ok ? response.json() : null))
+        .then(
+          (data: {
+            unreadByKind?: { followed_new_game?: number };
+          } | null) => {
+            setNewGameUnreadCount(data?.unreadByKind?.followed_new_game ?? 0);
+          }
+        )
+        .catch(() => setNewGameUnreadCount(0));
+    });
   }, [profileId]);
 
   useEffect(() => {

@@ -1,4 +1,5 @@
 import type { EquippedTitle } from "@/lib/titles";
+import type { AdminDisplayRole } from "@/lib/admin-display-role";
 
 export type ChatChannel = "world" | "creator";
 
@@ -17,6 +18,7 @@ export type ChatMessage = ChatMessageRecord & {
   author_equipped_title: EquippedTitle | null;
   author_is_supporter: boolean;
   author_supporter_badge: string | null;
+  author_admin_role: AdminDisplayRole;
   is_creator: boolean;
   is_own: boolean;
   is_virtual: boolean;

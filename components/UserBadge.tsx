@@ -6,6 +6,7 @@ import {
   getSupporterDisplayTier,
   supporterUsernameClassByTier,
 } from "@/lib/supporter-tier";
+import { adminRoleRainbowTextClass } from "@/lib/admin-display-role";
 import { SupporterBadge } from "@/components/supporter/supporter-badge";
 import { cn } from "@/lib/utils";
 
@@ -18,9 +19,14 @@ type UserBadgeProps = {
   usernameClassName?: string;
   titleClassName?: string;
   layout?: "inline" | "stacked" | "compact";
-  showBrackets?: boolean;
   animateTitle?: boolean;
   maxTitleWidth?: string;
+  /** 頭像已有 VIP/SVIP 時可關閉名字旁的徽章 */
+  showSupporterBadge?: boolean;
+  /** 未佩戴稱號時顯示的角色標籤（例如「玩家」「創作者」） */
+  fallbackRoleLabel?: string | null;
+  /** 角色標籤使用 SVIP 同款炫彩漸層 */
+  fallbackRoleRainbow?: boolean;
 };
 
 export function UserBadge({
@@ -32,17 +38,18 @@ export function UserBadge({
   usernameClassName,
   titleClassName,
   layout = "inline",
-  showBrackets = true,
   animateTitle = true,
   maxTitleWidth = "max-w-[5.5rem]",
+  showSupporterBadge = true,
+  fallbackRoleLabel = null,
+  fallbackRoleRainbow = false,
 }: UserBadgeProps) {
   const supporterTier = getSupporterDisplayTier(isSupporter, supporterBadge);
+  const isSupporterDisplay = supporterTier !== "none";
 
-  const titleLabel = title
-    ? showBrackets
-      ? `「${title.name}」`
-      : title.name
-    : null;
+  const titleLabel = title?.name ?? null;
+  const secondaryLabel = titleLabel ?? fallbackRoleLabel ?? null;
+  const isRoleFallback = !titleLabel && Boolean(fallbackRoleLabel);
 
   const titleClass = title
     ? cn(
@@ -52,17 +59,27 @@ export function UserBadge({
         }),
         titleClassName
       )
-    : null;
+    : isRoleFallback
+      ? cn(
+          fallbackRoleRainbow ? adminRoleRainbowTextClass : "font-medium text-zinc-500",
+          titleClassName
+        )
+      : null;
 
   const nameClass = cn(
     "font-medium",
-    supporterTier !== "none" &&
-      supporterUsernameClassByTier[supporterTier],
-    usernameClassName
+    isSupporterDisplay && supporterUsernameClassByTier[supporterTier],
+    usernameClassName,
+    isSupporterDisplay &&
+      supporterTier === "premium" &&
+      "!bg-clip-text !text-transparent hover:!text-transparent",
+    isSupporterDisplay &&
+      supporterTier === "basic" &&
+      "!text-amber-300 hover:!text-amber-200"
   );
 
   const supporterIcon =
-    supporterTier !== "none" ? (
+    showSupporterBadge && supporterTier !== "none" ? (
       <SupporterBadge
         isSupporter={isSupporter}
         supporterBadge={supporterBadge}
@@ -77,8 +94,10 @@ export function UserBadge({
           <span className={nameClass}>{username}</span>
           {supporterIcon}
         </span>
-        {title && titleLabel && (
-          <span className={cn("inline-block text-[10px]", titleClass)}>{titleLabel}</span>
+        {secondaryLabel && titleClass && (
+          <span className={cn("inline-block text-[10px]", titleClass)}>
+            {secondaryLabel}
+          </span>
         )}
       </span>
     );
@@ -93,12 +112,12 @@ export function UserBadge({
           {username}
         </span>
         {supporterIcon}
-        {title && titleLabel && (
+        {secondaryLabel && titleClass && (
           <span
             className={cn("shrink-0 truncate text-[9px] sm:text-[10px]", maxTitleWidth, titleClass)}
-            title={title.name}
+            title={secondaryLabel}
           >
-            {titleLabel}
+            {secondaryLabel}
           </span>
         )}
       </span>
@@ -109,8 +128,10 @@ export function UserBadge({
     <span className={cn("inline-flex flex-wrap items-center gap-x-1.5 gap-y-0.5", className)}>
       <span className={nameClass}>{username}</span>
       {supporterIcon}
-      {title && titleLabel && (
-        <span className={cn("inline-block text-[11px] sm:text-xs", titleClass)}>{titleLabel}</span>
+      {secondaryLabel && titleClass && (
+        <span className={cn("inline-block text-[11px] sm:text-xs", titleClass)}>
+          {secondaryLabel}
+        </span>
       )}
     </span>
   );

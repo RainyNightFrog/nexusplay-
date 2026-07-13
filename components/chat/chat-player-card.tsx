@@ -23,10 +23,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ProfileShowcaseTags } from "@/components/profile/profile-showcase-tags";
+import { UserBadge } from "@/components/UserBadge";
 import { useChatPlayerProfile } from "@/hooks/use-chat-player-profile";
 import type { ChatMessage } from "@/lib/chat";
 import type { EquippedTitle } from "@/lib/titles";
-import { getTitleDisplayClass } from "@/lib/titles";
 import { formatCountryName } from "@/lib/request-geo";
 import { normalizeWebsite } from "@/lib/profile-settings";
 import {
@@ -43,14 +43,26 @@ import {
 } from "@/lib/platform-leaderboard-virtual";
 import { Link } from "@/i18n/navigation";
 import { FollowCreatorButton } from "@/components/creator/follow-creator-button";
+import { SupporterAvatarInsignia } from "@/components/supporter/supporter-avatar-insignia";
 import { cn } from "@/lib/utils";
+import {
+  getSupporterDisplayTier,
+  supporterAvatarRingClassByTier,
+} from "@/lib/supporter-tier";
+import {
+  resolveChatAuthorRoleFallback,
+  type AdminDisplayRole,
+} from "@/lib/admin-display-role";
 
 export type ChatPlayerPreview = {
   userId: string;
   displayName: string;
   avatarUrl: string | null;
   equippedTitle: EquippedTitle | null;
+  isSupporter?: boolean;
+  supporterBadge?: string | null;
   isCreator: boolean;
+  adminRole?: AdminDisplayRole;
   isVirtual: boolean;
   virtualPlayerId: string | null;
   isOwn: boolean;
@@ -64,7 +76,10 @@ export function chatMessageToPlayerPreview(
     displayName: message.author_name,
     avatarUrl: message.author_avatar_url,
     equippedTitle: message.author_equipped_title,
+    isSupporter: message.author_is_supporter,
+    supporterBadge: message.author_supporter_badge,
     isCreator: message.is_creator,
+    adminRole: message.author_admin_role ?? "none",
     isVirtual: message.is_virtual,
     virtualPlayerId: message.virtual_player_id,
     isOwn: message.is_own,
@@ -194,7 +209,26 @@ export function ChatPlayerCard({
   const detail = profile;
   const avatarUrl = detail?.avatarUrl ?? player.avatarUrl;
   const equippedTitle = player.equippedTitle ?? detail?.equippedTitle ?? null;
+  const supporterTier = getSupporterDisplayTier(
+    detail?.isSupporter ?? player.isSupporter ?? false,
+    detail?.supporterBadge ?? player.supporterBadge ?? null
+  );
   const isCreator = detail?.isCreator ?? player.isCreator;
+  const adminRole: AdminDisplayRole =
+    detail?.adminRole ?? player.adminRole ?? "none";
+  const roleFallback = resolveChatAuthorRoleFallback(
+    {
+      equippedTitle,
+      adminRole,
+      isCreator,
+    },
+    {
+      superAdmin: t("roleSuperAdmin"),
+      admin: t("rolePlatformAdmin"),
+      creator: t("roleCreator"),
+      player: t("rolePlayer"),
+    }
+  );
   const isVirtual = detail?.isVirtual ?? player.isVirtual;
   const followableCreatorId = (() => {
     if (!isCreator) return null;
@@ -231,14 +265,20 @@ export function ChatPlayerCard({
           <div className="flex w-full flex-col items-center gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
             <div className="flex flex-col items-center gap-3 sm:flex-row sm:gap-5">
               <div className="relative shrink-0">
+                <SupporterAvatarInsignia
+                  tier={supporterTier}
+                  size="md"
+                />
                 <div
                   className={cn(
-                    "relative size-20 overflow-hidden rounded-full ring-2",
+                    "relative mt-1 size-20 overflow-hidden rounded-full ring-2",
                     isCreator
                       ? "ring-violet-400/40"
-                      : isVirtual
-                        ? "ring-cyan-400/30"
-                        : "ring-white/10"
+                      : supporterTier !== "none"
+                        ? supporterAvatarRingClassByTier[supporterTier]
+                        : isVirtual
+                          ? "ring-cyan-400/30"
+                          : "ring-white/10"
                   )}
                 >
                   {avatarUrl ? (
@@ -261,33 +301,22 @@ export function ChatPlayerCard({
               </div>
 
               <div className="flex min-w-0 flex-col items-center sm:items-start sm:text-left">
-                <div className="inline-flex flex-col items-center gap-0.5 sm:items-start">
-                  <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 sm:justify-start">
-                    <span className="max-w-full truncate text-lg font-semibold text-zinc-100 sm:text-xl">
-                      {displayName}
-                    </span>
-                    {isCreator && (
-                      <span className="shrink-0 rounded-full bg-violet-500/15 px-2 py-0.5 text-xs text-violet-300">
-                        {t("creatorBadge")}
-                      </span>
-                    )}
-                    {!isVirtual && !isCreator && (
-                      <span className="shrink-0 rounded-full bg-white/8 px-2 py-0.5 text-xs text-zinc-400">
-                        {t("playerCardReal")}
-                      </span>
-                    )}
-                  </div>
-                  {equippedTitle && (
-                    <span
-                      className={cn(
-                        "text-sm font-semibold tracking-wide",
-                        getTitleDisplayClass(
-                          equippedTitle.css_class,
-                          equippedTitle.rarity_tier
-                        )
-                      )}
-                    >
-                      「{equippedTitle.name}」
+                <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 sm:justify-start">
+                  <UserBadge
+                    username={displayName}
+                    title={equippedTitle}
+                    fallbackRoleLabel={roleFallback.label}
+                    fallbackRoleRainbow={roleFallback.rainbow}
+                    isSupporter={detail?.isSupporter}
+                    supporterBadge={detail?.supporterBadge}
+                    showSupporterBadge={false}
+                    animateTitle={false}
+                    usernameClassName="text-lg font-semibold text-zinc-100 sm:text-xl"
+                    titleClassName="text-xs sm:text-sm"
+                  />
+                  {!isVirtual && adminRole === "none" && !isCreator && (
+                    <span className="shrink-0 rounded-full bg-white/8 px-2 py-0.5 text-xs text-zinc-400">
+                      {t("playerCardReal")}
                     </span>
                   )}
                 </div>

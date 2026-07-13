@@ -182,6 +182,8 @@ function LeaderboardCard({
           <UserBadge
             username={entry.displayName}
             title={entry.equippedTitle}
+            isSupporter={entry.isSupporter}
+            supporterBadge={entry.supporterBadge}
             animateTitle={false}
             usernameClassName={cn(
               "max-w-full truncate",

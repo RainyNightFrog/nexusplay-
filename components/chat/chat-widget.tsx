@@ -30,6 +30,7 @@ import {
 } from "@/hooks/use-chat-messages";
 import type { ChatChannel, ChatMessage } from "@/lib/chat";
 import type { EquippedTitle } from "@/lib/titles";
+import { getSupporterDisplayTierFromProfile, type SupporterDisplayTier } from "@/lib/supporter-tier";
 
 type ChatTab = ChatChannel | "contacts";
 
@@ -41,6 +42,8 @@ function ChatChannelPanel({
   onDraftChange,
   onAuthorClick,
   scrollToLatestKey,
+  supporterTier = "none",
+  viewerSupporterBadge = null,
 }: {
   channel: ChatChannel;
   active: boolean;
@@ -49,6 +52,8 @@ function ChatChannelPanel({
   onDraftChange: (value: string) => void;
   onAuthorClick?: (message: ChatMessage) => void;
   scrollToLatestKey: number;
+  supporterTier?: SupporterDisplayTier;
+  viewerSupporterBadge?: string | null;
 }) {
   const t = useTranslations("chat");
   const chat = useChatMessages(channel, active);
@@ -64,6 +69,8 @@ function ChatChannelPanel({
         onRecall={(id) => void chat.recallMessage(id)}
         onAuthorClick={onAuthorClick}
         scrollToLatestKey={scrollToLatestKey}
+        viewerSupporterTier={supporterTier}
+        viewerSupporterBadge={viewerSupporterBadge}
       />
       <ChatInput
         value={draft}
@@ -71,6 +78,7 @@ function ChatChannelPanel({
         sending={chat.sending}
         readOnly={readOnly}
         readOnlyHint={t("creatorReadOnly")}
+        supporterTier={supporterTier}
         onSend={chat.sendMessage}
       />
       {chat.error && (
@@ -84,7 +92,8 @@ function ChatChannelPanel({
 
 export function ChatWidget() {
   const t = useTranslations("chat");
-  const { profile, isCreator, loading } = useAuth();
+  const { profile, isCreator, loading: authLoading } = useAuth();
+  const authBlocking = authLoading && !profile;
   const [open, setOpen] = useState(false);
   const [channel, setChannel] = useState<ChatTab>("world");
   const [drafts, setDrafts] = useState<Record<ChatChannel, string>>({
@@ -106,6 +115,9 @@ export function ChatWidget() {
   }, [channel, open, profile]);
 
   useAmbientChatBackgroundPoll(backgroundAmbientChannels, open && !!profile);
+
+  const supporterTier = getSupporterDisplayTierFromProfile(profile);
+  const viewerSupporterBadge = profile?.supporter_badge ?? null;
 
   function updateDraft(targetChannel: ChatChannel, value: string) {
     setDrafts((prev) => ({ ...prev, [targetChannel]: value }));
@@ -186,7 +198,7 @@ export function ChatWidget() {
               </div>
             </div>
 
-            {loading ? (
+            {authBlocking ? (
               <div className="flex flex-1 items-center justify-center px-6 py-12 text-sm text-zinc-500">
                 {t("loading")}
               </div>
@@ -238,6 +250,8 @@ export function ChatWidget() {
                   {channel === "contacts" ? (
                     <ChatContactsPanel
                       active
+                      isCreator={isCreator}
+                      supporterTier={supporterTier}
                       initialPlayerId={dmTargetId}
                       onInitialPlayerConsumed={() => setDmTargetId(null)}
                       onPlayerProfileClick={handleContactProfileClick}
@@ -252,6 +266,8 @@ export function ChatWidget() {
                       onDraftChange={(value) => updateDraft(channel, value)}
                       onAuthorClick={handleAuthorClick}
                       scrollToLatestKey={scrollToLatestKey}
+                      supporterTier={supporterTier}
+                      viewerSupporterBadge={viewerSupporterBadge}
                     />
                   )}
                 </Tabs>

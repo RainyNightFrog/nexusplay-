@@ -51,6 +51,8 @@ export type PlatformLeaderboardEntry = {
   /** 打賞榜：非本人且非 admin 時為 true，UI 顯示區間而非精確金額 */
   isDonationMasked?: boolean;
   donationTier?: DonationPrivacyTier;
+  isSupporter?: boolean;
+  supporterBadge?: string | null;
 };
 
 export type PlatformLeaderboardsResponse = {

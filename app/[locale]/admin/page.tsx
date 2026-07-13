@@ -13,6 +13,7 @@ import {
   MessageSquare,
   Mail,
   RefreshCw,
+  Shield,
   ShieldAlert,
   Rocket,
   Trash2,
@@ -35,6 +36,7 @@ import { AdminLaunchChecklistPanel } from "@/components/admin/launch-checklist-p
 import { AdminUsersPanel } from "@/components/admin/users-panel";
 import { AdminForumModerationPanel } from "@/components/admin/forum-moderation-panel";
 import { AdminChatModerationPanel } from "@/components/admin/chat-moderation-panel";
+import { AdminSupportInboxPanel } from "@/components/admin/support-inbox-panel";
 import { AdminOrdersPanel } from "@/components/admin/orders-panel";
 import { AdminStripePanel } from "@/components/admin/stripe-panel";
 import { AdminAdminsPanel } from "@/components/admin/admins-panel";
@@ -456,6 +458,10 @@ export default function AdminPage() {
           <TabsTrigger value="forum" className="gap-1.5 px-3 shrink-0">
             <MessagesSquare className="size-4" />
             {t("tabForum")}
+          </TabsTrigger>
+          <TabsTrigger value="support" className="gap-1.5 px-3 shrink-0">
+            <Shield className="size-4" />
+            {t("tabSupport")}
           </TabsTrigger>
           <TabsTrigger value="chat" className="gap-1.5 px-3 shrink-0">
             <MessageSquare className="size-4" />
@@ -953,6 +959,10 @@ export default function AdminPage() {
 
         <TabsContent value="forum" className="flex-none text-left">
           <AdminForumModerationPanel />
+        </TabsContent>
+
+        <TabsContent value="support">
+          <AdminSupportInboxPanel />
         </TabsContent>
 
         <TabsContent value="chat">

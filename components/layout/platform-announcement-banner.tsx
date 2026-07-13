@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Megaphone, X } from "lucide-react";
 import { Link } from "@/i18n/navigation";
+import { deferClientTask } from "@/lib/defer-client";
 import { cn } from "@/lib/utils";
 
 type Announcement = {
@@ -25,12 +26,14 @@ export function PlatformAnnouncementBanner() {
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    fetch("/api/announcements/active")
-      .then((response) => response.json())
-      .then((data: { announcements?: Announcement[] }) => {
-        setAnnouncements(data.announcements ?? []);
-      })
-      .catch(() => setAnnouncements([]));
+    return deferClientTask(() => {
+      fetch("/api/announcements/active")
+        .then((response) => response.json())
+        .then((data: { announcements?: Announcement[] }) => {
+          setAnnouncements(data.announcements ?? []);
+        })
+        .catch(() => setAnnouncements([]));
+    });
   }, []);
 
   const visible = announcements.filter((item) => !dismissed.has(item.id));

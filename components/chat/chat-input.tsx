@@ -5,6 +5,11 @@ import { Loader2, Send } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { ChatEmojiPicker } from "@/components/chat/chat-emoji-picker";
 import { CHAT_LIMITS } from "@/lib/chat";
+import {
+  supporterComposerMirrorClassByTier,
+  supporterComposerTextClassByTier,
+  type SupporterDisplayTier,
+} from "@/lib/supporter-tier";
 import { cn } from "@/lib/utils";
 
 type ChatInputProps = {
@@ -14,8 +19,13 @@ type ChatInputProps = {
   sending?: boolean;
   readOnly?: boolean;
   readOnlyHint?: string;
+  maxLength?: number;
+  supporterTier?: SupporterDisplayTier;
   onSend: (content: string) => Promise<boolean>;
 };
+
+const composerMirrorClass =
+  "pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words px-3 py-2 pr-12 text-sm leading-[1.375rem]";
 
 export function ChatInput({
   value,
@@ -24,10 +34,15 @@ export function ChatInput({
   sending,
   readOnly,
   readOnlyHint,
+  maxLength = CHAT_LIMITS.content,
+  supporterTier = "none",
   onSend,
 }: ChatInputProps) {
   const t = useTranslations("chat");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const isSupporterComposer = supporterTier !== "none";
+  const showComposerMirror =
+    supporterTier === "premium" && value.length > 0;
 
   async function handleSend() {
     const trimmed = value.trim();
@@ -50,8 +65,8 @@ export function ChatInput({
   function handleEmojiPick(emoji: string) {
     const next = `${value}${emoji}`;
     onChange(
-      next.length > CHAT_LIMITS.content
-        ? next.slice(0, CHAT_LIMITS.content)
+      next.length > maxLength
+        ? next.slice(0, maxLength)
         : next
     );
     textareaRef.current?.focus();
@@ -69,26 +84,52 @@ export function ChatInput({
     <div className="border-t border-white/8 bg-zinc-950/60 p-3">
       <div className="flex items-end gap-2">
         <ChatEmojiPicker disabled={disabled || sending} onPick={handleEmojiPick} />
-        <div className="relative min-w-0 flex-1">
+        <div
+          className={cn(
+            "relative min-w-0 flex-1 rounded-xl border border-white/10 bg-zinc-900/80",
+            isSupporterComposer &&
+              (supporterTier === "premium"
+                ? "focus-within:border-violet-400/35 focus-within:ring-2 focus-within:ring-violet-400/15"
+                : "focus-within:border-amber-400/35 focus-within:ring-2 focus-within:ring-amber-400/15"),
+            !isSupporterComposer &&
+              "focus-within:border-cyan-500/40 focus-within:ring-2 focus-within:ring-cyan-500/15"
+          )}
+        >
           <textarea
             ref={textareaRef}
             value={value}
             onChange={(event) =>
-              onChange(event.target.value.slice(0, CHAT_LIMITS.content))
+              onChange(event.target.value.slice(0, maxLength))
             }
             onKeyDown={handleKeyDown}
             disabled={disabled || sending}
-            maxLength={CHAT_LIMITS.content}
+            maxLength={maxLength}
             rows={1}
             placeholder={t("placeholder")}
             className={cn(
-              "max-h-24 min-h-9 w-full resize-none rounded-xl border border-white/10 bg-zinc-900/80 px-3 py-2 pr-12 text-sm text-zinc-100",
-              "placeholder:text-zinc-600 focus:border-cyan-500/40 focus:outline-none focus:ring-2 focus:ring-cyan-500/15",
-              "disabled:opacity-50"
+              "max-h-24 min-h-9 w-full resize-none border-0 bg-transparent px-3 py-2 pr-12 text-sm leading-[1.375rem] focus:outline-none disabled:opacity-50",
+              isSupporterComposer
+                ? cn(
+                    supporterComposerTextClassByTier[supporterTier],
+                    showComposerMirror && "[-webkit-text-fill-color:transparent]"
+                  )
+                : "text-zinc-100",
+              "placeholder:text-zinc-600"
             )}
           />
-          <span className="pointer-events-none absolute bottom-2 right-2 text-[10px] text-zinc-600">
-            {value.length}/{CHAT_LIMITS.content}
+          {showComposerMirror ? (
+            <div
+              aria-hidden
+              className={cn(
+                composerMirrorClass,
+                supporterComposerMirrorClassByTier[supporterTier]
+              )}
+            >
+              {value}
+            </div>
+          ) : null}
+          <span className="pointer-events-none absolute bottom-2 right-2 z-10 text-[10px] text-zinc-600">
+            {value.length}/{maxLength}
           </span>
         </div>
         <button

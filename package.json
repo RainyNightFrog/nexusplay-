@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node --max-old-space-size=4096 ./node_modules/next/dist/bin/next dev",
+    "dev": "node --max-old-space-size=4096 ./node_modules/next/dist/bin/next dev --turbo",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -78,6 +78,7 @@
     "db:forum": "node scripts/run-forum.mjs",
     "db:chat": "node scripts/run-chat.mjs",
     "db:chat-contacts": "node scripts/run-chat-contacts.mjs",
+    "db:chat-admin-support": "node scripts/run-chat-admin-support.mjs",
     "db:chat-contacts-retention": "node scripts/run-chat-contacts-retention.mjs",
     "db:chat-ambient-users": "npx tsx scripts/run-chat-ambient-users.ts",
     "db:chat-ambient-bootstrap": "npx tsx scripts/run-chat-ambient-users.ts --bootstrap",
