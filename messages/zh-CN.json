@@ -932,7 +932,8 @@
     "regionUnknown": "无法侦测",
     "playerId": "ID",
     "playerIdHint": "注册时自动分配的唯一编号，联系客服时可提供此 ID",
-    "editShowcaseTags": "編輯資料卡展示標籤"
+    "editShowcaseTags": "编辑资料卡展示标签",
+    "showcaseTagsStatsNote": "此处只控制昵称下方的小标签。资料卡中间的「成就数、论坛发文」等数字目前无法关闭。"
   },
   "settings": {
     "title": "设置",
@@ -1707,8 +1708,8 @@
     "profilePublicDesc": "允许其他玩家查看你的个人页面与基本资讯",
     "leaderboardVisibleLabel": "显示于排行榜",
     "leaderboardVisibleDesc": "在网站在线榜、游玩时长榜等排行榜中显示你的暱称",
-    "showcaseTagsTitle": "资料卡展示标签",
-    "showcaseTagsDesc": "选择要在玩家资料卡昵称下方展示的标签，最多 4 个。若某标签目前无数据（例如未上榜），会自动略过。",
+    "showcaseTagsTitle": "玩家资料卡标签（成就、论坛等）",
+    "showcaseTagsDesc": "勾选要在聊天玩家资料卡昵称下方显示的标签，最多 4 个。取消勾选即可隐藏该标签。若某标签目前无数据（例如未上榜），会自动略过。",
     "showcaseTagsMaxHint": "最多可选 {max} 个标签，并可调整显示顺序。",
     "showcaseTagsOrderTitle": "显示顺序（越上面越优先）",
     "showcaseTagsMoveUp": "上移",

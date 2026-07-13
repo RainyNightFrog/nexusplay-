@@ -15,6 +15,7 @@ import {
   Save,
   Settings,
   Shield,
+  Tags,
   UserRound,
 } from "lucide-react";
 import { Link, useRouter } from "@/i18n/navigation";
@@ -45,11 +46,14 @@ import {
 } from "@/lib/supporter-tier";
 import { cn } from "@/lib/utils";
 import { CreatorUsernameField } from "@/components/profile/creator-username-field";
+import { ProfileShowcaseTagsEditor } from "@/components/settings/profile-showcase-tags-editor";
 import { normalizeCreatorUsername } from "@/lib/creator-username";
 import { PROFILE_LIMITS } from "@/lib/profile-settings";
+import type { ProfileShowcaseTagId } from "@/lib/profile-showcase-tags";
 
 export default function ProfilePage() {
   const t = useTranslations("profile");
+  const tAccount = useTranslations("accountSettings");
   const locale = useLocale();
   const { translateApiError } = useApiError();
   const tNav = useTranslations("nav");
@@ -67,6 +71,7 @@ export default function ProfilePage() {
   const [twitter, setTwitter] = useState("");
   const [playingGames, setPlayingGames] = useState(true);
   const [developingGames, setDevelopingGames] = useState(false);
+  const [showcaseTags, setShowcaseTags] = useState<ProfileShowcaseTagId[]>([]);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
 
@@ -99,6 +104,7 @@ export default function ProfilePage() {
     setTwitter(profile.twitter ?? "");
     setPlayingGames(profile.playing_games);
     setDevelopingGames(profile.developing_games);
+    setShowcaseTags(profile.profile_showcase_tags);
     setAvatarPreview(profile.avatar_url);
 
     fetch("/api/auth/profile")
@@ -185,6 +191,7 @@ export default function ProfilePage() {
           twitter: twitter.trim(),
           playing_games: playingGames,
           developing_games: developingGames,
+          profile_showcase_tags: showcaseTags,
         }),
       });
 
@@ -304,12 +311,6 @@ export default function ProfilePage() {
               >
                 {t("changeTitle")}
               </Button>
-              <Link
-                href="/settings/privacy"
-                className="text-xs text-cyan-300/90 transition-colors hover:text-cyan-200"
-              >
-                {t("editShowcaseTags")}
-              </Link>
             </div>
           </div>
 
@@ -402,6 +403,27 @@ export default function ProfilePage() {
                   disabled={saving}
                 />
               </div>
+            </section>
+
+            <div className="border-t border-white/8" />
+
+            <section className="space-y-4 text-left">
+              <div className="text-center">
+                <h2 className={accountSectionTitleClassName}>
+                  <Tags className="size-4 text-cyan-400" />
+                  {tAccount("showcaseTagsTitle")}
+                </h2>
+                <p className="mt-2 text-xs leading-relaxed text-zinc-500">
+                  {tAccount("showcaseTagsDesc")}
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-zinc-600">
+                  {t("showcaseTagsStatsNote")}
+                </p>
+              </div>
+              <ProfileShowcaseTagsEditor
+                value={showcaseTags}
+                onChange={setShowcaseTags}
+              />
             </section>
 
             <div className="border-t border-white/8" />

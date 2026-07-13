@@ -1076,7 +1076,8 @@
     "playerId": "ID",
     "playerIdHint": "A unique number assigned at registration. Provide this ID when contacting support.",
     "settingsHint": "For appearance, notifications, and system preferences, go to",
-    "editShowcaseTags": "編輯資料卡展示標籤"
+    "editShowcaseTags": "Edit profile card tags",
+    "showcaseTagsStatsNote": "This only controls the small tags under your name. Achievement and forum counts in the stat grid cannot be hidden yet."
   },
   "settings": {
     "title": "Settings",
@@ -1179,8 +1180,8 @@
     "profilePublicDesc": "Allow other players to view your profile page",
     "leaderboardVisibleLabel": "Show on leaderboards",
     "leaderboardVisibleDesc": "Display your name on site-wide leaderboards",
-    "showcaseTagsTitle": "Profile card tags",
-    "showcaseTagsDesc": "Choose up to 4 tags shown under your name on player cards. Tags without data (e.g. not ranked) are skipped automatically.",
+    "showcaseTagsTitle": "Player card tags (achievements, forum, etc.)",
+    "showcaseTagsDesc": "Choose up to 4 tags shown under your name on player cards. Uncheck a tag to hide it. Tags without data (e.g. not ranked) are skipped automatically.",
     "showcaseTagsMaxHint": "Select up to {max} tags and adjust their display order.",
     "showcaseTagsOrderTitle": "Display order (top = first)",
     "showcaseTagsMoveUp": "Move up",

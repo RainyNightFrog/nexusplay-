@@ -166,8 +166,13 @@ export function resolveProfileShowcaseTags(
   preferences: ProfileShowcaseTagId[] | null | undefined,
   context: ProfileShowcaseTagContext
 ): ProfileShowcaseTagPayload[] {
+  if (Array.isArray(preferences) && preferences.length === 0) {
+    return [];
+  }
+
+  const isExplicitPreference = Array.isArray(preferences) && preferences.length > 0;
   const preferred = normalizeProfileShowcaseTags(
-    preferences?.length ? preferences : DEFAULT_PROFILE_SHOWCASE_TAGS
+    isExplicitPreference ? preferences : DEFAULT_PROFILE_SHOWCASE_TAGS
   );
 
   const resolved: ProfileShowcaseTagPayload[] = [];
@@ -181,7 +186,7 @@ export function resolveProfileShowcaseTags(
     if (resolved.length >= MAX_PROFILE_SHOWCASE_TAGS) break;
   }
 
-  if (resolved.length >= MAX_PROFILE_SHOWCASE_TAGS) {
+  if (isExplicitPreference || resolved.length >= MAX_PROFILE_SHOWCASE_TAGS) {
     return resolved;
   }
 

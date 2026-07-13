@@ -164,8 +164,8 @@ export default function DataSettingsPage() {
             </h2>
             <p className={accountSectionIntroClassName}>{t("deleteDesc")}</p>
 
-            <div className="flex items-start gap-2 rounded-xl border border-amber-400/20 bg-amber-500/5 p-3 text-left">
-              <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-400" />
+            <div className="flex flex-col items-center gap-2 rounded-xl border border-amber-400/20 bg-amber-500/5 p-3 text-center">
+              <AlertTriangle className="size-4 shrink-0 text-amber-400" />
               <p className="text-xs leading-relaxed text-amber-200/90">
                 {t("deleteWarning")}
               </p>
