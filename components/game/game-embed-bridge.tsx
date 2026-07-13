@@ -16,6 +16,7 @@ import {
   RAINYNIGHTFROG_LEAVE_CONFIRM_RESPONSE,
   RAINYNIGHTFROG_LEAVE_MESSAGE,
   RAINYNIGHTFROG_READY_MESSAGE,
+  RAINYNIGHTFROG_REQUEST_AUTH_MESSAGE,
   RAINYNIGHTFROG_RESIZE_MESSAGE,
   RAINYNIGHTFROG_EXPAND_REQUEST,
   RAINYNIGHTFROG_PLAY_MODE_MESSAGE,
@@ -23,6 +24,9 @@ import {
   LEGACY_NEXUSPLAY_PLAY_MODE_MESSAGE,
   RNF_SUBMIT_SCORE_MESSAGE,
   RNF_SAVE_DATA_MESSAGE,
+  RAINYNIGHTFROG_STORAGE_GET_MESSAGE,
+  RAINYNIGHTFROG_STORAGE_GET_RESPONSE_MESSAGE,
+  RAINYNIGHTFROG_STORAGE_SET_MESSAGE,
   type RainyNightFrogAuthUser,
   type RainyNightFrogLeaveConfirmRequest,
 } from "@/lib/rainynightfrog-embed-sdk";
@@ -38,6 +42,14 @@ type GameEmbedBridgeProps = {
 type PendingLeaveConfirm = {
   requestId: string;
 };
+
+function buildRnfStorageKey(slug: string, suffix: string): string {
+  return `rnf:${slug}:${suffix}`;
+}
+
+function isSafeRnfStorageSegment(value: string): boolean {
+  return /^[a-z0-9-]+$/i.test(value);
+}
 
 function buildAuthPayload(
   profile: ReturnType<typeof useAuth>["profile"],
@@ -201,7 +213,7 @@ export function GameEmbedBridge({
           : {};
 
       try {
-        await fetch(`/api/games/${gameId}/leaderboard`, {
+        const response = await fetch(`/api/games/${gameId}/leaderboard`, {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
@@ -213,6 +225,16 @@ export function GameEmbedBridge({
             },
           }),
         });
+        if (!response.ok) {
+          const payload = (await response.json().catch(() => ({}))) as {
+            error?: string;
+          };
+          console.warn(
+            "[RNF] submitScore rejected:",
+            response.status,
+            payload.error ?? "unknown"
+          );
+        }
       } catch (error) {
         console.error("[RNF] submitScore failed:", error);
       }
@@ -314,8 +336,77 @@ export function GameEmbedBridge({
         return;
       }
 
+      if (
+        data?.type === RAINYNIGHTFROG_REQUEST_AUTH_MESSAGE ||
+        data?.type === "nexusplay:request-auth"
+      ) {
+        postAuth();
+        return;
+      }
+
       if (data?.type === RNF_SUBMIT_SCORE_MESSAGE) {
         void handleRnfSubmitScore(data as { score?: unknown; metadata?: unknown; timestamp?: unknown });
+        return;
+      }
+
+      if (data?.type === RAINYNIGHTFROG_STORAGE_GET_MESSAGE) {
+        const request = data as {
+          requestId?: string;
+          slug?: string;
+          suffix?: string;
+        };
+        if (
+          !request.requestId ||
+          !request.slug ||
+          !request.suffix ||
+          !isSafeRnfStorageSegment(request.slug) ||
+          !isSafeRnfStorageSegment(request.suffix)
+        ) {
+          return;
+        }
+        const key = buildRnfStorageKey(request.slug, request.suffix);
+        let value: unknown = null;
+        try {
+          const raw = window.localStorage.getItem(key);
+          value = raw ? JSON.parse(raw) : null;
+        } catch {
+          value = null;
+        }
+        iframeRef.current?.contentWindow?.postMessage(
+          {
+            type: RAINYNIGHTFROG_STORAGE_GET_RESPONSE_MESSAGE,
+            requestId: request.requestId,
+            value,
+          },
+          "*"
+        );
+        return;
+      }
+
+      if (data?.type === RAINYNIGHTFROG_STORAGE_SET_MESSAGE) {
+        const request = data as {
+          slug?: string;
+          suffix?: string;
+          value?: unknown;
+        };
+        if (
+          !request.slug ||
+          !request.suffix ||
+          !isSafeRnfStorageSegment(request.slug) ||
+          !isSafeRnfStorageSegment(request.suffix)
+        ) {
+          return;
+        }
+        const key = buildRnfStorageKey(request.slug, request.suffix);
+        try {
+          if (request.value == null) {
+            window.localStorage.removeItem(key);
+          } else {
+            window.localStorage.setItem(key, JSON.stringify(request.value));
+          }
+        } catch (error) {
+          console.warn("[RNF] parent storage set failed:", error);
+        }
         return;
       }
 

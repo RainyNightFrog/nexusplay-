@@ -8,9 +8,23 @@ export type LeaderboardRow = {
   player_name: string;
   score: number;
   grade: string | null;
+  difficulty: string;
   meta: Record<string, unknown>;
   updated_at: string;
 };
+
+const DEFAULT_LEADERBOARD_DIFFICULTY = "normal";
+
+export function resolveLeaderboardDifficulty(
+  meta: Record<string, unknown> | null | undefined
+): string {
+  const raw = meta?.difficulty;
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    if (trimmed) return trimmed.slice(0, 32);
+  }
+  return DEFAULT_LEADERBOARD_DIFFICULTY;
+}
 
 export type LeaderboardPublicEntry = {
   rank: number;
@@ -43,14 +57,19 @@ export function validateLeaderboardSubmit(body: {
 export async function getTopLeaderboard(
   supabase: SupabaseClient,
   gameId: number,
-  limit = 20
+  limit = 20,
+  difficulty?: string | null
 ): Promise<LeaderboardRow[]> {
-  const { data, error } = await supabase
+  let query = supabase
     .from("game_leaderboard")
-    .select("id, game_id, user_id, player_name, score, grade, meta, updated_at")
-    .eq("game_id", gameId)
-    .order("score", { ascending: false })
-    .limit(limit);
+    .select("id, game_id, user_id, player_name, score, grade, difficulty, meta, updated_at")
+    .eq("game_id", gameId);
+
+  if (difficulty) {
+    query = query.eq("difficulty", difficulty);
+  }
+
+  const { data, error } = await query.order("score", { ascending: false }).limit(limit);
 
   if (error) {
     throw new Error(`讀取排行榜失敗：${error.message}`);
@@ -68,11 +87,15 @@ export async function submitLeaderboardScore(
   grade: string | null,
   meta: Record<string, unknown>
 ): Promise<LeaderboardRow> {
+  const difficulty = resolveLeaderboardDifficulty(meta);
+  const metaWithDifficulty = { ...meta, difficulty };
+
   const { data: existing, error: readError } = await supabase
     .from("game_leaderboard")
     .select("id, score")
     .eq("game_id", gameId)
     .eq("user_id", userId)
+    .eq("difficulty", difficulty)
     .maybeSingle();
 
   if (readError) {
@@ -82,7 +105,7 @@ export async function submitLeaderboardScore(
   if (existing && existing.score >= score) {
     const { data: current, error: fetchError } = await supabase
       .from("game_leaderboard")
-      .select("id, game_id, user_id, player_name, score, grade, meta, updated_at")
+      .select("id, game_id, user_id, player_name, score, grade, difficulty, meta, updated_at")
       .eq("id", existing.id)
       .single();
 
@@ -102,12 +125,13 @@ export async function submitLeaderboardScore(
         player_name: playerName,
         score,
         grade,
-        meta,
+        difficulty,
+        meta: metaWithDifficulty,
         updated_at: new Date().toISOString(),
       },
-      { onConflict: "game_id,user_id" }
+      { onConflict: "game_id,user_id,difficulty" }
     )
-    .select("id, game_id, user_id, player_name, score, grade, meta, updated_at")
+    .select("id, game_id, user_id, player_name, score, grade, difficulty, meta, updated_at")
     .single();
 
   if (error) {

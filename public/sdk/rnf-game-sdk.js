@@ -238,9 +238,19 @@
   }
   var API_PROXY_REQUEST = "rainynightfrog:api-proxy-request";
   var API_PROXY_RESPONSE = "rainynightfrog:api-proxy-response";
+  var STORAGE_GET = "rainynightfrog:storage-get";
+  var STORAGE_GET_RESPONSE = "rainynightfrog:storage-get-response";
+  var STORAGE_SET = "rainynightfrog:storage-set";
   var AUTH_TYPES = ["rainynightfrog:auth", "nexusplay:auth"];
+  var READY_TYPES = ["rainynightfrog:ready", "nexusplay:ready"];
+  var AUTH_REQUEST_TYPES = ["rainynightfrog:request-auth", "nexusplay:request-auth"];
   var apiProxyWaiters = {};
+  var parentStorageWaiters = {};
+  var parentStorageCache = {};
+  var parentStorageLoaded = {};
+  var PARENT_STORAGE_SUFFIXES = ["leaderboard-by-diff", "save"];
   var authUser = null;
+  var sessionLoggedInCache = null;
   var gameId = detectGameId();
 
   var DEFAULT_DIFFICULTIES = [
@@ -249,6 +259,91 @@
     { id: "hard", label: "困難", speedMult: 1.08, scoreMult: 1.85, ai: 1.35, desc: "更快節奏與更多威脅" },
     { id: "extreme", label: "極限", speedMult: 1.32, scoreMult: 2.5, ai: 1.65, desc: "電競級挑戰" },
   ];
+
+  function rnfStorageKey(suffix) {
+    return "rnf:" + slug + ":" + suffix;
+  }
+
+  function readIframeStorageJson(suffix) {
+    try {
+      var raw = localStorage.getItem(rnfStorageKey(suffix));
+      return raw ? JSON.parse(raw) : null;
+    } catch (_e) {
+      return null;
+    }
+  }
+
+  function writeIframeStorageJson(suffix, value) {
+    try {
+      if (value == null) localStorage.removeItem(rnfStorageKey(suffix));
+      else localStorage.setItem(rnfStorageKey(suffix), JSON.stringify(value));
+    } catch (_e) {}
+  }
+
+  function ensureParentStorage(suffix) {
+    if (!isEmbedded()) return Promise.resolve(null);
+    if (parentStorageLoaded[suffix]) {
+      return Promise.resolve(
+        Object.prototype.hasOwnProperty.call(parentStorageCache, suffix)
+          ? parentStorageCache[suffix]
+          : null
+      );
+    }
+    return new Promise(function (resolve) {
+      var requestId = "rnf-st-" + Date.now() + "-" + Math.random().toString(36).slice(2);
+      var timer = setTimeout(function () {
+        delete parentStorageWaiters[requestId];
+        if (!parentStorageLoaded[suffix]) {
+          var fallback = readIframeStorageJson(suffix);
+          if (fallback != null) parentStorageCache[suffix] = fallback;
+          parentStorageLoaded[suffix] = true;
+        }
+        resolve(
+          Object.prototype.hasOwnProperty.call(parentStorageCache, suffix)
+            ? parentStorageCache[suffix]
+            : null
+        );
+      }, 4000);
+      parentStorageWaiters[requestId] = { suffix: suffix, resolve: resolve, timer: timer };
+      postToParent({
+        type: STORAGE_GET,
+        requestId: requestId,
+        slug: slug,
+        suffix: suffix,
+      });
+    });
+  }
+
+  function prefetchParentStorage() {
+    if (!isEmbedded()) return;
+    PARENT_STORAGE_SUFFIXES.forEach(function (suffix) {
+      ensureParentStorage(suffix).catch(function () {});
+    });
+  }
+
+  function writeParentStorage(suffix, value) {
+    parentStorageCache[suffix] = value;
+    parentStorageLoaded[suffix] = true;
+    writeIframeStorageJson(suffix, value);
+    if (isEmbedded()) {
+      postToParent({
+        type: STORAGE_SET,
+        slug: slug,
+        suffix: suffix,
+        value: value,
+      });
+    }
+  }
+
+  function readParentStorageSync(suffix, fallbackValue) {
+    if (isEmbedded() && parentStorageLoaded[suffix]) {
+      return Object.prototype.hasOwnProperty.call(parentStorageCache, suffix)
+        ? parentStorageCache[suffix]
+        : fallbackValue;
+    }
+    var local = readIframeStorageJson(suffix);
+    return local != null ? local : fallbackValue;
+  }
 
   function detectGameId() {
     var params = new URLSearchParams(location.search);
@@ -310,58 +405,238 @@
       if (data.ok) {
         waiter.resolve({ ok: true, status: data.status, data: data.data });
       } else {
-        waiter.reject(new Error(data.error || "proxy failed"));
+        waiter.resolve({
+          ok: false,
+          status: data.status || 0,
+          data: data.data || {},
+          error: data.error || "proxy failed",
+        });
       }
+    });
+    window.addEventListener("message", function (event) {
+      var data = event.data;
+      if (!data || data.type !== STORAGE_GET_RESPONSE) return;
+      var waiter = parentStorageWaiters[data.requestId];
+      if (!waiter) return;
+      clearTimeout(waiter.timer);
+      delete parentStorageWaiters[data.requestId];
+      parentStorageCache[waiter.suffix] = data.value != null ? data.value : null;
+      parentStorageLoaded[waiter.suffix] = true;
+      waiter.resolve(parentStorageCache[waiter.suffix]);
     });
     window.addEventListener("message", function (event) {
       var data = event.data;
       if (!data || AUTH_TYPES.indexOf(data.type) === -1) return;
       authUser = data.user || null;
+      sessionLoggedInCache = !!authUser;
     });
   }
 
-  function fetchLeaderboardBundle(limit) {
-    limit = limit || 15;
-    var bundle = {
-      cloud: [],
-      local: readLocalLeaderboard(),
-      cloudOk: false,
-      cloudError: null,
-      loggedIn: !!authUser,
-      gameId: gameId,
-    };
-    if (!gameId) {
-      bundle.cloudError = "未連結平台遊戲";
-      return Promise.resolve(bundle);
-    }
-    return proxyApiFetch("GET", "/api/games/" + gameId + "/leaderboard?limit=" + limit, null)
-      .then(function (res) {
-        bundle.cloudOk = !!res.ok;
-        bundle.cloud = ((res.data && res.data.entries) || []).map(function (e) {
-          return Object.assign({}, e, { source: "cloud", local: false });
-        });
-        if (!res.ok) {
-          bundle.cloudError = (res.data && res.data.error) || "讀取失敗";
+  function syncAuthFromEmbedSdk() {
+    try {
+      var api = global.RainyNightFrog || global.NexusPlay;
+      if (api && typeof api.getUser === "function") {
+        var u = api.getUser();
+        if (u) {
+          authUser = u;
+          sessionLoggedInCache = true;
         }
-        return bundle;
+      }
+    } catch (_e) {}
+  }
+
+  function requestAuthFromParent() {
+    postToParent({ type: AUTH_REQUEST_TYPES[0], gameId: gameId });
+    postToParent({ type: AUTH_REQUEST_TYPES[1], gameId: gameId });
+  }
+
+  function announceReady() {
+    postToParent({ type: READY_TYPES[0], gameId: gameId });
+    postToParent({ type: READY_TYPES[1], gameId: gameId });
+  }
+
+  function probeSessionLoggedIn() {
+    if (!gameId) return Promise.resolve(false);
+    return proxyApiFetch("GET", "/api/games/" + gameId + "/save", null)
+      .then(function (res) {
+        var loggedIn = res.status !== 401;
+        sessionLoggedInCache = loggedIn;
+        return loggedIn;
       })
-      .catch(function (err) {
-        bundle.cloudError = err && err.message ? err.message : "無法連線平台";
-        return bundle;
+      .catch(function () {
+        sessionLoggedInCache = false;
+        return false;
       });
   }
 
-  function fetchLeaderboard(limit) {
-    return fetchLeaderboardBundle(limit).then(function (b) { return b.cloud; });
+  function refreshAuthState() {
+    syncAuthFromEmbedSdk();
+    requestAuthFromParent();
+    if (authUser || sessionLoggedInCache === true) {
+      return Promise.resolve(true);
+    }
+    return new Promise(function (resolve) {
+      var settled = false;
+      function finish(val) {
+        if (settled) return;
+        settled = true;
+        resolve(!!val);
+      }
+      var timer = setTimeout(function () {
+        syncAuthFromEmbedSdk();
+        if (authUser) {
+          finish(true);
+          return;
+        }
+        probeSessionLoggedIn().then(finish);
+      }, 320);
+      var poll = setInterval(function () {
+        syncAuthFromEmbedSdk();
+        if (authUser) {
+          clearInterval(poll);
+          clearTimeout(timer);
+          finish(true);
+        }
+      }, 60);
+      setTimeout(function () { clearInterval(poll); }, 360);
+    });
   }
 
-  function readLocalLeaderboard() {
+  function isUserLoggedIn(bundle) {
+    if (authUser) return true;
+    if (sessionLoggedInCache === true) return true;
+    if (bundle && bundle.cloud && bundle.cloud.some(function (e) { return e.isMe; })) return true;
+    if (bundle && bundle.merged && bundle.merged.some(function (e) { return e.isMe && e.source === "cloud"; })) return true;
+    return false;
+  }
+
+  function finalizeLeaderboardBundle(bundle) {
+    bundle.loggedIn = isUserLoggedIn(bundle);
+    return bundle;
+  }
+
+  function resolveEntryDifficulty(entry, fallback) {
+    fallback = fallback || "normal";
+    if (!entry) return fallback;
+    if (entry.difficulty) return String(entry.difficulty);
+    if (entry.meta && entry.meta.difficulty) return String(entry.meta.difficulty);
+    return fallback;
+  }
+
+  function readLegacyLocalLeaderboard() {
     try {
       var raw = localStorage.getItem("rnf:" + slug + ":leaderboard");
       return raw ? JSON.parse(raw) : [];
     } catch (_e) {
       return [];
     }
+  }
+
+  function readLocalLeaderboardByDiff() {
+    try {
+      var store = readParentStorageSync("leaderboard-by-diff", null);
+      if (store && typeof store === "object" && !Array.isArray(store)) return store;
+      var legacy = readLegacyLocalLeaderboard();
+      if (!legacy.length) return {};
+      store = {};
+      legacy.forEach(function (entry) {
+        var diff = resolveEntryDifficulty(entry, "normal");
+        if (!store[diff]) store[diff] = [];
+        store[diff].push(entry);
+      });
+      writeLocalLeaderboardByDiff(store);
+      return store;
+    } catch (_e) {
+      return {};
+    }
+  }
+
+  function writeLocalLeaderboardByDiff(store) {
+    writeParentStorage("leaderboard-by-diff", store || {});
+  }
+
+  function readLocalLeaderboardForDifficulty(difficulty) {
+    var store = readLocalLeaderboardByDiff();
+    return (store[difficulty] || []).slice();
+  }
+
+  function mergeDifficultyLeaderboard(cloud, local, difficulty) {
+    var merged = (cloud || []).filter(function (e) {
+      return resolveEntryDifficulty(e, "normal") === difficulty;
+    }).slice();
+    (local || []).forEach(function (le) {
+      if (!le.isMe) return;
+      var idx = merged.findIndex(function (e) { return e.isMe; });
+      if (idx >= 0) {
+        if (le.score > merged[idx].score) merged[idx] = Object.assign({}, le, { rank: merged[idx].rank });
+      } else {
+        merged.push(le);
+      }
+    });
+    merged.sort(function (a, b) { return b.score - a.score; });
+    return merged.slice(0, 15).map(function (e, i) {
+      return Object.assign({}, e, { rank: i + 1 });
+    });
+  }
+
+  function fetchLeaderboardBundle(limit, difficulty) {
+    limit = limit || 15;
+    difficulty = difficulty || "normal";
+    var loadPromise = isEmbedded()
+      ? ensureParentStorage("leaderboard-by-diff")
+      : Promise.resolve(null);
+    return loadPromise.then(function () {
+      var bundle = {
+        cloud: [],
+        local: readLocalLeaderboardForDifficulty(difficulty),
+        cloudOk: false,
+        cloudError: null,
+        loggedIn: !!authUser,
+        gameId: gameId,
+        difficulty: difficulty,
+      };
+      if (!gameId) {
+        bundle.cloudError = "未連結平台遊戲";
+        bundle.merged = mergeDifficultyLeaderboard([], bundle.local, difficulty);
+        return Promise.resolve(finalizeLeaderboardBundle(bundle));
+      }
+      var path = "/api/games/" + gameId + "/leaderboard?limit=" + Math.max(limit, 20) + "&difficulty=" + encodeURIComponent(difficulty);
+      return refreshAuthState()
+        .then(function () {
+          return proxyApiFetch("GET", path, null);
+        })
+        .then(function (res) {
+          bundle.cloudOk = !!res.ok;
+          var cloud = ((res.data && res.data.entries) || []).map(function (e) {
+            return Object.assign({}, e, { source: "cloud", local: false });
+          });
+          bundle.cloud = filterEntriesByDifficulty(cloud, difficulty);
+          if (!res.ok) {
+            bundle.cloudError = (res.data && res.data.error) || res.error || "讀取失敗";
+          }
+          bundle.merged = mergeDifficultyLeaderboard(bundle.cloud, bundle.local, difficulty);
+          return finalizeLeaderboardBundle(bundle);
+        })
+        .catch(function (err) {
+          bundle.cloudError = err && err.message ? err.message : "無法連線平台";
+          bundle.merged = mergeDifficultyLeaderboard([], bundle.local, difficulty);
+          return finalizeLeaderboardBundle(bundle);
+        });
+    });
+  }
+
+  function filterEntriesByDifficulty(entries, difficulty) {
+    return (entries || []).filter(function (e) {
+      return resolveEntryDifficulty(e, "normal") === difficulty;
+    });
+  }
+
+  function fetchLeaderboard(limit, difficulty) {
+    return fetchLeaderboardBundle(limit, difficulty).then(function (b) { return b.merged || b.cloud; });
+  }
+
+  function readLocalLeaderboard() {
+    return readLegacyLocalLeaderboard();
   }
 
   function writeLocalLeaderboard(list) {
@@ -371,12 +646,14 @@
   }
 
   function pushLocalScore(score, meta) {
-    var list = readLocalLeaderboard();
+    var difficulty = resolveEntryDifficulty({ meta: meta }, "normal");
+    var store = readLocalLeaderboardByDiff();
+    var list = store[difficulty] || [];
     var name = (authUser && authUser.displayName) || "本地玩家";
     var entry = {
       playerName: name,
       score: score,
-      meta: meta || {},
+      meta: Object.assign({}, meta || {}, { difficulty: difficulty }),
       isMe: true,
       local: true,
       source: "local",
@@ -390,18 +667,25 @@
       list.push(entry);
     }
     list.sort(function (a, b) { return b.score - a.score; });
-    list = list.slice(0, 20).map(function (e, i) {
+    store[difficulty] = list.slice(0, 20).map(function (e, i) {
       return Object.assign({}, e, { rank: i + 1 });
     });
-    writeLocalLeaderboard(list);
-    return list;
+    writeLocalLeaderboardByDiff(store);
+    return store[difficulty];
   }
 
-  function formatDifficultyMeta(meta) {
+  function formatDifficultyMeta(meta, labelMap) {
     if (!meta || typeof meta !== "object") return "";
     var diff = meta.difficulty;
     if (!diff) return "";
-    var map = { easy: "簡單", normal: "標準", hard: "困難", extreme: "極限" };
+    if (labelMap && labelMap[diff]) return labelMap[diff];
+    var map = {
+      easy: "簡單",
+      normal: "標準",
+      hard: "困難",
+      extreme: "極限",
+      versus: "雙人對戰",
+    };
     return map[diff] || String(diff);
   }
 
@@ -439,14 +723,15 @@
 
   function formatCloudError(msg) {
     if (!msg) return "無法連線平台";
-    if (msg.indexOf("game_leaderboard") >= 0) {
-      return "平台排行榜資料表尚未建立（需管理員執行 npm run db:leaderboard）";
+    if (msg.indexOf("game_leaderboard") >= 0 || msg.indexOf("relation") >= 0 && msg.indexOf("does not exist") >= 0) {
+      return "平台排行榜資料表尚未建立。管理員請在 Supabase SQL Editor 執行 supabase/game-leaderboard.sql 與 game-leaderboard-by-difficulty.sql，或在本機執行 npm run db:leaderboard";
     }
     return msg;
   }
 
-  function renderLeaderboardPanel(bundle) {
+  function renderLeaderboardPanel(bundle, diffLabel) {
     var html = "";
+    var sectionTitle = diffLabel ? "「" + diffLabel + "」排行榜" : "排行榜";
     if (!bundle.loggedIn) {
       html +=
         '<p class="rnf-lb-note">未登入帳號：結算分數只會存在本機。登入後再玩，才會寫入<strong>平台排行榜</strong>。</p>';
@@ -454,11 +739,11 @@
       html +=
         '<p class="rnf-lb-note" style="background:rgba(34,211,238,.08);border-color:rgba(34,211,238,.25)">已登入：下方「平台」標籤為平台排行榜紀錄。</p>';
     }
-    html += '<p class="rnf-lb-section-title">平台排行榜</p>';
+    html += '<p class="rnf-lb-section-title">平台 · ' + sectionTitle + "</p>";
     if (bundle.cloudOk && bundle.cloud.length) {
       html += renderLeaderboardHtml(bundle.cloud, false, null);
     } else if (bundle.cloudOk) {
-      html += '<p class="rnf-lb-empty">尚無玩家上榜。登入後完成一局即可成為第一位！</p>';
+      html += '<p class="rnf-lb-empty">此難度尚無玩家上榜。登入後完成一局即可成為第一位！</p>';
     } else {
       html +=
         '<p class="rnf-lb-empty">無法載入平台排行榜' +
@@ -469,7 +754,7 @@
       return e.local !== false || e.source === "local";
     });
     if (localEntries.length) {
-      html += '<p class="rnf-lb-section-title">本機試玩紀錄（未上傳／僅此瀏覽器）</p>';
+      html += '<p class="rnf-lb-section-title">本機試玩 · ' + sectionTitle + "</p>";
       html += renderLeaderboardHtml(
         localEntries.map(function (e, i) {
           return Object.assign({}, e, { rank: i + 1, source: "local", local: true });
@@ -479,7 +764,7 @@
       );
     }
     if (!bundle.cloud.length && !localEntries.length) {
-      html += '<p class="rnf-lb-empty">尚無任何紀錄，先玩一局吧！</p>';
+      html += '<p class="rnf-lb-empty">此難度尚無任何紀錄，先玩一局吧！</p>';
     }
     return html;
   }
@@ -520,13 +805,23 @@
   }
 
   function submitScore(score, metadata) {
+    var meta = metadata || {};
     var payload = {
       type: "RNF_SUBMIT_SCORE",
       score: Math.floor(Number(score) || 0),
       timestamp: Date.now(),
-      metadata: metadata || {},
+      metadata: meta,
     };
     postToParent(payload);
+    if (!isEmbedded() && gameId) {
+      refreshAuthState().then(function (loggedIn) {
+        if (!loggedIn) return;
+        directApiFetch("POST", "/api/games/" + gameId + "/leaderboard", {
+          score: payload.score,
+          meta: Object.assign({}, meta, { submittedAt: payload.timestamp }),
+        }).catch(function () {});
+      });
+    }
     SFX.score();
     return payload;
   }
@@ -534,19 +829,14 @@
   function saveData(saveObject) {
     var payload = { type: "RNF_SAVE_DATA", data: saveObject || {} };
     postToParent(payload);
-    try {
-      localStorage.setItem("rnf:" + slug + ":save", JSON.stringify(saveObject));
-    } catch (_e) {}
+    writeParentStorage("save", saveObject || {});
     return payload;
   }
 
   function loadLocalSave() {
-    try {
-      var raw = localStorage.getItem("rnf:" + slug + ":save");
-      return raw ? JSON.parse(raw) : null;
-    } catch (_e) {
-      return null;
-    }
+    var data = readParentStorageSync("save", null);
+    if (data && typeof data === "object" && !Array.isArray(data)) return data;
+    return null;
   }
 
   function getSettings() {
@@ -739,12 +1029,46 @@
     var particles = createParticles();
     var keyGuard = createKeyGuard(canvas);
     var localSave = loadLocalSave() || {};
-    var bestScore = localSave.bestScore || 0;
     var difficulties = options.difficulties || DEFAULT_DIFFICULTIES;
     var selectedDifficulty = localSave.difficulty || difficulties[1]?.id || difficulties[0].id;
+    var lbDifficulty = selectedDifficulty;
+
+    function getBestForDifficulty(diffId) {
+      if (localSave.bestScores && localSave.bestScores[diffId] != null) {
+        return localSave.bestScores[diffId];
+      }
+      if (localSave.bestScore && diffId === (localSave.difficulty || selectedDifficulty)) {
+        return localSave.bestScore;
+      }
+      return 0;
+    }
+
+    function setBestForDifficulty(diffId, score) {
+      if (!localSave.bestScores) localSave.bestScores = {};
+      var prev = getBestForDifficulty(diffId);
+      if (score <= prev) return prev;
+      localSave.bestScores[diffId] = score;
+      delete localSave.bestScore;
+      return score;
+    }
+
+    var bestScore = getBestForDifficulty(selectedDifficulty);
     var enableLeaderboard = options.enableLeaderboard !== false;
     var tuningFlags = options.tuning || { sensitivity: true, gameSpeed: true };
     var showTuning = options.showTuning !== false;
+
+    function hydrateLocalSaveFromParent() {
+      if (!isEmbedded()) return;
+      ensureParentStorage("save").then(function (remote) {
+        if (!remote || typeof remote !== "object" || Array.isArray(remote)) return;
+        localSave = Object.assign({}, remote, localSave);
+        selectedDifficulty = localSave.difficulty || selectedDifficulty;
+        lbDifficulty = selectedDifficulty;
+        bestScore = getBestForDifficulty(selectedDifficulty);
+        var activeMenu = root.querySelector("#rnf-menu.rnf-screen.active");
+        if (activeMenu) renderMenu();
+      });
+    }
 
     function getDifficultyConfig() {
       for (var i = 0; i < difficulties.length; i++) {
@@ -761,7 +1085,9 @@
 
     function setDifficulty(id) {
       selectedDifficulty = id;
+      lbDifficulty = id;
       localSave.difficulty = id;
+      bestScore = getBestForDifficulty(id);
       saveData(localSave);
     }
 
@@ -825,16 +1151,29 @@
     }
 
     function renderLeaderboardScreen() {
+      var diffCfg = difficulties.find(function (d) { return d.id === lbDifficulty; }) || getDifficultyConfig();
+      var tabButtons = difficulties.map(function (d) {
+        return '<button class="rnf-btn' + (d.id === lbDifficulty ? " selected" : "") + '" data-lb-diff="' + d.id + '">' + d.label + "</button>";
+      }).join("");
       leaderboardPanel.innerHTML =
         '<div class="rnf-badge">LEADERBOARD</div>' +
         '<h1 class="rnf-title" style="font-size:1.45rem">排行榜</h1>' +
-        '<p class="rnf-sub">平台與本機試玩紀錄分開顯示</p>' +
+        '<p class="rnf-sub">各難度獨立分榜 · 平台與本機試玩分開顯示</p>' +
+        '<p class="rnf-diff-label">選擇難度分榜</p>' +
+        '<div class="rnf-btn-row" id="rnf-lb-diff-row">' + tabButtons + "</div>" +
         '<div class="rnf-lb-list rnf-scroll" id="rnf-lb-list"><p class="rnf-lb-empty">載入中…</p></div>' +
         '<div class="rnf-btn-row"><button class="rnf-btn primary" id="rnf-lb-back">返回</button></div>';
       show("rnf-leaderboard");
       var listEl = leaderboardPanel.querySelector("#rnf-lb-list");
-      fetchLeaderboardBundle(15).then(function (bundle) {
-        listEl.innerHTML = renderLeaderboardPanel(bundle);
+      fetchLeaderboardBundle(15, lbDifficulty).then(function (bundle) {
+        listEl.innerHTML = renderLeaderboardPanel(bundle, diffCfg.label);
+      });
+      leaderboardPanel.querySelectorAll("[data-lb-diff]").forEach(function (btn) {
+        btn.onclick = function () {
+          SFX.click();
+          lbDifficulty = btn.getAttribute("data-lb-diff");
+          renderLeaderboardScreen();
+        };
       });
       leaderboardPanel.querySelector("#rnf-lb-back").onclick = function () {
         SFX.click();
@@ -893,6 +1232,7 @@
       if (lbBtn) {
         lbBtn.onclick = function () {
           SFX.click();
+          lbDifficulty = selectedDifficulty;
           renderLeaderboardScreen();
         };
       }
@@ -995,27 +1335,27 @@
       keyGuard.detach();
       var diffCfg = getDifficultyConfig();
       var rawScore = Math.floor(Number(score) || 0);
-      var finalScore = Math.floor(rawScore * (diffCfg.scoreMult || 1));
       var meta = Object.assign({ slug: slug, difficulty: diffCfg.id, rawScore: rawScore }, extra || {});
-      if (finalScore > bestScore) {
-        bestScore = finalScore;
-        localSave.bestScore = bestScore;
-        localSave = Object.assign({}, localSave, meta);
-        saveData(localSave);
-      }
+      lbDifficulty = resolveEntryDifficulty({ meta: meta }, diffCfg.id);
+      var recordDiff = difficulties.find(function (d) { return d.id === lbDifficulty; }) || diffCfg;
+      var finalScore = Math.floor(rawScore * (recordDiff.scoreMult || 1));
+      var updatedBest = setBestForDifficulty(lbDifficulty, finalScore);
+      if (updatedBest > bestScore) bestScore = updatedBest;
+      localSave = Object.assign({}, localSave, meta);
+      saveData(localSave);
       pushLocalScore(finalScore, meta);
       submitScore(finalScore, meta);
-      var uploadHint = authUser
+      var uploadHint = isUserLoggedIn()
         ? "分數已提交至平台排行榜"
         : "分數已存本機試玩紀錄；登入後再玩才會寫入平台排行榜";
       overPanel.innerHTML =
         '<div class="rnf-badge">GAME OVER</div><h1 class="rnf-title" style="font-size:1.6rem">任務結束</h1>' +
         '<div class="rnf-score-big">' + finalScore.toLocaleString() + "</div>" +
-        '<p class="rnf-sub">難度 ' + diffCfg.label + ' · 加成 x' + diffCfg.scoreMult.toFixed(2) +
+        '<p class="rnf-sub">難度 ' + recordDiff.label + ' · 加成 x' + recordDiff.scoreMult.toFixed(2) +
         (rawScore !== finalScore ? " · 原始 " + rawScore.toLocaleString() : "") + "</p>" +
         '<p class="rnf-sub">' + uploadHint + "</p>" +
         '<div class="rnf-stats"><div class="rnf-stat">最佳<span>BEST</span><b>' + bestScore.toLocaleString() + "</b></div>" +
-        '<div class="rnf-stat">難度<span>DIFF</span><b style="font-size:.85rem;color:#c4b5fd">' + diffCfg.label + "</b></div></div>" +
+        '<div class="rnf-stat">難度<span>DIFF</span><b style="font-size:.85rem;color:#c4b5fd">' + recordDiff.label + "</b></div></div>" +
         '<div class="rnf-btn-row"><button class="rnf-btn primary" id="rnf-retry">再玩一次</button>' +
         (enableLeaderboard ? '<button class="rnf-btn" id="rnf-over-lb">排行榜</button>' : "") +
         '<button class="rnf-btn" id="rnf-menu-back">主選單</button></div>';
@@ -1041,6 +1381,7 @@
     }
 
     renderMenu();
+    hydrateLocalSaveFromParent();
 
     return {
       root: root,
@@ -1080,6 +1421,14 @@
       bindEmbedBridge();
       bindApiProxy();
       gameId = detectGameId();
+      announceReady();
+      prefetchParentStorage();
+      setTimeout(announceReady, 120);
+      setTimeout(announceReady, 500);
+      setTimeout(function () {
+        syncAuthFromEmbedSdk();
+        if (!authUser) probeSessionLoggedIn();
+      }, 200);
       return RNF;
     },
     getSettings: getSettings,

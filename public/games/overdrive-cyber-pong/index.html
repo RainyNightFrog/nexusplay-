@@ -6,7 +6,7 @@
   <title>Overdrive Cyber Pong · 超頻電競乒乓</title>
 </head>
 <body>
-<script src="/sdk/rnf-game-sdk.js?v=20260715"></script>
+<script src="/sdk/rnf-game-sdk.js?v=20260720"></script>
 <script>
 RNF.init();
 var shell = RNF.buildShell({
@@ -16,6 +16,11 @@ var shell = RNF.buildShell({
   width: 960,
   height: 520,
   bgmStyle: "pulse",
+  difficulties: [
+    { id: "easy", label: "簡單 AI", speedMult: 1, scoreMult: 1, ai: 0.85, desc: "單人對戰簡單 AI" },
+    { id: "hard", label: "困難 AI", speedMult: 1, scoreMult: 1.35, ai: 1.2, desc: "單人對戰困難 AI" },
+    { id: "versus", label: "雙人對戰", speedMult: 1, scoreMult: 1.15, ai: 1, desc: "本地雙人同螢幕" },
+  ],
   highlights: ["曲球軌跡", "重力場", "可點選模式", "雙人對戰"],
   help: {
     about: "霓虹風格的乒乓球對戰。先達到目標分數者獲勝。",
@@ -211,13 +216,13 @@ function loop(now) {
   if (ball.x < -20) {
     scoreR++;
     RNF.sfx.score();
-    if (scoreR >= 7) shell.gameOver(scoreL * 100 + scoreR * 50, { winner: "right", mode: mode });
+    if (scoreR >= 7) shell.gameOver(scoreL * 100 + scoreR * 50, { winner: "right", mode: mode, difficulty: mode === "2p" ? "versus" : mode });
     else resetBall(1);
   }
   if (ball.x > 980) {
     scoreL++;
     RNF.sfx.score();
-    if (scoreL >= 7) shell.gameOver(scoreL * 100 + scoreR * 50, { winner: "left", mode: mode });
+    if (scoreL >= 7) shell.gameOver(scoreL * 100 + scoreR * 50, { winner: "left", mode: mode, difficulty: mode === "2p" ? "versus" : mode });
     else resetBall(-1);
   }
 

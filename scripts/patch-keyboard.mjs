@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const ROOT = path.resolve("public/games");
-const SDK = "/sdk/rnf-game-sdk.js?v=20260715";
+const SDK = "/sdk/rnf-game-sdk.js?v=20260717";
 
 const SLUGS = [
   "neon-snake-extreme",

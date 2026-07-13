@@ -363,14 +363,65 @@
     return data.save ?? null;
   }
 
-  async function cloudFetchLeaderboard(limit) {
+  function resolveEntryDifficulty(entry, fallback) {
+    fallback = fallback || "normal";
+    if (!entry) return fallback;
+    if (entry.difficulty) return String(entry.difficulty);
+    if (entry.meta && entry.meta.difficulty) return String(entry.meta.difficulty);
+    return fallback;
+  }
+
+  function readLocalLeaderboardByDiff() {
+    var key = "leaderboard-by-diff";
+    var raw = readLocal(key);
+    if (raw) return raw;
+    var legacy = readLocal("leaderboard") || [];
+    if (!legacy.length) return {};
+    var store = {};
+    legacy.forEach(function (entry) {
+      var diff = resolveEntryDifficulty(entry, "normal");
+      if (!store[diff]) store[diff] = [];
+      store[diff].push(entry);
+    });
+    writeLocal(key, store);
+    return store;
+  }
+
+  function mergeDifficultyLeaderboard(cloud, local, difficulty) {
+    var merged = (cloud || []).filter(function (e) {
+      return resolveEntryDifficulty(e, "normal") === difficulty;
+    }).slice();
+    (local || []).forEach(function (le) {
+      if (!le.isMe) return;
+      var idx = merged.findIndex(function (e) { return e.isMe; });
+      if (idx >= 0) {
+        if (le.score > merged[idx].score) merged[idx] = Object.assign({}, le, { rank: merged[idx].rank });
+      } else {
+        merged.push(le);
+      }
+    });
+    merged.sort(function (a, b) { return b.score - a.score; });
+    return merged.slice(0, 20).map(function (e, i) {
+      return Object.assign({}, e, { rank: i + 1 });
+    });
+  }
+
+  async function cloudFetchLeaderboard(limit, difficulty) {
     if (!gameId) return [];
-    var res = await fetch("/api/games/" + gameId + "/leaderboard?limit=" + (limit || 20), {
+    var path = "/api/games/" + gameId + "/leaderboard?limit=" + (limit || 20);
+    if (difficulty) path += "&difficulty=" + encodeURIComponent(difficulty);
+    var res = await fetch(path, {
       credentials: "same-origin",
     });
     if (!res.ok) return [];
     var data = await res.json();
-    return data.entries || [];
+    return filterEntriesByDifficulty(data.entries || [], difficulty || "normal");
+  }
+
+  function filterEntriesByDifficulty(entries, difficulty) {
+    return (entries || []).filter(function (e) {
+      return resolveEntryDifficulty(e, "normal") === difficulty;
+    });
   }
 
   async function cloudSubmitScore(payload) {
@@ -408,7 +459,9 @@
   }
 
   function submitLocalScore(entry) {
-    var list = readLocal("leaderboard") || [];
+    var difficulty = resolveEntryDifficulty(entry, "normal");
+    var store = readLocalLeaderboardByDiff();
+    var list = store[difficulty] || [];
     var name = user ? user.displayName : getGuestName();
     if (!user) writeLocal("guest-name", name);
 
@@ -416,7 +469,7 @@
       playerName: name,
       score: entry.score,
       grade: entry.grade || null,
-      meta: entry.meta || {},
+      meta: Object.assign({}, entry.meta || {}, { difficulty: difficulty }),
       updatedAt: new Date().toISOString(),
       isMe: true,
       local: true,
@@ -435,9 +488,9 @@
     list.sort(function (a, b) {
       return b.score - a.score;
     });
-    list = list.slice(0, 20);
-    writeLocal("leaderboard", list);
-    return list;
+    store[difficulty] = list.slice(0, 20);
+    writeLocal("leaderboard-by-diff", store);
+    return store[difficulty];
   }
 
   function mergeLeaderboards(cloud, local) {
@@ -588,13 +641,15 @@
       }
       return cloudResult;
     },
-    fetchLeaderboard: async function (limit) {
-      var local = readLocal("leaderboard") || [];
+    fetchLeaderboard: async function (limit, difficulty) {
+      difficulty = difficulty || "normal";
+      var store = readLocalLeaderboardByDiff();
+      var local = store[difficulty] || [];
       var cloud = [];
       try {
-        cloud = await cloudFetchLeaderboard(limit || 20);
+        cloud = await cloudFetchLeaderboard(limit || 20, difficulty);
       } catch (_e) {}
-      return mergeLeaderboards(cloud, local);
+      return mergeDifficultyLeaderboard(cloud, local, difficulty);
     },
     renderLeaderboard: function (container, entries) {
       injectStyles();

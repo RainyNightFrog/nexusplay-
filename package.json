@@ -85,6 +85,7 @@
     "chat:ambient:creator": "node scripts/run-chat-ambient.mjs --channel=creator",
     "db:avatars": "node scripts/run-avatars.mjs",
     "db:seed": "node scripts/seed-platform.mjs",
+    "db:seed-rnf-followers": "node scripts/seed-rainynightfrog-followers.mjs",
     "db:seed-virtual-games": "npx tsx scripts/seed-virtual-games.ts",
     "upload:void-gacha": "npx tsx scripts/upload-void-gacha-zip.ts",
     "db:assign-creator": "node scripts/assign-game-creator.mjs",

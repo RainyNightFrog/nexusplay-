@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import pg from "pg";
 
 const { Client } = pg;
+const PROJECT_REF = "icydkixwynxizrgfzelq";
 
 function loadEnv() {
   const envPath = resolve(process.cwd(), ".env.local");
@@ -48,27 +49,20 @@ function buildConnectionCandidates() {
   ].filter(Boolean);
 }
 
-async function main() {
-  loadEnv();
+async function runSqlViaPg(sql) {
   const candidates = buildConnectionCandidates();
   if (!candidates.length) {
-    console.error("請在 .env.local 設定 DATABASE_URL 或 SUPABASE_DB_PASSWORD");
-    process.exit(1);
+    return { ok: false, error: new Error("缺少 DATABASE_URL 或 SUPABASE_DB_PASSWORD") };
   }
-
-  const sqlPath = resolve(process.cwd(), "supabase/game-leaderboard.sql");
-  const sql = readFileSync(sqlPath, "utf8");
 
   let lastError = null;
   for (const connectionString of candidates) {
     const client = new Client({ connectionString, ssl: { rejectUnauthorized: false } });
     try {
       await client.connect();
-      console.log("執行 supabase/game-leaderboard.sql …");
       await client.query(sql);
-      console.log("✓ game_leaderboard 表與 RLS 已就緒");
       await client.end();
-      return;
+      return { ok: true, via: "postgres" };
     } catch (error) {
       lastError = error;
       try {
@@ -79,8 +73,107 @@ async function main() {
     }
   }
 
-  console.error("執行失敗：", lastError);
-  process.exit(1);
+  return { ok: false, error: lastError };
+}
+
+async function runSqlViaManagementApi(sql) {
+  const accessToken = process.env.SUPABASE_ACCESS_TOKEN?.trim();
+  if (!accessToken) {
+    return { ok: false, error: new Error("缺少 SUPABASE_ACCESS_TOKEN") };
+  }
+
+  const response = await fetch(
+    `https://api.supabase.com/v1/projects/${PROJECT_REF}/database/query`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ query: sql }),
+    }
+  );
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const message =
+      payload.message ||
+      payload.error ||
+      payload.error_description ||
+      `Management API 失敗 (${response.status})`;
+    return { ok: false, error: new Error(String(message)) };
+  }
+
+  return { ok: true, via: "management-api" };
+}
+
+async function runSqlFile(label, filePath) {
+  const sql = readFileSync(filePath, "utf8");
+  console.log(`執行 ${label} …`);
+
+  const pgResult = await runSqlViaPg(sql);
+  if (pgResult.ok) {
+    console.log(`✓ ${label}（Postgres 直連）`);
+    return;
+  }
+
+  console.warn(`Postgres 直連失敗，改以 Supabase Management API 執行…`);
+  const apiResult = await runSqlViaManagementApi(sql);
+  if (apiResult.ok) {
+    console.log(`✓ ${label}（Management API）`);
+    return;
+  }
+
+  throw apiResult.error ?? pgResult.error ?? new Error(`${label} 執行失敗`);
+}
+
+async function verifyTable() {
+  const checkSql =
+    "select to_regclass('public.game_leaderboard') as table_name, " +
+    "(select count(*) from information_schema.columns " +
+    "where table_schema = 'public' and table_name = 'game_leaderboard' and column_name = 'difficulty') as has_difficulty;";
+
+  const accessToken = process.env.SUPABASE_ACCESS_TOKEN?.trim();
+  if (!accessToken) return;
+
+  const response = await fetch(
+    `https://api.supabase.com/v1/projects/${PROJECT_REF}/database/query/read-only`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ query: checkSql }),
+    }
+  );
+
+  const rows = await response.json().catch(() => []);
+  if (response.ok && Array.isArray(rows) && rows[0]) {
+    console.log(
+      "驗證：game_leaderboard =",
+      rows[0].table_name ? "已建立" : "未找到",
+      "| difficulty 欄位 =",
+      Number(rows[0].has_difficulty) > 0 ? "有" : "無"
+    );
+  }
+}
+
+async function main() {
+  loadEnv();
+
+  const baseSql = resolve(process.cwd(), "supabase/game-leaderboard.sql");
+  const migrationSql = resolve(process.cwd(), "supabase/game-leaderboard-by-difficulty.sql");
+
+  try {
+    await runSqlFile("supabase/game-leaderboard.sql", baseSql);
+    await runSqlFile("supabase/game-leaderboard-by-difficulty.sql", migrationSql);
+    await verifyTable();
+    console.log("✓ 排行榜資料表 migration 全部完成");
+  } catch (error) {
+    console.error("執行失敗：", error);
+    process.exit(1);
+  }
 }
 
 main();

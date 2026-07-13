@@ -249,7 +249,7 @@
         <h3>⚙️ 設定</h3>
         <ul>
           <li>主選單或遊戲中按 <strong>⚙ 設定</strong> 可調整鍵盤移動幅度與換道平滑度</li>
-          <li><strong>移動幅度「小」+ 平滑度「慢」：</strong> 預設組合，每次按鍵只換一條線道，需完成換道後才能再移動</li>
+          <li><strong>移動幅度「小」+ 平滑度「慢」：</strong> 預設組合，每次按鍵只換一條線道，換道約 0.46 秒完成</li>
         </ul>
         <h3>⚙️ 難度</h3>
         <ul>
@@ -375,18 +375,18 @@
   const W = 960, H = 600;
   const LANES = [W * 0.25, W * 0.5, W * 0.75];
   const PLAYER_Y = H * 0.82;
-  const SETTINGS_STORAGE_KEY = 'nexusplay:neon-abyss-runner:settings:v2';
+  const SETTINGS_STORAGE_KEY = 'nexusplay:neon-abyss-runner:settings:v3';
 
   const MOVE_RANGE_PRESETS = {
-    small:  { debounce: 500, requireSettled: true,  settleAt: 0.94, label: '小' },
-    medium: { debounce: 320, requireSettled: true,  settleAt: 0.88, label: '中' },
-    large:  { debounce: 180, requireSettled: false, settleAt: 0,    label: '大' },
+    small:  { debounce: 680, requireSettled: true,  settleAt: 1,    label: '小' },
+    medium: { debounce: 420, requireSettled: true,  settleAt: 0.98, label: '中' },
+    large:  { debounce: 280, requireSettled: true,  settleAt: 0.92, label: '大' },
   };
 
   const LANE_SMOOTH_PRESETS = {
-    slow:   { switchMs: 320, label: '慢' },
-    medium: { switchMs: 220, label: '標準' },
-    fast:   { switchMs: 155, label: '快' },
+    slow:   { switchMs: 460, label: '慢' },
+    medium: { switchMs: 300, label: '標準' },
+    fast:   { switchMs: 210, label: '快' },
   };
 
   const MOVE_RANGE_LABELS = { small: '小', medium: '中', large: '大' };
@@ -432,6 +432,7 @@
   let spawnTimer = 0, waveTimer = 0, waveDuration = 18000, waveSpawns = 0, waveTarget = 12;
   let shake = 0, scrollY = 0, bgPhase = 0, bossActive = false, invuln = 0;
   let bestScore = 0, bestWave = 0, bestCombo = 1, bestGrade = '—';
+  let gameEnding = false;
 
   const keys = {};
   let touchStartX = 0, touchStartY = 0;
@@ -563,6 +564,7 @@
 
   function resetGame() {
     cfg = DIFF[difficulty];
+    gameEnding = false;
     player = { lane: 1, x: LANES[1], y: PLAYER_Y, w: 36, h: 44, tilt: 0 };
     currentLane = 1; targetLane = 1; laneT = 1;
     obstacles = []; orbs = []; pickups = []; particles = []; floatTexts = [];
@@ -691,6 +693,7 @@
   }
 
   function moveLane(dir) {
+    if (gameEnding || !running) return;
     const preset = getMovePreset();
     const now = performance.now();
     if (now - lastLaneInputAt < preset.debounce) return;
@@ -699,7 +702,8 @@
     if (next < 0 || next > 2 || next === targetLane) return;
     targetLane = next;
     laneT = 0;
-    player.tilt = dir * 0.22;
+    currentLane = nearestLane(player.x);
+    player.tilt = dir * 0.16;
     lastLaneInputAt = now;
   }
 
@@ -720,7 +724,7 @@
   }
 
   function takeHit() {
-    if (invuln > 0 || dashActive) return;
+    if (invuln > 0 || dashActive || !running || gameEnding) return;
     if (shield) {
       shield = false;
       invuln = 1200;
@@ -758,7 +762,7 @@
 
     if (laneT < 1) {
       laneT = Math.min(1, laneT + dt / laneSwitchMs);
-      const ease = 1 - Math.pow(1 - laneT, 3);
+      const ease = laneT * laneT * (3 - 2 * laneT);
       const from = laneX(currentLane), to = laneX(targetLane);
       player.x = from + (to - from) * ease;
       if (laneT >= 1) {
@@ -820,19 +824,28 @@
     orbs = orbs.filter((o) => !o.collected && o.y < H + 40);
     pickups = pickups.filter((p) => p.y < H + 40);
 
-    if (!dashActive) {
+    if (!dashActive && !gameEnding) {
       const pl = playerLane();
-      obstacles.forEach((o) => {
+      for (let oi = 0; oi < obstacles.length; oi++) {
+        const o = obstacles[oi];
         if (o.type === 'barrier') {
-          if (Math.abs(o.lane - pl) < 0.5 && rectsOverlap(player.x, player.y, player.w * 0.7, player.h * 0.6, o.x, o.y, o.w, o.h))
+          if (Math.abs(o.lane - pl) < 0.5 && rectsOverlap(player.x, player.y, player.w * 0.7, player.h * 0.6, o.x, o.y, o.w, o.h)) {
             takeHit();
+            if (!running) break;
+          }
         } else if (o.type === 'laser' && o.active) {
           const inLane = o.lanes.indexOf(pl) >= 0;
-          if (inLane && Math.abs(o.y - player.y) < 22) takeHit();
+          if (inLane && Math.abs(o.y - player.y) < 22) {
+            takeHit();
+            if (!running) break;
+          }
         } else if (o.type === 'mine') {
-          if (dist(player.x, player.y, o.x, o.y) < o.r + 14) takeHit();
+          if (dist(player.x, player.y, o.x, o.y) < o.r + 14) {
+            takeHit();
+            if (!running) break;
+          }
         }
-      });
+      }
     }
 
     const pl = playerLane();
@@ -1103,9 +1116,13 @@
   });
 
   async function endGame() {
+    if (gameEnding) return;
+    gameEnding = true;
     running = false;
+    paused = false;
     PlatformBridge.setGameSessionActive(false);
     gameLoopCtrl.stop();
+
     const finalScore = Math.floor(score);
     const grade = calcGrade(finalScore);
     $('goGrade').textContent = grade;
@@ -1115,6 +1132,11 @@
     $('goDist').textContent = Math.floor(distance).toLocaleString() + 'm';
     $('goMsg').textContent = '你在 ' + cfg.label + ' 難度下穿越了 ' + wave + ' 波深淵航道。' +
       (grade === 'S' ? ' 傳說級虛空駕駛員！' : grade === 'A' ? ' 出色的疾馳表現！' : ' 再試一次，突破極限！');
+    $('goLbLoading').style.display = 'block';
+    $('goLbLoading').textContent = '載入排行榜…';
+    $('goLbList').innerHTML = '';
+    $('goSaveHint').textContent = '正在儲存紀錄…';
+    showScreen('gameover');
 
     if (finalScore > bestScore) bestScore = finalScore;
     if (wave > bestWave) bestWave = wave;
@@ -1122,27 +1144,37 @@
     bestGrade = PlatformBridge.betterGrade(bestGrade, grade);
     refreshMenuStats();
 
-    const result = await PlatformBridge.saveProgress({
-      bestScore, bestWave, bestCombo, bestGrade,
-      difficulty,
-      settings,
-      _incrementGames: true,
-    });
-    PlatformBridge.setSaveHint($('goSaveHint'), result.synced, !!PlatformBridge.getUser());
-    PlatformBridge.setSaveHint($('saveHint'), result.synced, !!PlatformBridge.getUser());
+    try {
+      const result = await PlatformBridge.saveProgress({
+        bestScore, bestWave, bestCombo, bestGrade,
+        difficulty,
+        settings,
+        _incrementGames: true,
+      });
+      PlatformBridge.setSaveHint($('goSaveHint'), result.synced, !!PlatformBridge.getUser());
+      PlatformBridge.setSaveHint($('saveHint'), result.synced, !!PlatformBridge.getUser());
+    } catch (_e) {
+      $('goSaveHint').textContent = '紀錄已存本機';
+    }
 
-    await PlatformBridge.submitScore({
-      score: finalScore,
-      grade,
-      meta: { wave, combo: parseFloat(maxCombo.toFixed(1)), distance: Math.floor(distance), difficulty },
-    });
+    try {
+      await PlatformBridge.submitScore({
+        score: finalScore,
+        grade,
+        meta: { wave, combo: parseFloat(maxCombo.toFixed(1)), distance: Math.floor(distance), difficulty },
+      });
+    } catch (_e) {}
 
-    showScreen('gameover');
-    $('goLbLoading').style.display = 'block';
-    $('goLbList').innerHTML = '';
-    const entries = await PlatformBridge.fetchLeaderboard(15);
-    $('goLbLoading').style.display = 'none';
-    PlatformBridge.renderLeaderboard($('goLbList'), entries);
+    try {
+      const entries = await Promise.race([
+        PlatformBridge.fetchLeaderboard(15),
+        new Promise(function (resolve) { setTimeout(function () { resolve([]); }, 8000); }),
+      ]);
+      $('goLbLoading').style.display = 'none';
+      PlatformBridge.renderLeaderboard($('goLbList'), entries);
+    } catch (_e) {
+      $('goLbLoading').textContent = '無法載入排行榜';
+    }
   }
 
   function startGame() {
@@ -1293,12 +1325,15 @@
   });
 
   window.addEventListener('keydown', (e) => {
+    if (!screens.game.classList.contains('active') || gameEnding) return;
     keys[e.code] = true;
     if (e.code === 'KeyA' || e.code === 'ArrowLeft') {
+      e.preventDefault();
       if (e.repeat) return;
       moveLane(-1);
     }
     if (e.code === 'KeyD' || e.code === 'ArrowRight') {
+      e.preventDefault();
       if (e.repeat) return;
       moveLane(1);
     }
@@ -1320,12 +1355,12 @@
     touchStartY = e.touches[0].clientY;
   }, { passive: true });
   wrap.addEventListener('touchend', (e) => {
-    if (!running) return;
+    if (!running || gameEnding) return;
     const dx = e.changedTouches[0].clientX - touchStartX;
     const dy = e.changedTouches[0].clientY - touchStartY;
-    if (Math.abs(dx) > 48 && Math.abs(dx) > Math.abs(dy)) {
+    if (Math.abs(dx) > 64 && Math.abs(dx) > Math.abs(dy) * 1.2) {
       moveLane(dx > 0 ? 1 : -1);
-    } else if (Math.abs(dx) < 20 && Math.abs(dy) < 20) {
+    } else if (Math.abs(dx) < 24 && Math.abs(dy) < 24) {
       tryDash();
     }
   }, { passive: true });

@@ -1,6 +1,7 @@
 -- ============================================================
--- 遊戲排行榜（game_leaderboard）
+-- 遊戲排行榜（game_leaderboard）— 基礎表（相容舊版）
 -- 請在 Supabase Dashboard → SQL Editor 中執行，或 npm run db:leaderboard
+-- 完整 schema（含 difficulty 分榜）會由 game-leaderboard-by-difficulty.sql 補上
 -- ============================================================
 
 create table if not exists public.game_leaderboard (

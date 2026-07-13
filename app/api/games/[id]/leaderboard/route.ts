@@ -71,8 +71,9 @@ export async function GET(
       50,
       Math.max(1, Number.parseInt(url.searchParams.get("limit") ?? "20", 10) || 20)
     );
+    const difficulty = url.searchParams.get("difficulty")?.trim() || null;
 
-    const rows = await getTopLeaderboard(createServerSupabase(), gameId, limit);
+    const rows = await getTopLeaderboard(createServerSupabase(), gameId, limit, difficulty);
     const titleMap = await resolveEquippedTitles(
       createServerSupabase(),
       rows.map((row) => row.user_id)

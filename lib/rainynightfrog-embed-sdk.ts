@@ -226,6 +226,7 @@ export type NexusPlayAuthUser = RainyNightFrogAuthUser;
 
 export const RAINYNIGHTFROG_AUTH_MESSAGE = "rainynightfrog:auth";
 export const RAINYNIGHTFROG_READY_MESSAGE = "rainynightfrog:ready";
+export const RAINYNIGHTFROG_REQUEST_AUTH_MESSAGE = "rainynightfrog:request-auth";
 export const RAINYNIGHTFROG_RESIZE_MESSAGE = "rainynightfrog:resize";
 export const RAINYNIGHTFROG_LEAVE_MESSAGE = "rainynightfrog:leave";
 export const RAINYNIGHTFROG_LEAVE_CONFIRM_REQUEST =
@@ -238,6 +239,10 @@ export const RAINYNIGHTFROG_API_PROXY_REQUEST = "rainynightfrog:api-proxy-reques
 export const RAINYNIGHTFROG_API_PROXY_RESPONSE = "rainynightfrog:api-proxy-response";
 export const RNF_SUBMIT_SCORE_MESSAGE = "RNF_SUBMIT_SCORE";
 export const RNF_SAVE_DATA_MESSAGE = "RNF_SAVE_DATA";
+export const RAINYNIGHTFROG_STORAGE_GET_MESSAGE = "rainynightfrog:storage-get";
+export const RAINYNIGHTFROG_STORAGE_GET_RESPONSE_MESSAGE =
+  "rainynightfrog:storage-get-response";
+export const RAINYNIGHTFROG_STORAGE_SET_MESSAGE = "rainynightfrog:storage-set";
 export const RAINYNIGHTFROG_SHOW_MENU_MESSAGE = "rainynightfrog:show-menu";
 export const RNF_SHOW_MENU_MESSAGE = "RNF_SHOW_MENU";
 
