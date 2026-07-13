@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Crown, ArrowLeft, ChevronLeft, ChevronRight, Loader2, Medal, RefreshCw, Trophy } from "lucide-react";
+import { Crown, ChevronLeft, ChevronRight, Loader2, Medal, RefreshCw, Trophy } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Dialog,
@@ -61,7 +61,15 @@ function RankBadge({ rank }: { rank: number }) {
   );
 }
 
-function OnlineIndicator({ isOnline }: { isOnline: boolean }) {
+function OnlineIndicator({
+  isOnline,
+  titleOnline,
+  titleOffline,
+}: {
+  isOnline: boolean;
+  titleOnline: string;
+  titleOffline: string;
+}) {
   return (
     <span
       className={cn(
@@ -70,7 +78,7 @@ function OnlineIndicator({ isOnline }: { isOnline: boolean }) {
           ? "animate-pulse bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]"
           : "bg-zinc-600"
       )}
-      title={isOnline ? "在線" : "離線"}
+      title={isOnline ? titleOnline : titleOffline}
     />
   );
 }
@@ -125,6 +133,7 @@ function LeaderboardCard({
   animateKey: string;
   onPlayerClick?: (entry: PlatformLeaderboardEntry) => void;
 }) {
+  const t = useTranslations("leaderboard");
   const tcx = useTranslations("common");
   const isTopThree = entry.rank <= 3;
 
@@ -181,16 +190,21 @@ function LeaderboardCard({
             )}
             titleClassName="text-[10px] sm:text-xs"
           />
-          <OnlineIndicator isOnline={entry.isOnline} />
+          <OnlineIndicator
+            isOnline={entry.isOnline}
+            titleOnline={t("statusOnline")}
+            titleOffline={t("statusOffline")}
+          />
           {entry.isMe && (
             <span className="shrink-0 rounded-full bg-cyan-500/15 px-2.5 py-0.5 text-xs font-semibold text-cyan-300 sm:text-sm">
-              你
+              {t("youBadge")}
             </span>
           )}
         </div>
         {isTopThree && (
           <p className="mt-1 text-sm text-zinc-500 sm:text-base">
-            #{entry.rank} · {entry.isOnline ? "競技中" : "稍後再戰"}
+            #{entry.rank} ·{" "}
+            {entry.isOnline ? t("statusOnline") : t("statusOffline")}
           </p>
         )}
       </div>
@@ -342,7 +356,6 @@ function LeaderboardTabPanel({
   fetchError,
   animateKey,
   page,
-  onPageChange,
   onPlayerClick,
 }: {
   entries: PlatformLeaderboardEntry[];
@@ -352,7 +365,6 @@ function LeaderboardTabPanel({
   fetchError: boolean;
   animateKey: string;
   page: number;
-  onPageChange: (page: number) => void;
   onPlayerClick?: (entry: PlatformLeaderboardEntry) => void;
 }) {
   const totalPages = Math.max(1, Math.ceil(entries.length / LEADERBOARD_PAGE_SIZE));
@@ -361,23 +373,15 @@ function LeaderboardTabPanel({
   const pageEntries = entries.slice(start, start + LEADERBOARD_PAGE_SIZE);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-2.5 [scrollbar-gutter:stable]">
-        <LeaderboardList
-          entries={pageEntries}
-          tab={tab}
-          locale={locale}
-          loading={loading}
-          fetchError={fetchError}
-          animateKey={animateKey}
-          onPlayerClick={onPlayerClick}
-        />
-      </div>
-      <LeaderboardPagination
-        page={safePage}
-        totalPages={totalPages}
-        totalEntries={entries.length}
-        onPageChange={onPageChange}
+    <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-2.5 [scrollbar-gutter:stable]">
+      <LeaderboardList
+        entries={pageEntries}
+        tab={tab}
+        locale={locale}
+        loading={loading}
+        fetchError={fetchError}
+        animateKey={animateKey}
+        onPlayerClick={onPlayerClick}
       />
     </div>
   );
@@ -486,6 +490,18 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
   const playTimeEntries = data?.playTime ?? [];
   const donatedEntries = data?.donated ?? [];
 
+  const activeEntries =
+    activeTab === "online"
+      ? onlineEntries
+      : activeTab === "playTime"
+        ? playTimeEntries
+        : donatedEntries;
+  const activePage = pageByTab[activeTab];
+  const activeTotalPages = Math.max(
+    1,
+    Math.ceil(activeEntries.length / LEADERBOARD_PAGE_SIZE)
+  );
+
   return (
     <>
     <Dialog open={open} onOpenChange={setOpen}>
@@ -571,11 +587,13 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
 
               <div className="flex items-center justify-between gap-3 border-b border-white/5 px-4 py-2.5 text-sm text-zinc-500">
                 <span className="min-w-0 truncate">
-                  {lastUpdated
-                    ? t("lastUpdated", {
-                        time: lastUpdated.toLocaleTimeString(locale),
-                      })
-                    : t("loading")}
+                  {activeTab === "donated"
+                    ? t("donatedHint")
+                    : lastUpdated
+                      ? t("lastUpdated", {
+                          time: lastUpdated.toLocaleTimeString(locale),
+                        })
+                      : t("loading")}
                 </span>
                 <Button
                   type="button"
@@ -600,7 +618,6 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
                     fetchError={fetchError}
                     animateKey={animateKey}
                     page={pageByTab.online}
-                    onPageChange={(page) => setTabPage("online", page)}
                     onPlayerClick={handlePlayerClick}
                   />
                 </TabsContent>
@@ -613,7 +630,6 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
                     fetchError={fetchError}
                     animateKey={animateKey}
                     page={pageByTab.playTime}
-                    onPageChange={(page) => setTabPage("playTime", page)}
                     onPlayerClick={handlePlayerClick}
                   />
                 </TabsContent>
@@ -626,7 +642,6 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
                     fetchError={fetchError}
                     animateKey={animateKey}
                     page={pageByTab.donated}
-                    onPageChange={(page) => setTabPage("donated", page)}
                     onPlayerClick={handlePlayerClick}
                   />
                 </TabsContent>
@@ -634,18 +649,13 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
             </div>
           </Tabs>
 
-          <div className="shrink-0 border-t border-white/5 pt-3 text-center">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={pageByTab[activeTab] <= 1}
-              onClick={() => setTabPage(activeTab, 1)}
-              className="gap-1.5 border-white/10 bg-white/5 text-zinc-300 hover:border-cyan-400/30 hover:text-cyan-300"
-            >
-              <ArrowLeft className="size-4" />
-              {t("backToFirstPage")}
-            </Button>
+          <div className="shrink-0 border-t border-white/5 pt-3">
+            <LeaderboardPagination
+              page={Math.min(activePage, activeTotalPages)}
+              totalPages={activeTotalPages}
+              totalEntries={activeEntries.length}
+              onPageChange={(page) => setTabPage(activeTab, page)}
+            />
           </div>
 
           {profile && (

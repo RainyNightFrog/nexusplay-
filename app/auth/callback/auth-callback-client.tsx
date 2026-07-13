@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Loader2 } from "lucide-react";
 import { buildChooseRolePath, shouldSkipAccountIntent } from "@/lib/account-intent";
 import { AUTH_REDIRECT_COOKIE } from "@/lib/auth-redirect-cookie";
 import {
@@ -18,6 +17,10 @@ import {
   exchangePkceCodeForSession,
   resolvePkceVerifierForExchange,
 } from "@/lib/supabase/pkce";
+import {
+  AuthCallbackScreen,
+  type AuthCallbackMessageKey,
+} from "@/components/auth/auth-callback-screen";
 
 function readAuthRedirectFromDocument(): string {
   const match = document.cookie.match(
@@ -58,7 +61,8 @@ const OAUTH_IN_FLIGHT_KEY = "oauth:in-flight";
 
 export function AuthCallbackClient() {
   const searchParams = useSearchParams();
-  const [message, setMessage] = useState("正在完成登入…");
+  const [messageKey, setMessageKey] =
+    useState<AuthCallbackMessageKey>("callbackCompleting");
 
   useEffect(() => {
     const redirectTo =
@@ -112,7 +116,7 @@ export function AuthCallbackClient() {
 
       if (tokenHash && otpType === "recovery") {
         try {
-          setMessage("正在驗證重設密碼連結…");
+          setMessageKey("callbackVerifyingRecovery");
           const { error } = await supabase.auth.verifyOtp({
             token_hash: tokenHash,
             type: "recovery",
@@ -137,7 +141,7 @@ export function AuthCallbackClient() {
 
       if (hashAccessToken && hashRefreshToken) {
         try {
-          setMessage("正在驗證登入…");
+          setMessageKey("callbackVerifying");
           const { error } = await supabase.auth.setSession({
             access_token: hashAccessToken,
             refresh_token: hashRefreshToken,
@@ -151,10 +155,12 @@ export function AuthCallbackClient() {
           clearAuthRedirectCookie();
           window.sessionStorage.removeItem(OAUTH_IN_FLIGHT_KEY);
           window.location.replace(
-            hashType === "recovery" ? "/auth?mode=reset" : buildPostAuthPath(
-              (await supabase.auth.getUser()).data.user,
-              safeRedirect
-            )
+            hashType === "recovery"
+              ? "/auth?mode=reset"
+              : buildPostAuthPath(
+                  (await supabase.auth.getUser()).data.user,
+                  safeRedirect
+                )
           );
           return;
         } catch (error) {
@@ -176,7 +182,7 @@ export function AuthCallbackClient() {
       }
 
       try {
-        setMessage("正在驗證登入…");
+        setMessageKey("callbackVerifying");
 
         const codeVerifier = resolvePkceVerifierForExchange();
         clearStaleSupabaseSessionCookies();
@@ -210,7 +216,10 @@ export function AuthCallbackClient() {
         completeAuthCodeExchange(code);
         clearPkceVerifierBackup();
 
-        if (safeRedirect === "/auth?mode=reset" || safeRedirect.startsWith("/auth?mode=reset&")) {
+        if (
+          safeRedirect === "/auth?mode=reset" ||
+          safeRedirect.startsWith("/auth?mode=reset&")
+        ) {
           clearAuthRedirectCookie();
           window.sessionStorage.removeItem(OAUTH_IN_FLIGHT_KEY);
           window.location.replace("/auth?mode=reset");
@@ -227,12 +236,5 @@ export function AuthCallbackClient() {
     })();
   }, [searchParams]);
 
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-950 text-zinc-100">
-      <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-5 py-4">
-        <Loader2 className="size-5 animate-spin text-cyan-400" />
-        <p className="text-sm text-zinc-300">{message}</p>
-      </div>
-    </div>
-  );
+  return <AuthCallbackScreen messageKey={messageKey} />;
 }

@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AdminPanelFrame } from "@/components/admin/admin-panel-frame";
+import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 
 type AdminAccount = {
   id: string;
@@ -166,9 +167,7 @@ export function AdminAdminsPanel() {
         </CardHeader>
         <CardContent className="space-y-3">
           {loading ? (
-            <div className="flex justify-center py-10">
-              <Loader2 className="size-6 animate-spin text-amber-400" />
-            </div>
+            <AdminLoadingState spinnerClassName="text-amber-400" minHeightClassName="min-h-0" />
           ) : admins.length === 0 ? (
             <p className="py-8 text-center text-sm text-zinc-500">
               {t("adminsEmpty")}

@@ -15,6 +15,7 @@ import {
 import type { ForumDigestAdminReport } from "@/lib/forum-digest-admin-service";
 import type { FeedHealthReport } from "@/lib/feed-health-service";
 import { AdminPanelFrame } from "@/components/admin/admin-panel-frame";
+import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 import { cn } from "@/lib/utils";
 
 type AdminDigestReportPanelProps = {
@@ -101,9 +102,7 @@ export function AdminDigestReportPanel({ onError, onSuccess }: AdminDigestReport
         refreshLabel={t("refresh")}
         centerContent
       >
-        <div className="flex h-40 items-center justify-center">
-          <Loader2 className="size-8 animate-spin text-violet-400" />
-        </div>
+        <AdminLoadingState spinnerClassName="text-violet-400" />
       </AdminPanelFrame>
     );
   }

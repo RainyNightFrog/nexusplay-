@@ -41,6 +41,7 @@ import { AdminAdminsPanel } from "@/components/admin/admins-panel";
 import { AdminCronPanel } from "@/components/admin/cron-panel";
 import { AdminCurationPanel } from "@/components/admin/curation-panel";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -380,6 +381,30 @@ export default function AdminPage() {
     return t("filterAll");
   };
 
+  const feedbackCategoryLabel = (category: FeedbackCategory) => {
+    const map: Record<FeedbackCategory, string> = {
+      general: t("feedbackCategoryGeneral"),
+      bug: t("feedbackCategoryBug"),
+      suggestion: t("feedbackCategorySuggestion"),
+      report: t("feedbackCategoryReport"),
+      billing: t("feedbackCategoryBilling"),
+      other: t("feedbackCategoryOther"),
+    };
+    return map[category] ?? category;
+  };
+
+  const logActionFilterLabel = (filter: string) => {
+    const map: Record<string, string> = {
+      all: t("logsFilterAll"),
+      approve_game: t("logsFilterApprove"),
+      ban: t("logsFilterBan"),
+      suspend: t("logsFilterSuspend"),
+      refund_tip: t("logsFilterRefundTip"),
+      refund_order: t("logsFilterRefundOrder"),
+    };
+    return map[filter] ?? filter;
+  };
+
   return (
     <AdminShell title={t("title")} description={t("description")}>
       {pageError && (
@@ -526,9 +551,7 @@ export default function AdminPage() {
           </div>
 
           {loadingGames ? (
-            <div className="flex h-40 items-center justify-center">
-              <Loader2 className="size-8 animate-spin text-amber-400" />
-            </div>
+            <AdminLoadingState spinnerClassName="text-amber-400" />
           ) : games.length === 0 ? (
             <Card className="border-white/10 bg-zinc-900/40">
               <CardContent className="py-12 text-center text-sm text-zinc-500">
@@ -664,9 +687,7 @@ export default function AdminPage() {
           </div>
 
           {loadingFeedbacks ? (
-            <div className="flex h-40 items-center justify-center">
-              <Loader2 className="size-8 animate-spin text-cyan-400" />
-            </div>
+            <AdminLoadingState spinnerClassName="text-cyan-400" />
           ) : feedbacks.length === 0 ? (
             <Card className="border-white/10 bg-zinc-900/40">
               <CardContent className="py-12 text-center text-sm text-zinc-500">
@@ -732,9 +753,11 @@ export default function AdminPage() {
                         >
                           <SelectTrigger className="border-white/10 bg-zinc-900/80 text-zinc-100">
                             <SelectDisplayValue>
-                              {feedbackDrafts[feedback.id]?.category ??
-                                feedback.category ??
-                                "general"}
+                              {feedbackCategoryLabel(
+                                (feedbackDrafts[feedback.id]?.category ??
+                                  feedback.category ??
+                                  "general") as FeedbackCategory
+                              )}
                             </SelectDisplayValue>
                           </SelectTrigger>
                           <SelectContent className="border-white/10 bg-zinc-900 text-zinc-100">
@@ -846,7 +869,9 @@ export default function AdminPage() {
               }}
             >
               <SelectTrigger className="w-48 border-white/10 bg-zinc-900/80 text-zinc-100">
-                <SelectDisplayValue>{logActionFilter}</SelectDisplayValue>
+                <SelectDisplayValue>
+                  {logActionFilterLabel(logActionFilter)}
+                </SelectDisplayValue>
               </SelectTrigger>
               <SelectContent className="border-white/10 bg-zinc-900 text-zinc-100">
                 <SelectItem value="all">{t("logsFilterAll")}</SelectItem>
@@ -887,9 +912,7 @@ export default function AdminPage() {
           </div>
 
           {loadingLogs ? (
-            <div className="flex h-40 items-center justify-center">
-              <Loader2 className="size-8 animate-spin text-violet-400" />
-            </div>
+            <AdminLoadingState spinnerClassName="text-violet-400" />
           ) : logs.length === 0 ? (
             <Card className="border-white/10 bg-zinc-900/40">
               <CardContent className="py-12 text-center text-sm text-zinc-500">

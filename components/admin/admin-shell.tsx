@@ -15,7 +15,8 @@ type AdminShellProps = {
 };
 
 export function AdminShell({ title, description, children }: AdminShellProps) {
-  const t = useTranslations("nav");
+  const tNav = useTranslations("nav");
+  const tAdmin = useTranslations("admin");
 
   return (
     <div className="dark relative min-h-full text-zinc-100">
@@ -28,7 +29,7 @@ export function AdminShell({ title, description, children }: AdminShellProps) {
           )}
         >
           <ArrowLeft className="size-4" />
-          <span className="hidden sm:inline">{t("backHome")}</span>
+          <span className="hidden sm:inline">{tNav("backHome")}</span>
         </Link>
 
         <div className="flex min-w-0 flex-1 items-center gap-2.5">
@@ -36,7 +37,7 @@ export function AdminShell({ title, description, children }: AdminShellProps) {
             <Shield className="size-4 text-white" />
           </div>
           <span className="hidden truncate text-sm font-semibold text-white sm:inline">
-            RainyNightFrog Admin
+            {tAdmin("shellBrand")}
           </span>
         </div>
 
@@ -49,7 +50,7 @@ export function AdminShell({ title, description, children }: AdminShellProps) {
         <div className="mb-8 text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/20 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-200">
             <Shield className="size-3.5" />
-            Super Admin
+            {tNav("roleAdmin")}
           </div>
           <h1 className="mt-4 text-2xl font-bold text-white sm:text-3xl">{title}</h1>
           <p className="mx-auto mt-2 max-w-2xl text-sm text-zinc-500">{description}</p>

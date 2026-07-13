@@ -815,6 +815,11 @@
   },
   "auth": {
     "callbackFailed": "ログイン認証に失敗しました。もう一度お試しください",
+    "callbackTitle": "ログイン中",
+    "callbackCompleting": "ログインを完了しています…",
+    "callbackVerifying": "ログインを確認しています…",
+    "callbackVerifyingRecovery": "パスワード再設定リンクを確認しています…",
+    "callbackHint": "しばらくお待ちください。まもなく移動します",
     "creatorHint": "クリエイターダッシュボードは「クリエイター」アカウントのみ利用可能です。クリエイターアカウントでログインするか、登録時にクリエイターを選択してください。",
     "displayNameRequired": "表示名を入力してください",
     "registerSuccess": "登録に成功しました！メール認証が有効な場合は、受信トレイのリンクをクリックしてからログインしてください。",

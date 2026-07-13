@@ -1,7 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
+  hkdToUsd,
   isUserOnline,
   LEADERBOARD_TOP_LIMIT,
+  usdCentsToHkd,
   type ActivityStatsRow,
   type PlatformLeaderboardEntry,
   type PlatformLeaderboardsResponse,
@@ -84,6 +86,136 @@ async function fetchTopByColumn(
     .slice(0, LEADERBOARD_LIMIT);
 }
 
+type SupporterPassAggregate = {
+  hkd: number;
+  lastPaidAt: string;
+};
+
+async function fetchSupporterPassTotals(
+  supabase: SupabaseClient,
+  excludeUserIds: Set<string>
+): Promise<Map<string, SupporterPassAggregate>> {
+  const { data, error } = await supabase
+    .from("orders")
+    .select("buyer_id, total_amount_cents, created_at")
+    .eq("order_type", "supporter_pass")
+    .eq("status", "succeeded");
+
+  if (error) {
+    throw new Error(`讀取支持者付款紀錄失敗：${error.message}`);
+  }
+
+  const totals = new Map<string, SupporterPassAggregate>();
+
+  for (const row of data ?? []) {
+    const buyerId = row.buyer_id as string;
+    if (excludeUserIds.has(buyerId)) continue;
+
+    const paidAt = String(row.created_at ?? new Date().toISOString());
+    const amountHkd = usdCentsToHkd(Number(row.total_amount_cents ?? 0));
+    if (amountHkd <= 0) continue;
+
+    const existing = totals.get(buyerId);
+    totals.set(buyerId, {
+      hkd: (existing?.hkd ?? 0) + amountHkd,
+      lastPaidAt:
+        existing && Date.parse(existing.lastPaidAt) > Date.parse(paidAt)
+          ? existing.lastPaidAt
+          : paidAt,
+    });
+  }
+
+  return totals;
+}
+
+/** 貢獻榜：打賞（user_activity_stats）+ 平台支持者付款（orders） */
+async function fetchTopContributionRows(
+  supabase: SupabaseClient,
+  excludeUserIds: Set<string>
+): Promise<ActivityStatsRow[]> {
+  const supporterTotals = await fetchSupporterPassTotals(supabase, excludeUserIds);
+
+  const { data: tipRows, error: tipError } = await supabase
+    .from("user_activity_stats")
+    .select(
+      "user_id, total_online_time, total_play_time, total_donated, last_active_at"
+    )
+    .gt("total_donated", 0)
+    .order("total_donated", { ascending: false })
+    .limit(FETCH_POOL_SIZE);
+
+  if (tipError) {
+    throw new Error(`讀取打賞累計失敗：${tipError.message}`);
+  }
+
+  const combined = new Map<string, ActivityStatsRow>();
+
+  for (const row of (tipRows ?? []) as ActivityStatsRow[]) {
+    if (excludeUserIds.has(row.user_id)) continue;
+
+    const supporter = supporterTotals.get(row.user_id);
+    const tipsHkd = Number(row.total_donated);
+    const totalHkd = tipsHkd + (supporter?.hkd ?? 0);
+    if (totalHkd <= 0) continue;
+
+    combined.set(row.user_id, {
+      ...row,
+      total_donated: totalHkd,
+      last_active_at:
+        supporter &&
+        Date.parse(supporter.lastPaidAt) > Date.parse(row.last_active_at)
+          ? supporter.lastPaidAt
+          : row.last_active_at,
+    });
+    supporterTotals.delete(row.user_id);
+  }
+
+  for (const [userId, supporter] of supporterTotals) {
+    if (supporter.hkd <= 0) continue;
+
+    combined.set(userId, {
+      user_id: userId,
+      total_online_time: 0,
+      total_play_time: 0,
+      total_donated: supporter.hkd,
+      last_active_at: supporter.lastPaidAt,
+    });
+  }
+
+  return [...combined.values()]
+    .sort((a, b) => {
+      if (b.total_donated !== a.total_donated) {
+        return b.total_donated - a.total_donated;
+      }
+      return Date.parse(b.last_active_at) - Date.parse(a.last_active_at);
+    })
+    .slice(0, LEADERBOARD_LIMIT);
+}
+
+/** 單一用戶貢獻累計（HKD）：打賞 + 支持者付款 */
+export async function getUserContributionHkd(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<number> {
+  const [{ data: activity, error: activityError }, supporterTotals] =
+    await Promise.all([
+      supabase
+        .from("user_activity_stats")
+        .select("total_donated")
+        .eq("user_id", userId)
+        .maybeSingle(),
+      fetchSupporterPassTotals(supabase, new Set()),
+    ]);
+
+  if (activityError) {
+    throw new Error(`讀取用戶貢獻資料失敗：${activityError.message}`);
+  }
+
+  const tipsHkd = Number(activity?.total_donated ?? 0);
+  const supporterHkd = supporterTotals.get(userId)?.hkd ?? 0;
+  return tipsHkd + supporterHkd;
+}
+
 function mapEntries(
   rows: ActivityStatsRow[],
   profiles: Map<string, ProfileRow>,
@@ -106,11 +238,12 @@ function mapEntries(
     let donationTier: import("@/lib/platform-leaderboard").DonationPrivacyTier | undefined;
 
     if (valueKey === "total_donated") {
-      const masked = maskDonationAmount(value, {
+      const rawHkd = Number(row.total_donated);
+      const masked = maskDonationAmount(rawHkd, {
         isSelf: isMe,
         isAdmin: viewerIsAdmin,
       });
-      value = masked.value;
+      value = hkdToUsd(masked.value);
       isDonationMasked = masked.isMasked;
       donationTier = masked.tier;
     }
@@ -164,7 +297,7 @@ export async function getPlatformLeaderboards(
   const [onlineRows, playRows, donatedRows] = await Promise.all([
     fetchTopByColumn(supabase, "total_online_time", ambientBotIds),
     fetchTopByColumn(supabase, "total_play_time", ambientBotIds),
-    fetchTopByColumn(supabase, "total_donated", ambientBotIds),
+    fetchTopContributionRows(supabase, ambientBotIds),
   ]);
 
   const userIds = [
@@ -193,6 +326,14 @@ export async function getPlatformLeaderboards(
     currentUserId,
     viewerIsAdmin
   );
+  const realDonated = mapEntries(
+    donatedRows,
+    profiles,
+    titleMap,
+    "total_donated",
+    currentUserId,
+    viewerIsAdmin
+  );
 
   return {
     online: mergePlatformLeaderboardEntries(
@@ -205,13 +346,10 @@ export async function getPlatformLeaderboards(
       virtual.playTime,
       currentUserId
     ),
-    donated: mapEntries(
-      donatedRows,
-      profiles,
-      titleMap,
-      "total_donated",
-      currentUserId,
-      viewerIsAdmin
+    donated: mergePlatformLeaderboardEntries(
+      realDonated,
+      virtual.donated,
+      currentUserId
     ),
     fetchedAt: new Date().toISOString(),
   };

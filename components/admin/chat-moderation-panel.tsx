@@ -24,6 +24,7 @@ import {
   AdminPanelHeader,
   adminPanelCenteredCardsClass,
 } from "@/components/admin/admin-panel-header";
+import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 import { cn } from "@/lib/utils";
 
 function formatDate(value: string, locale: string) {
@@ -146,9 +147,7 @@ export function AdminChatModerationPanel() {
         </CardHeader>
         <CardContent className="space-y-3">
           {loading ? (
-            <div className="flex justify-center py-10">
-              <Loader2 className="size-6 animate-spin text-sky-400" />
-            </div>
+            <AdminLoadingState spinnerClassName="text-sky-400" minHeightClassName="min-h-0" />
           ) : messages.length === 0 ? (
             <p className="py-8 text-center text-sm text-zinc-500">
               {t("chatMessagesEmpty")}

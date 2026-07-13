@@ -23,7 +23,16 @@ import {
   AdminPanelHeader,
   adminPanelCenteredCardsClass,
 } from "@/components/admin/admin-panel-header";
+import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 import { cn } from "@/lib/utils";
+
+function stripeEventStatusLabel(
+  status: string,
+  t: ReturnType<typeof useTranslations<"admin">>
+) {
+  const key = `stripeEventStatus_${status}` as const;
+  return t.has(key) ? t(key) : status;
+}
 
 function formatDate(value: string, locale: string) {
   try {
@@ -156,9 +165,7 @@ export function AdminStripePanel() {
         </CardHeader>
         <CardContent className="space-y-3">
           {loading ? (
-            <div className="flex justify-center py-10">
-              <Loader2 className="size-6 animate-spin text-emerald-400" />
-            </div>
+            <AdminLoadingState spinnerClassName="text-emerald-400" minHeightClassName="min-h-0" />
           ) : events.length === 0 ? (
             <p className="py-8 text-center text-sm text-zinc-500">
               {t("stripeEventsEmpty")}
@@ -192,7 +199,7 @@ export function AdminStripePanel() {
                     )}
                   </div>
                   <Badge className={cn("border", eventStatusClass(event.status))}>
-                    {event.status}
+                    {stripeEventStatusLabel(event.status, t)}
                   </Badge>
                 </div>
               </div>

@@ -27,6 +27,7 @@ import type {
   LaunchChecklistReport,
 } from "@/lib/launch-checklist-service";
 import { AdminPanelFrame } from "@/components/admin/admin-panel-frame";
+import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 import { cn } from "@/lib/utils";
 
 function statusIcon(status: LaunchChecklistItem["status"]) {
@@ -151,9 +152,7 @@ export function AdminLaunchChecklistPanel({ onError }: LaunchChecklistPanelProps
         refreshLabel={t("refresh")}
         centerContent
       >
-        <div className="flex h-48 items-center justify-center">
-          <Loader2 className="size-8 animate-spin text-cyan-400" />
-        </div>
+        <AdminLoadingState spinnerClassName="text-cyan-400" minHeightClassName="min-h-48" />
       </AdminPanelFrame>
     );
   }

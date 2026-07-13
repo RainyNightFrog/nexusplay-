@@ -1,22 +1,43 @@
 import { Suspense } from "react";
-import { Loader2 } from "lucide-react";
+import { cookies } from "next/headers";
+import { NextIntlClientProvider, hasLocale } from "next-intl";
+import { getMessages, setRequestLocale } from "next-intl/server";
+import {
+  AuthCallbackScreen,
+  type AuthCallbackMessageKey,
+} from "@/components/auth/auth-callback-screen";
+import { defaultLocale, routing } from "@/i18n/routing";
 import { AuthCallbackClient } from "./auth-callback-client";
 
-function AuthCallbackFallback() {
-  return (
-    <div className="flex min-h-screen items-center justify-center text-zinc-100">
-      <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-5 py-4">
-        <Loader2 className="size-5 animate-spin text-cyan-400" />
-        <p className="text-sm text-zinc-300">正在完成登入…</p>
-      </div>
-    </div>
-  );
+async function resolveCallbackLocale() {
+  const cookieStore = await cookies();
+  const cookieLocale = cookieStore.get("NEXT_LOCALE")?.value;
+
+  if (cookieLocale && hasLocale(routing.locales, cookieLocale)) {
+    return cookieLocale;
+  }
+
+  return defaultLocale;
 }
 
-export default function AuthCallbackPage() {
+function AuthCallbackFallback({
+  messageKey = "callbackCompleting",
+}: {
+  messageKey?: AuthCallbackMessageKey;
+}) {
+  return <AuthCallbackScreen messageKey={messageKey} />;
+}
+
+export default async function AuthCallbackPage() {
+  const locale = await resolveCallbackLocale();
+  setRequestLocale(locale);
+  const messages = await getMessages();
+
   return (
-    <Suspense fallback={<AuthCallbackFallback />}>
-      <AuthCallbackClient />
-    </Suspense>
+    <NextIntlClientProvider locale={locale} messages={messages}>
+      <Suspense fallback={<AuthCallbackFallback />}>
+        <AuthCallbackClient />
+      </Suspense>
+    </NextIntlClientProvider>
   );
 }

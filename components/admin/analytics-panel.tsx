@@ -12,7 +12,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Loader2, RefreshCw } from "lucide-react";
+import { AdminLoadingState } from "@/components/admin/admin-loading-state";
+import { RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -194,9 +195,7 @@ export function AdminAnalyticsPanel({ onError }: AdminAnalyticsPanelProps) {
       </div>
 
       {loading && !analytics ? (
-        <div className="flex h-48 items-center justify-center">
-          <Loader2 className="size-8 animate-spin text-emerald-400" />
-        </div>
+        <AdminLoadingState spinnerClassName="text-emerald-400" minHeightClassName="min-h-48" />
       ) : analytics ? (
         <>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

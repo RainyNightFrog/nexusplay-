@@ -36,6 +36,7 @@ import {
   AdminPanelHeader,
   adminPanelCenteredCardsClass,
 } from "@/components/admin/admin-panel-header";
+import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 import { cn } from "@/lib/utils";
 
 function formatDate(value: string, locale: string) {
@@ -60,6 +61,27 @@ function accountStatusClass(status: string) {
     default:
       return "border-white/10 bg-white/5 text-zinc-300";
   }
+}
+
+function accountStatusLabel(
+  status: string,
+  t: ReturnType<typeof useTranslations<"admin">>
+) {
+  const key = `usersAccountStatus_${status}` as const;
+  return t.has(key) ? t(key) : status;
+}
+
+function orderStatusLabel(
+  status: string,
+  t: ReturnType<typeof useTranslations<"admin">>
+) {
+  const map: Record<string, string> = {
+    succeeded: t("ordersStatusSucceeded"),
+    pending: t("ordersStatusPending"),
+    refunded: t("ordersStatusRefunded"),
+    failed: t("ordersStatusFailed"),
+  };
+  return map[status] ?? status;
 }
 
 type UserAction =
@@ -254,9 +276,7 @@ export function AdminUsersPanel() {
         </CardHeader>
         <CardContent className="space-y-2">
           {loading ? (
-            <div className="flex justify-center py-10">
-              <Loader2 className="size-6 animate-spin text-cyan-400" />
-            </div>
+            <AdminLoadingState spinnerClassName="text-cyan-400" minHeightClassName="min-h-0" />
           ) : users.length === 0 ? (
             <p className="py-8 text-center text-sm text-zinc-500">
               {t("usersEmpty")}
@@ -288,7 +308,7 @@ export function AdminUsersPanel() {
                   <Badge
                     className={cn("border", accountStatusClass(user.accountStatus))}
                   >
-                    {user.accountStatus}
+                    {accountStatusLabel(user.accountStatus, t)}
                   </Badge>
                   {user.chatMutedUntil &&
                     new Date(user.chatMutedUntil).getTime() > Date.now() && (
@@ -318,9 +338,7 @@ export function AdminUsersPanel() {
           </CardHeader>
           <CardContent className="space-y-4">
             {detailLoading ? (
-              <div className="flex justify-center py-10">
-                <Loader2 className="size-6 animate-spin text-cyan-400" />
-              </div>
+              <AdminLoadingState spinnerClassName="text-cyan-400" minHeightClassName="min-h-0" />
             ) : detail ? (
               <>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -438,7 +456,7 @@ export function AdminUsersPanel() {
                         >
                           <span className="text-zinc-300">{tip.gameTitle}</span>
                           <span className="font-mono text-fuchsia-200">
-                            ${tip.amountUsd.toFixed(2)} · {tip.status}
+                            ${tip.amountUsd.toFixed(2)} · {orderStatusLabel(tip.status, t)}
                           </span>
                         </div>
                       ))}
@@ -464,7 +482,7 @@ export function AdminUsersPanel() {
                           </span>
                           <span className="font-mono text-cyan-200">
                             ${(order.totalAmountCents / 100).toFixed(2)} ·{" "}
-                            {order.status}
+                            {orderStatusLabel(order.status, t)}
                           </span>
                         </div>
                       ))}

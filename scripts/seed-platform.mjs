@@ -5,6 +5,17 @@ import pg from "pg";
 
 const { Client } = pg;
 
+const PLAY_COUNT_PATCH = [
+  { title: "VOID GACHA", plays_count: 18_240 },
+  { title: "CoreDefense: Mindustry X", plays_count: 16_580 },
+  { title: "CyberFortune 012", plays_count: 12_430 },
+  { title: "Neon Abyss: Void Runner", plays_count: 9_870 },
+  { title: "Signal Breach: ICE Protocol", plays_count: 7_650 },
+  { title: "Void Relay: Card Descent", plays_count: 14_920 },
+  { title: "Pulse Protocol: Neon Beat", plays_count: 6_340 },
+  { title: "軌道回收：環形防線", plays_count: 5_180 },
+];
+
 const NEW_GAMES = [
   {
     title: "CoreDefense: Mindustry X",
@@ -13,7 +24,7 @@ const NEW_GAMES = [
     category: "策略",
     cover_url: "/covers/core-defense-cover.png",
     game_url: "/demos/core-defense-preview.html",
-    plays_count: 98500,
+    plays_count: 16580,
     rating_avg: 4.91,
     daysAgo: 12,
   },
@@ -24,7 +35,7 @@ const NEW_GAMES = [
     category: "益智",
     cover_url: "/covers/cyber-fortune-cover.png",
     game_url: "/demos/cyber-fortune-preview.html",
-    plays_count: 64200,
+    plays_count: 12430,
     rating_avg: 4.76,
     daysAgo: 8,
   },
@@ -35,7 +46,7 @@ const NEW_GAMES = [
     category: "動作",
     cover_url: "/covers/neon-abyss-runner-cover.png",
     game_url: "/demos/neon-abyss-runner-preview.html",
-    plays_count: 72800,
+    plays_count: 9870,
     rating_avg: 4.88,
     daysAgo: 5,
   },
@@ -46,7 +57,7 @@ const NEW_GAMES = [
     category: "益智",
     cover_url: "/covers/signal-breach-cover.png",
     game_url: "/demos/signal-breach-preview.html",
-    plays_count: 58400,
+    plays_count: 7650,
     rating_avg: 4.84,
     daysAgo: 6,
   },
@@ -57,7 +68,7 @@ const NEW_GAMES = [
     category: "卡牌對戰",
     cover_url: "/covers/void-relay-cover.png",
     game_url: "/demos/void-relay-preview.html",
-    plays_count: 81200,
+    plays_count: 14920,
     rating_avg: 4.91,
     daysAgo: 4,
   },
@@ -68,7 +79,7 @@ const NEW_GAMES = [
     category: "音樂節奏",
     cover_url: "/covers/pulse-protocol-cover.png",
     game_url: "/demos/pulse-protocol-preview.html",
-    plays_count: 66500,
+    plays_count: 6340,
     rating_avg: 4.79,
     daysAgo: 3,
   },
@@ -79,7 +90,7 @@ const NEW_GAMES = [
     category: "塔防",
     cover_url: "/covers/orbital-salvage-cover.png",
     game_url: "/demos/orbital-salvage-preview.html",
-    plays_count: 54300,
+    plays_count: 5180,
     rating_avg: 4.86,
     daysAgo: 7,
   },
@@ -267,6 +278,21 @@ async function main() {
   });
 
   console.log("🎮 RainyNightFrog 平台種子資料寫入中…\n");
+
+  // 0. 同步平台示範遊戲遊玩次數（約 3k～20k）
+  for (const patch of PLAY_COUNT_PATCH) {
+    const { data, error } = await admin
+      .from("games")
+      .update({ plays_count: patch.plays_count })
+      .eq("title", patch.title)
+      .select("id, title, plays_count");
+
+    if (error) {
+      console.warn(`⚠ 更新遊玩次數失敗 ${patch.title}: ${error.message}`);
+    } else if (data?.length) {
+      console.log(`✓ 已更新遊玩次數：${patch.title} → ${patch.plays_count.toLocaleString()}`);
+    }
+  }
 
   // 1. 追加新遊戲（不碰 VOID GACHA）
   for (const game of NEW_GAMES) {

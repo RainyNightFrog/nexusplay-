@@ -10,11 +10,11 @@ export type VirtualGameSeed = {
   description: string;
   category: string;
   tags: GameTag[];
-  /** 遊玩次數：幾百～幾千，最高約一萬 */
+  /** 遊玩次數：約三千～兩萬 */
   playsCount: number;
-  /** 按讚數：幾十～幾千 */
+  /** 收藏數：幾十～一千多 */
   likesCount: number;
-  /** 分享數：幾十～幾千 */
+  /** 分享數：幾百～七千左右 */
   sharesCount: number;
   ratingAvg: number;
   daysAgo: number;
@@ -32,8 +32,8 @@ export const VIRTUAL_GAMES_SEED: VirtualGameSeed[] = [
     category: "休閒",
     tags: ["賽博朋克", "霓虹", "復古", "像素風", "快節奏", "單機", "鍵鼠操作", "2D", "高難度", "程序生成"],
     playsCount: 4_280,
-    likesCount: 312,
-    sharesCount: 86,
+    likesCount: 186,
+    sharesCount: 1_240,
     ratingAvg: 4.72,
     daysAgo: 14,
   },
@@ -48,8 +48,8 @@ export const VIRTUAL_GAMES_SEED: VirtualGameSeed[] = [
     category: "益智",
     tags: ["賽博朋克", "霓虹", "復古", "快節奏", "單機", "鍵鼠操作", "2D", "解謎機制", "競技", "明亮"],
     playsCount: 5_640,
-    likesCount: 428,
-    sharesCount: 124,
+    likesCount: 324,
+    sharesCount: 2_180,
     ratingAvg: 4.68,
     daysAgo: 12,
   },
@@ -63,9 +63,9 @@ export const VIRTUAL_GAMES_SEED: VirtualGameSeed[] = [
       "倒數計時心跳音效、5×5 五子連珠擴充、閃爍晶片棋子與勝率記錄。在量子棋盤上超越 AI 對手！",
     category: "益智",
     tags: ["賽博朋克", "霓虹", "科幻", "回合制", "單機", "鍵鼠操作", "2D", "解謎機制", "快節奏", "教育"],
-    playsCount: 1_960,
-    likesCount: 148,
-    sharesCount: 42,
+    playsCount: 3_280,
+    likesCount: 58,
+    sharesCount: 890,
     ratingAvg: 4.61,
     daysAgo: 11,
   },
@@ -80,8 +80,8 @@ export const VIRTUAL_GAMES_SEED: VirtualGameSeed[] = [
     category: "動作",
     tags: ["賽博朋克", "霓虹", "復古", "快節奏", "單機", "鍵鼠操作", "2D", "硬核", "割草", "明亮"],
     playsCount: 7_350,
-    likesCount: 536,
-    sharesCount: 178,
+    likesCount: 412,
+    sharesCount: 3_450,
     ratingAvg: 4.75,
     daysAgo: 10,
   },
@@ -96,8 +96,8 @@ export const VIRTUAL_GAMES_SEED: VirtualGameSeed[] = [
     category: "平台跳躍",
     tags: ["賽博朋克", "霓虹", "可愛", "快節奏", "單機", "鍵鼠操作", "2D", "橫向捲軸", "觸控友善", "明亮"],
     playsCount: 8_920,
-    likesCount: 684,
-    sharesCount: 236,
+    likesCount: 568,
+    sharesCount: 4_120,
     ratingAvg: 4.81,
     daysAgo: 9,
   },
@@ -112,8 +112,8 @@ export const VIRTUAL_GAMES_SEED: VirtualGameSeed[] = [
     category: "益智",
     tags: ["賽博朋克", "霓虹", "復古", "16-bit", "快節奏", "單機", "鍵鼠操作", "2D", "競技", "硬核"],
     playsCount: 9_680,
-    likesCount: 892,
-    sharesCount: 318,
+    likesCount: 738,
+    sharesCount: 5_680,
     ratingAvg: 4.84,
     daysAgo: 8,
   },
@@ -128,8 +128,8 @@ export const VIRTUAL_GAMES_SEED: VirtualGameSeed[] = [
     category: "射擊",
     tags: ["賽博朋克", "科幻", "霓虹", "快節奏", "單機", "鍵鼠操作", "2D", "割草", "高難度", "機甲"],
     playsCount: 6_140,
-    likesCount: 467,
-    sharesCount: 152,
+    likesCount: 445,
+    sharesCount: 2_960,
     ratingAvg: 4.73,
     daysAgo: 7,
   },
@@ -143,9 +143,9 @@ export const VIRTUAL_GAMES_SEED: VirtualGameSeed[] = [
       "限時解密、黑客代碼 Glitch 翻牌特效、連擊音階加成。在矩陣中配對所有加密晶片！",
     category: "益智",
     tags: ["賽博朋克", "霓虹", "黑暗", "解謎機制", "單機", "鍵鼠操作", "2D", "快節奏", "教育", "科幻"],
-    playsCount: 1_740,
-    likesCount: 126,
-    sharesCount: 38,
+    playsCount: 3_560,
+    likesCount: 72,
+    sharesCount: 720,
     ratingAvg: 4.58,
     daysAgo: 6,
   },
@@ -160,8 +160,8 @@ export const VIRTUAL_GAMES_SEED: VirtualGameSeed[] = [
     category: "運動競技",
     tags: ["賽博朋克", "霓虹", "復古", "競技", "本地多人", "單機", "鍵鼠操作", "2D", "快節奏", "明亮"],
     playsCount: 3_420,
-    likesCount: 254,
-    sharesCount: 91,
+    likesCount: 214,
+    sharesCount: 1_560,
     ratingAvg: 4.66,
     daysAgo: 5,
   },
@@ -176,8 +176,8 @@ export const VIRTUAL_GAMES_SEED: VirtualGameSeed[] = [
     category: "動作",
     tags: ["賽博朋克", "霓虹", "快節奏", "程序生成", "單機", "鍵鼠操作", "2D", "橫向捲軸", "割草", "高難度"],
     playsCount: 9_960,
-    likesCount: 768,
-    sharesCount: 284,
+    likesCount: 628,
+    sharesCount: 4_890,
     ratingAvg: 4.79,
     daysAgo: 4,
   },

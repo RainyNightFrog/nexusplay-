@@ -4,6 +4,23 @@ export const ACTIVITY_PULSE_MS = 30_000;
 export const ACTIVITY_PULSE_SECONDS = 30;
 export const LEADERBOARD_TOP_LIMIT = 50;
 export const LEADERBOARD_PAGE_SIZE = 10;
+/** 打賞金額在資料庫以 HKD 累計；對外顯示 USD 時使用此匯率 */
+export const TIP_USD_TO_HKD = 7.8;
+
+export function hkdToUsd(amountHkd: number): number {
+  if (!Number.isFinite(amountHkd) || amountHkd <= 0) return 0;
+  return Math.round((amountHkd / TIP_USD_TO_HKD) * 100) / 100;
+}
+
+export function usdToHkd(amountUsd: number): number {
+  if (!Number.isFinite(amountUsd) || amountUsd <= 0) return 0;
+  return Math.round(amountUsd * TIP_USD_TO_HKD * 100) / 100;
+}
+
+export function usdCentsToHkd(cents: number): number {
+  if (!Number.isFinite(cents) || cents <= 0) return 0;
+  return usdToHkd(cents / 100);
+}
 
 export type ActivityStatsRow = {
   user_id: string;
@@ -68,17 +85,24 @@ export function formatDurationSeconds(
   return format("durationHoursOnly", { hours, minutes });
 }
 
-export function formatDonationAmount(amount: number, locale: string): string {
+export function formatDonationAmount(amountUsd: number, locale: string): string {
   try {
     return new Intl.NumberFormat(locale, {
       style: "currency",
-      currency: "HKD",
+      currency: "USD",
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
-    }).format(amount);
+    }).format(amountUsd);
   } catch {
-    return `HK$${amount.toFixed(2)}`;
+    return `$${amountUsd.toFixed(2)}`;
   }
+}
+
+export function formatDonationAmountFromHkd(
+  amountHkd: number,
+  locale: string
+): string {
+  return formatDonationAmount(hkdToUsd(amountHkd), locale);
 }
 
 const DONATION_TIER_LABELS: Record<

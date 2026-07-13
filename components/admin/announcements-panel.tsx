@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { AdminPanelFrame } from "@/components/admin/admin-panel-frame";
+import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 
 type AnnouncementRow = {
   id: string;
@@ -252,9 +253,7 @@ export function AdminAnnouncementsPanel() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="flex justify-center py-10">
-              <Loader2 className="size-8 animate-spin text-cyan-400" />
-            </div>
+            <AdminLoadingState spinnerClassName="text-cyan-400" minHeightClassName="min-h-0" />
           ) : announcements.length === 0 ? (
             <p className="py-8 text-center text-sm text-zinc-500">
               {t("announcementsEmpty")}

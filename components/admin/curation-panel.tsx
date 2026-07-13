@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { AdminCurationGameRecord } from "@/lib/admin-curation-service";
 import { AdminPanelFrame } from "@/components/admin/admin-panel-frame";
+import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 import { cn } from "@/lib/utils";
 
 export function AdminCurationPanel() {
@@ -148,9 +149,7 @@ export function AdminCurationPanel() {
         </CardHeader>
         <CardContent className="space-y-4">
           {loading ? (
-            <div className="flex justify-center py-10">
-              <Loader2 className="size-6 animate-spin text-yellow-400" />
-            </div>
+            <AdminLoadingState spinnerClassName="text-yellow-400" minHeightClassName="min-h-0" />
           ) : games.length === 0 ? (
             <p className="py-8 text-center text-sm text-zinc-500">
               {t("curationEmpty")}

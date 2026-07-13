@@ -24,7 +24,21 @@ import {
   AdminPanelHeader,
   adminPanelCenteredCardsClass,
 } from "@/components/admin/admin-panel-header";
+import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 import { cn } from "@/lib/utils";
+
+function orderStatusLabel(
+  status: string,
+  t: ReturnType<typeof useTranslations<"admin">>
+) {
+  const map: Record<string, string> = {
+    succeeded: t("ordersStatusSucceeded"),
+    pending: t("ordersStatusPending"),
+    refunded: t("ordersStatusRefunded"),
+    failed: t("ordersStatusFailed"),
+  };
+  return map[status] ?? status;
+}
 
 function formatDate(value: string, locale: string) {
   try {
@@ -162,9 +176,7 @@ export function AdminOrdersPanel() {
         </CardHeader>
         <CardContent className="space-y-3">
           {loading ? (
-            <div className="flex justify-center py-10">
-              <Loader2 className="size-6 animate-spin text-fuchsia-400" />
-            </div>
+            <AdminLoadingState spinnerClassName="text-fuchsia-400" minHeightClassName="min-h-0" />
           ) : orders.length === 0 ? (
             <p className="py-8 text-center text-sm text-zinc-500">
               {t("ordersEmpty")}
@@ -194,7 +206,7 @@ export function AdminOrdersPanel() {
                     ${(order.totalAmountCents / 100).toFixed(2)}
                   </span>
                   <Badge className={cn("border", orderStatusClass(order.status))}>
-                    {order.status}
+                    {orderStatusLabel(order.status, t)}
                   </Badge>
                   {order.status === "succeeded" && (
                     <Button

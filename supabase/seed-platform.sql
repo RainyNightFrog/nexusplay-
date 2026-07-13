@@ -14,7 +14,7 @@ from (
       '策略',
       '/covers/core-defense-cover.png',
       '/demos/core-defense-preview.html',
-      98500::bigint,
+      16580::bigint,
       4.91::numeric,
       now() - interval '12 days'
     ),
@@ -24,7 +24,7 @@ from (
       '益智',
       '/covers/cyber-fortune-cover.png',
       '/demos/cyber-fortune-preview.html',
-      64200::bigint,
+      12430::bigint,
       4.76::numeric,
       now() - interval '8 days'
     )

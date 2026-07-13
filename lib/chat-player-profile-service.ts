@@ -20,6 +20,7 @@ import {
   VIRTUAL_LEADERBOARD_USER_PREFIX,
 } from "@/lib/platform-leaderboard-virtual";
 import { isUserOnline } from "@/lib/platform-leaderboard";
+import { getUserContributionHkd } from "@/lib/platform-leaderboard-service";
 import { resolveEquippedTitleForUser } from "@/lib/equipped-title-service";
 import { resolveVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
 import { getVirtualPlayerSocialStats } from "@/lib/virtual-player-public-profile";
@@ -176,7 +177,7 @@ async function loadRealUserProfile(
       }));
   }
 
-  const rawDonated = Number(activity?.total_donated ?? 0);
+  const rawDonated = await getUserContributionHkd(supabase, userId);
   const revealDonation = maskDonationTotalForProfile(rawDonated, {
     isSelf: viewer?.userId === userId,
     isAdmin: viewer?.isAdmin,

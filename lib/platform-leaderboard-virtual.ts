@@ -18,6 +18,12 @@ export const LEADERBOARD_VIRTUAL_PLAYER_IDS = VIRTUAL_PLAYERS.map(
 
 export const LEADERBOARD_VIRTUAL_COUNT = VIRTUAL_PLAYERS.length;
 
+/** 貢獻榜虛擬玩家數量 */
+export const LEADERBOARD_VIRTUAL_DONATION_COUNT = 20;
+
+const VIRTUAL_DONATION_MIN_USD = 1;
+const VIRTUAL_DONATION_MAX_USD = 160;
+
 type VirtualStats = {
   playerId: string;
   displayName: string;
@@ -223,15 +229,70 @@ function toEntries(
     }));
 }
 
+function getDonationVirtualPlayers(): VirtualPlayer[] {
+  const players = getLeaderboardVirtualPlayers();
+  return [...players]
+    .sort((a, b) => hashString(a.id, 389) - hashString(b.id, 389))
+    .slice(0, LEADERBOARD_VIRTUAL_DONATION_COUNT);
+}
+
+function getVirtualDonationUsd(playerId: string): number {
+  const span = VIRTUAL_DONATION_MAX_USD - VIRTUAL_DONATION_MIN_USD + 1;
+  const dollars = VIRTUAL_DONATION_MIN_USD + (hashString(playerId, 241) % span);
+  const cents = hashString(playerId, 313) % 100;
+  return Math.round((dollars + cents / 100) * 100) / 100;
+}
+
+function toDonationEntries(
+  players: VirtualPlayer[],
+  now: number,
+  currentUserId?: string | null
+): PlatformLeaderboardEntry[] {
+  return players
+    .map((player) => {
+      const activity = computeVirtualActivity(
+        player,
+        now,
+        LEADERBOARD_VIRTUAL_COUNT
+      );
+      const amountUsd = getVirtualDonationUsd(player.id);
+
+      return {
+        rank: 0,
+        userId: `${VIRTUAL_LEADERBOARD_USER_PREFIX}${player.id}`,
+        displayName: player.displayName,
+        avatarUrl: resolveVirtualPlayerAvatarUrl(player.id),
+        equippedTitle: null,
+        value: amountUsd,
+        lastActiveAt: activity.lastActiveAt,
+        isOnline: isUserOnline(activity.lastActiveAt, now),
+        isDonationMasked: false,
+      };
+    })
+    .sort((a, b) => {
+      if (b.value !== a.value) return b.value - a.value;
+      return Date.parse(b.lastActiveAt) - Date.parse(a.lastActiveAt);
+    })
+    .map((entry, index) => ({
+      ...entry,
+      rank: index + 1,
+      isMe: currentUserId
+        ? entry.userId === currentUserId
+        : undefined,
+    }));
+}
+
 export function getVirtualPlatformLeaderboardEntries(
   currentUserId?: string | null
 ) {
   const now = Date.now();
   const stats = buildVirtualStats(now);
+  const donationPlayers = getDonationVirtualPlayers();
 
   return {
     online: toEntries(stats, "onlineSeconds", now, currentUserId),
     playTime: toEntries(stats, "playSeconds", now, currentUserId),
+    donated: toDonationEntries(donationPlayers, now, currentUserId),
   };
 }
 

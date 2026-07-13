@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import type { AdminCronRunRecord } from "@/lib/admin-cron-service";
 import { AdminPanelFrame } from "@/components/admin/admin-panel-frame";
+import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 import { cn } from "@/lib/utils";
 
 function formatDate(value: string, locale: string) {
@@ -118,9 +119,7 @@ export function AdminCronPanel() {
         </CardHeader>
         <CardContent className="space-y-3">
           {loading ? (
-            <div className="flex justify-center py-10">
-              <Loader2 className="size-6 animate-spin text-cyan-400" />
-            </div>
+            <AdminLoadingState spinnerClassName="text-cyan-400" minHeightClassName="min-h-0" />
           ) : jobs.length === 0 ? (
             <p className="py-8 text-center text-sm text-zinc-500">
               {t("cronJobsEmpty")}

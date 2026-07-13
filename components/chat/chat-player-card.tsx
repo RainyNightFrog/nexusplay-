@@ -30,7 +30,7 @@ import { getTitleDisplayClass } from "@/lib/titles";
 import { formatCountryName } from "@/lib/request-geo";
 import { normalizeWebsite } from "@/lib/profile-settings";
 import {
-  formatDonationAmount,
+  formatDonationAmountFromHkd,
   formatDonationTierLabel,
   formatDurationSeconds,
   type PlatformLeaderboardEntry,
@@ -408,7 +408,7 @@ export function ChatPlayerCard({
                   label={t("playerCardDonated")}
                   value={
                     detail.donatedTotal != null
-                      ? formatDonationAmount(detail.donatedTotal, locale)
+                      ? formatDonationAmountFromHkd(detail.donatedTotal, locale)
                       : detail.donationTier && detail.donationTier !== "none"
                         ? formatDonationTierLabel(detail.donationTier, locale)
                         : "—"
