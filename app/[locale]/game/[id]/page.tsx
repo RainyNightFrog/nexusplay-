@@ -37,7 +37,7 @@ import { LeaderboardNavButton } from "@/components/LeaderboardModal";
 import { Link, useRouter } from "@/i18n/navigation";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { isDirectlyPlayable } from "@/lib/games-data";
-import { buildEmbedCode, IFRAME_SANDBOX } from "@/lib/iframe-sandbox";
+import { buildEmbedCode, sandboxForEmbedUrl } from "@/lib/iframe-sandbox";
 import { isSafeEmbedUrl } from "@/lib/embed-url";
 import { postShowGameMenu } from "@/lib/rainynightfrog-embed-sdk";
 import { TAG_COLORS, type Game } from "@/lib/games";
@@ -697,7 +697,7 @@ function GamePageContent() {
                       title={game.title}
                       tabIndex={0}
                       className="absolute inset-0 size-full border-0"
-                      sandbox={IFRAME_SANDBOX}
+                      sandbox={sandboxForEmbedUrl(iframeSrc)}
                       allowFullScreen
                       referrerPolicy="no-referrer"
                     />

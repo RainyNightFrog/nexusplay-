@@ -22,7 +22,7 @@ function buildContentSecurityPolicy() {
     `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.googletagmanager.com https://www.google-analytics.com`,
     "style-src 'self' 'unsafe-inline'",
     `img-src 'self' data: blob: https: https://images.unsplash.com https://api.dicebear.com https://lh3.googleusercontent.com ${supabaseOrigin}`,
-    `connect-src 'self' ${supabaseOrigin} wss://${supabaseHostname} https://api.stripe.com https://www.google-analytics.com https://region1.google-analytics.com`,
+    `connect-src 'self' ${supabaseOrigin} wss://${supabaseHostname} https://api.stripe.com https://www.google-analytics.com https://region1.google-analytics.com https://void-gacha.com https://*.void-gacha.com`,
     "font-src 'self' data:",
     "object-src 'none'",
     `frame-src 'self' ${supabaseOrigin} https://js.stripe.com https://hooks.stripe.com`,
