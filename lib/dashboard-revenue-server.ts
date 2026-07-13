@@ -127,7 +127,7 @@ export async function loadDashboardRevenueForRequest(
   }
 
   const profile = await resolveUserProfile(authClient, user);
-  if (!hasCreatorDashboardAccess(user, profile.role)) {
+  if (!hasCreatorDashboardAccess(user, profile.role, profile.is_admin)) {
     return { error: "需要創作者身分", status: 403 as const };
   }
 

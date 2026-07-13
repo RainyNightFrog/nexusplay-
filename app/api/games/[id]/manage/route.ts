@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { authorizeGameEdit } from "@/lib/game-auth";
-import { resolveUserRole, hasCreatorDashboardAccess } from "@/lib/auth-profile";
+import { resolveUserProfile, hasCreatorDashboardAccess } from "@/lib/auth-profile";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
 
@@ -14,9 +14,9 @@ async function authorizeCreatorForGame(gameId: number) {
     return { error: NextResponse.json({ error: "請先登入" }, { status: 401 }) };
   }
 
-  const role = await resolveUserRole(authClient, user);
+  const profile = await resolveUserProfile(authClient, user);
 
-  if (!hasCreatorDashboardAccess(user, role)) {
+  if (!hasCreatorDashboardAccess(user, profile.role, profile.is_admin)) {
     return {
       error: NextResponse.json(
         { error: "需要創作者身分才能編輯遊戲" },

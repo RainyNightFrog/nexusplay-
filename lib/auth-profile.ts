@@ -34,15 +34,20 @@ export async function resolveUserProfile(
   const { data: profile, error } = await supabase
     .from("profiles")
     .select(
-      "id, display_name, avatar_url, role, created_at, support_email, equipped_title_id, bio, player_number, is_supporter, supporter_since, supporter_badge, username"
+      "id, display_name, avatar_url, role, created_at, support_email, equipped_title_id, bio, player_number, is_supporter, supporter_since, supporter_badge, username, is_admin"
     )
     .eq("id", user.id)
     .maybeSingle();
 
   if (!error && profile) {
-    const isAdmin = isAdminUser(user) || metadataProfile.is_admin === true;
+    const dbIsAdmin =
+      (profile as { is_admin?: boolean | null }).is_admin === true;
+    const isAdmin =
+      isAdminUser(user) || metadataProfile.is_admin === true || dbIsAdmin;
     const developingGames =
-      metadataProfile.developing_games || normalizeRole(profile.role) === "creator";
+      metadataProfile.developing_games ||
+      normalizeRole(profile.role) === "creator" ||
+      isAdmin;
     const equippedTitle = profile.equipped_title_id
       ? await resolveEquippedTitleForUser(supabase, user.id)
       : null;
@@ -58,7 +63,8 @@ export async function resolveUserProfile(
       display_name: profile.display_name || metadataProfile.display_name,
       username: readOptionalString(profile.username),
       avatar_url: profile.avatar_url ?? metadataProfile.avatar_url,
-      role: isAdmin ? "player" : resolveRoleFromPreferences(developingGames),
+      // 管理員若同時開發遊戲，仍應保留 creator，避免後台／編輯入口被擋
+      role: resolveRoleFromPreferences(developingGames),
       is_admin: isAdmin,
       created_at: profile.created_at ?? metadataProfile.created_at,
       developing_games: developingGames,
@@ -90,7 +96,8 @@ export async function resolveUserRole(
 /** 創作者後台與上傳 API：創作者或超級管理員皆可 */
 export function hasCreatorDashboardAccess(
   user: User,
-  role: UserRole
+  role: UserRole,
+  isAdminFlag = false
 ): boolean {
-  return isAdminUser(user) || role === "creator";
+  return isAdminUser(user) || isAdminFlag === true || role === "creator";
 }

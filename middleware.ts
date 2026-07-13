@@ -1,14 +1,16 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, NextRequest } from "next/server";
 import { shouldSkipAccountIntent } from "@/lib/account-intent";
-import { resolveUserRole, hasCreatorDashboardAccess } from "@/lib/auth-profile";
+import { resolveUserProfile, hasCreatorDashboardAccess } from "@/lib/auth-profile";
 import { resolveAdminAccess } from "@/lib/admin-auth";
 import { getAccountStatusRecord, isAccountRestricted } from "@/lib/account-status";
 import { ANALYTICS_SESSION_COOKIE } from "@/lib/analytics-service";
 import { getSupabaseCookieOptions } from "@/lib/supabase/cookie-options";
 import {
+  buildSubdomainApexRedirectUrl,
   buildSubdomainRedundantPathRedirect,
   buildSubdomainRewritePath,
+  isSubdomainApexPath,
   isSubdomainCanonicalPath,
   resolveSubdomainFromHost,
 } from "@/lib/subdomain";
@@ -145,13 +147,16 @@ function sanitizePathname(pathname: string) {
 }
 
 export async function middleware(request: NextRequest) {
+  // 舊語系別名 → 預設繁中（zh-HK，localePrefix as-needed 故去掉前綴）
   if (
     request.nextUrl.pathname === "/zh-TW" ||
-    request.nextUrl.pathname.startsWith("/zh-TW/")
+    request.nextUrl.pathname.startsWith("/zh-TW/") ||
+    request.nextUrl.pathname === "/zh-Hant" ||
+    request.nextUrl.pathname.startsWith("/zh-Hant/")
   ) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname =
-      redirectUrl.pathname.replace(/^\/zh-TW(?=\/|$)/, "") || "/";
+      redirectUrl.pathname.replace(/^\/(zh-TW|zh-Hant)(?=\/|$)/, "") || "/";
     return NextResponse.redirect(redirectUrl);
   }
 
@@ -165,6 +170,16 @@ export async function middleware(request: NextRequest) {
   const subdomainLabel = resolveSubdomainFromHost(request.headers.get("host") ?? "");
   let effectiveRequest = request;
   let rewriteUrl: URL | null = null;
+
+  // 子網域上的創作者後台／帳號路徑 → 導回主網域（避免 rewrite 成 /game/.../dashboard 而 404）
+  if (subdomainLabel && isSubdomainApexPath(request.nextUrl.pathname)) {
+    const apex = buildSubdomainApexRedirectUrl(
+      request.headers.get("host") ?? "",
+      request.nextUrl.pathname,
+      request.nextUrl.search
+    );
+    return NextResponse.redirect(apex, 307);
+  }
 
   if (subdomainLabel) {
     const lookupClient = createServerClient(
@@ -357,9 +372,9 @@ export async function middleware(request: NextRequest) {
       );
     }
 
-    const role = await resolveUserRole(supabase, user);
+    const profile = await resolveUserProfile(supabase, user);
 
-    if (!hasCreatorDashboardAccess(user, role)) {
+    if (!hasCreatorDashboardAccess(user, profile.role, profile.is_admin)) {
       redirectUrl.searchParams.set("hint", "creator");
       return finalizeMiddlewareResponse(
         request,

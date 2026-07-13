@@ -1,4 +1,4 @@
-import { hasCreatorDashboardAccess, resolveUserRole } from "@/lib/auth-profile";
+import { hasCreatorDashboardAccess, resolveUserProfile } from "@/lib/auth-profile";
 import {
   authenticateApiKey,
   extractApiKeyFromRequest,
@@ -84,8 +84,8 @@ export async function authorizeCreatorApiRequest(
     return { ok: false, status: 401, error: "請先登入或提供 API 金鑰" };
   }
 
-  const role = await resolveUserRole(authClient, user);
-  if (!hasCreatorDashboardAccess(user, role)) {
+  const profile = await resolveUserProfile(authClient, user);
+  if (!hasCreatorDashboardAccess(user, profile.role, profile.is_admin)) {
     return { ok: false, status: 403, error: "需要創作者身分" };
   }
 

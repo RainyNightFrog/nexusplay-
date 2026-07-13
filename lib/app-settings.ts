@@ -1,4 +1,4 @@
-export type AppLanguage = "zh-Hant" | "en";
+export type AppLanguage = "zh-HK" | "zh-CN" | "en";
 
 export type AppSettings = {
   language: AppLanguage;
@@ -13,7 +13,7 @@ export const APP_SETTINGS_STORAGE_KEY = "rainynightfrog-app-settings";
 const LEGACY_APP_SETTINGS_STORAGE_KEY = "nexusplay-app-settings";
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
-  language: "zh-Hant",
+  language: "zh-HK",
   reduceMotion: false,
   forumEmailDigest: true,
   forumReplyNotify: true,
@@ -50,7 +50,16 @@ export function parseAppSettings(raw: string | null): AppSettings {
     };
     const { theme: _ignoredTheme, compactLayout: _ignoredCompactLayout, ...rest } =
       parsed;
-    return { ...DEFAULT_APP_SETTINGS, ...rest };
+    const rawLanguage = rest.language as string | undefined;
+    const language =
+      rawLanguage === "zh-Hant" || rawLanguage === "zh-TW"
+        ? ("zh-HK" as AppLanguage)
+        : rest.language;
+    return {
+      ...DEFAULT_APP_SETTINGS,
+      ...rest,
+      ...(language ? { language } : {}),
+    };
   } catch {
     return { ...DEFAULT_APP_SETTINGS };
   }

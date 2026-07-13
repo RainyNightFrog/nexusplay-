@@ -34,8 +34,57 @@ export const RESERVED_SUBDOMAINS = new Set([
   "games",
 ]);
 
+/**
+ * 帳號／後台等平台路徑：在遊戲／創作者子網域上不可 rewrite 成 `/game/{slug}/...`，
+ * 必須導回主網域，否則「編輯遊戲」等連結會 404。
+ */
+export const SUBDOMAIN_APEX_PATH_PREFIXES = [
+  "/dashboard",
+  "/admin",
+  "/auth",
+  "/account",
+  "/profile",
+  "/settings",
+  "/notifications",
+  "/supporter",
+  "/community",
+  "/search",
+] as const;
+
 export function isReservedSubdomain(subdomain: string) {
   return RESERVED_SUBDOMAINS.has(subdomain.toLowerCase());
+}
+
+/** 路徑（可含語系前綴）是否為需導回主網域的平台路由 */
+export function isSubdomainApexPath(pathname: string) {
+  const { pathname: path } = splitLocaleFromPath(pathname);
+  return SUBDOMAIN_APEX_PATH_PREFIXES.some(
+    (prefix) => path === prefix || path.startsWith(`${prefix}/`)
+  );
+}
+
+/**
+ * 將子網域上的平台路徑改寫為主網域同源網址（保留 path / query）。
+ * 例：void-gacha.rainynightfrog.com/dashboard/edit/1 → rainynightfrog.com/dashboard/edit/1
+ */
+export function buildSubdomainApexRedirectUrl(
+  host: string,
+  pathname: string,
+  search = ""
+) {
+  const [hostnamePart, portPart] = host.split(":");
+  const hostname = (hostnamePart ?? "").trim().toLowerCase();
+  const port = portPart?.trim() ?? "";
+
+  if (hostname.endsWith(".localhost") || hostname === "localhost") {
+    const origin = `http://localhost${port ? `:${port}` : ""}`;
+    return `${origin}${pathname}${search}`;
+  }
+
+  const rootDomain = getRootDomain();
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
+  const origin = siteUrl || `https://${rootDomain}`;
+  return `${origin}${pathname}${search}`;
 }
 
 /**
