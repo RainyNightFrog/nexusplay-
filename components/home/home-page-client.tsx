@@ -59,6 +59,24 @@ import { useGameI18n } from "@/hooks/use-game-i18n";
 import { useGameFavoriteActions } from "@/hooks/use-game-favorite-actions";
 import { cn } from "@/lib/utils";
 
+function isDefaultHomeQuery(
+  category: FilterCategory,
+  selectedTags: GameTag[],
+  sort: SortOption,
+  priceFilter: PriceFilterId
+) {
+  return (
+    category === ALL_CATEGORY &&
+    selectedTags.length === 0 &&
+    sort === "latest" &&
+    priceFilter === "all"
+  );
+}
+
+type HomePageClientProps = {
+  initialGames: Game[];
+};
+
 function FilterSortBar({
   category,
   sort,
@@ -158,7 +176,7 @@ function FilterSortBar({
   );
 }
 
-export function HomePageClient() {
+export function HomePageClient({ initialGames }: HomePageClientProps) {
   const t = useTranslations("home");
   const tNav = useTranslations("nav");
   const { localizedTag } = useGameI18n();
@@ -171,8 +189,9 @@ export function HomePageClient() {
     loadFavoriteCounts,
     toggleGameFavorite,
   } = useGameFavoriteActions();
-  const [games, setGames] = useState<Game[]>([]);
-  const [loading, setLoading] = useState(true);
+  const hasInitialGames = initialGames.length > 0;
+  const [games, setGames] = useState<Game[]>(initialGames);
+  const [loading, setLoading] = useState(!hasInitialGames);
   const [toast, setToast] = useState<string | null>(null);
   const [category, setCategory] = useState<FilterCategory>(ALL_CATEGORY);
   const [selectedTags, setSelectedTags] = useState<GameTag[]>([]);
@@ -229,8 +248,27 @@ export function HomePageClient() {
   );
 
   useEffect(() => {
-    loadGames(category, selectedTags, sort, priceFilter);
-  }, [category, selectedTags, sort, priceFilter, loadGames]);
+    if (
+      isDefaultHomeQuery(category, selectedTags, sort, priceFilter) &&
+      hasInitialGames
+    ) {
+      setGames(initialGames);
+      setLoading(false);
+      void loadFavoriteCounts(initialGames.map((game) => game.id));
+      return;
+    }
+
+    void loadGames(category, selectedTags, sort, priceFilter);
+  }, [
+    category,
+    selectedTags,
+    sort,
+    priceFilter,
+    loadGames,
+    initialGames,
+    hasInitialGames,
+    loadFavoriteCounts,
+  ]);
 
   const activeSortLabel = t(`sort.${sort}`);
   const activePriceFilterLabel = t(`priceFilter.${priceFilter}`);
@@ -278,7 +316,7 @@ export function HomePageClient() {
         </div>
       </SiteHeader>
 
-      <AnnouncementMarquee uploadHref={uploadHref} />
+      <AnnouncementMarquee uploadHref={uploadHref} games={games} />
 
       <main className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Hero Section */}

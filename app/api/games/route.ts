@@ -12,13 +12,20 @@ export async function GET(request: Request) {
     const tags = parseGameTagsParam(searchParams);
 
     const games = await getGames({ category, sort, priceFilter, tags });
-    return NextResponse.json({
-      games,
-      category: category ?? "全部",
-      sort,
-      priceFilter,
-      tags,
-    });
+    return NextResponse.json(
+      {
+        games,
+        category: category ?? "全部",
+        sort,
+        priceFilter,
+        tags,
+      },
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+        },
+      }
+    );
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "讀取遊戲列表失敗";

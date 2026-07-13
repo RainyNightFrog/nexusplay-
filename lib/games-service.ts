@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { resolveGameRecordByRouteParam } from "@/lib/game-slug";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { mapRecordToGame } from "@/lib/games-data";
@@ -20,7 +21,12 @@ export function parseSortOption(value: string | null): SortOption {
   return "latest";
 }
 
-export async function getGames(options: GetGamesOptions = {}): Promise<Game[]> {
+function buildGamesCacheKey(options: GetGamesOptions) {
+  const { category, sort = "latest", priceFilter = {}, tags = [] } = options;
+  return JSON.stringify({ category, sort, priceFilter, tags });
+}
+
+async function queryGamesFromDb(options: GetGamesOptions = {}): Promise<Game[]> {
   const { category, sort = "latest", priceFilter = {}, tags = [] } = options;
   const supabase = createServerSupabase();
 
@@ -87,6 +93,18 @@ export async function getGames(options: GetGamesOptions = {}): Promise<Game[]> {
     if (aFeatured !== bFeatured) return bFeatured - aFeatured;
     return 0;
   });
+}
+
+export async function getGames(options: GetGamesOptions = {}): Promise<Game[]> {
+  if (process.env.NODE_ENV === "development") {
+    return queryGamesFromDb(options);
+  }
+
+  const cacheKey = buildGamesCacheKey(options);
+  return unstable_cache(() => queryGamesFromDb(options), ["games-list", cacheKey], {
+    revalidate: 60,
+    tags: ["games"],
+  })();
 }
 
 export async function getPublicGameById(id: number): Promise<Game | null> {

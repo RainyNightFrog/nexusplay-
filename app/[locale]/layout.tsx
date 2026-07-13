@@ -10,7 +10,7 @@ import { AuthProvider } from "@/components/auth/auth-provider";
 import { AppSettingsProvider } from "@/components/settings/app-settings-provider";
 import { NexusAuroraBackground } from "@/components/ui/nexus-aurora-background";
 import { NexusCursorGlow } from "@/components/ui/nexus-cursor-glow";
-import { ChatWidget } from "@/components/chat/chat-widget";
+import { ChatWidgetLazy } from "@/components/chat/chat-widget-lazy";
 import { PlatformAnnouncementBanner } from "@/components/layout/platform-announcement-banner";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { routing } from "@/i18n/routing";
@@ -95,7 +95,7 @@ export default async function LocaleLayout({
                 <PageViewTracker />
                 <GoogleAnalyticsProvider />
                 <ActivityPulseTracker />
-                <ChatWidget />
+                <ChatWidgetLazy />
                 <PlatformAnnouncementBanner />
                 <div className="flex-1">{children}</div>
                 <SiteFooter />

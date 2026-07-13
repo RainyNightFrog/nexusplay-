@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 
 type AnnouncementMarqueeProps = {
   uploadHref?: string;
+  games?: Game[];
 };
 
 const GAME_PICK_COUNT = 6;
@@ -113,11 +114,16 @@ function MarqueeLeadBlock({ label }: { label: string }) {
   );
 }
 
-export function AnnouncementMarquee({ uploadHref }: AnnouncementMarqueeProps) {
+export function AnnouncementMarquee({
+  uploadHref,
+  games: gamesProp = [],
+}: AnnouncementMarqueeProps) {
   const t = useTranslations("home");
-  const [games, setGames] = useState<Game[]>([]);
+  const [fallbackGames, setFallbackGames] = useState<Game[]>([]);
   const [feedSeed, setFeedSeed] = useState(0);
   const [mounted, setMounted] = useState(false);
+
+  const games = gamesProp.length > 0 ? gamesProp : fallbackGames;
 
   const formatGameLabel = useCallback(
     (templateKey: GamePickTemplateKey, title: string) =>
@@ -125,30 +131,30 @@ export function AnnouncementMarquee({ uploadHref }: AnnouncementMarqueeProps) {
     [t]
   );
 
+  const marqueeGames = useMemo(
+    () => [...games].sort((a, b) => b.players - a.players),
+    [games]
+  );
+
   const feedItems = useMemo(() => {
     const announcements = buildAnnouncementMarqueeItems(
       (announcement) => t(announcement.messageKey),
       uploadHref
     );
-    const gameItems = buildGameMarqueeItems(games, formatGameLabel, {
+    const gameItems = buildGameMarqueeItems(marqueeGames, formatGameLabel, {
       count: GAME_PICK_COUNT,
     });
 
     return mergeMarqueeFeed(announcements, gameItems);
-  }, [feedSeed, formatGameLabel, games, t, uploadHref]);
+  }, [feedSeed, formatGameLabel, marqueeGames, t, uploadHref]);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const trackSegments = useMemo(() => {
-    if (feedItems.length === 0) {
-      return [];
-    }
-    return [feedItems, feedItems];
-  }, [feedItems]);
-
   useEffect(() => {
+    if (gamesProp.length > 0) return;
+
     let cancelled = false;
 
     async function loadGames() {
@@ -156,11 +162,11 @@ export function AnnouncementMarquee({ uploadHref }: AnnouncementMarqueeProps) {
         const response = await fetch("/api/games?sort=views");
         const data = (await response.json()) as { games?: Game[] };
         if (!cancelled) {
-          setGames(data.games ?? []);
+          setFallbackGames(data.games ?? []);
         }
       } catch {
         if (!cancelled) {
-          setGames([]);
+          setFallbackGames([]);
         }
       }
     }
@@ -170,7 +176,14 @@ export function AnnouncementMarquee({ uploadHref }: AnnouncementMarqueeProps) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [gamesProp.length]);
+
+  const trackSegments = useMemo(() => {
+    if (feedItems.length === 0) {
+      return [];
+    }
+    return [feedItems, feedItems];
+  }, [feedItems]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {

@@ -31,6 +31,28 @@ function stripLocalePrefix(pathname: string): string {
   return pathname;
 }
 
+/** 僅在需要驗證身分或檢查帳號限制的路由才呼叫 Supabase getUser */
+function pathnameNeedsServerAuth(pathname: string) {
+  if (pathname === "/auth/choose-role") return true;
+
+  const authPrefixes = [
+    "/admin",
+    "/dashboard",
+    "/account",
+    "/profile",
+    "/settings",
+    "/community",
+    "/notifications",
+    "/supporter",
+  ];
+
+  if (authPrefixes.some((prefix) => pathname.startsWith(prefix))) {
+    return true;
+  }
+
+  return pathname.includes("/forum");
+}
+
 function applySubdomainRewrite(request: NextRequest) {
   const subdomain = resolveSubdomainFromHost(request.headers.get("host") ?? "");
   if (!subdomain) {
@@ -246,7 +268,7 @@ export async function middleware(request: NextRequest) {
     ReturnType<ReturnType<typeof createServerClient>["auth"]["getUser"]>
   >["data"]["user"] = null;
 
-  if (!isAuthLoginPage) {
+  if (!isAuthLoginPage && pathnameNeedsServerAuth(pathnameWithoutLocale)) {
     ({
       data: { user },
     } = await supabase.auth.getUser());
