@@ -95,7 +95,11 @@ export function buildRainyNightFrogEmbedSdkScript() {
     if(d.type!=='rainynightfrog:resize'&&d.type!=='nexusplay:resize'&&d.type!=='rainynightfrog:play-mode'&&d.type!=='nexusplay:play-mode')return;
     if(d.type==='rainynightfrog:play-mode'||d.type==='nexusplay:play-mode'){
       if(typeof window.__voidRnfSyncExpandGate==='function'){
-        window.__voidRnfSyncExpandGate({expanded:d.mode==='expanded'});
+        window.__voidRnfSyncExpandGate({
+          expanded:d.mode==='expanded'||d.mode==='fullscreen',
+          width:window.innerWidth||0,
+          height:window.innerHeight||0
+        });
       }
       return;
     }
