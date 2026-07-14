@@ -2120,6 +2120,8 @@
     "playerCardRegion": "Vùng",
     "playerCardBio": "Giới thiệu",
     "playerCardBioEmpty": "Chưa có giới thiệu",
+    "playerCardRegisteredAt": "Ngày đăng ký",
+    "playerCardRegisteredAtEmpty": "Chưa có ngày đăng ký",
     "playerCardLoadFailed": "Không tải được hồ sơ người chơi",
     "playerCardOnlineTime": "Thời gian trực tuyến",
     "playerCardPlayTime": "thời gian chơi",

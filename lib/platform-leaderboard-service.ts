@@ -8,6 +8,7 @@ import {
   type PlatformLeaderboardEntry,
   type PlatformLeaderboardsResponse,
 } from "@/lib/platform-leaderboard";
+import { resolveAdminDisplayRole } from "@/lib/admin-display-role";
 import { maskDonationAmount } from "@/lib/activity-stats-masking";
 import { resolveEquippedTitles } from "@/lib/equipped-title-service";
 import { isAmbientLocalEmail } from "@/lib/ambient-local-email";
@@ -22,37 +23,90 @@ type ProfileRow = {
   avatar_url: string | null;
   is_supporter: boolean | null;
   supporter_badge: string | null;
+  is_admin: boolean | null;
 };
 
 const LEADERBOARD_LIMIT = LEADERBOARD_TOP_LIMIT;
 const FETCH_POOL_SIZE = 80;
+/** 同一 instance 內快取，避免每次開排行榜／玩家卡重算 */
+const LEADERBOARD_CACHE_TTL_MS = 20_000;
+const BACKFILL_MIN_INTERVAL_MS = 5 * 60_000;
+const AUTH_USER_FLAGS_CACHE_TTL_MS = 5 * 60_000;
+
+type LeaderboardCoreCache = {
+  expiresAt: number;
+  onlineRows: ActivityStatsRow[];
+  playRows: ActivityStatsRow[];
+  donatedRows: ActivityStatsRow[];
+  profiles: Map<string, ProfileRow>;
+  titleMap: Map<string, import("@/lib/titles").EquippedTitle | null>;
+  metadataAdminIds: Set<string>;
+};
+
+let leaderboardCoreCache: LeaderboardCoreCache | null = null;
+let lastActivityBackfillAt = 0;
+let authUserFlagsCache: {
+  expiresAt: number;
+  ambientBotIds: Set<string>;
+  metadataAdminIds: Set<string>;
+} | null = null;
 
 async function ensureActivityStatsBackfill(
   supabase: SupabaseClient
 ): Promise<void> {
+  const now = Date.now();
+  if (now - lastActivityBackfillAt < BACKFILL_MIN_INTERVAL_MS) {
+    return;
+  }
+
   const { error } = await supabase.rpc("backfill_user_activity_stats");
   if (error) {
     throw new Error(`補建排行榜資料失敗：${error.message}`);
   }
+  lastActivityBackfillAt = now;
 }
 
-async function listAmbientBotUserIds(
-  supabase: SupabaseClient
-): Promise<Set<string>> {
+async function loadAuthUserFlags(supabase: SupabaseClient): Promise<{
+  ambientBotIds: Set<string>;
+  metadataAdminIds: Set<string>;
+}> {
+  const now = Date.now();
+  if (authUserFlagsCache && authUserFlagsCache.expiresAt > now) {
+    return authUserFlagsCache;
+  }
+
   const { data, error } = await supabase.auth.admin.listUsers({
     page: 1,
     perPage: 1000,
   });
 
   if (error) {
-    return new Set();
+    return (
+      authUserFlagsCache ?? {
+        ambientBotIds: new Set(),
+        metadataAdminIds: new Set(),
+      }
+    );
   }
 
-  return new Set(
-    (data.users ?? [])
-      .filter((user) => isAmbientLocalEmail(user.email))
-      .map((user) => user.id)
-  );
+  const ambientBotIds = new Set<string>();
+  const metadataAdminIds = new Set<string>();
+
+  for (const user of data.users ?? []) {
+    if (isAmbientLocalEmail(user.email)) {
+      ambientBotIds.add(user.id);
+    }
+    if (user.user_metadata?.role === "admin") {
+      metadataAdminIds.add(user.id);
+    }
+  }
+
+  authUserFlagsCache = {
+    expiresAt: now + AUTH_USER_FLAGS_CACHE_TTL_MS,
+    ambientBotIds,
+    metadataAdminIds,
+  };
+  return authUserFlagsCache;
 }
 
 async function fetchTopByColumn(
@@ -194,27 +248,38 @@ async function fetchTopContributionRows(
     .slice(0, LEADERBOARD_LIMIT);
 }
 
-/** 單一用戶貢獻累計（HKD）：打賞 + 支持者付款 */
+/** 單一用戶貢獻累計（HKD）：打賞 + 支持者付款（只查該用戶，勿掃全站訂單） */
 export async function getUserContributionHkd(
   supabase: SupabaseClient,
   userId: string
 ): Promise<number> {
-  const [{ data: activity, error: activityError }, supporterTotals] =
+  const [{ data: activity, error: activityError }, { data: orders, error: ordersError }] =
     await Promise.all([
       supabase
         .from("user_activity_stats")
         .select("total_donated")
         .eq("user_id", userId)
         .maybeSingle(),
-      fetchSupporterPassTotals(supabase, new Set()),
+      supabase
+        .from("orders")
+        .select("total_amount_cents")
+        .eq("buyer_id", userId)
+        .eq("order_type", "supporter_pass")
+        .eq("status", "succeeded"),
     ]);
 
   if (activityError) {
     throw new Error(`讀取用戶貢獻資料失敗：${activityError.message}`);
   }
+  if (ordersError) {
+    throw new Error(`讀取支持者付款失敗：${ordersError.message}`);
+  }
 
   const tipsHkd = Number(activity?.total_donated ?? 0);
-  const supporterHkd = supporterTotals.get(userId)?.hkd ?? 0;
+  const supporterHkd = (orders ?? []).reduce(
+    (sum, row) => sum + usdCentsToHkd(Number(row.total_amount_cents ?? 0)),
+    0
+  );
   return tipsHkd + supporterHkd;
 }
 
@@ -224,7 +289,8 @@ function mapEntries(
   titleMap: Map<string, import("@/lib/titles").EquippedTitle | null>,
   valueKey: "total_online_time" | "total_play_time" | "total_donated",
   currentUserId?: string | null,
-  viewerIsAdmin = false
+  viewerIsAdmin = false,
+  metadataAdminIds: Set<string> = new Set()
 ): PlatformLeaderboardEntry[] {
   const now = Date.now();
 
@@ -250,6 +316,11 @@ function mapEntries(
       donationTier = masked.tier;
     }
 
+    const adminRole = resolveAdminDisplayRole(
+      profile?.is_admin === true,
+      metadataAdminIds.has(row.user_id)
+    );
+
     return {
       rank: index + 1,
       userId: row.user_id,
@@ -264,6 +335,7 @@ function mapEntries(
       donationTier,
       isSupporter: profile?.is_supporter === true,
       supporterBadge: profile?.supporter_badge ?? null,
+      adminRole,
     };
   });
 }
@@ -277,7 +349,9 @@ async function loadProfiles(
   const uniqueIds = [...new Set(userIds)];
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, display_name, avatar_url, is_supporter, supporter_badge")
+    .select(
+      "id, display_name, avatar_url, is_supporter, supporter_badge, is_admin"
+    )
     .in("id", uniqueIds);
 
   if (error) {
@@ -289,14 +363,18 @@ async function loadProfiles(
   );
 }
 
-export async function getPlatformLeaderboards(
-  supabase: SupabaseClient,
-  currentUserId?: string | null,
-  viewerIsAdmin = false
-): Promise<PlatformLeaderboardsResponse> {
+async function loadLeaderboardCore(
+  supabase: SupabaseClient
+): Promise<LeaderboardCoreCache> {
+  const now = Date.now();
+  if (leaderboardCoreCache && leaderboardCoreCache.expiresAt > now) {
+    return leaderboardCoreCache;
+  }
+
   await ensureActivityStatsBackfill(supabase);
 
-  const ambientBotIds = await listAmbientBotUserIds(supabase);
+  const authFlags = await loadAuthUserFlags(supabase);
+  const ambientBotIds = authFlags.ambientBotIds;
 
   const [onlineRows, playRows, donatedRows] = await Promise.all([
     fetchTopByColumn(supabase, "total_online_time", ambientBotIds),
@@ -310,33 +388,57 @@ export async function getPlatformLeaderboards(
     ...donatedRows.map((row) => row.user_id),
   ];
 
-  const profiles = await loadProfiles(supabase, userIds);
-  const titleMap = await resolveEquippedTitles(supabase, userIds);
-  const virtual = getVirtualPlatformLeaderboardEntries(currentUserId);
+  const [profiles, titleMap] = await Promise.all([
+    loadProfiles(supabase, userIds),
+    resolveEquippedTitles(supabase, userIds),
+  ]);
 
-  const realOnline = mapEntries(
+  leaderboardCoreCache = {
+    expiresAt: now + LEADERBOARD_CACHE_TTL_MS,
     onlineRows,
-    profiles,
-    titleMap,
-    "total_online_time",
-    currentUserId,
-    viewerIsAdmin
-  );
-  const realPlayTime = mapEntries(
     playRows,
-    profiles,
-    titleMap,
-    "total_play_time",
-    currentUserId,
-    viewerIsAdmin
-  );
-  const realDonated = mapEntries(
     donatedRows,
     profiles,
     titleMap,
+    metadataAdminIds: authFlags.metadataAdminIds,
+  };
+  return leaderboardCoreCache;
+}
+
+export async function getPlatformLeaderboards(
+  supabase: SupabaseClient,
+  currentUserId?: string | null,
+  viewerIsAdmin = false
+): Promise<PlatformLeaderboardsResponse> {
+  const core = await loadLeaderboardCore(supabase);
+  const virtual = getVirtualPlatformLeaderboardEntries(currentUserId);
+
+  const realOnline = mapEntries(
+    core.onlineRows,
+    core.profiles,
+    core.titleMap,
+    "total_online_time",
+    currentUserId,
+    viewerIsAdmin,
+    core.metadataAdminIds
+  );
+  const realPlayTime = mapEntries(
+    core.playRows,
+    core.profiles,
+    core.titleMap,
+    "total_play_time",
+    currentUserId,
+    viewerIsAdmin,
+    core.metadataAdminIds
+  );
+  const realDonated = mapEntries(
+    core.donatedRows,
+    core.profiles,
+    core.titleMap,
     "total_donated",
     currentUserId,
-    viewerIsAdmin
+    viewerIsAdmin,
+    core.metadataAdminIds
   );
 
   return {

@@ -4,6 +4,7 @@ import { useRef, type KeyboardEvent } from "react";
 import { Loader2, Send } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { ChatEmojiPicker } from "@/components/chat/chat-emoji-picker";
+import { RainbowSafeText } from "@/components/supporter/rainbow-safe-text";
 import { CHAT_LIMITS } from "@/lib/chat";
 import {
   supporterComposerMirrorClassByTier,
@@ -118,14 +119,13 @@ export function ChatInput({
             )}
           />
           {showComposerMirror ? (
-            <div
-              aria-hidden
-              className={cn(
-                composerMirrorClass,
-                supporterComposerMirrorClassByTier[supporterTier]
-              )}
-            >
-              {value}
+            <div aria-hidden className={composerMirrorClass}>
+              <RainbowSafeText
+                text={value}
+                rainbowClassName={
+                  supporterComposerMirrorClassByTier[supporterTier]
+                }
+              />
             </div>
           ) : null}
           <span className="pointer-events-none absolute bottom-2 right-2 z-10 text-[10px] text-zinc-600">

@@ -2125,6 +2125,8 @@
     "playerCardRegion": "地域",
     "playerCardBio": "自己紹介",
     "playerCardBioEmpty": "自己紹介はまだありません",
+    "playerCardRegisteredAt": "登録日",
+    "playerCardRegisteredAtEmpty": "登録日不明",
     "playerCardLoadFailed": "プレーヤープロフィールのロードに失敗しました",
     "playerCardOnlineTime": "オンライン時間",
     "playerCardPlayTime": "プレイ時間",

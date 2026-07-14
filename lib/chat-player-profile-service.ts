@@ -29,7 +29,10 @@ import {
   getVirtualPlayerCountryCode,
 } from "@/lib/request-geo";
 import { getVirtualPlayerById } from "@/lib/virtual-players";
-import { getVirtualPlayerSupporterFlags } from "@/lib/virtual-player-supporter";
+import {
+  getVirtualPlayerEquippedTitle,
+  getVirtualPlayerSupporterFlags,
+} from "@/lib/virtual-player-supporter";
 import { getVirtualPlayerBio } from "@/lib/virtual-player-bios";
 import type { EquippedTitle } from "@/lib/titles";
 import {
@@ -56,6 +59,7 @@ export type ChatPlayerPublicProfile = {
   isVirtual: boolean;
   isOnline: boolean;
   bio: string | null;
+  registeredAt: string | null;
   website: string | null;
   profilePublic: boolean;
   achievementCount: number;
@@ -95,7 +99,9 @@ async function loadRealUserProfile(
 ): Promise<ChatPlayerPublicProfile | null> {
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("id, display_name, avatar_url, role, bio, player_number, is_supporter, supporter_badge, is_admin")
+    .select(
+      "id, display_name, avatar_url, role, bio, player_number, is_supporter, supporter_badge, is_admin, created_at"
+    )
     .eq("id", userId)
     .maybeSingle();
 
@@ -107,6 +113,10 @@ async function loadRealUserProfile(
   if (authError) throw new Error(authError.message);
 
   const metadata = authData.user?.user_metadata ?? {};
+  const registeredAt =
+    readOptionalString(profile.created_at) ??
+    readOptionalString(authData.user?.created_at) ??
+    null;
   const profilePublic = readBoolean(metadata.profile_public, true);
   const bio = profilePublic
     ? readOptionalString(profile.bio) ?? readOptionalString(metadata.bio)
@@ -210,7 +220,8 @@ async function loadRealUserProfile(
     isVirtual: false,
     isOnline: lastActiveAt ? isUserOnline(lastActiveAt) : false,
     bio,
-    website,
+    registeredAt: registeredAt,
+    website: website,
     profilePublic,
     achievementCount: achievementCountRes.count ?? achievementHighlights.length,
     achievementHighlights,
@@ -227,6 +238,29 @@ async function loadRealUserProfile(
     supporterBadge: readOptionalString(profile.supporter_badge),
     showcaseTags: [],
   };
+}
+
+function hashVirtualId(value: string, salt: number) {
+  let hash = salt;
+  for (const char of value) {
+    hash = Math.imul(31, hash) + char.charCodeAt(0);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+/** Stable join date in Feb 1 – Jul 10, 2026 for virtual / ambient players. */
+function getVirtualPlayerRegisteredAt(playerId: string): string {
+  const startDay = Date.UTC(2026, 1, 1); // 2026-02-01
+  const endDay = Date.UTC(2026, 6, 10); // 2026-07-10
+  const totalDays = Math.floor((endDay - startDay) / 86_400_000);
+  const dayOffset = hashVirtualId(playerId, 401) % (totalDays + 1);
+  const hour = hashVirtualId(playerId, 503) % 24;
+  const minute = hashVirtualId(playerId, 607) % 60;
+  const second = hashVirtualId(playerId, 701) % 60;
+  return new Date(
+    startDay + dayOffset * 86_400_000 + hour * 3_600_000 + minute * 60_000 + second * 1_000
+  ).toISOString();
 }
 
 async function loadVirtualPlayerProfile(
@@ -263,12 +297,13 @@ async function loadVirtualPlayerProfile(
     playerNumber: null,
     displayName: player.displayName,
     avatarUrl: resolveVirtualPlayerAvatarUrl(virtualPlayerId),
-    equippedTitle: null,
+    equippedTitle: getVirtualPlayerEquippedTitle(virtualPlayerId),
     isCreator,
     adminRole: "none",
     isVirtual: true,
     isOnline: activity.isOnline,
     bio: getVirtualPlayerBio(virtualPlayerId),
+    registeredAt: getVirtualPlayerRegisteredAt(virtualPlayerId),
     website: social.website,
     profilePublic: true,
     achievementCount: social.achievementCount,
@@ -417,6 +452,9 @@ export async function getChatPlayerPublicProfile(
           ...profile,
           userId: ambientUserId ?? userId,
           ...(realProfile?.bio ? { bio: realProfile.bio } : {}),
+          ...(realProfile?.registeredAt
+            ? { registeredAt: realProfile.registeredAt }
+            : {}),
         };
       }
     } else {

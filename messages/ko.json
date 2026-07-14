@@ -2125,6 +2125,8 @@
     "playerCardRegion": "지역",
     "playerCardBio": "자기소개",
     "playerCardBioEmpty": "아직 자기소개가 없습니다",
+    "playerCardRegisteredAt": "가입일",
+    "playerCardRegisteredAtEmpty": "가입일 없음",
     "playerCardLoadFailed": "플레이어 프로필을 로드하지 못했습니다.",
     "playerCardOnlineTime": "온라인 시간",
     "playerCardPlayTime": "플레이 시간",

@@ -2120,6 +2120,8 @@
     "playerCardRegion": "Região",
     "playerCardBio": "Bio",
     "playerCardBioEmpty": "Sem bio ainda",
+    "playerCardRegisteredAt": "Data de registo",
+    "playerCardRegisteredAtEmpty": "Data de registo indisponível",
     "playerCardLoadFailed": "Falha ao carregar o perfil do jogador",
     "playerCardOnlineTime": "Tempo on-line",
     "playerCardPlayTime": "Tempo de jogo",

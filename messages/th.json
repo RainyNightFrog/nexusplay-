@@ -2120,6 +2120,8 @@
     "playerCardRegion": "ภูมิภาค",
     "playerCardBio": "แนะนำตัว",
     "playerCardBioEmpty": "ยังไม่ได้กรอกแนะนำตัว",
+    "playerCardRegisteredAt": "วันที่สมัคร",
+    "playerCardRegisteredAtEmpty": "ไม่มีวันที่สมัคร",
     "playerCardLoadFailed": "ไม่สามารถโหลดโปรไฟล์ผู้เล่นได้",
     "playerCardOnlineTime": "เวลาออนไลน์",
     "playerCardPlayTime": "เวลาเล่น",

@@ -2134,6 +2134,8 @@
     "playerCardPlayerId": "ID",
     "playerCardBio": "Bio",
     "playerCardBioEmpty": "No bio yet",
+    "playerCardRegisteredAt": "Joined",
+    "playerCardRegisteredAtEmpty": "Join date unavailable",
     "playerCardLoadFailed": "Failed to load player profile",
     "playerCardOnlineTime": "Online time",
     "playerCardPlayTime": "Play time",

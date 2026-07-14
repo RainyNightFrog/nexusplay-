@@ -4,10 +4,23 @@ import {
 } from "@/lib/platform-leaderboard";
 import { resolveVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
 import {
+  getVirtualPlayerEquippedTitle,
+  getVirtualPlayerSupporterFlags,
+} from "@/lib/virtual-player-supporter";
+import {
   VIRTUAL_PLAYERS,
   getVirtualPlayerById,
   type VirtualPlayer,
 } from "@/lib/virtual-players";
+
+function virtualPlayerPresentation(playerId: string) {
+  const supporter = getVirtualPlayerSupporterFlags(playerId);
+  return {
+    equippedTitle: getVirtualPlayerEquippedTitle(playerId),
+    isSupporter: supporter?.isSupporter === true,
+    supporterBadge: supporter?.badge ?? null,
+  };
+}
 
 export const VIRTUAL_LEADERBOARD_USER_PREFIX = "virtual-player:";
 
@@ -214,19 +227,24 @@ function toEntries(
       if (b[valueKey] !== a[valueKey]) return b[valueKey] - a[valueKey];
       return Date.parse(b.lastActiveAt) - Date.parse(a.lastActiveAt);
     })
-    .map((row, index) => ({
-      rank: index + 1,
-      userId: `${VIRTUAL_LEADERBOARD_USER_PREFIX}${row.playerId}`,
-      displayName: row.displayName,
-      avatarUrl: resolveVirtualPlayerAvatarUrl(row.playerId),
-      equippedTitle: null,
-      value: row[valueKey],
-      lastActiveAt: row.lastActiveAt,
-      isOnline: isUserOnline(row.lastActiveAt, now),
-      isMe: currentUserId
-        ? `${VIRTUAL_LEADERBOARD_USER_PREFIX}${row.playerId}` === currentUserId
-        : undefined,
-    }));
+    .map((row, index) => {
+      const presentation = virtualPlayerPresentation(row.playerId);
+      return {
+        rank: index + 1,
+        userId: `${VIRTUAL_LEADERBOARD_USER_PREFIX}${row.playerId}`,
+        displayName: row.displayName,
+        avatarUrl: resolveVirtualPlayerAvatarUrl(row.playerId),
+        equippedTitle: presentation.equippedTitle,
+        value: row[valueKey],
+        lastActiveAt: row.lastActiveAt,
+        isOnline: isUserOnline(row.lastActiveAt, now),
+        isMe: currentUserId
+          ? `${VIRTUAL_LEADERBOARD_USER_PREFIX}${row.playerId}` === currentUserId
+          : undefined,
+        isSupporter: presentation.isSupporter,
+        supporterBadge: presentation.supporterBadge,
+      };
+    });
 }
 
 function getDonationVirtualPlayers(): VirtualPlayer[] {
@@ -257,16 +275,19 @@ function toDonationEntries(
       );
       const amountUsd = getVirtualDonationUsd(player.id);
 
+      const presentation = virtualPlayerPresentation(player.id);
       return {
         rank: 0,
         userId: `${VIRTUAL_LEADERBOARD_USER_PREFIX}${player.id}`,
         displayName: player.displayName,
         avatarUrl: resolveVirtualPlayerAvatarUrl(player.id),
-        equippedTitle: null,
+        equippedTitle: presentation.equippedTitle,
         value: amountUsd,
         lastActiveAt: activity.lastActiveAt,
         isOnline: isUserOnline(activity.lastActiveAt, now),
         isDonationMasked: false,
+        isSupporter: presentation.isSupporter,
+        supporterBadge: presentation.supporterBadge,
       };
     })
     .sort((a, b) => {

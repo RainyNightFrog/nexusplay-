@@ -446,7 +446,7 @@ export default function AdminPage() {
 
       <Tabs defaultValue="games" className="mx-auto w-full min-w-0 gap-y-20">
         <div className="w-full rounded-lg border border-white/10 bg-zinc-900/80 p-2">
-          <TabsList className="flex h-auto w-full flex-wrap justify-center gap-1.5 border-0 bg-transparent p-0 shadow-none [&_[data-slot=tabs-trigger]]:flex-none">
+          <TabsList className="flex !h-auto min-h-0 w-full flex-wrap justify-center gap-1.5 overflow-visible border-0 bg-transparent p-0 shadow-none group-data-horizontal/tabs:!h-auto group-data-horizontal/tabs:min-h-0 [&_[data-slot=tabs-trigger]]:!h-auto [&_[data-slot=tabs-trigger]]:min-h-8 [&_[data-slot=tabs-trigger]]:flex-none [&_[data-slot=tabs-trigger]]:shrink-0">
           <TabsTrigger value="games" className="gap-1.5 px-3 shrink-0">
             <ShieldAlert className="size-4" />
             {t("tabGames")}

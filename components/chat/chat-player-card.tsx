@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import Image from "next/image";
 import {
+  CalendarDays,
   Clock3,
   ExternalLink,
   Gamepad2,
@@ -103,9 +104,12 @@ export function leaderboardEntryToPlayerPreview(
     avatarUrl: entry.avatarUrl,
     equippedTitle: entry.equippedTitle,
     isCreator: false,
+    adminRole: entry.adminRole ?? "none",
     isVirtual: Boolean(virtualPlayerId),
     virtualPlayerId,
     isOwn: entry.isMe ?? false,
+    isSupporter: entry.isSupporter,
+    supporterBadge: entry.supporterBadge,
   };
 }
 
@@ -443,13 +447,24 @@ export function ChatPlayerCard({
                         : "—"
                   }
                 />
-                {detail.isCreator && (
-                  <StatItem
-                    icon={<Gamepad2 className="size-3.5 shrink-0" />}
-                    label={t("playerCardPublishedGames")}
-                    value={String(detail.publishedGames)}
-                  />
-                )}
+                <StatItem
+                  icon={<Gamepad2 className="size-3.5 shrink-0" />}
+                  label={t("playerCardPublishedGames")}
+                  value={detail.isCreator ? String(detail.publishedGames) : "—"}
+                />
+                <StatItem
+                  icon={<CalendarDays className="size-3.5 shrink-0" />}
+                  label={t("playerCardRegisteredAt")}
+                  value={
+                    detail.registeredAt
+                      ? new Date(detail.registeredAt).toLocaleDateString(locale, {
+                          year: "numeric",
+                          month: "numeric",
+                          day: "numeric",
+                        })
+                      : "—"
+                  }
+                />
               </div>
 
               {detail.achievementHighlights.length > 0 && (

@@ -112,6 +112,68 @@ async function resolveSubdomainRewrite(
   return { request: rewrittenRequest, rewriteUrl };
 }
 
+/**
+ * next-intl 會把路徑改寫成 /[locale]/...；子網域若覆蓋成無 locale 的
+ * /game/{slug}，App Router 會把 `[locale]` 誤判成 `game` 而回全域 404。
+ * 非預設語系（Accept-Language: en / zh-CN）時尤其明顯。
+ */
+function ensureLocalePrefixedPath(pathname: string, locale: string) {
+  for (const item of routing.locales) {
+    if (pathname === `/${item}` || pathname.startsWith(`/${item}/`)) {
+      return pathname;
+    }
+  }
+
+  if (pathname === "/") {
+    return `/${locale}`;
+  }
+
+  return `/${locale}${pathname}`;
+}
+
+function resolveSubdomainRewriteDestination(
+  request: NextRequest,
+  response: NextResponse,
+  rewriteUrl: URL
+) {
+  const middlewareRewrite = response.headers.get("x-middleware-rewrite");
+  if (middlewareRewrite) {
+    try {
+      return new URL(middlewareRewrite, request.url);
+    } catch {
+      // fall through
+    }
+  }
+
+  // next-intl 對非預設語系常回 redirect（Location: /en/...）；
+  // 子網域改為內部 rewrite，網址列維持乾淨根路徑。
+  const location = response.headers.get("location");
+  if (location && response.status >= 300 && response.status < 400) {
+    try {
+      const redirected = new URL(location, request.url);
+      if (redirected.origin === rewriteUrl.origin) {
+        return redirected;
+      }
+    } catch {
+      // fall through
+    }
+  }
+
+  const cookieLocale = request.cookies.get("NEXT_LOCALE")?.value;
+  const locale =
+    cookieLocale &&
+    routing.locales.includes(cookieLocale as (typeof routing.locales)[number])
+      ? cookieLocale
+      : routing.defaultLocale;
+
+  const destination = new URL(rewriteUrl.href);
+  destination.pathname = ensureLocalePrefixedPath(
+    rewriteUrl.pathname,
+    locale
+  );
+  return destination;
+}
+
 function finalizeMiddlewareResponse(
   request: NextRequest,
   response: NextResponse,
@@ -121,7 +183,13 @@ function finalizeMiddlewareResponse(
     return response;
   }
 
-  const rewriteResponse = NextResponse.rewrite(rewriteUrl, {
+  const destination = resolveSubdomainRewriteDestination(
+    request,
+    response,
+    rewriteUrl
+  );
+
+  const rewriteResponse = NextResponse.rewrite(destination, {
     request: { headers: request.headers },
   });
 
@@ -130,11 +198,35 @@ function finalizeMiddlewareResponse(
   });
 
   response.headers.forEach((value, key) => {
-    if (key.toLowerCase() === "set-cookie") return;
+    const lower = key.toLowerCase();
+    // 勿把 redirect Location 抄上 rewrite，否則瀏覽器會離開子網域根路徑
+    if (lower === "set-cookie" || lower === "location") return;
     rewriteResponse.headers.set(key, value);
   });
 
   return rewriteResponse;
+}
+
+/** 香港／台灣瀏覽器常送 zh-TW；對齊預設繁中，避免落到 en 後子網域 404 */
+function withNormalizedAcceptLanguage(request: NextRequest) {
+  const accept = request.headers.get("accept-language");
+  if (!accept || !/\bzh-(?:TW|Hant)\b/i.test(accept)) {
+    return request;
+  }
+
+  const normalized = accept
+    .replace(/\bzh-TW\b/gi, "zh-HK")
+    .replace(/\bzh-Hant\b/gi, "zh-HK");
+  if (normalized === accept) {
+    return request;
+  }
+
+  const headers = new Headers(request.headers);
+  headers.set("accept-language", normalized);
+  return new NextRequest(request.url, {
+    headers,
+    method: request.method,
+  });
 }
 
 function sanitizePathname(pathname: string) {
@@ -244,6 +336,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(callbackUrl);
   }
 
+  effectiveRequest = withNormalizedAcceptLanguage(effectiveRequest);
   const response = intlMiddleware(effectiveRequest);
 
   if (!effectiveRequest.cookies.get(ANALYTICS_SESSION_COOKIE)?.value) {

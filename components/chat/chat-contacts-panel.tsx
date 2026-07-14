@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { ChatInput } from "@/components/chat/chat-input";
 import { UserBadge } from "@/components/UserBadge";
+import { RainbowSafeText } from "@/components/supporter/rainbow-safe-text";
 import { useVirtualContacts, useVirtualDm } from "@/hooks/use-virtual-dm";
 import { useAdminSupportChat, useAdminSupportContact } from "@/hooks/use-admin-support-chat";
 import { ADMIN_SUPPORT_CONTACT_ID, SUPPORT_CHAT_LIMITS } from "@/lib/support-chat";
@@ -281,13 +282,19 @@ function VirtualDmThread({
           <div className="space-y-2.5">
             {dm.messages.map((message) => {
               const isUser = message.sender === "user";
-              const contentClass = isUser
-                ? supporterTier !== "none"
-                  ? supporterMessageContentClassByTier[supporterTier]
-                  : "text-white"
-                : virtualSupporterTier !== "none"
-                  ? supporterMessageContentClassByTier[virtualSupporterTier]
-                  : "text-zinc-200";
+              const tier = isUser
+                ? supporterTier
+                : virtualSupporterTier;
+              const useRainbow = tier === "premium";
+              const contentClass = useRainbow
+                ? undefined
+                : isUser
+                  ? supporterTier !== "none"
+                    ? supporterMessageContentClassByTier[supporterTier]
+                    : "text-white"
+                  : virtualSupporterTier !== "none"
+                    ? supporterMessageContentClassByTier[virtualSupporterTier]
+                    : "text-zinc-200";
 
               return (
                 <div
@@ -302,7 +309,16 @@ function VirtualDmThread({
                         : "border border-white/8 bg-zinc-900/80"
                     )}
                   >
-                    <span className={contentClass}>{message.content}</span>
+                    {useRainbow ? (
+                      <RainbowSafeText
+                        text={message.content}
+                        rainbowClassName={
+                          supporterMessageContentClassByTier.premium
+                        }
+                      />
+                    ) : (
+                      <span className={contentClass}>{message.content}</span>
+                    )}
                   </div>
                 </div>
               );

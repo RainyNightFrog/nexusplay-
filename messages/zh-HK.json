@@ -2175,6 +2175,8 @@
     "playerCardPlayerId": "ID",
     "playerCardBio": "自我介紹",
     "playerCardBioEmpty": "尚未填寫自我介紹",
+    "playerCardRegisteredAt": "註冊時間",
+    "playerCardRegisteredAtEmpty": "尚無註冊時間",
     "playerCardLoadFailed": "載入玩家資料失敗",
     "playerCardOnlineTime": "在線時長",
     "playerCardPlayTime": "遊玩時長",

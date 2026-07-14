@@ -1,14 +1,16 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { LeaderboardRanks } from "@/lib/profile-showcase-tags";
-import { getPlatformLeaderboards } from "@/lib/platform-leaderboard-service";
-import { VIRTUAL_LEADERBOARD_USER_PREFIX } from "@/lib/platform-leaderboard-virtual";
+import {
+  getVirtualPlatformLeaderboardEntries,
+  VIRTUAL_LEADERBOARD_USER_PREFIX,
+} from "@/lib/platform-leaderboard-virtual";
 
 type ActivityColumn =
   | "total_online_time"
   | "total_play_time"
   | "total_donated";
 
-async function getRealUserRankBeyondBoard(
+async function getRealUserRank(
   supabase: SupabaseClient,
   userId: string,
   column: ActivityColumn
@@ -42,6 +44,11 @@ function findRankInBoard(
   return entries.find((entry) => entry.userId === lookupUserId)?.rank ?? null;
 }
 
+/**
+ * 玩家資料卡展示標籤用名次：勿再呼叫完整排行榜組裝（約 3 秒）。
+ * - 虛擬玩家：只讀本機虛擬榜
+ * - 真實玩家：用 COUNT 估名次
+ */
 export async function resolvePlayerLeaderboardRanks(
   supabase: SupabaseClient,
   options: {
@@ -51,29 +58,13 @@ export async function resolvePlayerLeaderboardRanks(
     viewerIsAdmin?: boolean;
   }
 ): Promise<LeaderboardRanks> {
-  const lookupUserId = options.virtualPlayerId
-    ? `${VIRTUAL_LEADERBOARD_USER_PREFIX}${options.virtualPlayerId}`
-    : options.userId ?? null;
-
-  if (!lookupUserId) {
-    return { online: null, playTime: null, donated: null };
-  }
-
-  const boards = await getPlatformLeaderboards(
-    supabase,
-    options.viewerUserId,
-    options.viewerIsAdmin
-  );
-
-  const onlineFromBoard = findRankInBoard(boards.online, lookupUserId);
-  const playTimeFromBoard = findRankInBoard(boards.playTime, lookupUserId);
-  const donatedFromBoard = findRankInBoard(boards.donated, lookupUserId);
-
   if (options.virtualPlayerId) {
+    const lookupUserId = `${VIRTUAL_LEADERBOARD_USER_PREFIX}${options.virtualPlayerId}`;
+    const boards = getVirtualPlatformLeaderboardEntries(options.viewerUserId);
     return {
-      online: onlineFromBoard,
-      playTime: playTimeFromBoard,
-      donated: donatedFromBoard,
+      online: findRankInBoard(boards.online, lookupUserId),
+      playTime: findRankInBoard(boards.playTime, lookupUserId),
+      donated: findRankInBoard(boards.donated, lookupUserId),
     };
   }
 
@@ -82,12 +73,9 @@ export async function resolvePlayerLeaderboardRanks(
   }
 
   const [online, playTime, donated] = await Promise.all([
-    onlineFromBoard ??
-      getRealUserRankBeyondBoard(supabase, options.userId, "total_online_time"),
-    playTimeFromBoard ??
-      getRealUserRankBeyondBoard(supabase, options.userId, "total_play_time"),
-    donatedFromBoard ??
-      getRealUserRankBeyondBoard(supabase, options.userId, "total_donated"),
+    getRealUserRank(supabase, options.userId, "total_online_time"),
+    getRealUserRank(supabase, options.userId, "total_play_time"),
+    getRealUserRank(supabase, options.userId, "total_donated"),
   ]);
 
   return { online, playTime, donated };

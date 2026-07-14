@@ -39,7 +39,8 @@ export async function GET(request: Request) {
 
     return NextResponse.json(data, {
       headers: {
-        "Cache-Control": "no-store, max-age=0",
+        // 允許瀏覽器短快取；伺服器亦有 20 秒記憶體快取
+        "Cache-Control": "private, max-age=10, stale-while-revalidate=20",
       },
     });
   } catch (error) {

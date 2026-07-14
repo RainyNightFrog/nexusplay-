@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Crown, ChevronLeft, ChevronRight, Loader2, Medal, RefreshCw, Trophy } from "lucide-react";
+import { ArrowLeft, Crown, ChevronLeft, ChevronRight, Loader2, Medal, RefreshCw, Trophy } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Dialog,
@@ -134,8 +134,16 @@ function LeaderboardCard({
   onPlayerClick?: (entry: PlatformLeaderboardEntry) => void;
 }) {
   const t = useTranslations("leaderboard");
+  const tChat = useTranslations("chat");
   const tcx = useTranslations("common");
   const isTopThree = entry.rank <= 3;
+  const adminRole = entry.adminRole ?? "none";
+  const adminTitleLabel =
+    adminRole === "super_admin"
+      ? tChat("roleSuperAdmin")
+      : adminRole === "admin"
+        ? tChat("rolePlatformAdmin")
+        : null;
 
   const valueLabel =
     tab === "donated"
@@ -178,19 +186,25 @@ function LeaderboardCard({
       />
 
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
           <UserBadge
             username={entry.displayName}
-            title={entry.equippedTitle}
+            title={adminTitleLabel ? null : entry.equippedTitle}
+            fallbackRoleLabel={adminTitleLabel}
+            fallbackRoleRainbow={Boolean(adminTitleLabel)}
             isSupporter={entry.isSupporter}
             supporterBadge={entry.supporterBadge}
+            showSupporterBadge
+            layout="compact"
             animateTitle={false}
+            maxTitleWidth="max-w-[7.5rem] sm:max-w-[9rem]"
             usernameClassName={cn(
-              "max-w-full truncate",
+              "max-w-[7rem] sm:max-w-[10rem]",
               isTopThree ? "text-base sm:text-lg" : "text-sm sm:text-base",
               "text-zinc-100"
             )}
             titleClassName="text-[10px] sm:text-xs"
+            className="min-w-0"
           />
           <OnlineIndicator
             isOnline={entry.isOnline}
@@ -658,6 +672,20 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
               totalEntries={activeEntries.length}
               onPageChange={(page) => setTabPage(activeTab, page)}
             />
+          </div>
+
+          <div className="shrink-0 text-center">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={activePage <= 1}
+              onClick={() => setTabPage(activeTab, 1)}
+              className="gap-1.5 border-white/10 bg-white/5 text-zinc-300 hover:border-cyan-400/30 hover:text-cyan-300"
+            >
+              <ArrowLeft className="size-4" />
+              {t("backToFirstPage")}
+            </Button>
           </div>
 
           {profile && (

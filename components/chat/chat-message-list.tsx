@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import type { ChatMessage } from "@/lib/chat";
 import { UserBadge } from "@/components/UserBadge";
 import { SupporterAvatarInsignia } from "@/components/supporter/supporter-avatar-insignia";
+import { RainbowSafeText } from "@/components/supporter/rainbow-safe-text";
 import {
   supporterMessageContentClassByTier,
   type SupporterDisplayTier,
@@ -247,19 +248,28 @@ export function ChatMessageList({
                       : "border border-white/8 bg-zinc-900/80"
                 )}
               >
-                <span
-                  className={cn(
-                    recalled
-                      ? undefined
-                      : isSupporterMessage
+                {recalled ? (
+                  <span>{t("recalled")}</span>
+                ) : isSupporterMessage && supporterTier === "premium" ? (
+                  <RainbowSafeText
+                    text={message.content}
+                    rainbowClassName={
+                      supporterMessageContentClassByTier.premium
+                    }
+                  />
+                ) : (
+                  <span
+                    className={cn(
+                      isSupporterMessage
                         ? supporterMessageContentClassByTier[supporterTier]
                         : message.is_own
                           ? "text-white"
                           : "text-zinc-100"
-                  )}
-                >
-                  {recalled ? t("recalled") : message.content}
-                </span>
+                    )}
+                  >
+                    {message.content}
+                  </span>
+                )}
               </div>
 
               {showRecall && (
