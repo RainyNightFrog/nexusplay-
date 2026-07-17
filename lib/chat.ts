@@ -16,6 +16,9 @@ export type ChatMessage = ChatMessageRecord & {
   author_name: string;
   author_avatar_url: string | null;
   author_equipped_title: EquippedTitle | null;
+  author_avatar_frame_class: string | null;
+  author_name_color_class: string | null;
+  author_chat_bubble_class: string | null;
   author_is_supporter: boolean;
   author_supporter_badge: string | null;
   author_admin_role: AdminDisplayRole;

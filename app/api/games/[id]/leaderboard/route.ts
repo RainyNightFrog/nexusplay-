@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { checkFirstWinAchievement } from "@/lib/achievement-unlock-service";
+import { checkLeaderboardAchievements } from "@/lib/achievement-unlock-service";
 import { isAdminUser } from "@/lib/admin-auth";
 import { resolveEquippedTitles } from "@/lib/equipped-title-service";
 import {
@@ -162,13 +162,13 @@ export async function POST(
       body.meta ?? {}
     );
 
-    void checkFirstWinAchievement(
+    void checkLeaderboardAchievements(
       createServerSupabase(),
       user.id,
       typeof body.grade === "string" ? body.grade : null,
       (body.meta as Record<string, unknown>) ?? {}
     ).catch((error) => {
-      console.error("[achievements] first_win check failed:", error);
+      console.error("[achievements] leaderboard achievement check failed:", error);
     });
 
     return NextResponse.json({

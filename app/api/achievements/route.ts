@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAchievementsWithProgress, buildCategoryProgress } from "@/lib/achievements-service";
+import { getApWallet, ensureApWalletBackfill } from "@/lib/ap-shop-service";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
 
@@ -23,12 +24,22 @@ export async function GET() {
 
     const categoryProgress = buildCategoryProgress(achievements);
 
+    let wallet = { balance: 0, lifetime_earned: totalPoints };
+    if (user?.id) {
+      wallet = await ensureApWalletBackfill(supabase, user.id);
+      if (wallet.lifetime_earned === 0 && totalPoints > 0) {
+        wallet = await getApWallet(supabase, user.id);
+      }
+    }
+
     return NextResponse.json({
       achievements,
       summary: {
         unlocked_count: unlockedCount,
         total_count: achievements.length,
-        total_points: totalPoints,
+        total_points: wallet.lifetime_earned || totalPoints,
+        spendable_ap: wallet.balance,
+        lifetime_ap: wallet.lifetime_earned || totalPoints,
         completion_percent:
           achievements.length > 0
             ? Math.round((unlockedCount / achievements.length) * 100)

@@ -81,7 +81,8 @@ export function UserNav() {
         className={cn(
           "relative flex size-9 items-center justify-center overflow-hidden rounded-full",
           "border border-cyan-400/30 bg-gradient-to-br from-cyan-500/30 to-violet-600/40",
-          "shadow-md shadow-cyan-500/20 transition-transform hover:scale-105"
+          "shadow-md shadow-cyan-500/20 transition-transform hover:scale-105",
+          profile.equipped_avatar_frame_class
         )}
         aria-label={t("userMenu")}
       >
@@ -111,6 +112,7 @@ export function UserNav() {
               isSupporter={profile.is_supporter}
               supporterBadge={profile.supporter_badge}
               layout="stacked"
+              nameColorClass={profile.equipped_name_color_class}
               usernameClassName="truncate text-sm font-medium text-white"
               titleClassName="text-[10px]"
             />

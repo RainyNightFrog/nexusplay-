@@ -9,6 +9,10 @@ import {
 import { getAmbientUserPlayerMap } from "@/lib/ambient-user-index";
 import { resolveVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
 import { resolveEquippedTitles } from "@/lib/equipped-title-service";
+import {
+  resolveCosmeticCssByCodes,
+  resolveEquippedCosmeticsMap,
+} from "@/lib/ap-shop-service";
 import { formatForumAuthor } from "@/lib/forum";
 import { resolveAdminDisplayRole } from "@/lib/admin-display-role";
 import { resolveSupporterProfiles } from "@/lib/supporter-profile";
@@ -27,6 +31,41 @@ function historyCutoffIso() {
   return new Date(
     Date.now() - CHAT_LIMITS.historyDays * 86_400_000
   ).toISOString();
+}
+
+async function buildCosmeticsCssMap(
+  supabase: SupabaseClient,
+  userIds: string[]
+) {
+  const cosmeticsMap = await resolveEquippedCosmeticsMap(supabase, userIds);
+  const cosmeticCodes = [...cosmeticsMap.values()].flatMap(
+    (c) =>
+      [c.avatar_frame, c.name_color, c.chat_bubble].filter(Boolean) as string[]
+  );
+  const cssByCode = await resolveCosmeticCssByCodes(supabase, cosmeticCodes);
+
+  const cosmeticsCssMap = new Map<
+    string,
+    {
+      avatar_frame_class: string | null;
+      name_color_class: string | null;
+      chat_bubble_class: string | null;
+    }
+  >();
+  for (const [userId, cos] of cosmeticsMap) {
+    cosmeticsCssMap.set(userId, {
+      avatar_frame_class: cos.avatar_frame
+        ? (cssByCode.get(cos.avatar_frame) ?? null)
+        : null,
+      name_color_class: cos.name_color
+        ? (cssByCode.get(cos.name_color) ?? null)
+        : null,
+      chat_bubble_class: cos.chat_bubble
+        ? (cssByCode.get(cos.chat_bubble) ?? null)
+        : null,
+    });
+  }
+  return cosmeticsCssMap;
 }
 
 async function resolveAuthorProfiles(userIds: string[]) {
@@ -60,6 +99,14 @@ function mapChatMessage(
   titleMap: Map<string, import("@/lib/titles").EquippedTitle | null>,
   supporterMap: Map<string, import("@/lib/supporter-profile").SupporterProfileFlags>,
   ambientMap: Map<string, string>,
+  cosmeticsCssMap: Map<
+    string,
+    {
+      avatar_frame_class: string | null;
+      name_color_class: string | null;
+      chat_bubble_class: string | null;
+    }
+  >,
   viewerId?: string
 ): ChatMessage {
   const profile = profileMap.get(record.user_id);
@@ -69,6 +116,7 @@ function mapChatMessage(
   const virtualSupporter = virtualPlayerId
     ? getVirtualPlayerSupporterFlags(virtualPlayerId)
     : null;
+  const cosmetics = cosmeticsCssMap.get(record.user_id);
 
   return {
     ...record,
@@ -77,6 +125,9 @@ function mapChatMessage(
       ? resolveVirtualPlayerAvatarUrl(virtualPlayerId)
       : (profile?.avatar_url ?? null),
     author_equipped_title: titleMap.get(record.user_id) ?? null,
+    author_avatar_frame_class: cosmetics?.avatar_frame_class ?? null,
+    author_name_color_class: cosmetics?.name_color_class ?? null,
+    author_chat_bubble_class: cosmetics?.chat_bubble_class ?? null,
     author_is_supporter:
       virtualSupporter?.isSupporter === true || supporter?.isSupporter === true,
     author_supporter_badge:
@@ -115,12 +166,14 @@ export async function listChatMessages(
 
   const records = (data ?? []) as ChatMessageRecord[];
   const userIds = records.map((row) => row.user_id);
-  const [profileMap, titleMap, supporterMap, ambientMap] = await Promise.all([
-    resolveAuthorProfiles(userIds),
-    resolveEquippedTitles(supabase, userIds),
-    resolveSupporterProfiles(supabase, userIds),
-    getAmbientUserPlayerMap(supabase),
-  ]);
+  const [profileMap, titleMap, supporterMap, ambientMap, cosmeticsMap] =
+    await Promise.all([
+      resolveAuthorProfiles(userIds),
+      resolveEquippedTitles(supabase, userIds),
+      resolveSupporterProfiles(supabase, userIds),
+      getAmbientUserPlayerMap(supabase),
+      buildCosmeticsCssMap(supabase, userIds),
+    ]);
 
   return records
     .map((record) =>
@@ -130,6 +183,7 @@ export async function listChatMessages(
         titleMap,
         supporterMap,
         ambientMap,
+        cosmeticsMap,
         viewerId
       )
     )
@@ -245,18 +299,21 @@ export async function createChatMessage(
 
   const record = data as ChatMessageRecord;
   const serverSupabase = createServerSupabase();
-  const [profileMap, titleMap, supporterMap, ambientMap] = await Promise.all([
-    resolveAuthorProfiles([record.user_id]),
-    resolveEquippedTitles(serverSupabase, [record.user_id]),
-    resolveSupporterProfiles(serverSupabase, [record.user_id]),
-    getAmbientUserPlayerMap(serverSupabase),
-  ]);
+  const [profileMap, titleMap, supporterMap, ambientMap, cosmeticsMap] =
+    await Promise.all([
+      resolveAuthorProfiles([record.user_id]),
+      resolveEquippedTitles(serverSupabase, [record.user_id]),
+      resolveSupporterProfiles(serverSupabase, [record.user_id]),
+      getAmbientUserPlayerMap(serverSupabase),
+      buildCosmeticsCssMap(serverSupabase, [record.user_id]),
+    ]);
   return mapChatMessage(
     record,
     profileMap,
     titleMap,
     supporterMap,
     ambientMap,
+    cosmeticsMap,
     input.userId
   );
 }
@@ -294,18 +351,21 @@ export async function recallChatMessage(
 
   const record = data as ChatMessageRecord;
   const serverSupabase = createServerSupabase();
-  const [profileMap, titleMap, supporterMap, ambientMap] = await Promise.all([
-    resolveAuthorProfiles([record.user_id]),
-    resolveEquippedTitles(serverSupabase, [record.user_id]),
-    resolveSupporterProfiles(serverSupabase, [record.user_id]),
-    getAmbientUserPlayerMap(serverSupabase),
-  ]);
+  const [profileMap, titleMap, supporterMap, ambientMap, cosmeticsMap] =
+    await Promise.all([
+      resolveAuthorProfiles([record.user_id]),
+      resolveEquippedTitles(serverSupabase, [record.user_id]),
+      resolveSupporterProfiles(serverSupabase, [record.user_id]),
+      getAmbientUserPlayerMap(serverSupabase),
+      buildCosmeticsCssMap(serverSupabase, [record.user_id]),
+    ]);
   return mapChatMessage(
     record,
     profileMap,
     titleMap,
     supporterMap,
     ambientMap,
+    cosmeticsMap,
     userId
   );
 }

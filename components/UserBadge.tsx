@@ -18,6 +18,8 @@ type UserBadgeProps = {
   className?: string;
   usernameClassName?: string;
   titleClassName?: string;
+  /** AP 商店名字顏色 class */
+  nameColorClass?: string | null;
   layout?: "inline" | "stacked" | "compact";
   animateTitle?: boolean;
   maxTitleWidth?: string;
@@ -41,6 +43,7 @@ export function UserBadge({
   className,
   usernameClassName,
   titleClassName,
+  nameColorClass = null,
   layout = "inline",
   animateTitle = true,
   maxTitleWidth = "max-w-[5.5rem]",
@@ -78,6 +81,7 @@ export function UserBadge({
   const nameClass = cn(
     "font-medium",
     isSupporterDisplay && supporterUsernameClassByTier[supporterTier],
+    !isSupporterDisplay && nameColorClass,
     usernameClassName,
     isSupporterDisplay &&
       supporterTier === "premium" &&

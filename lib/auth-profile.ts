@@ -2,6 +2,10 @@ import type { User } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { UserProfile, UserRole } from "@/lib/auth";
 import { isAdminUser } from "@/lib/admin-auth";
+import {
+  getEquippedCosmetics,
+  resolveCosmeticCssByCodes,
+} from "@/lib/ap-shop-service";
 import { resolveEquippedTitleForUser } from "@/lib/equipped-title-service";
 import { profileFromUserMetadata } from "@/lib/profile-from-metadata";
 import { resolveRoleFromPreferences } from "@/lib/profile-settings";
@@ -32,7 +36,7 @@ export async function resolveUserProfile(
   const metadataProfile = profileFromUserMetadata(user);
 
   const selectWithLifetime =
-    "id, display_name, avatar_url, role, created_at, support_email, equipped_title_id, bio, player_number, is_supporter, supporter_since, supporter_badge, supporter_lifetime, username, is_admin";
+    "id, display_name, avatar_url, role, created_at, support_email, equipped_title_id, bio, player_number, is_supporter, supporter_since, supporter_badge, supporter_lifetime, username, is_admin, equipped_avatar_frame, equipped_name_color, equipped_chat_bubble";
   const selectBase =
     "id, display_name, avatar_url, role, created_at, support_email, equipped_title_id, bio, player_number, is_supporter, supporter_since, supporter_badge, username, is_admin";
 
@@ -79,6 +83,29 @@ export async function resolveUserProfile(
       ? await resolveEquippedTitleForUser(supabase, user.id)
       : null;
 
+    let cosmetics = {
+      avatar_frame: readOptionalString(profile.equipped_avatar_frame),
+      name_color: readOptionalString(profile.equipped_name_color),
+      chat_bubble: readOptionalString(profile.equipped_chat_bubble),
+    };
+    if (
+      !cosmetics.avatar_frame &&
+      !cosmetics.name_color &&
+      !cosmetics.chat_bubble
+    ) {
+      try {
+        cosmetics = await getEquippedCosmetics(supabase, user.id);
+      } catch {
+        /* ignore missing columns */
+      }
+    }
+
+    const cssMap = await resolveCosmeticCssByCodes(supabase, [
+      cosmetics.avatar_frame ?? "",
+      cosmetics.name_color ?? "",
+      cosmetics.chat_bubble ?? "",
+    ]);
+
     return {
       ...metadataProfile,
       player_number:
@@ -104,6 +131,18 @@ export async function resolveUserProfile(
       bio: readOptionalString(profile.bio) ?? metadataProfile.bio,
       equipped_title_id: equippedTitleId,
       equipped_title: equippedTitle,
+      equipped_avatar_frame: cosmetics.avatar_frame,
+      equipped_name_color: cosmetics.name_color,
+      equipped_chat_bubble: cosmetics.chat_bubble,
+      equipped_avatar_frame_class: cosmetics.avatar_frame
+        ? (cssMap.get(cosmetics.avatar_frame) ?? null)
+        : null,
+      equipped_name_color_class: cosmetics.name_color
+        ? (cssMap.get(cosmetics.name_color) ?? null)
+        : null,
+      equipped_chat_bubble_class: cosmetics.chat_bubble
+        ? (cssMap.get(cosmetics.chat_bubble) ?? null)
+        : null,
       is_supporter: profile.is_supporter === true,
       supporter_since: readOptionalString(profile.supporter_since),
       supporter_badge: readOptionalString(profile.supporter_badge),

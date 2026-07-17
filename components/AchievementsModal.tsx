@@ -22,7 +22,10 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserBadge } from "@/components/UserBadge";
+import { ApShopPanel } from "@/components/ApShopPanel";
 import { useAuth } from "@/hooks/use-auth";
+import type { ApShopItem, ApWallet, EquippedCosmetics } from "@/lib/ap-shop";
+import type { ApShopItemKind } from "@/lib/ap-shop";
 import {
   ACHIEVEMENT_CATEGORY_LABELS,
   ACHIEVEMENT_CATEGORY_ORDER,
@@ -55,6 +58,8 @@ type AchievementsResponse = {
     unlocked_count: number;
     total_count: number;
     total_points: number;
+    spendable_ap?: number;
+    lifetime_ap?: number;
     completion_percent: number;
     claimable_count?: number;
   };
@@ -292,7 +297,7 @@ function AchievementCard({
               type="button"
               disabled={claiming}
               onClick={() => onClaim(achievement.code)}
-              className="h-8 border-0 bg-gradient-to-r from-amber-500 to-orange-500 px-3 text-xs font-semibold text-white shadow-md shadow-amber-500/25 hover:from-amber-400 hover:to-orange-400"
+              className="h-8 gap-1.5 border-0 bg-gradient-to-r from-amber-500 to-orange-500 px-3 text-xs font-semibold text-white shadow-md shadow-amber-500/25 hover:from-amber-400 hover:to-orange-400"
             >
               {claiming ? (
                 <Loader2 className="size-3.5 animate-spin" />
@@ -492,6 +497,10 @@ function TitleCard({
                 t("unlockRequirementSupporterPremium")
               ) : title.name === SUPPORTER_TITLE_LIFETIME ? (
                 t("unlockRequirementSupporterLifetime")
+              ) : title.name === "AP 先驅" ||
+                title.name === "霓虹旅人" ||
+                title.name === "點數帝王" ? (
+                t("unlockRequirementApShop")
               ) : (
                 t("unlockRequirementUnknown")
               )}
@@ -586,9 +595,14 @@ function TitleCard({
 export function AchievementsModal({ open, onOpenChange }: AchievementsModalProps) {
   const t = useTranslations("achievements");
   const { profile, refreshProfile } = useAuth();
-  const [activeTab, setActiveTab] = useState<"achievements" | "titles">("achievements");
+  const [activeTab, setActiveTab] = useState<"achievements" | "titles" | "shop">(
+    "achievements"
+  );
   const [achievementsData, setAchievementsData] = useState<AchievementsResponse | null>(null);
   const [titlesData, setTitlesData] = useState<TitlesResponse | null>(null);
+  const [shopWallet, setShopWallet] = useState<ApWallet | null>(null);
+  const [shopItems, setShopItems] = useState<ApShopItem[]>([]);
+  const [shopEquipped, setShopEquipped] = useState<EquippedCosmetics | null>(null);
   const [loading, setLoading] = useState(false);
   const [equippingId, setEquippingId] = useState<string | "unequip" | null>(null);
   const [claimingCode, setClaimingCode] = useState<string | "all" | null>(null);
@@ -599,10 +613,13 @@ export function AchievementsModal({ open, onOpenChange }: AchievementsModalProps
     setError(false);
 
     try {
-      const [achievementsRes, titlesRes] = await Promise.all([
+      const [achievementsRes, titlesRes, shopRes] = await Promise.all([
         fetch("/api/achievements", { credentials: "same-origin", cache: "no-store" }),
         profile
           ? fetch("/api/titles", { credentials: "same-origin", cache: "no-store" })
+          : Promise.resolve(null),
+        profile
+          ? fetch("/api/ap/shop", { credentials: "same-origin", cache: "no-store" })
           : Promise.resolve(null),
       ]);
 
@@ -621,6 +638,27 @@ export function AchievementsModal({ open, onOpenChange }: AchievementsModalProps
         setTitlesData(titlesPayload);
       } else {
         setTitlesData(null);
+      }
+
+      if (shopRes) {
+        if (shopRes.ok) {
+          const shopPayload = (await shopRes.json()) as {
+            wallet: ApWallet;
+            items: ApShopItem[];
+            equipped: EquippedCosmetics;
+          };
+          setShopWallet(shopPayload.wallet);
+          setShopItems(shopPayload.items);
+          setShopEquipped(shopPayload.equipped);
+        } else {
+          setShopWallet(null);
+          setShopItems([]);
+          setShopEquipped(null);
+        }
+      } else {
+        setShopWallet(null);
+        setShopItems([]);
+        setShopEquipped(null);
       }
     } catch {
       setError(true);
@@ -730,6 +768,54 @@ export function AchievementsModal({ open, onOpenChange }: AchievementsModalProps
     }
   };
 
+  const handleShopPurchase = async (itemCode: string) => {
+    const response = await fetch("/api/ap/purchase", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ item_code: itemCode }),
+    });
+    const payload = (await response.json()) as {
+      error?: string;
+      wallet?: ApWallet;
+      items?: ApShopItem[];
+      equipped?: EquippedCosmetics;
+    };
+    if (!response.ok) {
+      throw new Error(payload.error || t("shopBuyFailed"));
+    }
+    if (payload.wallet) setShopWallet(payload.wallet);
+    if (payload.items) setShopItems(payload.items);
+    if (payload.equipped) setShopEquipped(payload.equipped);
+    await fetchData(true);
+    await refreshProfile();
+  };
+
+  const handleShopEquip = async (
+    kind: Exclude<ApShopItemKind, "title">,
+    itemCode: string | null
+  ) => {
+    const response = await fetch("/api/ap/equip", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kind, item_code: itemCode }),
+    });
+    const payload = (await response.json()) as {
+      error?: string;
+      wallet?: ApWallet;
+      items?: ApShopItem[];
+      equipped?: EquippedCosmetics;
+    };
+    if (!response.ok) {
+      throw new Error(payload.error || t("shopEquipFailed"));
+    }
+    if (payload.wallet) setShopWallet(payload.wallet);
+    if (payload.items) setShopItems(payload.items);
+    if (payload.equipped) setShopEquipped(payload.equipped);
+    await refreshProfile();
+  };
+
   const claimableCount =
     achievementsData?.summary.claimable_count ??
     achievementsData?.achievements.filter((item) => item.claimable).length ??
@@ -780,7 +866,7 @@ export function AchievementsModal({ open, onOpenChange }: AchievementsModalProps
           </DialogHeader>
 
           {profile && achievementsData && (
-            <div className="grid grid-cols-3 gap-3 rounded-xl border border-white/8 bg-zinc-900/50 p-3 text-center sm:gap-4 sm:p-4">
+            <div className="grid grid-cols-2 gap-3 rounded-xl border border-white/8 bg-zinc-900/50 p-3 text-center sm:grid-cols-4 sm:gap-4 sm:p-4">
               <div>
                 <p className="text-xl font-bold text-cyan-300 sm:text-2xl">
                   {achievementsData.summary.unlocked_count}
@@ -789,9 +875,18 @@ export function AchievementsModal({ open, onOpenChange }: AchievementsModalProps
               </div>
               <div>
                 <p className="text-xl font-bold text-amber-300 sm:text-2xl">
-                  {achievementsData.summary.total_points}
+                  {achievementsData.summary.spendable_ap ??
+                    shopWallet?.balance ??
+                    achievementsData.summary.total_points}
                 </p>
-                <p className="text-xs text-zinc-500 sm:text-sm">{t("statPoints")}</p>
+                <p className="text-xs text-zinc-500 sm:text-sm">{t("statSpendableAp")}</p>
+              </div>
+              <div>
+                <p className="text-xl font-bold text-orange-300 sm:text-2xl">
+                  {achievementsData.summary.lifetime_ap ??
+                    achievementsData.summary.total_points}
+                </p>
+                <p className="text-xs text-zinc-500 sm:text-sm">{t("statLifetimeAp")}</p>
               </div>
               <div>
                 <p className="text-xl font-bold text-violet-300 sm:text-2xl">
@@ -805,7 +900,7 @@ export function AchievementsModal({ open, onOpenChange }: AchievementsModalProps
           <Tabs
             value={activeTab}
             onValueChange={(value) =>
-              setActiveTab(value as "achievements" | "titles")
+              setActiveTab(value as "achievements" | "titles" | "shop")
             }
             className="flex min-h-0 flex-1 flex-col"
           >
@@ -831,6 +926,16 @@ export function AchievementsModal({ open, onOpenChange }: AchievementsModalProps
                 >
                   👑 {t("tabTitles")}
                 </TabsTrigger>
+                <TabsTrigger
+                  value="shop"
+                  className={cn(
+                    TAB_TRIGGER_CLASS,
+                    "!h-11 sm:!h-12",
+                    "data-active:bg-gradient-to-r data-active:from-cyan-500/25 data-active:to-emerald-500/20 data-active:text-cyan-100"
+                  )}
+                >
+                  🛒 {t("tabShop")}
+                </TabsTrigger>
               </TabsList>
 
               <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/5 px-4 py-3 text-base text-zinc-500 sm:px-5">
@@ -841,7 +946,9 @@ export function AchievementsModal({ open, onOpenChange }: AchievementsModalProps
                       ? t("loadError")
                       : activeTab === "titles"
                         ? t("titlesTabHint")
-                        : t("liveStats")}
+                        : activeTab === "shop"
+                          ? t("shopTabHint")
+                          : t("liveStats")}
                 </span>
                 <Button
                   type="button"
@@ -876,12 +983,12 @@ export function AchievementsModal({ open, onOpenChange }: AchievementsModalProps
                             type="button"
                             disabled={claimingCode !== null}
                             onClick={() => void handleClaimAll()}
-                            className="h-9 border-0 bg-gradient-to-r from-amber-500 to-orange-500 px-4 text-sm font-semibold text-white shadow-md shadow-amber-500/25 hover:from-amber-400 hover:to-orange-400"
+                            className="h-9 gap-1.5 border-0 bg-gradient-to-r from-amber-500 to-orange-500 px-4 text-sm font-semibold text-white shadow-md shadow-amber-500/25 hover:from-amber-400 hover:to-orange-400"
                           >
                             {claimingCode === "all" ? (
-                              <Loader2 className="mr-2 size-4 animate-spin" />
+                              <Loader2 className="size-4 animate-spin" />
                             ) : (
-                              <Sparkles className="mr-2 size-4" />
+                              <Sparkles className="size-4" />
                             )}
                             {claimingCode === "all" ? t("claiming") : t("claimAll")}
                           </Button>
@@ -995,6 +1102,23 @@ export function AchievementsModal({ open, onOpenChange }: AchievementsModalProps
                         ))}
                       </div>
                     </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="shop" className="mt-0 outline-none">
+                  {!profile ? (
+                    <p className="py-16 text-center text-base text-zinc-500">
+                      {t("loginRequired")}
+                    </p>
+                  ) : (
+                    <ApShopPanel
+                      wallet={shopWallet}
+                      items={shopItems}
+                      equipped={shopEquipped}
+                      loading={loading}
+                      onPurchase={handleShopPurchase}
+                      onEquip={handleShopEquip}
+                    />
                   )}
                 </TabsContent>
                 </div>

@@ -4,12 +4,17 @@ import { isGamePubliclyLive } from "@/lib/game-live-service";
 export const ACHIEVEMENT_CODES = {
   firstWin: "first_win",
   bigTipper: "big_tipper",
+  bigTipper500: "big_tipper_500",
+  donationStarter: "donation_starter",
   creatorDebut: "creator_debut",
   nightOwl: "night_owl",
+  nightOwl50h: "night_owl_50h",
 } as const;
 
 export const BIG_TIPPER_HKD = 100;
+export const BIG_TIPPER_500_HKD = 500;
 export const NIGHT_OWL_SECONDS = 10 * 3600;
+export const NIGHT_OWL_50H_SECONDS = 50 * 3600;
 /** 打賞 USD → HKD 估算（與平台 HKD 顯示一致） */
 export const TIP_USD_TO_HKD = 7.8;
 
@@ -70,6 +75,22 @@ export async function checkFirstWinAchievement(
   }
 
   return grantAchievement(supabase, userId, ACHIEVEMENT_CODES.firstWin);
+}
+
+/** 排行榜提交後：檢查勝利／S 級相關成就（可領取進度仍以 claim 為準，此處補即時授予關鍵項） */
+export async function checkLeaderboardAchievements(
+  supabase: SupabaseClient,
+  userId: string,
+  grade: string | null | undefined,
+  meta: Record<string, unknown>
+): Promise<void> {
+  if (isWinLeaderboardSubmission(grade, meta)) {
+    await grantAchievement(supabase, userId, ACHIEVEMENT_CODES.firstWin);
+  }
+
+  if (grade?.trim() && /^(S{1,3}|SSS\+?)$/i.test(grade.trim())) {
+    await grantAchievement(supabase, userId, "s_rank_clear");
+  }
 }
 
 export async function recordTipDonationAndCheckBigTipper(

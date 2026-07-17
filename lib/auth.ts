@@ -23,6 +23,14 @@ export type UserProfile = {
   profile_showcase_tags: ProfileShowcaseTagId[];
   equipped_title_id: string | null;
   equipped_title: EquippedTitle | null;
+  /** AP 商店外觀：商店 item code */
+  equipped_avatar_frame: string | null;
+  equipped_name_color: string | null;
+  equipped_chat_bubble: string | null;
+  /** 對應 css_class（由商店表解析） */
+  equipped_avatar_frame_class: string | null;
+  equipped_name_color_class: string | null;
+  equipped_chat_bubble_class: string | null;
   stripe_account_id?: string | null;
   stripe_details_submitted?: boolean;
   is_supporter: boolean;

@@ -52,7 +52,11 @@
     "pagePrev": "Zurück",
     "pageNext": "Als nächstes",
     "pageInfo": "Seite {current} / {total}",
-    "backToFirstPage": "Zur ersten Seite"
+    "backToFirstPage": "Zur ersten Seite",
+    "donatedHint": "Platform Supporter Pass payments + tips (USD)",
+    "statusOnline": "Online",
+    "statusOffline": "Offline",
+    "youBadge": "You"
   },
   "common": {
     "404": "Seite nicht gefunden",
@@ -892,7 +896,13 @@
     "resetPasswordSuccess": "Passwort aktualisiert. Anmeldung läuft…",
     "passwordMismatch": "Passwörter stimmen nicht überein",
     "resetSessionRequired": "Reset-Link abgelaufen oder nicht verifiziert. Bitte neuen Reset-Link anfordern.",
-    "resetPasswordMinLength": "Mindestens 8 Zeichen"
+    "resetPasswordMinLength": "Mindestens 8 Zeichen",
+    "callbackTitle": "Signing you in",
+    "callbackCompleting": "Completing sign-in…",
+    "callbackVerifying": "Verifying sign-in…",
+    "callbackVerifyingRecovery": "Verifying password reset link…",
+    "callbackHint": "Please wait, redirecting shortly",
+    "adminHint": "This account does not have super admin access. If Google sign-in succeeded but you returned here, the signed-in email has not been granted admin. Ask the platform owner to run npm run db:assign-admin, or sign in with an authorized admin account."
   },
   "profile": {
     "title": "Profil",
@@ -932,7 +942,8 @@
     "creatorUsernamePreviewNote": "Opens your creator page automatically. Use Copy URL — do not select the note text with the link.",
     "playerId": "ID",
     "playerIdHint": "A unique number assigned at registration. Provide this ID when contacting support.",
-    "editShowcaseTags": "編輯資料卡展示標籤"
+    "editShowcaseTags": "編輯資料卡展示標籤",
+    "showcaseTagsStatsNote": "This only controls the small tags under your name. Achievement and forum counts in the stat grid cannot be hidden yet."
   },
   "settings": {
     "title": "Einstellungen",
@@ -1661,7 +1672,14 @@
     "usersBadgeVip": "VIP",
     "usersBadgeSvip": "SVIP",
     "curationRepublish": "Republish",
-    "curationPublishConfirm": "Republish this game?"
+    "curationPublishConfirm": "Republish this game?",
+    "shellBrand": "RainyNightFrog Admin",
+    "usersAccountStatus_active": "Active",
+    "usersAccountStatus_suspended": "Suspended",
+    "usersAccountStatus_banned": "Banned",
+    "stripeEventStatus_processed": "Processed",
+    "stripeEventStatus_failed": "Failed",
+    "stripeEventStatus_pending": "Pending"
   },
   "legal": {
     "metaTitle": "Rechtliches · RainyNightFrog",
@@ -2093,7 +2111,25 @@
     "unlockRequirementSupporterBasic": "成為 $5 平台支持者即可獲得",
     "unlockRequirementSupporterPremium": "成為 $10 熱心支持者即可獲得",
     "unlockRequirementSupporterLifetime": "支持 $250 USD 或以上即可永久獲得（含一年 SVIP 特效）",
-    "goToSupporter": "前往支持者頁"
+    "goToSupporter": "前往支持者頁",
+    "tabShop": "AP Shop",
+    "statSpendableAp": "Spendable AP",
+    "statLifetimeAp": "Lifetime AP",
+    "shopTabHint": "Spend AP on cosmetics and exclusive titles (not real money)",
+    "shopBalanceLabel": "Spendable AP",
+    "shopBalanceHint": "Unlocking achievements credits AP; spending does not reduce lifetime total",
+    "shopLifetimeLabel": "Lifetime earned",
+    "shopBuy": "Redeem",
+    "shopCannotAfford": "Not enough AP",
+    "shopOwned": "Owned",
+    "shopEquipped": "Equipped",
+    "shopEquip": "Equip",
+    "shopUnequip": "Unequip",
+    "shopTitleGranted": "Added to title wardrobe",
+    "shopBuyFailed": "Purchase failed. Please try again.",
+    "shopEquipFailed": "Could not equip. Please try again.",
+    "shopPreviewName": "Preview: PlayerName",
+    "unlockRequirementApShop": "Redeem in the AP Shop"
   },
   "about": {
     "metaTitle": "Über uns · RainyNightFrog",
@@ -2190,7 +2226,14 @@
     "contactsAdminEmptyHint": "All admins share this inbox to help with publishing issues.",
     "adminSupportLoadFailed": "Failed to load admin support chat",
     "loginToPost": "Sign in to post in this channel; you can still read messages",
-    "loginRequiredContacts": "Sign in to use contacts and direct messages"
+    "loginRequiredContacts": "Sign in to use contacts and direct messages",
+    "rolePlayer": "Player",
+    "roleCreator": "Creator",
+    "roleSuperAdmin": "Super Admin",
+    "rolePlatformAdmin": "Admin",
+    "contactsDiscoverTitle": "Chat with virtual players",
+    "contactsDiscoverHint": "Tap a player below to message them — they reply automatically",
+    "contactsDiscoverPreview": "Tap to start a DM"
   },
   "supporter": {
     "metaTitle": "平台支持者 · RainyNightFrog",

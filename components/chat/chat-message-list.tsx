@@ -173,6 +173,7 @@ export function ChatMessageList({
                       : supporterTier === "basic"
                         ? "ring-1 ring-amber-400/40"
                         : "bg-white/8 text-zinc-300",
+                  message.author_avatar_frame_class,
                   onAuthorClick && "cursor-pointer hover:opacity-80"
                 )}
                 aria-label={message.author_name}
@@ -217,6 +218,7 @@ export function ChatMessageList({
                       supporterBadge={supporterBadge}
                       showSupporterBadge={false}
                       animateTitle={false}
+                      nameColorClass={message.author_name_color_class}
                       usernameClassName="text-zinc-400 hover:text-cyan-300"
                       titleClassName="text-[9px]"
                     />
@@ -231,6 +233,7 @@ export function ChatMessageList({
                     supporterBadge={supporterBadge}
                     showSupporterBadge={false}
                     animateTitle={false}
+                    nameColorClass={message.author_name_color_class}
                     usernameClassName="text-zinc-400"
                     titleClassName="text-[9px]"
                   />
@@ -245,7 +248,8 @@ export function ChatMessageList({
                     ? "border border-dashed border-white/10 bg-white/3 italic text-zinc-500"
                     : message.is_own
                       ? "bg-gradient-to-br from-cyan-600/80 to-violet-600/80"
-                      : "border border-white/8 bg-zinc-900/80"
+                      : "border border-white/8 bg-zinc-900/80",
+                  !recalled && message.author_chat_bubble_class
                 )}
               >
                 {recalled ? (
