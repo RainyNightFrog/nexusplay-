@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -193,6 +193,8 @@ export function HomePageClient({ initialGames }: HomePageClientProps) {
   const hasInitialGames = initialGames.length > 0;
   const [games, setGames] = useState<Game[]>(initialGames);
   const [loading, setLoading] = useState(!hasInitialGames);
+  const gamesCountRef = useRef(initialGames.length);
+  gamesCountRef.current = games.length;
   const [toast, setToast] = useState<string | null>(null);
   const [category, setCategory] = useState<FilterCategory>(ALL_CATEGORY);
   const [selectedTags, setSelectedTags] = useState<GameTag[]>([]);
@@ -267,7 +269,8 @@ export function HomePageClient({ initialGames }: HomePageClientProps) {
     }
 
     void loadGames(category, selectedTags, sort, priceFilter, {
-      silent: hasInitialGames && isDefaultHomeQuery(category, selectedTags, sort, priceFilter),
+      // 已有列表時背景刷新，避免篩選時整區換成骨架屏
+      silent: hasInitialGames || gamesCountRef.current > 0,
     });
   }, [
     category,
@@ -505,7 +508,7 @@ export function HomePageClient({ initialGames }: HomePageClientProps) {
           />
 
           <AnimatePresence mode="wait">
-            {loading ? (
+            {loading && games.length === 0 ? (
               <motion.div
                 key="skeleton"
                 initial={{ opacity: 0 }}
@@ -519,9 +522,10 @@ export function HomePageClient({ initialGames }: HomePageClientProps) {
               <motion.div
                 key={`${category}-${selectedTags.join(",")}-${sort}-${priceFilter}-bento`}
                 initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
+                animate={{ opacity: loading ? 0.55 : 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.25 }}
+                className={cn(loading && "pointer-events-none")}
               >
                 <BentoGameGrid
                   games={games}

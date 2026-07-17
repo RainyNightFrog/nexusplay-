@@ -6,6 +6,47 @@ import type { ChatPlayerPreview } from "@/components/chat/chat-player-card";
 import { isVirtualLeaderboardUserId } from "@/lib/platform-leaderboard-virtual";
 import type { ChatPlayerPublicProfile } from "@/lib/chat-player-profile-service";
 
+const PROFILE_CACHE_TTL_MS = 45_000;
+
+type CachedProfile = {
+  expiresAt: number;
+  profile: ChatPlayerPublicProfile;
+};
+
+const profileCache = new Map<string, CachedProfile>();
+
+function profileCacheKey(player: ChatPlayerPreview) {
+  if (player.virtualPlayerId) return `vp:${player.virtualPlayerId}`;
+  if (player.userId && !isVirtualLeaderboardUserId(player.userId)) {
+    return `u:${player.userId}`;
+  }
+  return null;
+}
+
+function readCachedProfile(player: ChatPlayerPreview) {
+  const key = profileCacheKey(player);
+  if (!key) return null;
+  const hit = profileCache.get(key);
+  if (!hit) return null;
+  if (hit.expiresAt <= Date.now()) {
+    profileCache.delete(key);
+    return null;
+  }
+  return hit.profile;
+}
+
+function writeCachedProfile(
+  player: ChatPlayerPreview,
+  profile: ChatPlayerPublicProfile
+) {
+  const key = profileCacheKey(player);
+  if (!key) return;
+  profileCache.set(key, {
+    profile,
+    expiresAt: Date.now() + PROFILE_CACHE_TTL_MS,
+  });
+}
+
 export function useChatPlayerProfile(
   player: ChatPlayerPreview | null,
   open: boolean
@@ -15,50 +56,75 @@ export function useChatPlayerProfile(
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadProfile = useCallback(async () => {
-    if (!player) return;
-
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams();
-      if (player.virtualPlayerId) {
-        params.set("virtualPlayerId", player.virtualPlayerId);
+  const loadProfile = useCallback(
+    async (target: ChatPlayerPreview, options?: { silent?: boolean }) => {
+      if (!options?.silent) {
+        setLoading(true);
       }
-      if (player.userId && !isVirtualLeaderboardUserId(player.userId)) {
-        params.set("userId", player.userId);
+      setError(null);
+      try {
+        const params = new URLSearchParams();
+        if (target.virtualPlayerId) {
+          params.set("virtualPlayerId", target.virtualPlayerId);
+        }
+        if (target.userId && !isVirtualLeaderboardUserId(target.userId)) {
+          params.set("userId", target.userId);
+        }
+
+        const response = await fetch(
+          `/api/chat/players/profile?${params.toString()}`,
+          { credentials: "same-origin" }
+        );
+        const data = (await response.json()) as {
+          profile?: ChatPlayerPublicProfile;
+          error?: string;
+        };
+
+        if (!response.ok) {
+          throw new Error(data.error ?? t("playerCardLoadFailed"));
+        }
+
+        const nextProfile = data.profile ?? null;
+        setProfile(nextProfile);
+        if (nextProfile) {
+          writeCachedProfile(target, nextProfile);
+        }
+      } catch (err) {
+        if (!options?.silent) {
+          setProfile(null);
+        }
+        setError(err instanceof Error ? err.message : t("playerCardLoadFailed"));
+      } finally {
+        setLoading(false);
       }
-
-      const response = await fetch(
-        `/api/chat/players/profile?${params.toString()}`,
-        { credentials: "same-origin", cache: "no-store" }
-      );
-      const data = (await response.json()) as {
-        profile?: ChatPlayerPublicProfile;
-        error?: string;
-      };
-
-      if (!response.ok) {
-        throw new Error(data.error ?? t("playerCardLoadFailed"));
-      }
-
-      setProfile(data.profile ?? null);
-    } catch (err) {
-      setProfile(null);
-      setError(err instanceof Error ? err.message : t("playerCardLoadFailed"));
-    } finally {
-      setLoading(false);
-    }
-  }, [player, t]);
+    },
+    [t]
+  );
 
   useEffect(() => {
     if (!open || !player) {
-      setProfile(null);
-      setError(null);
       return;
     }
-    void loadProfile();
+
+    const cached = readCachedProfile(player);
+    if (cached) {
+      setProfile(cached);
+      setError(null);
+      setLoading(false);
+      void loadProfile(player, { silent: true });
+      return;
+    }
+
+    setProfile(null);
+    void loadProfile(player);
   }, [open, player, loadProfile]);
 
-  return { profile, loading, error, reload: loadProfile };
+  return {
+    profile,
+    loading,
+    error,
+    reload: () => {
+      if (player) void loadProfile(player);
+    },
+  };
 }

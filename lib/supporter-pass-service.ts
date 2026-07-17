@@ -16,7 +16,10 @@ import {
   resolveSiteUrl,
 } from "@/lib/stripe-connect";
 import { createServerSupabase } from "@/lib/supabase-server";
-import { grantSupporterTitlesForBadge } from "@/lib/supporter-title-service";
+import {
+  grantSupporterTitlesForBadge,
+  revokeSupporterTitles,
+} from "@/lib/supporter-title-service";
 
 export { getCheckoutPaymentsState, formatCentsAsUsd };
 
@@ -55,11 +58,14 @@ export async function grantSupporterStatus(params: {
 export async function revokeSupporterStatus(userId: string) {
   const supabase = createServerSupabase();
 
+  await revokeSupporterTitles({ supabase, userId });
+
   const { error } = await supabase
     .from("profiles")
     .update({
       is_supporter: false,
       supporter_badge: null,
+      supporter_since: null,
     })
     .eq("id", userId);
 

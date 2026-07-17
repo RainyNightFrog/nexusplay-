@@ -1,4 +1,5 @@
 import type { AccountStatus } from "@/lib/account-status";
+import { revokeSupporterStatus } from "@/lib/supporter-pass-service";
 import { createServerSupabase } from "@/lib/supabase-server";
 
 export type AdminUserRecord = {
@@ -316,10 +317,8 @@ export async function updateAdminUserAccount(params: {
           : "supporter_v1";
       break;
     case "revoke_supporter":
-      patch.is_supporter = false;
-      patch.supporter_badge = null;
-      patch.supporter_since = null;
-      break;
+      await revokeSupporterStatus(params.userId);
+      return getAdminUserDetail(params.userId);
   }
 
   const { error } = await supabase

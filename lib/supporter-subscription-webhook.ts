@@ -11,7 +11,7 @@ export type SupporterSubscriptionDeletedResult =
       handled: true;
       userId: string;
       revoked: boolean;
-      reason?: "other_active_subscription" | "multiple_passes";
+      reason?: "other_active_subscription";
     };
 
 function resolveStripeCustomerId(
@@ -75,22 +75,6 @@ async function hasOtherActiveSupporterSubscription(
   );
 }
 
-async function hasMultipleSucceededSupporterPasses(userId: string) {
-  const supabase = createServerSupabase();
-  const { count, error } = await supabase
-    .from("orders")
-    .select("id", { count: "exact", head: true })
-    .eq("buyer_id", userId)
-    .eq("order_type", "supporter_pass")
-    .eq("status", "succeeded");
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return (count ?? 0) > 1;
-}
-
 export async function handleSupporterSubscriptionDeleted(
   subscription: Stripe.Subscription
 ): Promise<SupporterSubscriptionDeletedResult> {
@@ -117,15 +101,6 @@ export async function handleSupporterSubscriptionDeleted(
         reason: "other_active_subscription",
       };
     }
-  }
-
-  if (await hasMultipleSucceededSupporterPasses(userId)) {
-    return {
-      handled: true,
-      userId,
-      revoked: false,
-      reason: "multiple_passes",
-    };
   }
 
   await revokeSupporterStatus(userId);

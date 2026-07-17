@@ -128,10 +128,9 @@ function GuestLoginPrompt({
 
 export function ChatWidget() {
   const t = useTranslations("chat");
-  const { profile, isCreator, loading: authLoading } = useAuth();
-  const authBlocking = authLoading && !profile;
+  const { profile, isCreator } = useAuth();
   const isLoggedIn = Boolean(profile);
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const [channel, setChannel] = useState<ChatTab>("world");
   const [drafts, setDrafts] = useState<Record<ChatChannel, string>>({
     world: "",
@@ -255,12 +254,7 @@ export function ChatWidget() {
                 </div>
               </div>
 
-              {authBlocking ? (
-                <div className="flex flex-1 items-center justify-center px-6 py-12 text-sm text-zinc-500">
-                  {t("loading")}
-                </div>
-              ) : (
-                <>
+              <>
                   <Tabs
                     value={channel}
                     onValueChange={(value) => setChannel(value as ChatTab)}
@@ -327,7 +321,6 @@ export function ChatWidget() {
                       : t("retentionHint")}
                   </div>
                 </>
-              )}
             </motion.div>
           )}
         </AnimatePresence>

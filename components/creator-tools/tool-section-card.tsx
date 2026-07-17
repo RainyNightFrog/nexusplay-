@@ -35,14 +35,24 @@ export function ToolSectionCard({
       )}
     >
       <div className="border-b border-white/8 bg-gradient-to-r from-cyan-500/5 via-transparent to-violet-500/5 px-5 py-4 sm:px-6">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="flex min-w-0 items-start gap-3">
+        <div
+          className={cn(
+            "flex flex-col items-center gap-3 text-center",
+            badge && "sm:flex-row sm:items-start sm:justify-between sm:text-left"
+          )}
+        >
+          <div
+            className={cn(
+              "flex min-w-0 flex-col items-center gap-3",
+              badge && "sm:flex-row sm:items-start sm:text-left"
+            )}
+          >
             {icon && (
               <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-cyan-300">
                 {icon}
               </div>
             )}
-            <div className="min-w-0 text-left">
+            <div className="min-w-0">
               <h2 className="text-base font-semibold text-white sm:text-lg">{title}</h2>
               {description && (
                 <p className="mt-1 text-sm leading-relaxed text-zinc-400">{description}</p>

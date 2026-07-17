@@ -15,7 +15,7 @@ import { ToolMetric, ToolSectionCard } from "@/components/creator-tools/tool-sec
 import { cn } from "@/lib/utils";
 
 const inputClass = cn(
-  "h-10 w-full rounded-xl border border-white/10 bg-zinc-950/60 px-3 text-sm text-zinc-100",
+  "h-10 w-full rounded-xl border border-white/10 bg-zinc-950/60 px-3 text-center text-sm text-zinc-100",
   "outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
 );
 
@@ -95,7 +95,7 @@ export function RevenueCalculatorPanel() {
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <label className="space-y-1.5 text-left">
+          <label className="space-y-1.5 text-center">
             <span className="text-xs text-zinc-400">{t("revenueMonthlyTips")}</span>
             <input
               type="number"
@@ -105,7 +105,7 @@ export function RevenueCalculatorPanel() {
               className={inputClass}
             />
           </label>
-          <label className="space-y-1.5 text-left">
+          <label className="space-y-1.5 text-center">
             <span className="text-xs text-zinc-400">{t("revenueAvgTip")}</span>
             <input
               type="number"
@@ -116,7 +116,7 @@ export function RevenueCalculatorPanel() {
               className={inputClass}
             />
           </label>
-          <label className="space-y-1.5 text-left">
+          <label className="space-y-1.5 text-center">
             <span className="text-xs text-zinc-400">{t("revenuePricingType")}</span>
             <select
               value={pricingType}
@@ -130,7 +130,7 @@ export function RevenueCalculatorPanel() {
           </label>
           {pricingType !== "free" && (
             <>
-              <label className="space-y-1.5 text-left">
+              <label className="space-y-1.5 text-center">
                 <span className="text-xs text-zinc-400">{t("revenueMonthlySales")}</span>
                 <input
                   type="number"
@@ -141,7 +141,7 @@ export function RevenueCalculatorPanel() {
                 />
               </label>
               {pricingType === "fixed" ? (
-                <label className="space-y-1.5 text-left">
+                <label className="space-y-1.5 text-center">
                   <span className="text-xs text-zinc-400">{t("revenueSalePrice")}</span>
                   <input
                     type="number"
@@ -153,7 +153,7 @@ export function RevenueCalculatorPanel() {
                   />
                 </label>
               ) : (
-                <label className="space-y-1.5 text-left">
+                <label className="space-y-1.5 text-center">
                   <span className="text-xs text-zinc-400">{t("revenuePwywAvg")}</span>
                   <input
                     type="number"
@@ -192,8 +192,8 @@ export function RevenueCalculatorPanel() {
           />
         </div>
 
-        <div className="rounded-xl border border-white/8 bg-zinc-950/50 p-4">
-          <div className="mb-3 flex items-center gap-2 text-sm font-medium text-zinc-200">
+        <div className="rounded-xl border border-white/8 bg-zinc-950/50 p-4 text-center">
+          <div className="mb-3 flex items-center justify-center gap-2 text-sm font-medium text-zinc-200">
             <TrendingUp className="size-4 text-violet-400" />
             {t("revenueBreakdownTitle")}
           </div>
@@ -218,7 +218,7 @@ export function RevenueCalculatorPanel() {
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/5 p-4 text-left">
+          <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/5 p-4 text-center">
             <p className="text-xs text-zinc-400">{t("revenueSingleTipPreview")}</p>
             <p className="mt-1 text-2xl font-bold text-cyan-300 tabular-nums">
               ${singleTip.net.toFixed(2)}
@@ -228,10 +228,10 @@ export function RevenueCalculatorPanel() {
             </p>
           </div>
 
-          <div className="rounded-xl border border-violet-400/20 bg-violet-500/5 p-4 text-left">
+          <div className="rounded-xl border border-violet-400/20 bg-violet-500/5 p-4 text-center">
             <p className="text-xs text-zinc-400">{t("revenueDiscountPreview")}</p>
             <div className="mt-2 flex items-end gap-2">
-              <label className="flex-1 space-y-1">
+              <label className="flex-1 space-y-1 text-center">
                 <span className="text-[11px] text-zinc-500">{t("revenueDiscountPercent")}</span>
                 <input
                   type="range"

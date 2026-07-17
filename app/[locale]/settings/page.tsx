@@ -85,7 +85,7 @@ export default function SettingsPage() {
   const pathname = usePathname();
   const router = useRouter();
   const { profile, loading } = useAuth();
-  const { settings, ready, updateSettings, resetSettings } = useAppSettings();
+  const { settings, updateSettings, resetSettings } = useAppSettings();
   const [toast, setToast] = useState<string | null>(null);
   const [forumNotifySaving, setForumNotifySaving] = useState(false);
   const [forumReplyInApp, setForumReplyInApp] = useState(true);
@@ -274,7 +274,7 @@ export default function SettingsPage() {
     router.replace(pathname, { locale: nextLocale });
   }
 
-  if (loading || !profile || !ready) {
+  if (loading || !profile) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
         <Loader2 className="size-8 animate-spin text-violet-400" />

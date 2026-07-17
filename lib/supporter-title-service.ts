@@ -130,6 +130,64 @@ async function maybeAutoEquipSupporterTitle(
   }
 }
 
+/** 收回支持者稱號所有權；若正在佩戴支持者稱號則一併卸下 */
+export async function revokeSupporterTitles(params: {
+  supabase: SupabaseClient;
+  userId: string;
+}) {
+  const titleMap = await loadSupporterTitleIds(params.supabase);
+  if (!titleMap || titleMap.size === 0) {
+    return { revoked: false, reason: "titles_table_missing" as const };
+  }
+
+  const titleIds = [...titleMap.values()];
+
+  const { data: profile, error: profileError } = await params.supabase
+    .from("profiles")
+    .select("equipped_title_id")
+    .eq("id", params.userId)
+    .maybeSingle();
+
+  if (profileError) {
+    if (isMissingGamificationTable(profileError)) {
+      return { revoked: false, reason: "titles_table_missing" as const };
+    }
+    throw new Error(`讀取佩戴稱號失敗：${profileError.message}`);
+  }
+
+  if (
+    profile?.equipped_title_id &&
+    titleIds.includes(profile.equipped_title_id)
+  ) {
+    const { error: unequipError } = await params.supabase
+      .from("profiles")
+      .update({ equipped_title_id: null })
+      .eq("id", params.userId);
+
+    if (unequipError) {
+      if (isMissingGamificationTable(unequipError)) {
+        return { revoked: false, reason: "titles_table_missing" as const };
+      }
+      throw new Error(`卸下支持者稱號失敗：${unequipError.message}`);
+    }
+  }
+
+  const { error: deleteError } = await params.supabase
+    .from("user_titles")
+    .delete()
+    .eq("user_id", params.userId)
+    .in("title_id", titleIds);
+
+  if (deleteError) {
+    if (isMissingGamificationTable(deleteError)) {
+      return { revoked: false, reason: "titles_table_missing" as const };
+    }
+    throw new Error(`收回支持者稱號失敗：${deleteError.message}`);
+  }
+
+  return { revoked: true as const };
+}
+
 export async function grantSupporterTitlesForBadge(params: {
   supabase: SupabaseClient;
   userId: string;

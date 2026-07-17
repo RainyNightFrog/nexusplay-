@@ -11,7 +11,7 @@ import { ToolMetric, ToolSectionCard } from "@/components/creator-tools/tool-sec
 import { cn } from "@/lib/utils";
 
 const inputClass = cn(
-  "h-10 w-full rounded-xl border border-white/10 bg-zinc-950/60 px-3 text-sm text-zinc-100",
+  "h-10 w-full rounded-xl border border-white/10 bg-zinc-950/60 px-3 text-center text-sm text-zinc-100",
   "outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-500/20"
 );
 
@@ -60,7 +60,7 @@ export function PricingReferencePanel({
     >
       <div className="space-y-5">
         <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
-          <label className="space-y-1.5 text-left">
+          <label className="space-y-1.5 text-center">
             <span className="text-xs text-zinc-400">{t("pricingGenreFilter")}</span>
             <select
               value={genre}
@@ -75,7 +75,7 @@ export function PricingReferencePanel({
               ))}
             </select>
           </label>
-          <label className="space-y-1.5 text-left">
+          <label className="space-y-1.5 text-center">
             <span className="text-xs text-zinc-400">{t("pricingTagFilter")}</span>
             <select value={tag} onChange={(e) => setTag(e.target.value)} className={inputClass}>
               <option value="">{t("pricingAllTags")}</option>
@@ -111,7 +111,7 @@ export function PricingReferencePanel({
 
         {stats && !error && (
           <>
-            <p className="text-center text-xs text-zinc-500 sm:text-left">
+            <p className="text-center text-xs text-zinc-500">
               {t("pricingSampleSize", { count: stats.sampleSize })}
             </p>
 

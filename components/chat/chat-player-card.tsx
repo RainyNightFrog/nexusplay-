@@ -166,6 +166,22 @@ export function creatorToPlayerPreview(
   };
 }
 
+function PlayerCardStatsSkeleton() {
+  return (
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+      {Array.from({ length: 8 }).map((_, index) => (
+        <div
+          key={index}
+          className="animate-pulse rounded-lg border border-white/8 bg-white/[0.03] px-3 py-2"
+        >
+          <div className="mx-auto mb-2 h-3 w-16 rounded bg-white/10" />
+          <div className="mx-auto h-5 w-12 rounded bg-white/10" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function StatItem({
   icon,
   label,
@@ -372,15 +388,28 @@ export function ChatPlayerCard({
             )}
           </div>
 
-          {loading ? (
-            <div className="flex items-center justify-center py-6 text-sm text-zinc-500">
-              <Loader2 className="mr-2 size-4 animate-spin" />
-              {t("loading")}
+          {loading && !detail ? (
+            <div className="space-y-3">
+              <div className="animate-pulse rounded-lg border border-white/8 bg-white/[0.02] px-3 py-2.5">
+                <div className="mx-auto mb-2 h-3 w-20 rounded bg-white/10" />
+                <div className="mx-auto h-4 w-3/4 max-w-sm rounded bg-white/10" />
+              </div>
+              <PlayerCardStatsSkeleton />
+              <p className="flex items-center justify-center gap-2 text-xs text-zinc-500">
+                <Loader2 className="size-3.5 animate-spin" />
+                {t("loading")}
+              </p>
             </div>
-          ) : error ? (
+          ) : error && !detail ? (
             <p className="py-4 text-center text-sm text-rose-300 sm:text-base">{error}</p>
           ) : detail ? (
-            <>
+            <div className={cn("space-y-3", loading && "opacity-80")}>
+              {loading && (
+                <p className="flex items-center justify-center gap-2 text-[11px] text-zinc-500">
+                  <Loader2 className="size-3 animate-spin" />
+                  {t("loading")}
+                </p>
+              )}
               <div className="rounded-lg border border-white/8 bg-white/[0.02] px-3 py-2.5 text-center">
                 <p className="mb-1.5 text-xs font-medium text-zinc-400 sm:text-sm">
                   {t("playerCardBio")}
@@ -485,7 +514,7 @@ export function ChatPlayerCard({
                   </div>
                 </div>
               )}
-            </>
+            </div>
           ) : null}
 
           <div className="flex w-full flex-col gap-2 sm:flex-row sm:justify-center">

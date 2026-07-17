@@ -411,6 +411,7 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
   const [activeTab, setActiveTab] = useState<LeaderboardTab>("online");
   const [data, setData] = useState<PlatformLeaderboardsResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [fetchError, setFetchError] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [animateKey, setAnimateKey] = useState("initial");
@@ -455,11 +456,11 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
 
   const fetchLeaderboards = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
+    else setRefreshing(true);
 
     try {
       const response = await fetch("/api/leaderboards", {
         credentials: "same-origin",
-        cache: "no-store",
       });
 
       if (!response.ok) {
@@ -476,6 +477,7 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
       if (!silent) setData(null);
     } finally {
       if (!silent) setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
@@ -488,7 +490,8 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
       return;
     }
 
-    void fetchLeaderboards();
+    // 已有資料時背景刷新，避免每次打開都整頁轉圈
+    void fetchLeaderboards(data != null);
 
     pollRef.current = setInterval(() => {
       void fetchLeaderboards(true);
@@ -500,6 +503,8 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
         pollRef.current = null;
       }
     };
+    // 刻意不依賴 data，避免資料更新後重跑 effect
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchLeaderboards, open]);
 
   const onlineEntries = data?.online ?? [];
@@ -616,15 +621,25 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
                   variant="ghost"
                   size="sm"
                   className="h-8 shrink-0 gap-1.5 px-3 text-sm text-zinc-400 hover:text-cyan-300"
-                  onClick={() => void fetchLeaderboards()}
-                  disabled={loading}
+                  onClick={() => void fetchLeaderboards(data != null)}
+                  disabled={loading || refreshing}
                 >
-                  <RefreshCw className={cn("size-4", loading && "animate-spin")} />
+                  <RefreshCw
+                    className={cn(
+                      "size-4",
+                      (loading || refreshing) && "animate-spin"
+                    )}
+                  />
                   {t("refresh")}
                 </Button>
               </div>
 
-              <div className="flex h-[460px] max-h-[460px] flex-col">
+              <div
+                className={cn(
+                  "flex h-[460px] max-h-[460px] flex-col transition-opacity",
+                  refreshing && !loading && "opacity-70"
+                )}
+              >
                 <TabsContent value="online" keepMounted={false} className="mt-0 flex min-h-0 flex-1 flex-col outline-none">
                   <LeaderboardTabPanel
                     entries={onlineEntries}

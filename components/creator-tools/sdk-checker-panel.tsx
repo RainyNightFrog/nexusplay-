@@ -44,7 +44,7 @@ export function SdkCheckerPanel({ sdkSignals = [], compact = false }: SdkChecker
         ))}
       </div>
 
-      <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/5 px-4 py-3 text-sm text-cyan-100">
+      <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/5 px-4 py-3 text-center text-sm text-cyan-100">
         <p>{t("sdkHint")}</p>
         <Link
           href="/dashboard/tools"
@@ -60,7 +60,7 @@ export function SdkCheckerPanel({ sdkSignals = [], compact = false }: SdkChecker
   if (compact) {
     return (
       <div className="rounded-2xl border border-fuchsia-400/20 bg-fuchsia-500/5 p-4">
-        <div className="mb-3 flex items-center gap-2 text-sm font-medium text-fuchsia-200">
+        <div className="mb-3 flex items-center justify-center gap-2 text-sm font-medium text-fuchsia-200">
           <Code2 className="size-4" />
           {t("sdkTitle")}
         </div>

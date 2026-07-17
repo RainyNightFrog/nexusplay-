@@ -193,28 +193,6 @@ function GamePageContent() {
         let loadedGame = data.game;
         const userCanPlay = data.canPlay !== false;
 
-        if (userCanPlay && !isDirectlyPlayable(loadedGame.embedUrl)) {
-          if (!cancelled) setMigrating(true);
-
-          const migrateResponse = await fetch(`/api/games/${gameId}/migrate`, {
-            method: "POST",
-          });
-          const migrateData = (await migrateResponse.json()) as {
-            game?: Game;
-            error?: string;
-          };
-
-          if (migrateResponse.ok && migrateData.game) {
-            loadedGame = migrateData.game;
-          } else if (!cancelled) {
-            setLoadError(
-              migrateData.error ?? tc("reuploadLegacy")
-            );
-            setGame(loadedGame);
-            return;
-          }
-        }
-
         if (!cancelled) {
           setGame(loadedGame);
           setOwnerCreatorId(data.ownerCreatorId ?? loadedGame.creatorId ?? null);
@@ -223,6 +201,30 @@ function GamePageContent() {
           setCanPlay(userCanPlay);
           setRequiresPurchase(Boolean(data.requiresPurchase));
           setHasPurchased(Boolean(data.hasPurchased));
+          // 先結束整頁載入，舊版遊戲 migrate 改為背景處理
+          setLoading(false);
+        }
+
+        if (userCanPlay && !isDirectlyPlayable(loadedGame.embedUrl)) {
+          if (!cancelled) setMigrating(true);
+
+          try {
+            const migrateResponse = await fetch(`/api/games/${gameId}/migrate`, {
+              method: "POST",
+            });
+            const migrateData = (await migrateResponse.json()) as {
+              game?: Game;
+              error?: string;
+            };
+
+            if (migrateResponse.ok && migrateData.game) {
+              if (!cancelled) setGame(migrateData.game);
+            } else if (!cancelled) {
+              setLoadError(migrateData.error ?? tc("reuploadLegacy"));
+            }
+          } finally {
+            if (!cancelled) setMigrating(false);
+          }
         }
       } catch {
         if (!cancelled) {
@@ -232,7 +234,6 @@ function GamePageContent() {
       } finally {
         if (!cancelled) {
           setLoading(false);
-          setMigrating(false);
         }
       }
     }
@@ -511,9 +512,7 @@ function GamePageContent() {
     return (
       <div className="dark flex min-h-full flex-col items-center justify-center px-4 text-zinc-100">
         <Loader2 className="mb-4 size-10 animate-spin text-cyan-400" />
-        <p className="text-sm text-zinc-400">
-          {migrating ? tc("preparingGame") : tc("loadingGame")}
-        </p>
+        <p className="text-sm text-zinc-400">{tc("loadingGame")}</p>
       </div>
     );
   }
@@ -535,6 +534,12 @@ function GamePageContent() {
 
   return (
     <div className="dark relative min-h-full text-zinc-100">
+      {migrating && (
+        <div className="sticky top-0 z-40 flex items-center justify-center gap-2 border-b border-cyan-400/20 bg-cyan-500/10 px-4 py-2 text-xs text-cyan-200">
+          <Loader2 className="size-3.5 animate-spin" />
+          {tc("preparingGame")}
+        </div>
+      )}
       <SiteHeader>
           <Link
             href="/"

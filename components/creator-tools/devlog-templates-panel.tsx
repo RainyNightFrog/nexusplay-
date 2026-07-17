@@ -53,7 +53,7 @@ export function DevlogTemplatesPanel() {
           ))}
         </div>
 
-        <div className="rounded-xl border border-white/10 bg-zinc-950/60 p-4 text-left">
+        <div className="rounded-xl border border-white/10 bg-zinc-950/60 p-4 text-center">
           <h3 className="text-base font-semibold text-white">{title}</h3>
           <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-zinc-300">
             {body}

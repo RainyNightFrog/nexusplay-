@@ -169,88 +169,86 @@ export default function CommunityPage() {
           )}
         </motion.div>
 
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className={cn(
+            "mb-10 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50",
+            "shadow-xl shadow-black/40 backdrop-blur-sm"
+          )}
+        >
+          <CommunityForum
+            hubMode
+            games={gameOptions}
+            onToast={showToast}
+            onPostsChange={setTotalPosts}
+            onPostsLoaded={handlePostsLoaded}
+            onThreadNavigationChange={setThreadNav}
+          />
+        </motion.div>
+
         {loading ? (
-          <div className="flex justify-center py-20">
-            <Loader2 className="size-10 animate-spin text-violet-400" />
+          <div className="flex justify-center py-12">
+            <Loader2 className="size-8 animate-spin text-cyan-400" />
           </div>
         ) : games.length > 0 ? (
-          <>
-            <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.05 }}
-              className={cn(
-                "mb-10 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50",
-                "shadow-xl shadow-black/40 backdrop-blur-sm"
-              )}
-            >
-              <CommunityForum
-                hubMode
-                games={gameOptions}
-                onToast={showToast}
-                onPostsChange={setTotalPosts}
-                onPostsLoaded={handlePostsLoaded}
-                onThreadNavigationChange={setThreadNav}
-              />
-            </motion.div>
-
-            <section>
-              <h2 className="mb-4 flex items-center justify-center gap-2 text-lg font-semibold text-white">
-                <Gamepad2 className="size-5 text-cyan-400" />
-                {t("browseByGame")}
-              </h2>
-              <div className="grid gap-4 sm:grid-cols-2">
-                {games.map((game, index) => (
-                  <motion.div
-                    key={game.id}
-                    initial={{ opacity: 0, y: 16 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
+          <section>
+            <h2 className="mb-4 flex items-center justify-center gap-2 text-lg font-semibold text-white">
+              <Gamepad2 className="size-5 text-cyan-400" />
+              {t("browseByGame")}
+            </h2>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {games.map((game, index) => (
+                <motion.div
+                  key={game.id}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                >
+                  <Link
+                    href={`/game/${game.id}/forum`}
+                    className={cn(
+                      "group flex flex-col items-center gap-4 rounded-2xl border border-white/10 bg-zinc-900/60 p-4 text-center",
+                      "transition-all duration-200 hover:border-violet-400/30 hover:bg-zinc-900/80",
+                      "hover:shadow-lg hover:shadow-violet-500/10 sm:flex-row sm:items-center sm:justify-center"
+                    )}
                   >
-                    <Link
-                      href={`/game/${game.id}/forum`}
-                      className={cn(
-                        "group flex flex-col items-center gap-4 rounded-2xl border border-white/10 bg-zinc-900/60 p-4 text-center",
-                        "transition-all duration-200 hover:border-violet-400/30 hover:bg-zinc-900/80",
-                        "hover:shadow-lg hover:shadow-violet-500/10 sm:flex-row sm:items-center sm:justify-center"
-                      )}
-                    >
-                      <div className="relative size-20 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-zinc-800">
-                        <GameCoverImage
-                          src={game.image}
-                          alt={game.title}
-                          fill
-                          sizes="80px"
-                          className="object-cover transition-transform duration-300 group-hover:scale-105"
-                          unoptimized={!isSupabaseImage(game.image)}
-                        />
+                    <div className="relative size-20 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-zinc-800">
+                      <GameCoverImage
+                        src={game.image}
+                        alt={game.title}
+                        fill
+                        sizes="80px"
+                        className="object-cover transition-transform duration-300 group-hover:scale-105"
+                        unoptimized={!isSupabaseImage(game.image)}
+                      />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-base font-semibold text-white group-hover:text-violet-50">
+                        {game.title}
+                      </h3>
+                      <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-zinc-500">
+                        {localizedDescription(game.title, game.description)}
+                      </p>
+                      <div className="mt-3 flex flex-wrap items-center justify-center gap-3 text-xs">
+                        <span className="flex items-center gap-1 text-violet-300">
+                          <MessagesSquare className="size-3.5" />
+                          {t("threadCount", {
+                            count: forumCounts[game.id] ?? 0,
+                          })}
+                        </span>
+                        <span className="flex items-center gap-1 text-zinc-500">
+                          <Gamepad2 className="size-3.5" />
+                          {t("playCount", { count: formatCount(game.players) })}
+                        </span>
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <h3 className="text-base font-semibold text-white group-hover:text-violet-50">
-                          {game.title}
-                        </h3>
-                        <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-zinc-500">
-                          {localizedDescription(game.title, game.description)}
-                        </p>
-                        <div className="mt-3 flex flex-wrap items-center justify-center gap-3 text-xs">
-                          <span className="flex items-center gap-1 text-violet-300">
-                            <MessagesSquare className="size-3.5" />
-                            {t("threadCount", {
-                              count: forumCounts[game.id] ?? 0,
-                            })}
-                          </span>
-                          <span className="flex items-center gap-1 text-zinc-500">
-                            <Gamepad2 className="size-3.5" />
-                            {t("playCount", { count: formatCount(game.players) })}
-                          </span>
-                        </div>
-                      </div>
-                    </Link>
-                  </motion.div>
-                ))}
-              </div>
-            </section>
-          </>
+                    </div>
+                  </Link>
+                </motion.div>
+              ))}
+            </div>
+          </section>
         ) : (
           <div className="rounded-2xl border border-dashed border-white/10 py-16 text-center">
             <MessagesSquare className="mx-auto mb-3 size-10 text-zinc-600" />

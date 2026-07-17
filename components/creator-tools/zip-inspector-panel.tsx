@@ -102,7 +102,7 @@ export function ZipInspectorPanel({ file, compact = false, onReport }: ZipInspec
               </div>
 
               {report.entryPath && (
-                <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/5 px-4 py-3 text-center text-sm text-cyan-100 sm:text-left">
+                <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/5 px-4 py-3 text-center text-sm text-cyan-100">
                   <span className="text-zinc-400">{t("zipEntryPath")}: </span>
                   <code className="font-mono text-cyan-200">{report.entryPath}</code>
                 </div>
@@ -110,7 +110,7 @@ export function ZipInspectorPanel({ file, compact = false, onReport }: ZipInspec
 
               {report.warnings.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-center text-xs font-medium tracking-wide text-zinc-500 uppercase sm:text-left">
+                  <p className="text-center text-xs font-medium tracking-wide text-zinc-500 uppercase">
                     {t("zipWarningsTitle")}
                   </p>
                   {report.warnings.map((warning, index) => (
@@ -135,7 +135,7 @@ export function ZipInspectorPanel({ file, compact = false, onReport }: ZipInspec
 
               {report.largestFiles.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-center text-xs font-medium tracking-wide text-zinc-500 uppercase sm:text-left">
+                  <p className="text-center text-xs font-medium tracking-wide text-zinc-500 uppercase">
                     {t("zipLargestFiles")}
                   </p>
                   <div className="overflow-hidden rounded-xl border border-white/8">
@@ -154,7 +154,7 @@ export function ZipInspectorPanel({ file, compact = false, onReport }: ZipInspec
                 </div>
               )}
 
-              <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+              <div className="flex flex-wrap items-center justify-center gap-2">
                 {report.hasSdkReference ? (
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-200">
                     <CheckCircle2 className="size-3.5" />
@@ -185,7 +185,7 @@ export function ZipInspectorPanel({ file, compact = false, onReport }: ZipInspec
   if (compact) {
     return (
       <div className="rounded-2xl border border-cyan-400/20 bg-cyan-500/5 p-4">
-        <div className="mb-3 flex items-center gap-2 text-sm font-medium text-cyan-200">
+        <div className="mb-3 flex items-center justify-center gap-2 text-sm font-medium text-cyan-200">
           <Archive className="size-4" />
           {t("zipInspectorTitle")}
         </div>

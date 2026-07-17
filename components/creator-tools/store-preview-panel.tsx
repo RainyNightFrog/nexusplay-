@@ -43,7 +43,7 @@ export function StorePreviewPanel({
       <div className="grid gap-5 lg:grid-cols-2">
         {/* 首頁卡片預覽 */}
         <div className="space-y-2">
-          <p className="text-center text-xs font-medium tracking-wide text-zinc-500 uppercase lg:text-left">
+          <p className="text-center text-xs font-medium tracking-wide text-zinc-500 uppercase">
             {t("previewHomeCard")}
           </p>
           <div className="mx-auto max-w-xs">
@@ -102,7 +102,7 @@ export function StorePreviewPanel({
 
         {/* 社群分享卡預覽 */}
         <div className="space-y-2">
-          <p className="text-center text-xs font-medium tracking-wide text-zinc-500 uppercase lg:text-left">
+          <p className="text-center text-xs font-medium tracking-wide text-zinc-500 uppercase">
             {t("previewShareCard")}
           </p>
           <div className="overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-zinc-900 via-zinc-950 to-black shadow-xl">

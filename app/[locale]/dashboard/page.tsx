@@ -207,8 +207,6 @@ export default function CreatorDashboardPage() {
   }, []);
 
   useEffect(() => {
-    if (gamesLoading) return;
-
     let cancelled = false;
     setRevenueLoading(true);
     setRevenueError(null);
@@ -229,11 +227,9 @@ export default function CreatorDashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [analyticsScope, revenueTrendDays, gamesLoading, games.length, resolveDashboardError]);
+  }, [analyticsScope, revenueTrendDays, resolveDashboardError]);
 
   useEffect(() => {
-    if (gamesLoading) return;
-
     let cancelled = false;
     setAnalyticsLoading(true);
     setAnalyticsError(null);
@@ -257,7 +253,7 @@ export default function CreatorDashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [analyticsScope, highlightTimeRange, gamesLoading, games.length, resolveDashboardError]);
+  }, [analyticsScope, highlightTimeRange, resolveDashboardError]);
 
   const selectedGame = useMemo(
     () =>
