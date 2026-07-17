@@ -2250,7 +2250,7 @@
     "tierPerkSvipAll": "✓ 完整 SVIP 功能與特效（一年，含輸入文字特效）",
     "tierPerkLifetimeTitle": "✓ 永久稱號「RainyNightFrog」",
     "tierPerkLifetimePermanent": "✓ 稱號永久保留，不受訂閱取消影響",
-    "tierPerkWorldAnnounce": "✓ 每次上線世界頻道廣播通知",
+    "tierPerkWorldAnnounce": "✓ 上線時世界頻道廣播通知（四小時內不重複）",
     "lifetimeAmountLabel": "支持金額（USD）",
     "lifetimeAmountHint": "最低 ${min} USD，可自行輸入更高金額",
     "lifetimeInvalidAmount": "請輸入有效的支持金額",

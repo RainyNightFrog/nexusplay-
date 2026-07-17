@@ -198,16 +198,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [loadProfile]);
 
   useEffect(() => {
-    if (!profile?.supporter_lifetime || isAuthRoute(pathname)) {
+    const isPremiumOnlineEligible =
+      profile?.supporter_lifetime === true ||
+      (profile?.is_supporter === true &&
+        profile?.supporter_badge === "supporter_v2");
+
+    if (!profile || !isPremiumOnlineEligible || isAuthRoute(pathname)) {
       return;
     }
 
-    const key = `rnf-lifetime-online:${profile.id}`;
+    const key = `rnf-premium-online:${profile.id}`;
+    const cooldownMs = 4 * 60 * 60 * 1000; // 須與伺服器 LIFETIME_ONLINE_ANNOUNCE_COOLDOWN_MS 一致
     try {
-      if (sessionStorage.getItem(key) === "1") {
+      const lastRaw = sessionStorage.getItem(key);
+      const lastAt = lastRaw ? Number(lastRaw) : 0;
+      if (Number.isFinite(lastAt) && Date.now() - lastAt < cooldownMs) {
         return;
       }
-      sessionStorage.setItem(key, "1");
+      sessionStorage.setItem(key, String(Date.now()));
     } catch {
       // sessionStorage 不可用時仍嘗試廣播（伺服器有冷卻）
     }
@@ -216,7 +224,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       method: "POST",
       credentials: "same-origin",
     }).catch(() => undefined);
-  }, [profile?.id, profile?.supporter_lifetime, pathname]);
+  }, [
+    profile?.id,
+    profile?.is_supporter,
+    profile?.supporter_badge,
+    profile?.supporter_lifetime,
+    pathname,
+  ]);
 
   const value = useMemo<AuthContextValue>(
     () => ({

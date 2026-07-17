@@ -287,6 +287,7 @@ export function SupporterView() {
                         <li>{t("tierPerkPremiumBadge")}</li>
                         <li>{t("tierPerkPremiumGlow")}</li>
                         <li>{t("tierPerkComposer")}</li>
+                        <li>{t("tierPerkWorldAnnounce")}</li>
                       </>
                     )}
                   </ul>

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { announceLifetimeSupporterOnline } from "@/lib/supporter-lifetime-announce";
+import { announcePremiumSupporterOnline } from "@/lib/supporter-lifetime-announce";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 
-/** 永久支持者上線時，世界頻道廣播（有冷卻） */
+/** SVIP／永久傳說支持者上線時，世界頻道廣播（有冷卻） */
 export async function POST() {
   try {
     const authClient = await createAuthServerClient();
@@ -14,7 +14,7 @@ export async function POST() {
       return NextResponse.json({ error: "請先登入" }, { status: 401 });
     }
 
-    const result = await announceLifetimeSupporterOnline(user.id);
+    const result = await announcePremiumSupporterOnline(user.id);
     return NextResponse.json(result);
   } catch (error) {
     const message =

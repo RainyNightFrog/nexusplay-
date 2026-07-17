@@ -1,8 +1,11 @@
-import { SUPPORTER_TITLE_LIFETIME } from "@/lib/supporter-tier";
+import {
+  SUPPORTER_BADGE_V2,
+  SUPPORTER_TITLE_LIFETIME,
+} from "@/lib/supporter-tier";
 import { createServerSupabase } from "@/lib/supabase-server";
 
-/** 同一永久支持者世界頻道上線廣播最短間隔（6 小時） */
-export const LIFETIME_ONLINE_ANNOUNCE_COOLDOWN_MS = 6 * 60 * 60 * 1000;
+/** 同一支持者世界頻道上線廣播最短間隔（4 小時） */
+export const LIFETIME_ONLINE_ANNOUNCE_COOLDOWN_MS = 4 * 60 * 60 * 1000;
 
 function formatDisplayName(name: string | null | undefined) {
   const trimmed = name?.trim();
@@ -18,7 +21,13 @@ export function buildLifetimeBecomeAnnouncement(
 export function buildLifetimeOnlineAnnouncement(
   displayName: string | null | undefined
 ) {
-  return `⚡【${SUPPORTER_TITLE_LIFETIME}】「${formatDisplayName(displayName)}」已上線！`;
+  return `⚡【${SUPPORTER_TITLE_LIFETIME}】${formatDisplayName(displayName)}已上線！`;
+}
+
+export function buildSvipOnlineAnnouncement(
+  displayName: string | null | undefined
+) {
+  return `✨【SVIP】${formatDisplayName(displayName)}已上線！`;
 }
 
 async function insertWorldAnnouncement(params: {
@@ -60,18 +69,27 @@ export async function announceLifetimeSupporterBecome(params: {
   });
 }
 
+export type PremiumOnlineAnnounceResult =
+  | { announced: true; kind: "lifetime" | "svip" }
+  | {
+      announced: false;
+      reason: "not_eligible" | "cooldown" | "missing_column";
+    };
+
 /**
- * 永久支持者每次上線時世界頻道廣播。
- * 成功回傳 announced；冷卻中回傳 skipped。
+ * SVIP／永久傳說支持者上線時世界頻道廣播。
+ * 永久傳說優先使用傳說文案；一般 SVIP 使用 SVIP 文案。
+ * 成功回傳 announced；冷卻中或不符資格回傳 skipped。
  */
-export async function announceLifetimeSupporterOnline(userId: string): Promise<
-  | { announced: true }
-  | { announced: false; reason: "not_lifetime" | "cooldown" | "missing_column" }
-> {
+export async function announcePremiumSupporterOnline(
+  userId: string
+): Promise<PremiumOnlineAnnounceResult> {
   const supabase = createServerSupabase();
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("display_name, supporter_lifetime, supporter_lifetime_announced_at")
+    .select(
+      "display_name, is_supporter, supporter_badge, supporter_lifetime, supporter_lifetime_announced_at"
+    )
     .eq("id", userId)
     .maybeSingle();
 
@@ -85,9 +103,20 @@ export async function announceLifetimeSupporterOnline(userId: string): Promise<
     throw new Error(error.message);
   }
 
-  if (profile?.supporter_lifetime !== true) {
-    return { announced: false, reason: "not_lifetime" };
+  if (!profile) {
+    return { announced: false, reason: "not_eligible" };
   }
+
+  const isLifetime = profile.supporter_lifetime === true;
+  const isSvip =
+    profile.is_supporter === true &&
+    profile.supporter_badge === SUPPORTER_BADGE_V2;
+
+  if (!isLifetime && !isSvip) {
+    return { announced: false, reason: "not_eligible" };
+  }
+
+  const kind = isLifetime ? "lifetime" : "svip";
 
   const lastAt = profile.supporter_lifetime_announced_at
     ? new Date(profile.supporter_lifetime_announced_at).getTime()
@@ -102,7 +131,9 @@ export async function announceLifetimeSupporterOnline(userId: string): Promise<
   const nowIso = new Date().toISOString();
   await insertWorldAnnouncement({
     userId,
-    content: buildLifetimeOnlineAnnouncement(profile.display_name),
+    content: isLifetime
+      ? buildLifetimeOnlineAnnouncement(profile.display_name)
+      : buildSvipOnlineAnnouncement(profile.display_name),
   });
 
   const { error: updateError } = await supabase
@@ -115,10 +146,15 @@ export async function announceLifetimeSupporterOnline(userId: string): Promise<
       updateError.message.includes("supporter_lifetime_announced_at") ||
       updateError.message.includes("does not exist")
     ) {
-      return { announced: true };
+      return { announced: true, kind };
     }
     throw new Error(updateError.message);
   }
 
-  return { announced: true };
+  return { announced: true, kind };
+}
+
+/** @deprecated 請改用 announcePremiumSupporterOnline；保留給既有 API 路徑相容 */
+export async function announceLifetimeSupporterOnline(userId: string) {
+  return announcePremiumSupporterOnline(userId);
 }
