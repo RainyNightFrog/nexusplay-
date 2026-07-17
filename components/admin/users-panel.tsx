@@ -5,11 +5,15 @@ import { useLocale, useTranslations } from "next-intl";
 import {
   Ban,
   Loader2,
+  MessageSquare,
   MessageSquareOff,
   RefreshCw,
   Search,
   ShieldOff,
+  Sparkles,
   User,
+  UserCog,
+  Volume2,
   VolumeX,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -89,7 +93,17 @@ type UserAction =
   | "ban"
   | "unban"
   | "mute_chat"
-  | "disable_forum";
+  | "unmute_chat"
+  | "disable_forum"
+  | "enable_forum"
+  | "set_role"
+  | "grant_supporter"
+  | "revoke_supporter";
+
+type ActionExtras = {
+  role?: "player" | "creator";
+  supporterBadge?: "supporter_v1" | "supporter_v2";
+};
 
 export function AdminUsersPanel() {
   const t = useTranslations("admin");
@@ -172,10 +186,21 @@ export function AdminUsersPanel() {
     setDialogOpen(true);
   }
 
-  async function handleUserAction(action: UserAction, actionReason?: string) {
+  async function handleUserAction(
+    action: UserAction,
+    actionReason?: string,
+    extras?: ActionExtras
+  ) {
     if (!selectedId) return;
 
-    setActionLoading(action);
+    const loadingKey =
+      action === "set_role" && extras?.role
+        ? `set_role:${extras.role}`
+        : action === "grant_supporter" && extras?.supporterBadge
+          ? `grant_supporter:${extras.supporterBadge}`
+          : action;
+
+    setActionLoading(loadingKey);
     setError(null);
     try {
       const body: Record<string, string> = { action };
@@ -184,6 +209,12 @@ export function AdminUsersPanel() {
         body.chatMutedUntil = new Date(
           Date.now() + 24 * 60 * 60 * 1000
         ).toISOString();
+      }
+      if (action === "set_role" && extras?.role) {
+        body.role = extras.role;
+      }
+      if (action === "grant_supporter") {
+        body.supporterBadge = extras?.supporterBadge ?? "supporter_v1";
       }
 
       const response = await fetch(`/api/admin/users/${selectedId}`, {
@@ -310,6 +341,27 @@ export function AdminUsersPanel() {
                   >
                     {accountStatusLabel(user.accountStatus, t)}
                   </Badge>
+                  {user.role && (
+                    <Badge className="border border-white/10 bg-white/5 text-zinc-300">
+                      {user.role === "creator"
+                        ? t("usersRoleCreator")
+                        : t("usersRolePlayer")}
+                    </Badge>
+                  )}
+                  {user.isSupporter && (
+                    <Badge
+                      className={cn(
+                        "border",
+                        user.supporterBadge === "supporter_v2"
+                          ? "border-violet-400/30 bg-violet-500/10 text-violet-200"
+                          : "border-amber-400/30 bg-amber-500/10 text-amber-200"
+                      )}
+                    >
+                      {user.supporterBadge === "supporter_v2"
+                        ? t("usersBadgeSvip")
+                        : t("usersBadgeVip")}
+                    </Badge>
+                  )}
                   {user.chatMutedUntil &&
                     new Date(user.chatMutedUntil).getTime() > Date.now() && (
                       <Badge className="border border-violet-400/30 bg-violet-500/10 text-violet-200">
@@ -426,6 +478,27 @@ export function AdminUsersPanel() {
                     type="button"
                     size="sm"
                     variant="outline"
+                    disabled={
+                      !!actionLoading ||
+                      !detail.chatMutedUntil ||
+                      new Date(detail.chatMutedUntil).getTime() <= Date.now()
+                    }
+                    onClick={() => void handleUserAction("unmute_chat")}
+                    className="gap-1.5 border-emerald-400/20 text-emerald-200"
+                  >
+                    {actionLoading === "unmute_chat" ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <>
+                        <Volume2 className="size-3.5" />
+                        {t("usersUnmuteChat")}
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
                     disabled={!!actionLoading || detail.forumPostingDisabled}
                     onClick={() => void handleUserAction("disable_forum")}
                     className="gap-1.5 border-orange-400/20 text-orange-200"
@@ -437,6 +510,132 @@ export function AdminUsersPanel() {
                         <MessageSquareOff className="size-3.5" />
                         {t("usersDisableForum")}
                       </>
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={!!actionLoading || !detail.forumPostingDisabled}
+                    onClick={() => void handleUserAction("enable_forum")}
+                    className="gap-1.5 border-emerald-400/20 text-emerald-200"
+                  >
+                    {actionLoading === "enable_forum" ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <>
+                        <MessageSquare className="size-3.5" />
+                        {t("usersEnableForum")}
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={!!actionLoading || detail.role === "player"}
+                    onClick={() =>
+                      void handleUserAction("set_role", undefined, {
+                        role: "player",
+                      })
+                    }
+                    className="gap-1.5 border-white/10 text-zinc-200"
+                  >
+                    {actionLoading === "set_role:player" ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <>
+                        <User className="size-3.5" />
+                        {t("usersSetRolePlayer")}
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={!!actionLoading || detail.role === "creator"}
+                    onClick={() =>
+                      void handleUserAction("set_role", undefined, {
+                        role: "creator",
+                      })
+                    }
+                    className="gap-1.5 border-cyan-400/20 text-cyan-200"
+                  >
+                    {actionLoading === "set_role:creator" ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <>
+                        <UserCog className="size-3.5" />
+                        {t("usersSetRoleCreator")}
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={
+                      !!actionLoading ||
+                      (detail.isSupporter &&
+                        detail.supporterBadge === "supporter_v1")
+                    }
+                    onClick={() =>
+                      void handleUserAction("grant_supporter", undefined, {
+                        supporterBadge: "supporter_v1",
+                      })
+                    }
+                    className="gap-1.5 border-amber-400/20 text-amber-200"
+                  >
+                    {actionLoading === "grant_supporter:supporter_v1" ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <>
+                        <Sparkles className="size-3.5" />
+                        {t("usersGrantVip")}
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={
+                      !!actionLoading ||
+                      (detail.isSupporter &&
+                        detail.supporterBadge === "supporter_v2")
+                    }
+                    onClick={() =>
+                      void handleUserAction("grant_supporter", undefined, {
+                        supporterBadge: "supporter_v2",
+                      })
+                    }
+                    className="gap-1.5 border-violet-400/20 text-violet-200"
+                  >
+                    {actionLoading === "grant_supporter:supporter_v2" ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <>
+                        <Sparkles className="size-3.5" />
+                        {t("usersGrantSvip")}
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={!!actionLoading || !detail.isSupporter}
+                    onClick={() => void handleUserAction("revoke_supporter")}
+                    className="gap-1.5 border-rose-400/20 text-rose-200"
+                  >
+                    {actionLoading === "revoke_supporter" ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      t("usersRevokeSupporter")
                     )}
                   </Button>
                 </div>

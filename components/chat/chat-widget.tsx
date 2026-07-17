@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Globe,
@@ -30,7 +30,10 @@ import {
 } from "@/hooks/use-chat-messages";
 import type { ChatChannel, ChatMessage } from "@/lib/chat";
 import type { EquippedTitle } from "@/lib/titles";
-import { getSupporterDisplayTierFromProfile, type SupporterDisplayTier } from "@/lib/supporter-tier";
+import {
+  getSupporterDisplayTierFromProfile,
+  type SupporterDisplayTier,
+} from "@/lib/supporter-tier";
 
 type ChatTab = ChatChannel | "contacts";
 
@@ -38,6 +41,8 @@ function ChatChannelPanel({
   channel,
   active,
   readOnly,
+  readOnlyHint,
+  readOnlyAction,
   draft,
   onDraftChange,
   onAuthorClick,
@@ -48,6 +53,8 @@ function ChatChannelPanel({
   channel: ChatChannel;
   active: boolean;
   readOnly?: boolean;
+  readOnlyHint?: string;
+  readOnlyAction?: ReactNode;
   draft: string;
   onDraftChange: (value: string) => void;
   onAuthorClick?: (message: ChatMessage) => void;
@@ -77,7 +84,8 @@ function ChatChannelPanel({
         onChange={onDraftChange}
         sending={chat.sending}
         readOnly={readOnly}
-        readOnlyHint={t("creatorReadOnly")}
+        readOnlyHint={readOnlyHint ?? t("creatorReadOnly")}
+        readOnlyAction={readOnlyAction}
         supporterTier={supporterTier}
         onSend={chat.sendMessage}
       />
@@ -90,11 +98,40 @@ function ChatChannelPanel({
   );
 }
 
+function GuestLoginPrompt({
+  message,
+  showButton = true,
+}: {
+  message: string;
+  showButton?: boolean;
+}) {
+  const t = useTranslations("chat");
+
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 py-10 text-center">
+      <div className="flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500/15 to-violet-500/15 text-cyan-300">
+        <MessageCircle className="size-6" />
+      </div>
+      <p className="text-sm text-zinc-300">{message}</p>
+      {showButton ? (
+        <Button
+          nativeButton={false}
+          render={<Link href="/auth" />}
+          className="gap-2 bg-gradient-to-r from-cyan-600 to-violet-600 text-white hover:from-cyan-500 hover:to-violet-500"
+        >
+          {t("goLogin")}
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
 export function ChatWidget() {
   const t = useTranslations("chat");
   const { profile, isCreator, loading: authLoading } = useAuth();
   const authBlocking = authLoading && !profile;
-  const [open, setOpen] = useState(false);
+  const isLoggedIn = Boolean(profile);
+  const [open, setOpen] = useState(true);
   const [channel, setChannel] = useState<ChatTab>("world");
   const [drafts, setDrafts] = useState<Record<ChatChannel, string>>({
     world: "",
@@ -108,13 +145,15 @@ export function ChatWidget() {
   const [scrollToLatestKey, setScrollToLatestKey] = useState(0);
 
   const backgroundAmbientChannels = useMemo((): ChatChannel[] => {
-    if (!open || !profile) return [];
-    if (channel === "contacts") return ["world", "creator"];
+    if (!open) return [];
+    if (channel === "contacts") {
+      return isLoggedIn ? ["world", "creator"] : [];
+    }
     if (channel === "world") return ["creator"];
     return ["world"];
-  }, [channel, open, profile]);
+  }, [channel, open, isLoggedIn]);
 
-  useAmbientChatBackgroundPoll(backgroundAmbientChannels, open && !!profile);
+  useAmbientChatBackgroundPoll(backgroundAmbientChannels, open);
 
   const supporterTier = getSupporterDisplayTierFromProfile(profile);
   const viewerSupporterBadge = profile?.supporter_badge ?? null;
@@ -139,6 +178,7 @@ export function ChatWidget() {
   }
 
   function openDirectMessage(virtualPlayerId: string) {
+    if (!isLoggedIn) return;
     setDmTargetId(virtualPlayerId);
     setChannel("contacts");
   }
@@ -160,150 +200,159 @@ export function ChatWidget() {
     return () => document.removeEventListener("keydown", handleEscape);
   }, [open]);
 
+  const guestPostAction = (
+    <Button
+      nativeButton={false}
+      size="sm"
+      render={<Link href="/auth" />}
+      className="gap-2 bg-gradient-to-r from-cyan-600 to-violet-600 text-white hover:from-cyan-500 hover:to-violet-500"
+    >
+      {t("goLogin")}
+    </Button>
+  );
+
+  const channelReadOnly = !isLoggedIn || (channel === "creator" && !isCreator);
+  const channelReadOnlyHint = !isLoggedIn
+    ? t("loginToPost")
+    : t("creatorReadOnly");
+  const channelReadOnlyAction = !isLoggedIn ? guestPostAction : undefined;
+
   return (
     <>
-    <div className="pointer-events-none fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3">
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: 16, scale: 0.96 }}
-            animate={{
-              opacity: 1,
-              y: 0,
-              scale: 1,
-              height: 520,
-            }}
-            exit={{ opacity: 0, y: 16, scale: 0.96 }}
-            transition={{ type: "spring", stiffness: 380, damping: 30 }}
-            className="pointer-events-auto flex w-[min(100vw-2rem,400px)] flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/95 shadow-2xl shadow-black/50 backdrop-blur-xl"
+      <div className="pointer-events-none fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3">
+        <AnimatePresence>
+          {open && (
+            <motion.div
+              initial={{ opacity: 0, y: 16, scale: 0.96 }}
+              animate={{
+                opacity: 1,
+                y: 0,
+                scale: 1,
+                height: 520,
+              }}
+              exit={{ opacity: 0, y: 16, scale: 0.96 }}
+              transition={{ type: "spring", stiffness: 380, damping: 30 }}
+              className="pointer-events-auto flex w-[min(100vw-2rem,400px)] flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/95 shadow-2xl shadow-black/50 backdrop-blur-xl"
+            >
+              <div className="relative flex items-center justify-end border-b border-white/8 bg-gradient-to-r from-cyan-500/10 via-transparent to-violet-500/10 px-4 py-3">
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-16">
+                  <p className="text-center text-sm font-semibold text-zinc-100">
+                    {t("title")}
+                  </p>
+                  <p className="text-center text-[10px] text-zinc-500">
+                    {t("subtitle")}
+                  </p>
+                </div>
+                <div className="relative z-10 flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setOpen(false)}
+                    aria-label={t("close")}
+                    className="inline-flex size-8 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-white/8 hover:text-white"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
+              </div>
+
+              {authBlocking ? (
+                <div className="flex flex-1 items-center justify-center px-6 py-12 text-sm text-zinc-500">
+                  {t("loading")}
+                </div>
+              ) : (
+                <>
+                  <Tabs
+                    value={channel}
+                    onValueChange={(value) => setChannel(value as ChatTab)}
+                    className="flex min-h-0 flex-1 flex-col gap-0"
+                  >
+                    <TabsList className="mx-3 mt-3 h-9 w-auto self-stretch rounded-xl border border-white/8 bg-zinc-900/60 p-1">
+                      <TabsTrigger
+                        value="world"
+                        className="flex-1 gap-1 rounded-lg text-[11px] data-active:bg-cyan-500/15 data-active:text-cyan-200"
+                      >
+                        <Globe className="size-3.5" />
+                        {t("channelWorld")}
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="creator"
+                        className="flex-1 gap-1 rounded-lg text-[11px] data-active:bg-violet-500/15 data-active:text-violet-200"
+                      >
+                        <Sparkles className="size-3.5" />
+                        {t("channelCreator")}
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="contacts"
+                        className="flex-1 gap-1 rounded-lg text-[11px] data-active:bg-emerald-500/15 data-active:text-emerald-200"
+                      >
+                        <Users className="size-3.5" />
+                        {t("channelContacts")}
+                      </TabsTrigger>
+                    </TabsList>
+
+                    {channel === "contacts" ? (
+                      isLoggedIn ? (
+                        <ChatContactsPanel
+                          active
+                          isCreator={isCreator}
+                          supporterTier={supporterTier}
+                          initialPlayerId={dmTargetId}
+                          onInitialPlayerConsumed={() => setDmTargetId(null)}
+                          onPlayerProfileClick={handleContactProfileClick}
+                        />
+                      ) : (
+                        <GuestLoginPrompt message={t("loginRequiredContacts")} />
+                      )
+                    ) : (
+                      <ChatChannelPanel
+                        key={channel}
+                        channel={channel}
+                        active={channel === "world" || channel === "creator"}
+                        readOnly={channelReadOnly}
+                        readOnlyHint={channelReadOnlyHint}
+                        readOnlyAction={channelReadOnlyAction}
+                        draft={drafts[channel]}
+                        onDraftChange={(value) => updateDraft(channel, value)}
+                        onAuthorClick={handleAuthorClick}
+                        scrollToLatestKey={scrollToLatestKey}
+                        supporterTier={supporterTier}
+                        viewerSupporterBadge={viewerSupporterBadge}
+                      />
+                    )}
+                  </Tabs>
+
+                  <div className="border-t border-white/5 px-3 py-2 text-center text-[10px] text-zinc-600">
+                    {channel === "contacts"
+                      ? t("contactsRetentionHint")
+                      : t("retentionHint")}
+                  </div>
+                </>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <div className="pointer-events-auto flex items-center gap-3">
+          <ScrollToTopButton />
+          <motion.button
+            type="button"
+            onClick={() => setOpen((prev) => !prev)}
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.96 }}
+            aria-label={open ? t("close") : t("open")}
+            className="inline-flex size-14 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-violet-600 text-white shadow-xl shadow-cyan-500/25 ring-2 ring-white/10"
           >
-            <div className="relative flex items-center justify-end border-b border-white/8 bg-gradient-to-r from-cyan-500/10 via-transparent to-violet-500/10 px-4 py-3">
-              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-16">
-                <p className="text-center text-sm font-semibold text-zinc-100">
-                  {t("title")}
-                </p>
-                <p className="text-center text-[10px] text-zinc-500">
-                  {t("subtitle")}
-                </p>
-              </div>
-              <div className="relative z-10 flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => setOpen(false)}
-                  aria-label={t("close")}
-                  className="inline-flex size-8 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-white/8 hover:text-white"
-                >
-                  <X className="size-4" />
-                </button>
-              </div>
-            </div>
-
-            {authBlocking ? (
-              <div className="flex flex-1 items-center justify-center px-6 py-12 text-sm text-zinc-500">
-                {t("loading")}
-              </div>
-            ) : !profile ? (
-              <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 py-10 text-center">
-                <div className="flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500/15 to-violet-500/15 text-cyan-300">
-                  <MessageCircle className="size-6" />
-                </div>
-                <p className="text-sm text-zinc-300">{t("loginRequired")}</p>
-                <Button
-                  nativeButton={false}
-                  render={<Link href="/auth" />}
-                  className="gap-2 bg-gradient-to-r from-cyan-600 to-violet-600 text-white hover:from-cyan-500 hover:to-violet-500"
-                >
-                  {t("goLogin")}
-                </Button>
-              </div>
-            ) : (
-              <>
-                <Tabs
-                  value={channel}
-                  onValueChange={(value) => setChannel(value as ChatTab)}
-                  className="flex min-h-0 flex-1 flex-col gap-0"
-                >
-                  <TabsList className="mx-3 mt-3 h-9 w-auto self-stretch rounded-xl border border-white/8 bg-zinc-900/60 p-1">
-                    <TabsTrigger
-                      value="world"
-                      className="flex-1 gap-1 rounded-lg text-[11px] data-active:bg-cyan-500/15 data-active:text-cyan-200"
-                    >
-                      <Globe className="size-3.5" />
-                      {t("channelWorld")}
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="creator"
-                      className="flex-1 gap-1 rounded-lg text-[11px] data-active:bg-violet-500/15 data-active:text-violet-200"
-                    >
-                      <Sparkles className="size-3.5" />
-                      {t("channelCreator")}
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="contacts"
-                      className="flex-1 gap-1 rounded-lg text-[11px] data-active:bg-emerald-500/15 data-active:text-emerald-200"
-                    >
-                      <Users className="size-3.5" />
-                      {t("channelContacts")}
-                    </TabsTrigger>
-                  </TabsList>
-
-                  {channel === "contacts" ? (
-                    <ChatContactsPanel
-                      active
-                      isCreator={isCreator}
-                      supporterTier={supporterTier}
-                      initialPlayerId={dmTargetId}
-                      onInitialPlayerConsumed={() => setDmTargetId(null)}
-                      onPlayerProfileClick={handleContactProfileClick}
-                    />
-                  ) : (
-                    <ChatChannelPanel
-                      key={channel}
-                      channel={channel}
-                      active={channel === "world" || channel === "creator"}
-                      readOnly={channel === "creator" && !isCreator}
-                      draft={drafts[channel]}
-                      onDraftChange={(value) => updateDraft(channel, value)}
-                      onAuthorClick={handleAuthorClick}
-                      scrollToLatestKey={scrollToLatestKey}
-                      supporterTier={supporterTier}
-                      viewerSupporterBadge={viewerSupporterBadge}
-                    />
-                  )}
-                </Tabs>
-
-                <div className="border-t border-white/5 px-3 py-2 text-center text-[10px] text-zinc-600">
-                  {channel === "contacts"
-                    ? t("contactsRetentionHint")
-                    : t("retentionHint")}
-                </div>
-              </>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <div className="pointer-events-auto flex items-center gap-3">
-        <ScrollToTopButton />
-        <motion.button
-          type="button"
-          onClick={() => setOpen((prev) => !prev)}
-          whileHover={{ scale: 1.04 }}
-          whileTap={{ scale: 0.96 }}
-          aria-label={open ? t("close") : t("open")}
-          className="inline-flex size-14 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-violet-600 text-white shadow-xl shadow-cyan-500/25 ring-2 ring-white/10"
-        >
-          <MessageCircle className="size-6" />
-        </motion.button>
+            <MessageCircle className="size-6" />
+          </motion.button>
+        </div>
       </div>
-    </div>
 
-    <ChatPlayerCard
-      player={playerPreview}
-      open={playerCardOpen}
-      onOpenChange={setPlayerCardOpen}
-      onDirectMessage={openDirectMessage}
-    />
+      <ChatPlayerCard
+        player={playerPreview}
+        open={playerCardOpen}
+        onOpenChange={setPlayerCardOpen}
+        onDirectMessage={isLoggedIn ? openDirectMessage : undefined}
+      />
     </>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, type KeyboardEvent } from "react";
+import { useRef, type KeyboardEvent, type ReactNode } from "react";
 import { Loader2, Send } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { ChatEmojiPicker } from "@/components/chat/chat-emoji-picker";
@@ -20,6 +20,7 @@ type ChatInputProps = {
   sending?: boolean;
   readOnly?: boolean;
   readOnlyHint?: string;
+  readOnlyAction?: ReactNode;
   maxLength?: number;
   supporterTier?: SupporterDisplayTier;
   onSend: (content: string) => Promise<boolean>;
@@ -35,6 +36,7 @@ export function ChatInput({
   sending,
   readOnly,
   readOnlyHint,
+  readOnlyAction,
   maxLength = CHAT_LIMITS.content,
   supporterTier = "none",
   onSend,
@@ -75,8 +77,9 @@ export function ChatInput({
 
   if (readOnly) {
     return (
-      <div className="border-t border-white/8 bg-zinc-950/60 px-4 py-3 text-center text-xs text-zinc-500">
-        {readOnlyHint ?? t("creatorReadOnly")}
+      <div className="border-t border-white/8 bg-zinc-950/60 px-4 py-3 text-center">
+        <p className="text-xs text-zinc-500">{readOnlyHint ?? t("creatorReadOnly")}</p>
+        {readOnlyAction ? <div className="mt-2">{readOnlyAction}</div> : null}
       </div>
     );
   }

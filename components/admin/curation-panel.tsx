@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   AlertOctagon,
+  Globe,
   Loader2,
   Sparkles,
   Star,
@@ -281,6 +282,26 @@ export function AdminCurationPanel() {
                           <AlertOctagon className="size-3.5" />
                         )}
                         {t("curationEmergencyDraft")}
+                      </Button>
+                    )}
+                    {game.publishStatus === "draft" && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={isSaving}
+                        onClick={() => {
+                          if (!window.confirm(t("curationPublishConfirm"))) return;
+                          void patchGame(game.id, { publishStatus: "public" });
+                        }}
+                        className="gap-1.5 border-emerald-400/20 text-emerald-200"
+                      >
+                        {isSaving ? (
+                          <Loader2 className="size-3.5 animate-spin" />
+                        ) : (
+                          <Globe className="size-3.5" />
+                        )}
+                        {t("curationRepublish")}
                       </Button>
                     )}
                   </div>

@@ -10,6 +10,7 @@ export type AdminUserRecord = {
   playerNumber: number | null;
   isAdmin: boolean;
   isSupporter: boolean;
+  supporterBadge: string | null;
   accountStatus: AccountStatus;
   suspendedUntil: string | null;
   banReason: string | null;
@@ -62,7 +63,7 @@ export async function listAdminUsers(params: {
   let profileQuery = supabase
     .from("profiles")
     .select(
-      "id, display_name, username, role, player_number, is_admin, is_supporter, account_status, suspended_until, ban_reason, chat_muted_until, forum_posting_disabled, creator_balance_usd, created_at"
+      "id, display_name, username, role, player_number, is_admin, is_supporter, supporter_badge, account_status, suspended_until, ban_reason, chat_muted_until, forum_posting_disabled, creator_balance_usd, created_at"
     )
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -123,6 +124,7 @@ export async function listAdminUsers(params: {
       playerNumber: (profile.player_number as number | null) ?? null,
       isAdmin: profile.is_admin === true,
       isSupporter: profile.is_supporter === true,
+      supporterBadge: (profile.supporter_badge as string | null) ?? null,
       accountStatus: (profile.account_status as AccountStatus) ?? "active",
       suspendedUntil: (profile.suspended_until as string | null) ?? null,
       banReason: (profile.ban_reason as string | null) ?? null,
@@ -144,7 +146,7 @@ export async function getAdminUserDetail(userId: string): Promise<AdminUserDetai
   const { data: profile, error } = await supabase
     .from("profiles")
     .select(
-      "id, display_name, username, role, player_number, is_admin, is_supporter, account_status, suspended_until, ban_reason, chat_muted_until, forum_posting_disabled, creator_balance_usd, created_at, stripe_connect_account_id, payout_status"
+      "id, display_name, username, role, player_number, is_admin, is_supporter, supporter_badge, account_status, suspended_until, ban_reason, chat_muted_until, forum_posting_disabled, creator_balance_usd, created_at, stripe_connect_account_id, payout_status"
     )
     .eq("id", userId)
     .maybeSingle();
@@ -214,6 +216,7 @@ export async function getAdminUserDetail(userId: string): Promise<AdminUserDetai
     playerNumber: (profile.player_number as number | null) ?? null,
     isAdmin: profile.is_admin === true,
     isSupporter: profile.is_supporter === true,
+    supporterBadge: (profile.supporter_badge as string | null) ?? null,
     accountStatus: (profile.account_status as AccountStatus) ?? "active",
     suspendedUntil: (profile.suspended_until as string | null) ?? null,
     banReason: (profile.ban_reason as string | null) ?? null,
@@ -265,6 +268,7 @@ export async function updateAdminUserAccount(params: {
   suspendedUntil?: string | null;
   chatMutedUntil?: string | null;
   role?: "player" | "creator";
+  supporterBadge?: "supporter_v1" | "supporter_v2" | null;
 }) {
   const supabase = createServerSupabase();
   const patch: Record<string, unknown> = {};
@@ -306,11 +310,15 @@ export async function updateAdminUserAccount(params: {
     case "grant_supporter":
       patch.is_supporter = true;
       patch.supporter_since = new Date().toISOString();
-      patch.supporter_badge = "supporter_v1";
+      patch.supporter_badge =
+        params.supporterBadge === "supporter_v2"
+          ? "supporter_v2"
+          : "supporter_v1";
       break;
     case "revoke_supporter":
       patch.is_supporter = false;
       patch.supporter_badge = null;
+      patch.supporter_since = null;
       break;
   }
 

@@ -88,3 +88,63 @@ export async function deactivatePlatformAnnouncement(id: string) {
 
   if (error) throw new Error(error.message);
 }
+
+export async function reactivatePlatformAnnouncement(id: string) {
+  const supabase = createServerSupabase();
+  const { error } = await supabase
+    .from("platform_announcements")
+    .update({ active: true })
+    .eq("id", id);
+
+  if (error) throw new Error(error.message);
+}
+
+export async function updatePlatformAnnouncement(
+  id: string,
+  input: {
+    message?: string;
+    href?: string | null;
+    severity?: "info" | "warning" | "success";
+    active?: boolean;
+    startsAt?: string | null;
+    endsAt?: string | null;
+  }
+) {
+  const supabase = createServerSupabase();
+  const patch: Record<string, unknown> = {};
+
+  if (input.message !== undefined) {
+    const message = input.message.trim();
+    if (!message) throw new Error("請輸入公告內容");
+    patch.message = message;
+  }
+  if (input.href !== undefined) {
+    patch.href = input.href?.trim() || null;
+  }
+  if (input.severity !== undefined) {
+    patch.severity = input.severity;
+  }
+  if (input.active !== undefined) {
+    patch.active = input.active;
+  }
+  if (input.startsAt !== undefined) {
+    patch.starts_at = input.startsAt?.trim() || null;
+  }
+  if (input.endsAt !== undefined) {
+    patch.ends_at = input.endsAt?.trim() || null;
+  }
+
+  if (Object.keys(patch).length === 0) {
+    throw new Error("沒有可更新的欄位");
+  }
+
+  const { data, error } = await supabase
+    .from("platform_announcements")
+    .update(patch)
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data;
+}

@@ -12,10 +12,6 @@ export async function GET(request: Request) {
       data: { user },
     } = await authClient.auth.getUser();
 
-    if (!user) {
-      return NextResponse.json({ error: "請先登入" }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
     const channel = searchParams.get("channel") ?? "world";
     const before = searchParams.get("before") ?? undefined;
@@ -24,7 +20,8 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "無效的聊天頻道" }, { status: 400 });
     }
 
-    const messages = await listChatMessages(channel, user.id, { before });
+    // 公開頻道允許未登入瀏覽；發言仍需登入（見 POST）
+    const messages = await listChatMessages(channel, user?.id, { before });
 
     const skipMaintain = searchParams.get("maintain") === "0";
     if (!skipMaintain) {

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Loader2, Megaphone, Trash2 } from "lucide-react";
+import { Loader2, Megaphone, Pencil, RotateCcw, Trash2, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,12 +42,21 @@ const severityClass = {
   success: "border-emerald-400/30 bg-emerald-500/10 text-emerald-200",
 } as const;
 
+function toDatetimeLocalValue(value: string | null) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 export function AdminAnnouncementsPanel() {
   const t = useTranslations("admin");
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [announcements, setAnnouncements] = useState<AnnouncementRow[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [href, setHref] = useState("");
   const [severity, setSeverity] = useState<"info" | "warning" | "success">(
@@ -55,8 +64,8 @@ export function AdminAnnouncementsPanel() {
   );
   const [startsAt, setStartsAt] = useState("");
   const [endsAt, setEndsAt] = useState("");
-  const [creating, setCreating] = useState(false);
-  const [deactivatingId, setDeactivatingId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   const loadAnnouncements = useCallback(async () => {
     setLoading(true);
@@ -84,49 +93,86 @@ export function AdminAnnouncementsPanel() {
     void loadAnnouncements();
   }, [loadAnnouncements]);
 
-  async function handleCreate(event: React.FormEvent) {
+  function resetForm() {
+    setEditingId(null);
+    setMessage("");
+    setHref("");
+    setSeverity("info");
+    setStartsAt("");
+    setEndsAt("");
+  }
+
+  function startEdit(item: AnnouncementRow) {
+    setEditingId(item.id);
+    setMessage(item.message);
+    setHref(item.href ?? "");
+    setSeverity(item.severity);
+    setStartsAt(toDatetimeLocalValue(item.startsAt));
+    setEndsAt(toDatetimeLocalValue(item.endsAt));
+  }
+
+  async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (!message.trim()) return;
 
-    setCreating(true);
+    setSaving(true);
     setError(null);
     try {
+      const payload = {
+        message: message.trim(),
+        href: href.trim() || undefined,
+        severity,
+        startsAt: startsAt.trim()
+          ? new Date(startsAt).toISOString()
+          : undefined,
+        endsAt: endsAt.trim() ? new Date(endsAt).toISOString() : undefined,
+      };
+
       const response = await fetch("/api/admin/announcements", {
-        method: "POST",
+        method: editingId ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: message.trim(),
-          href: href.trim() || undefined,
-          severity,
-          startsAt: startsAt.trim()
-            ? new Date(startsAt).toISOString()
-            : undefined,
-          endsAt: endsAt.trim() ? new Date(endsAt).toISOString() : undefined,
-        }),
+        body: JSON.stringify(
+          editingId
+            ? {
+                id: editingId,
+                ...payload,
+                href: href.trim() || null,
+                startsAt: startsAt.trim()
+                  ? new Date(startsAt).toISOString()
+                  : null,
+                endsAt: endsAt.trim() ? new Date(endsAt).toISOString() : null,
+              }
+            : payload
+        ),
       });
       const data = (await response.json()) as { error?: string };
-      if (!response.ok) throw new Error(data.error ?? t("announcementsCreateFailed"));
-      setMessage("");
-      setHref("");
-      setSeverity("info");
-      setStartsAt("");
-      setEndsAt("");
+      if (!response.ok) {
+        throw new Error(
+          data.error ??
+            (editingId
+              ? t("announcementsUpdateFailed")
+              : t("announcementsCreateFailed"))
+        );
+      }
+      resetForm();
       await loadAnnouncements();
-    } catch (createError) {
+    } catch (saveError) {
       setError(
-        createError instanceof Error
-          ? createError.message
-          : t("announcementsCreateFailed")
+        saveError instanceof Error
+          ? saveError.message
+          : editingId
+            ? t("announcementsUpdateFailed")
+            : t("announcementsCreateFailed")
       );
     } finally {
-      setCreating(false);
+      setSaving(false);
     }
   }
 
   async function handleDeactivate(id: string) {
     if (!window.confirm(t("announcementsDeactivateConfirm"))) return;
 
-    setDeactivatingId(id);
+    setBusyId(id);
     setError(null);
     try {
       const response = await fetch(
@@ -137,6 +183,7 @@ export function AdminAnnouncementsPanel() {
       if (!response.ok) {
         throw new Error(data.error ?? t("announcementsDeactivateFailed"));
       }
+      if (editingId === id) resetForm();
       await loadAnnouncements();
     } catch (deactivateError) {
       setError(
@@ -145,7 +192,32 @@ export function AdminAnnouncementsPanel() {
           : t("announcementsDeactivateFailed")
       );
     } finally {
-      setDeactivatingId(null);
+      setBusyId(null);
+    }
+  }
+
+  async function handleReactivate(id: string) {
+    setBusyId(id);
+    setError(null);
+    try {
+      const response = await fetch("/api/admin/announcements", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, action: "reactivate" }),
+      });
+      const data = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        throw new Error(data.error ?? t("announcementsReactivateFailed"));
+      }
+      await loadAnnouncements();
+    } catch (reactivateError) {
+      setError(
+        reactivateError instanceof Error
+          ? reactivateError.message
+          : t("announcementsReactivateFailed")
+      );
+    } finally {
+      setBusyId(null);
     }
   }
 
@@ -163,11 +235,13 @@ export function AdminAnnouncementsPanel() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-white">
             <Megaphone className="size-5 text-cyan-400" />
-            {t("announcementsCreateTitle")}
+            {editingId
+              ? t("announcementsEditTitle")
+              : t("announcementsCreateTitle")}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleCreate} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <Label htmlFor="announcement-message">{t("announcementsMessage")}</Label>
               <Input
@@ -234,14 +308,27 @@ export function AdminAnnouncementsPanel() {
                 />
               </div>
             </div>
-            <Button
-              type="submit"
-              disabled={creating || !message.trim()}
-              className="gap-2 bg-cyan-600 hover:bg-cyan-500"
-            >
-              {creating ? <Loader2 className="size-4 animate-spin" /> : null}
-              {t("announcementsCreate")}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="submit"
+                disabled={saving || !message.trim()}
+                className="gap-2 bg-cyan-600 hover:bg-cyan-500"
+              >
+                {saving ? <Loader2 className="size-4 animate-spin" /> : null}
+                {editingId ? t("announcementsSave") : t("announcementsCreate")}
+              </Button>
+              {editingId && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={resetForm}
+                  className="gap-1.5 border-white/10"
+                >
+                  <X className="size-3.5" />
+                  {t("announcementsCancelEdit")}
+                </Button>
+              )}
+            </div>
           </form>
         </CardContent>
       </Card>
@@ -296,23 +383,52 @@ export function AdminAnnouncementsPanel() {
                       </Badge>
                     </div>
                   </div>
-                  {item.active && (
+                  <div className="flex flex-wrap gap-2">
                     <Button
                       type="button"
                       size="sm"
                       variant="outline"
-                      disabled={deactivatingId === item.id}
-                      onClick={() => void handleDeactivate(item.id)}
-                      className="gap-1 border-white/10 text-rose-200 hover:text-rose-100"
+                      disabled={busyId === item.id}
+                      onClick={() => startEdit(item)}
+                      className="gap-1 border-white/10"
                     >
-                      {deactivatingId === item.id ? (
-                        <Loader2 className="size-3.5 animate-spin" />
-                      ) : (
-                        <Trash2 className="size-3.5" />
-                      )}
-                      {t("announcementsDeactivate")}
+                      <Pencil className="size-3.5" />
+                      {t("announcementsEdit")}
                     </Button>
-                  )}
+                    {item.active ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={busyId === item.id}
+                        onClick={() => void handleDeactivate(item.id)}
+                        className="gap-1 border-white/10 text-rose-200 hover:text-rose-100"
+                      >
+                        {busyId === item.id ? (
+                          <Loader2 className="size-3.5 animate-spin" />
+                        ) : (
+                          <Trash2 className="size-3.5" />
+                        )}
+                        {t("announcementsDeactivate")}
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={busyId === item.id}
+                        onClick={() => void handleReactivate(item.id)}
+                        className="gap-1 border-emerald-400/20 text-emerald-200"
+                      >
+                        {busyId === item.id ? (
+                          <Loader2 className="size-3.5 animate-spin" />
+                        ) : (
+                          <RotateCcw className="size-3.5" />
+                        )}
+                        {t("announcementsReactivate")}
+                      </Button>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>

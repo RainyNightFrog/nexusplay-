@@ -38,6 +38,7 @@ export async function PATCH(
       suspendedUntil?: string;
       chatMutedUntil?: string;
       role?: "player" | "creator";
+      supporterBadge?: "supporter_v1" | "supporter_v2";
     };
 
     if (!body.action) {
@@ -53,13 +54,16 @@ export async function PATCH(
       suspendedUntil: body.suspendedUntil,
       chatMutedUntil: body.chatMutedUntil,
       role: body.role,
+      supporterBadge: body.supporterBadge,
     });
 
     await writeAdminLog(
       auth.supabase!,
       auth.user!.id,
       body.action,
-      `user=${id}${body.reason ? ` reason=${body.reason}` : ""}`
+      `user=${id}${body.reason ? ` reason=${body.reason}` : ""}${
+        body.role ? ` role=${body.role}` : ""
+      }${body.supporterBadge ? ` badge=${body.supporterBadge}` : ""}`
     );
 
     return NextResponse.json({ user });

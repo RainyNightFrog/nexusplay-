@@ -5,6 +5,8 @@ import {
   createPlatformAnnouncement,
   deactivatePlatformAnnouncement,
   listAllPlatformAnnouncements,
+  reactivatePlatformAnnouncement,
+  updatePlatformAnnouncement,
 } from "@/lib/platform-announcements";
 
 export async function GET() {
@@ -70,6 +72,61 @@ export async function POST(request: Request) {
   }
 }
 
+export async function PATCH(request: Request) {
+  try {
+    const auth = await requireAdmin();
+    if (auth.error) return auth.error;
+
+    const body = (await request.json()) as {
+      id?: string;
+      message?: string;
+      href?: string | null;
+      severity?: "info" | "warning" | "success";
+      startsAt?: string | null;
+      endsAt?: string | null;
+      active?: boolean;
+      action?: "reactivate";
+    };
+
+    const id = body.id?.trim();
+    if (!id) {
+      return NextResponse.json({ error: "缺少 id" }, { status: 400 });
+    }
+
+    if (body.action === "reactivate") {
+      await reactivatePlatformAnnouncement(id);
+      await writeAdminLog(
+        auth.supabase!,
+        auth.user!.id,
+        "reactivate_announcement",
+        id
+      );
+      return NextResponse.json({ ok: true });
+    }
+
+    const announcement = await updatePlatformAnnouncement(id, {
+      message: body.message,
+      href: body.href,
+      severity: body.severity,
+      startsAt: body.startsAt,
+      endsAt: body.endsAt,
+      active: body.active,
+    });
+
+    await writeAdminLog(
+      auth.supabase!,
+      auth.user!.id,
+      "update_announcement",
+      id
+    );
+
+    return NextResponse.json({ announcement });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "更新公告失敗";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
 export async function DELETE(request: Request) {
   try {
     const auth = await requireAdmin();
@@ -81,7 +138,12 @@ export async function DELETE(request: Request) {
     }
 
     await deactivatePlatformAnnouncement(id);
-    await writeAdminLog(auth.supabase!, auth.user!.id, "deactivate_announcement", id);
+    await writeAdminLog(
+      auth.supabase!,
+      auth.user!.id,
+      "deactivate_announcement",
+      id
+    );
 
     return NextResponse.json({ ok: true });
   } catch (error) {

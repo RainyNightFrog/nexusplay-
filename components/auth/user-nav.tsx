@@ -12,6 +12,10 @@ import { getInitials } from "@/lib/auth";
 import { getCreatorDashboardHref } from "@/lib/creator-nav";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { useAuth } from "@/hooks/use-auth";
+import {
+  getSupporterDisplayTier,
+  supporterUsernameClassByTier,
+} from "@/lib/supporter-tier";
 import { cn } from "@/lib/utils";
 
 export function UserNav() {
@@ -60,6 +64,16 @@ export function UserNav() {
   }
 
   const initials = getInitials(profile.display_name);
+  const supporterTier = getSupporterDisplayTier(
+    profile.is_supporter === true,
+    profile.supporter_badge,
+    profile.equipped_title
+  );
+  const roleLabel = isAdmin
+    ? t("roleAdmin")
+    : isCreator
+      ? t("roleCreator")
+      : t("rolePlayer");
 
   return (
     <div className="flex items-center gap-2">
@@ -104,12 +118,19 @@ export function UserNav() {
               usernameClassName="truncate text-sm font-medium text-white"
               titleClassName="text-[10px]"
             />
-            <p className="mt-0.5 text-xs text-zinc-500">
-              {isAdmin
-                ? t("roleAdmin")
-                : isCreator
-                  ? t("roleCreator")
-                  : t("rolePlayer")}
+            <p
+              className={cn(
+                "mt-0.5 text-xs",
+                supporterTier === "none" && "text-zinc-500",
+                supporterTier === "basic" && supporterUsernameClassByTier.basic,
+                supporterTier === "premium" &&
+                  cn(
+                    supporterUsernameClassByTier.premium,
+                    "!bg-clip-text !text-transparent"
+                  )
+              )}
+            >
+              {roleLabel}
             </p>
           </div>
 

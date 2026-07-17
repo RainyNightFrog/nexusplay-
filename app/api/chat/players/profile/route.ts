@@ -14,10 +14,6 @@ export async function GET(request: Request) {
       data: { user },
     } = await authClient.auth.getUser();
 
-    if (!user) {
-      return NextResponse.json({ error: "請先登入" }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get("userId")?.trim() || null;
     const virtualPlayerId = searchParams.get("virtualPlayerId")?.trim() || null;
@@ -28,14 +24,14 @@ export async function GET(request: Request) {
 
     const supabase = createServerSupabase();
 
-    if (userId && userId === user.id) {
+    if (user && userId && userId === user.id) {
       await syncUserCountryFromRequest(supabase, user.id, request);
     }
 
     const profile = await getChatPlayerPublicProfile(supabase, {
       userId,
       virtualPlayerId,
-      viewerUserId: user.id,
+      viewerUserId: user?.id,
       viewerIsAdmin: isAdminUser(user),
     });
 

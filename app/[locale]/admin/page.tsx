@@ -27,6 +27,7 @@ import {
   Star,
   Download,
   XCircle,
+  KeyRound,
 } from "lucide-react";
 import { AdminAnalyticsPanel } from "@/components/admin/analytics-panel";
 import { AdminFinancePanel } from "@/components/admin/finance-panel";
@@ -38,6 +39,7 @@ import { AdminForumModerationPanel } from "@/components/admin/forum-moderation-p
 import { AdminChatModerationPanel } from "@/components/admin/chat-moderation-panel";
 import { AdminSupportInboxPanel } from "@/components/admin/support-inbox-panel";
 import { AdminOrdersPanel } from "@/components/admin/orders-panel";
+import { AdminEntitlementsPanel } from "@/components/admin/entitlements-panel";
 import { AdminStripePanel } from "@/components/admin/stripe-panel";
 import { AdminAdminsPanel } from "@/components/admin/admins-panel";
 import { AdminCronPanel } from "@/components/admin/cron-panel";
@@ -470,6 +472,10 @@ export default function AdminPage() {
           <TabsTrigger value="orders" className="gap-1.5 px-3 shrink-0">
             <ShoppingCart className="size-4" />
             {t("tabOrders")}
+          </TabsTrigger>
+          <TabsTrigger value="entitlements" className="gap-1.5 px-3 shrink-0">
+            <KeyRound className="size-4" />
+            {t("tabEntitlements")}
           </TabsTrigger>
           <TabsTrigger value="feedbacks" className="gap-1.5 px-3 shrink-0">
             <MessageSquare className="size-4" />
@@ -971,6 +977,10 @@ export default function AdminPage() {
 
         <TabsContent value="orders">
           <AdminOrdersPanel />
+        </TabsContent>
+
+        <TabsContent value="entitlements" className="flex-none pt-2 text-left">
+          <AdminEntitlementsPanel />
         </TabsContent>
 
         <TabsContent value="analytics">
