@@ -306,6 +306,7 @@
   html {
     @apply min-h-screen font-sans;
     background-color: #030712;
+    overflow-x: clip;
   }
   html[data-reduce-motion="true"] *,
   html[data-reduce-motion="true"] *::before,
@@ -325,6 +326,18 @@
 
   html[data-reduce-motion="true"] .nexus-cursor-stars-layer {
     display: none !important;
+  }
+
+  html[data-game-modal-open] .chat-widget-root {
+    display: none !important;
+  }
+
+  @media (hover: none), (pointer: coarse) {
+    button,
+    a,
+    [role="button"] {
+      touch-action: manipulation;
+    }
   }
 }
 

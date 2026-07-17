@@ -34,7 +34,7 @@ export function SiteBrand({ className, showLabel = true }: SiteBrandProps) {
           alt="RainyNightFrog"
           width={72}
           height={72}
-          className={cn("size-14 sm:size-16", brandImageClass)}
+          className={cn("size-11 sm:size-14 md:size-16", brandImageClass)}
           priority
         />
       </Link>
@@ -58,7 +58,7 @@ export function SiteBrand({ className, showLabel = true }: SiteBrandProps) {
         width={420}
         height={178}
         className={cn(
-          "h-14 w-auto sm:h-16 md:h-[70px]",
+          "h-10 w-auto sm:h-14 md:h-16 lg:h-[70px]",
           brandImageClass
         )}
         priority

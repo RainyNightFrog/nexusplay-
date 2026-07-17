@@ -599,12 +599,22 @@ function GamePageContent() {
             <div
               className={cn(
                 showFullscreen && iframeSrc
-                  ? "fixed inset-3 z-[61] flex flex-col overflow-hidden overscroll-contain sm:inset-4 md:inset-6"
+                  ? "fixed inset-0 z-[61] flex flex-col overflow-hidden overscroll-contain sm:inset-3 md:inset-4 lg:inset-6"
                   : "overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/60 shadow-2xl shadow-black/50 ring-1 ring-white/5",
                 showFullscreen &&
                   iframeSrc &&
-                  "rounded-2xl border border-white/10 bg-zinc-950 shadow-2xl shadow-black/60"
+                  "border-0 bg-zinc-950 shadow-2xl shadow-black/60 sm:rounded-2xl sm:border sm:border-white/10"
               )}
+              style={
+                showFullscreen && iframeSrc
+                  ? {
+                      paddingTop: "env(safe-area-inset-top, 0px)",
+                      paddingRight: "env(safe-area-inset-right, 0px)",
+                      paddingBottom: "env(safe-area-inset-bottom, 0px)",
+                      paddingLeft: "env(safe-area-inset-left, 0px)",
+                    }
+                  : undefined
+              }
               onClick={(event) => {
                 if (showFullscreen) event.stopPropagation();
               }}
@@ -613,23 +623,27 @@ function GamePageContent() {
               }}
             >
               {showFullscreen && iframeSrc && (
-                <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
+                <div className="flex shrink-0 items-center justify-between gap-2 border-b border-white/10 px-3 py-2 sm:gap-3 sm:px-4 sm:py-3">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-white">
                       {game.title}
                     </p>
-                    <p className="text-xs text-zinc-500">{tc("fullscreenHint")}</p>
+                    <p className="hidden text-xs text-zinc-500 sm:block">
+                      {tc("fullscreenHint")}
+                    </p>
                   </div>
-                  <div className="flex shrink-0 items-center gap-2">
+                  <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
                     {showGameMenuButton && (
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={handleBackToGameMenu}
-                        className="gap-1.5 border-white/10 bg-white/5 text-zinc-300 hover:border-emerald-400/30 hover:text-white"
+                        className="gap-1.5 border-white/10 bg-white/5 px-2 text-zinc-300 hover:border-emerald-400/30 hover:text-white sm:px-3"
                       >
                         <Gamepad2 className="size-3.5" />
-                        {tc("backToGameMenu")}
+                        <span className="hidden sm:inline">
+                          {tc("backToGameMenu")}
+                        </span>
                       </Button>
                     )}
                     <Button
@@ -650,7 +664,7 @@ function GamePageContent() {
                   "relative w-full bg-black",
                   showFullscreen && iframeSrc
                     ? "min-h-0 flex-1"
-                    : "mx-auto max-h-[80vh]"
+                    : "mx-auto max-h-[min(70dvh,80vh)]"
                 )}
                 style={
                   showFullscreen
@@ -713,14 +727,15 @@ function GamePageContent() {
                         size="icon-sm"
                         onClick={() => setShowFullscreen(true)}
                         className={cn(
-                          "absolute bottom-3 right-3 z-10 size-9 rounded-lg",
-                          "border border-white/15 bg-zinc-950/80 text-zinc-200 backdrop-blur-sm",
+                          "absolute bottom-3 right-3 z-10 size-11 rounded-xl sm:size-9 sm:rounded-lg",
+                          "border border-white/15 bg-zinc-950/85 text-zinc-200 backdrop-blur-sm",
                           "hover:border-cyan-400/40 hover:bg-zinc-900 hover:text-cyan-200",
-                          "shadow-[0_0_20px_rgba(34,211,238,0.15)]"
+                          "shadow-[0_0_20px_rgba(34,211,238,0.15)]",
+                          "touch-manipulation"
                         )}
                         aria-label={tc("expandGame")}
                       >
-                        <Maximize2 className="size-4" />
+                        <Maximize2 className="size-5 sm:size-4" />
                       </Button>
                     )}
                     <GameEmbedBridge
@@ -754,7 +769,7 @@ function GamePageContent() {
               </div>
 
               {!showFullscreen && (
-                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/5 px-4 py-3">
+                <div className="flex flex-col gap-3 border-t border-white/5 px-3 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-4">
                   <p className="text-xs text-zinc-500">
                     {showPurchaseGate
                       ? t("purchaseRequiredDesc")
@@ -801,7 +816,7 @@ function GamePageContent() {
                       size="sm"
                       onClick={() => setShowEmbed(true)}
                       disabled={!iframeSrc}
-                      className="gap-1.5 border-white/10 bg-white/5 text-zinc-300 hover:border-violet-400/30 hover:text-white disabled:opacity-40"
+                      className="hidden gap-1.5 border-white/10 bg-white/5 text-zinc-300 hover:border-violet-400/30 hover:text-white disabled:opacity-40 sm:inline-flex"
                     >
                       <Code2 className="size-3.5" />
                       {tc("embed")}
@@ -811,7 +826,7 @@ function GamePageContent() {
                       size="sm"
                       onClick={() => setShowFullscreen(true)}
                       disabled={!iframeSrc || !showCreatorFullscreen}
-                      className="gap-1.5 border-white/10 bg-white/5 text-zinc-300 hover:border-amber-400/30 hover:text-white disabled:opacity-40"
+                      className="gap-1.5 border-amber-400/30 bg-amber-500/10 text-amber-100 hover:border-amber-400/50 hover:bg-amber-500/15 disabled:opacity-40 touch-manipulation"
                     >
                       <Maximize2 className="size-3.5" />
                       {tc("expandGame")}
@@ -823,7 +838,7 @@ function GamePageContent() {
 
             {showFullscreen && iframeSrc && (
               <div
-                className="mx-auto w-full max-h-[80vh]"
+                className="mx-auto w-full max-h-[min(70dvh,80vh)]"
                 style={{
                   aspectRatio: `${viewportWidth} / ${viewportHeight}`,
                   width: `min(100%, ${playerMaxWidth}px)`,
@@ -1052,7 +1067,7 @@ function GamePageContent() {
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className={cn(
                 "fixed left-1/2 top-1/2 z-[61] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2",
-                "overscroll-contain rounded-2xl border border-white/10 bg-zinc-900 p-5 shadow-2xl shadow-black/60"
+                "max-h-[min(90dvh,90vh)] overflow-y-auto overscroll-contain rounded-2xl border border-white/10 bg-zinc-900 p-5 shadow-2xl shadow-black/60"
               )}
               onWheel={(event) => event.stopPropagation()}
             >
@@ -1092,8 +1107,8 @@ function GamePageContent() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
             className={cn(
-              "fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2",
-              "rounded-full border border-cyan-400/30 bg-zinc-900/95 px-5 py-2.5",
+              "fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] left-1/2 z-50 flex -translate-x-1/2 items-center gap-2",
+              "max-w-[calc(100vw-2rem)] rounded-full border border-cyan-400/30 bg-zinc-900/95 px-5 py-2.5",
               "text-sm text-cyan-100 shadow-xl shadow-cyan-500/10 backdrop-blur-md"
             )}
           >

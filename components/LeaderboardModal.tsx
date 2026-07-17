@@ -538,13 +538,15 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
         aria-label={t("title")}
       >
         <Trophy className="size-4 shrink-0" />
-        <span className="text-xs font-medium sm:text-sm">{t("navLabel")}</span>
+        <span className="hidden text-xs font-medium sm:inline sm:text-sm">
+          {t("navLabel")}
+        </span>
       </DialogTrigger>
 
       <DialogContent
         showCloseButton
         className={cn(
-          "flex max-h-[85vh] w-[min(calc(100vw-1rem),720px)] max-w-[min(calc(100vw-1rem),720px)] flex-col gap-0 overflow-hidden",
+          "flex max-h-[min(85dvh,85vh)] w-[min(calc(100vw-1rem),720px)] max-w-[min(calc(100vw-1rem),720px)] flex-col gap-0 overflow-hidden",
           "sm:max-w-[720px]",
           "border-cyan-400/20 bg-zinc-950/95 p-0 text-base text-zinc-100",
           "shadow-2xl shadow-violet-500/15 backdrop-blur-xl"
@@ -636,7 +638,7 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
 
               <div
                 className={cn(
-                  "flex h-[460px] max-h-[460px] flex-col transition-opacity",
+                  "flex h-[min(460px,55dvh)] max-h-[min(460px,55dvh)] flex-col transition-opacity",
                   refreshing && !loading && "opacity-70"
                 )}
               >

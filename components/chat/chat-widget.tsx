@@ -189,6 +189,22 @@ export function ChatWidget() {
   }, [open, channel]);
 
   useEffect(() => {
+    const root = document.documentElement;
+    const syncModalState = () => {
+      if (root.dataset.gameModalOpen === "true") {
+        setOpen(false);
+      }
+    };
+    syncModalState();
+    const observer = new MutationObserver(syncModalState);
+    observer.observe(root, {
+      attributes: true,
+      attributeFilter: ["data-game-modal-open"],
+    });
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
     if (!open) return;
 
     function handleEscape(event: KeyboardEvent) {
@@ -218,7 +234,7 @@ export function ChatWidget() {
 
   return (
     <>
-      <div className="pointer-events-none fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3">
+      <div className="pointer-events-none fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-[max(1.25rem,env(safe-area-inset-right))] z-50 flex flex-col items-end gap-3 chat-widget-root">
         <AnimatePresence>
           {open && (
             <motion.div
@@ -227,11 +243,10 @@ export function ChatWidget() {
                 opacity: 1,
                 y: 0,
                 scale: 1,
-                height: 520,
               }}
               exit={{ opacity: 0, y: 16, scale: 0.96 }}
               transition={{ type: "spring", stiffness: 380, damping: 30 }}
-              className="pointer-events-auto flex w-[min(100vw-2rem,400px)] flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/95 shadow-2xl shadow-black/50 backdrop-blur-xl"
+              className="pointer-events-auto flex h-[min(520px,70dvh)] w-[min(100vw-2rem,400px)] flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/95 shadow-2xl shadow-black/50 backdrop-blur-xl"
             >
               <div className="relative flex items-center justify-end border-b border-white/8 bg-gradient-to-r from-cyan-500/10 via-transparent to-violet-500/10 px-4 py-3">
                 <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-16">
@@ -333,7 +348,7 @@ export function ChatWidget() {
             whileHover={{ scale: 1.04 }}
             whileTap={{ scale: 0.96 }}
             aria-label={open ? t("close") : t("open")}
-            className="inline-flex size-14 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-violet-600 text-white shadow-xl shadow-cyan-500/25 ring-2 ring-white/10"
+            className="inline-flex size-12 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-violet-600 text-white shadow-xl shadow-cyan-500/25 ring-2 ring-white/10 touch-manipulation sm:size-14"
           >
             <MessageCircle className="size-6" />
           </motion.button>

@@ -497,7 +497,7 @@
     "gameFeedSubscribeHint": "Subscribe to devlogs and forum posts for this game",
     "enterCommunityForum": "Enter community forum",
     "startPlay": "Start playing",
-    "startPlayHint": "Click the game area to start playing",
+    "startPlayHint": "On mobile, tap Expand first; on desktop, click the game area",
     "reuploadHint": "Please re-upload to play here",
     "postCount": "{count} posts",
     "draftPreviewBanner": "🛠️ Draft preview — creator-only, not listed on the homepage yet",

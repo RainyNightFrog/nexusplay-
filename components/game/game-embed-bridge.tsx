@@ -490,11 +490,19 @@ export function GameEmbedBridge({
     });
     observer.observe(iframe);
 
+    const onViewportChange = () => {
+      syncIframeLayout();
+    };
+    window.addEventListener("orientationchange", onViewportChange);
+    window.visualViewport?.addEventListener("resize", onViewportChange);
+
     return () => {
       window.clearTimeout(t1);
       window.clearTimeout(t2);
       window.cancelAnimationFrame(raf);
       observer.disconnect();
+      window.removeEventListener("orientationchange", onViewportChange);
+      window.visualViewport?.removeEventListener("resize", onViewportChange);
     };
   }, [iframeRef, syncIframeLayout, expanded]);
 

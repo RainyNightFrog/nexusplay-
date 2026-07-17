@@ -317,11 +317,12 @@ export function HomePageClient({ initialGames }: HomePageClientProps) {
             href="/community"
             className={cn(
               buttonVariants({ variant: "outline", size: "sm" }),
-              "hidden gap-1.5 border-violet-400/20 bg-violet-500/10 text-violet-200 hover:border-violet-400/30 hover:bg-violet-500/15 sm:inline-flex"
+              "inline-flex gap-1.5 border-violet-400/20 bg-violet-500/10 px-2 text-violet-200 hover:border-violet-400/30 hover:bg-violet-500/15 sm:px-3"
             )}
+            aria-label={tNav("community")}
           >
             <MessagesSquare className="size-3.5" />
-            {tNav("community")}
+            <span className="hidden sm:inline">{tNav("community")}</span>
           </Link>
           <LanguageSwitcher />
           <LeaderboardNavButton />

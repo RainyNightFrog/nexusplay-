@@ -19,10 +19,10 @@ export function ScrollToTopButton() {
       whileTap={{ scale: 0.96 }}
       aria-label={t("scrollToTop")}
       title={t("scrollToTop")}
-      className="pointer-events-auto inline-flex h-10 items-center justify-center gap-1 rounded-full bg-gradient-to-br from-cyan-500 to-violet-600 px-3 text-white shadow-lg shadow-cyan-500/20 ring-1 ring-white/10"
+      className="pointer-events-auto inline-flex size-10 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-violet-600 text-white shadow-lg shadow-cyan-500/20 ring-1 ring-white/10 touch-manipulation sm:h-10 sm:w-auto sm:gap-1 sm:px-3"
     >
       <ChevronUp className="size-3.5 shrink-0" />
-      <span className="text-xs font-semibold">{t("scrollToTop")}</span>
+      <span className="hidden text-xs font-semibold sm:inline">{t("scrollToTop")}</span>
     </motion.button>
   );
 }
