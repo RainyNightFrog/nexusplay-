@@ -5,8 +5,24 @@ import {
   getCheckoutPaymentsState,
   recordPreviewSupporterPass,
 } from "@/lib/supporter-pass-service";
-import { SUPPORTER_PASS_TIERS } from "@/lib/supporter-pass";
+import {
+  LIFETIME_SUPPORTER_MAX_USD,
+  LIFETIME_SUPPORTER_MIN_USD,
+  LIFETIME_SUPPORTER_TIER_ID,
+  SUPPORTER_PASS_TIERS,
+} from "@/lib/supporter-pass";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
+
+/** 正式站禁止免費預覽發放；僅本機／明確預覽模式可測 */
+function allowSupporterPreviewGrant() {
+  if (process.env.VERCEL_ENV === "production") {
+    return false;
+  }
+  const previewFlag = process.env.PLATFORM_PREVIEW_MODE?.trim().toLowerCase();
+  if (previewFlag === "true") return true;
+  if (previewFlag === "false") return false;
+  return process.env.NODE_ENV !== "production";
+}
 
 export async function GET() {
   return NextResponse.json({
@@ -16,6 +32,12 @@ export async function GET() {
       interval: tier.interval,
       badge: tier.badge,
     })),
+    lifetime: {
+      id: LIFETIME_SUPPORTER_TIER_ID,
+      minUsd: LIFETIME_SUPPORTER_MIN_USD,
+      maxUsd: LIFETIME_SUPPORTER_MAX_USD,
+      badge: "supporter_v2",
+    },
     ...getCheckoutPaymentsState(),
   });
 }
@@ -36,6 +58,7 @@ export async function POST(request: Request) {
 
     const body = (await request.json()) as {
       tierId?: string;
+      customAmountUsd?: number | string;
       localePath?: string;
     };
 
@@ -47,15 +70,30 @@ export async function POST(request: Request) {
     const payments = getCheckoutPaymentsState();
     const requestOrigin =
       request.headers.get("origin") ?? new URL(request.url).origin;
+    const tierId = body.tierId.trim();
 
     if (!payments.paymentsLive) {
+      if (!allowSupporterPreviewGrant()) {
+        return NextResponse.json(
+          {
+            error:
+              "金流尚未正式開放，暫時無法購買支持者通行證。請稍後再試或聯絡平台。",
+          },
+          { status: 503 }
+        );
+      }
+
       const result = await recordPreviewSupporterPass({
         userId: user.id,
-        tierId: body.tierId.trim(),
+        tierId,
+        customAmountUsd: body.customAmountUsd,
       });
 
       if ("error" in result) {
-        return NextResponse.json({ error: result.error }, { status: result.status });
+        return NextResponse.json(
+          { error: result.error },
+          { status: result.status }
+        );
       }
 
       return NextResponse.json({
@@ -70,13 +108,17 @@ export async function POST(request: Request) {
       userId: user.id,
       userEmail: user.email,
       displayName: profile.display_name,
-      tierId: body.tierId.trim(),
+      tierId,
+      customAmountUsd: body.customAmountUsd,
       localePath: body.localePath,
       requestOrigin,
     });
 
     if ("error" in result) {
-      return NextResponse.json({ error: result.error }, { status: result.status! });
+      return NextResponse.json(
+        { error: result.error },
+        { status: result.status! }
+      );
     }
 
     return NextResponse.json(result);

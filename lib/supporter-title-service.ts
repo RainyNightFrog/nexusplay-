@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
+  SUPPORTER_TITLE_LIFETIME,
   SUPPORTER_TITLE_V1,
   SUPPORTER_TITLE_V2,
   getSupporterTitleNameForBadge,
@@ -79,7 +80,8 @@ async function ensureUserOwnsTitle(
 async function maybeAutoEquipSupporterTitle(
   supabase: SupabaseClient,
   userId: string,
-  titleId: string
+  titleId: string,
+  replaceableNames: readonly string[]
 ) {
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
@@ -105,9 +107,7 @@ async function maybeAutoEquipSupporterTitle(
 
     if (
       equippedTitle?.name &&
-      SUPPORTER_TITLE_NAMES.includes(
-        equippedTitle.name as (typeof SUPPORTER_TITLE_NAMES)[number]
-      )
+      replaceableNames.includes(equippedTitle.name)
     ) {
       shouldEquip = true;
     }
@@ -130,7 +130,7 @@ async function maybeAutoEquipSupporterTitle(
   }
 }
 
-/** 收回支持者稱號所有權；若正在佩戴支持者稱號則一併卸下 */
+/** 收回訂閱支持者稱號；永久稱號 RainyNightFrog 不會被收回 */
 export async function revokeSupporterTitles(params: {
   supabase: SupabaseClient;
   userId: string;
@@ -224,11 +224,56 @@ export async function grantSupporterTitlesForBadge(params: {
     await maybeAutoEquipSupporterTitle(
       params.supabase,
       params.userId,
-      primaryTitleId
+      primaryTitleId,
+      SUPPORTER_TITLE_NAMES
     );
   }
 
   return { synced: true as const, titleId: primaryTitleId };
+}
+
+/** 授予永久傳說稱號 RainyNightFrog（訂閱撤銷不會收回） */
+export async function grantLifetimeRainyNightFrogTitle(params: {
+  supabase: SupabaseClient;
+  userId: string;
+  autoEquip?: boolean;
+}) {
+  const { data, error } = await params.supabase
+    .from("titles")
+    .select("id, name")
+    .eq("name", SUPPORTER_TITLE_LIFETIME)
+    .maybeSingle();
+
+  if (error) {
+    if (isMissingGamificationTable(error)) {
+      return { synced: false, reason: "titles_table_missing" as const };
+    }
+    throw new Error(`讀取永久稱號失敗：${error.message}`);
+  }
+
+  if (!data?.id) {
+    return { synced: false, reason: "title_rows_missing" as const };
+  }
+
+  const granted = await ensureUserOwnsTitle(
+    params.supabase,
+    params.userId,
+    data.id
+  );
+  if (!granted) {
+    return { synced: false, reason: "grant_failed" as const };
+  }
+
+  if (params.autoEquip !== false) {
+    await maybeAutoEquipSupporterTitle(
+      params.supabase,
+      params.userId,
+      data.id,
+      [...SUPPORTER_TITLE_NAMES, SUPPORTER_TITLE_LIFETIME]
+    );
+  }
+
+  return { synced: true as const, titleId: data.id };
 }
 
 export async function syncSupporterTitlesIfNeeded(params: {
@@ -237,7 +282,7 @@ export async function syncSupporterTitlesIfNeeded(params: {
 }) {
   const { data: profile, error } = await params.supabase
     .from("profiles")
-    .select("is_supporter, supporter_badge")
+    .select("is_supporter, supporter_badge, supporter_lifetime")
     .eq("id", params.userId)
     .maybeSingle();
 
@@ -245,18 +290,28 @@ export async function syncSupporterTitlesIfNeeded(params: {
     return { synced: false, reason: "not_supporter" as const };
   }
 
-  return grantSupporterTitlesForBadge({
+  const badgeResult = await grantSupporterTitlesForBadge({
     supabase: params.supabase,
     userId: params.userId,
     badge: profile.supporter_badge ?? "supporter_v1",
     autoEquip: false,
   });
+
+  if (profile.supporter_lifetime === true) {
+    await grantLifetimeRainyNightFrogTitle({
+      supabase: params.supabase,
+      userId: params.userId,
+      autoEquip: false,
+    });
+  }
+
+  return badgeResult;
 }
 
 export async function backfillAllSupporterTitles(supabase: SupabaseClient) {
   const { data: supporters, error } = await supabase
     .from("profiles")
-    .select("id, supporter_badge")
+    .select("id, supporter_badge, supporter_lifetime")
     .eq("is_supporter", true);
 
   if (error) {
@@ -272,6 +327,13 @@ export async function backfillAllSupporterTitles(supabase: SupabaseClient) {
       userId: profile.id,
       badge: profile.supporter_badge ?? "supporter_v1",
     });
+    if (profile.supporter_lifetime === true) {
+      await grantLifetimeRainyNightFrogTitle({
+        supabase,
+        userId: profile.id,
+        autoEquip: false,
+      });
+    }
     if (result.synced) {
       synced += 1;
     } else {

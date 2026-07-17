@@ -12,8 +12,16 @@ import {
   markTipPaymentFailed,
 } from "@/lib/tip-payment-webhook";
 import { handleSupporterSubscriptionDeleted } from "@/lib/supporter-subscription-webhook";
+import {
+  handleSupporterPassDisputeLost,
+  handleSupporterPassRefund,
+} from "@/lib/supporter-pass-refund";
 import { getStripeClient, isStripeConfigured } from "@/lib/stripe-connect";
-import { claimStripeWebhookEvent } from "@/lib/stripe-webhook-dedup";
+import {
+  claimStripeWebhookEventDetailed,
+  markStripeWebhookEventFailed,
+  markStripeWebhookEventProcessed,
+} from "@/lib/stripe-webhook-dedup";
 
 export async function POST(request: Request) {
   if (!isStripeConfigured()) {
@@ -40,9 +48,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "簽章驗證失敗" }, { status: 400 });
   }
 
-  const isNewEvent = await claimStripeWebhookEvent(event.id, event.type);
-  if (!isNewEvent) {
-    return NextResponse.json({ received: true, duplicate: true });
+  const claim = await claimStripeWebhookEventDetailed(event.id, event.type);
+  if (!claim.claimed) {
+    return NextResponse.json({
+      received: true,
+      duplicate: claim.reason === "duplicate",
+      inFlight: claim.reason === "in_flight",
+    });
   }
 
   try {
@@ -74,7 +86,10 @@ export async function POST(request: Request) {
       }
       case "charge.refunded": {
         const charge = event.data.object as Stripe.Charge;
-        await handleTipRefund(charge);
+        const tipResult = await handleTipRefund(charge);
+        if (!tipResult.handled) {
+          await handleSupporterPassRefund(charge);
+        }
         break;
       }
       case "charge.dispute.created": {
@@ -85,6 +100,9 @@ export async function POST(request: Request) {
       case "charge.dispute.closed": {
         const dispute = event.data.object as Stripe.Dispute;
         await handleTipDisputeClosed(dispute);
+        if (dispute.status === "lost") {
+          await handleSupporterPassDisputeLost(dispute);
+        }
         break;
       }
       case "account.updated": {
@@ -103,9 +121,17 @@ export async function POST(request: Request) {
       default:
         break;
     }
+
+    await markStripeWebhookEventProcessed(event.id);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Webhook 處理失敗";
     console.error("[stripe webhook]", event.type, message);
+    try {
+      await markStripeWebhookEventFailed(event.id, message);
+    } catch (markError) {
+      console.error("[stripe webhook] mark failed", markError);
+    }
+    // 回 500 讓 Stripe 重試；failed 狀態允許再次 claim
     return NextResponse.json({ error: message }, { status: 500 });
   }
 

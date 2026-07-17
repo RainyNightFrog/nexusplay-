@@ -31,24 +31,51 @@ export async function resolveUserProfile(
 ): Promise<UserProfile> {
   const metadataProfile = profileFromUserMetadata(user);
 
-  const { data: profile, error } = await supabase
-    .from("profiles")
-    .select(
-      "id, display_name, avatar_url, role, created_at, support_email, equipped_title_id, bio, player_number, is_supporter, supporter_since, supporter_badge, username, is_admin"
-    )
-    .eq("id", user.id)
-    .maybeSingle();
+  const selectWithLifetime =
+    "id, display_name, avatar_url, role, created_at, support_email, equipped_title_id, bio, player_number, is_supporter, supporter_since, supporter_badge, supporter_lifetime, username, is_admin";
+  const selectBase =
+    "id, display_name, avatar_url, role, created_at, support_email, equipped_title_id, bio, player_number, is_supporter, supporter_since, supporter_badge, username, is_admin";
+
+  let profile: Record<string, unknown> | null = null;
+  let error: { code?: string; message?: string } | null = null;
+
+  {
+    const result = await supabase
+      .from("profiles")
+      .select(selectWithLifetime)
+      .eq("id", user.id)
+      .maybeSingle();
+    error = result.error;
+    profile = result.data as Record<string, unknown> | null;
+
+    if (
+      error &&
+      (error.message?.includes("supporter_lifetime") ||
+        error.message?.includes("column"))
+    ) {
+      const fallback = await supabase
+        .from("profiles")
+        .select(selectBase)
+        .eq("id", user.id)
+        .maybeSingle();
+      error = fallback.error;
+      profile = fallback.data as Record<string, unknown> | null;
+    }
+  }
 
   if (!error && profile) {
-    const dbIsAdmin =
-      (profile as { is_admin?: boolean | null }).is_admin === true;
+    const dbIsAdmin = profile.is_admin === true;
     const isAdmin =
       isAdminUser(user) || metadataProfile.is_admin === true || dbIsAdmin;
     const developingGames =
       metadataProfile.developing_games ||
       normalizeRole(profile.role) === "creator" ||
       isAdmin;
-    const equippedTitle = profile.equipped_title_id
+    const equippedTitleId =
+      typeof profile.equipped_title_id === "string"
+        ? profile.equipped_title_id
+        : null;
+    const equippedTitle = equippedTitleId
       ? await resolveEquippedTitleForUser(supabase, user.id)
       : null;
 
@@ -60,21 +87,27 @@ export async function resolveUserProfile(
           : profile.player_number != null
             ? Number(profile.player_number) || null
             : null,
-      display_name: profile.display_name || metadataProfile.display_name,
+      display_name:
+        (typeof profile.display_name === "string" && profile.display_name) ||
+        metadataProfile.display_name,
       username: readOptionalString(profile.username),
-      avatar_url: profile.avatar_url ?? metadataProfile.avatar_url,
-      // 管理員若同時開發遊戲，仍應保留 creator，避免後台／編輯入口被擋
+      avatar_url:
+        (typeof profile.avatar_url === "string" ? profile.avatar_url : null) ??
+        metadataProfile.avatar_url,
       role: resolveRoleFromPreferences(developingGames),
       is_admin: isAdmin,
-      created_at: profile.created_at ?? metadataProfile.created_at,
+      created_at:
+        (typeof profile.created_at === "string" && profile.created_at) ||
+        metadataProfile.created_at,
       developing_games: developingGames,
       support_email: readOptionalString(profile.support_email),
       bio: readOptionalString(profile.bio) ?? metadataProfile.bio,
-      equipped_title_id: profile.equipped_title_id ?? null,
+      equipped_title_id: equippedTitleId,
       equipped_title: equippedTitle,
       is_supporter: profile.is_supporter === true,
       supporter_since: readOptionalString(profile.supporter_since),
       supporter_badge: readOptionalString(profile.supporter_badge),
+      supporter_lifetime: profile.supporter_lifetime === true,
     };
   }
 

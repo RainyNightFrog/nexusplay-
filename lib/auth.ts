@@ -28,6 +28,8 @@ export type UserProfile = {
   is_supporter: boolean;
   supporter_since: string | null;
   supporter_badge: string | null;
+  /** 一次性 $250+ 永久支持者 */
+  supporter_lifetime: boolean;
 };
 
 export function getInitials(name: string) {

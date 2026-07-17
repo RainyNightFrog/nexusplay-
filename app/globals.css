@@ -847,3 +847,201 @@
   color: transparent;
   filter: drop-shadow(0 0 8px rgba(167, 139, 250, 0.35));
 }
+
+/* ── 永久傳說稱號 RainyNightFrog：外框雷電特效 + 內層炫彩文字 ── */
+@keyframes title-rnf-gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 300% 50%;
+  }
+}
+
+@keyframes title-rnf-bolt-flash {
+  0%,
+  100% {
+    opacity: 0.55;
+    filter: drop-shadow(0 0 3px rgba(253, 224, 71, 0.5));
+  }
+  45% {
+    opacity: 0.75;
+  }
+  48% {
+    opacity: 1;
+    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.95))
+      drop-shadow(0 0 14px rgba(56, 189, 248, 1))
+      drop-shadow(0 0 20px rgba(250, 204, 21, 0.9));
+  }
+  55% {
+    opacity: 0.65;
+  }
+}
+
+@keyframes title-rnf-frame-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(56, 189, 248, 0.45),
+      0 0 8px rgba(56, 189, 248, 0.35),
+      0 0 16px rgba(168, 85, 247, 0.25),
+      inset 0 0 8px rgba(250, 204, 21, 0.08);
+  }
+  42% {
+    box-shadow:
+      0 0 0 1px rgba(250, 204, 21, 0.55),
+      0 0 10px rgba(250, 204, 21, 0.4),
+      0 0 18px rgba(56, 189, 248, 0.35),
+      inset 0 0 10px rgba(56, 189, 248, 0.1);
+  }
+  46% {
+    box-shadow:
+      0 0 0 1.5px rgba(255, 255, 255, 0.95),
+      0 0 14px rgba(255, 255, 255, 0.7),
+      0 0 28px rgba(34, 211, 238, 0.85),
+      0 0 40px rgba(250, 204, 21, 0.55),
+      inset 0 0 12px rgba(255, 255, 255, 0.15);
+  }
+  54% {
+    box-shadow:
+      0 0 0 1px rgba(168, 85, 247, 0.55),
+      0 0 12px rgba(168, 85, 247, 0.45),
+      0 0 22px rgba(244, 114, 182, 0.35),
+      inset 0 0 8px rgba(168, 85, 247, 0.1);
+  }
+}
+
+/* 外層：雷電包圍框（特效只放這裡，不碰文字漸變） */
+.title-rainynightfrog-frame {
+  position: relative;
+  display: inline-block;
+  padding: 0.18em 0.55em 0.22em;
+  border-radius: 0.4em;
+  vertical-align: baseline;
+  animation: title-rnf-frame-pulse 2.6s ease-in-out infinite;
+}
+
+.title-rainynightfrog-frame::before,
+.title-rainynightfrog-frame::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.title-rainynightfrog-frame::before {
+  inset: -3px -5px;
+  border-radius: 0.45em;
+  background:
+    linear-gradient(135deg, #fde68a 0 2px, transparent 2px) 0 0 / 10px 10px
+      no-repeat,
+    linear-gradient(225deg, #67e8f9 0 2px, transparent 2px) 100% 0 / 10px 10px
+      no-repeat,
+    linear-gradient(45deg, #c4b5fd 0 2px, transparent 2px) 0 100% / 10px 10px
+      no-repeat,
+    linear-gradient(315deg, #f9a8d4 0 2px, transparent 2px) 100% 100% / 10px
+      10px no-repeat,
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(253, 224, 71, 0.85) 18%,
+      transparent 28%,
+      transparent 55%,
+      rgba(103, 232, 249, 0.9) 72%,
+      transparent 82%
+    )
+      top / 100% 1.5px no-repeat,
+    linear-gradient(
+      90deg,
+      transparent 8%,
+      rgba(196, 181, 253, 0.85) 35%,
+      transparent 48%,
+      transparent 62%,
+      rgba(249, 168, 212, 0.9) 88%,
+      transparent 100%
+    )
+      bottom / 100% 1.5px no-repeat,
+    linear-gradient(
+      180deg,
+      transparent 0%,
+      rgba(103, 232, 249, 0.8) 22%,
+      transparent 35%,
+      transparent 60%,
+      rgba(253, 224, 71, 0.85) 80%,
+      transparent 100%
+    )
+      left / 1.5px 100% no-repeat,
+    linear-gradient(
+      180deg,
+      transparent 12%,
+      rgba(249, 168, 212, 0.85) 30%,
+      transparent 42%,
+      transparent 58%,
+      rgba(196, 181, 253, 0.9) 78%,
+      transparent 100%
+    )
+      right / 1.5px 100% no-repeat;
+  animation: title-rnf-bolt-flash 1.9s ease-in-out infinite;
+}
+
+.title-rainynightfrog-frame::after {
+  inset: -6px -8px;
+  border-radius: 0.5em;
+  background:
+    radial-gradient(
+      circle at 12% 18%,
+      rgba(253, 224, 71, 0.95) 0 1.2px,
+      transparent 1.8px
+    ),
+    radial-gradient(
+      circle at 88% 22%,
+      rgba(103, 232, 249, 0.95) 0 1.2px,
+      transparent 1.8px
+    ),
+    radial-gradient(
+      circle at 18% 82%,
+      rgba(196, 181, 253, 0.95) 0 1.2px,
+      transparent 1.8px
+    ),
+    radial-gradient(
+      circle at 84% 78%,
+      rgba(249, 168, 212, 0.95) 0 1.2px,
+      transparent 1.8px
+    ),
+    linear-gradient(
+      115deg,
+      transparent 40%,
+      rgba(255, 255, 255, 0.55) 49%,
+      transparent 58%
+    );
+  opacity: 0.7;
+  animation: title-rnf-bolt-flash 2.4s ease-in-out infinite reverse;
+}
+
+/* 內層：僅炫彩漸變文字 */
+.title-rainynightfrog {
+  position: relative;
+  z-index: 2;
+  display: inline-block;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  background-image: linear-gradient(
+    90deg,
+    #fbbf24,
+    #f472b6,
+    #22d3ee,
+    #a78bfa,
+    #facc15,
+    #38bdf8,
+    #fb7185,
+    #fbbf24
+  );
+  background-size: 300% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  animation: title-rnf-gradient 2.4s linear infinite;
+}

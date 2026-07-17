@@ -1,6 +1,7 @@
 import { revokeGameEntitlement } from "@/lib/game-entitlement-service";
 import { revokeSupporterStatus } from "@/lib/supporter-pass-service";
 import { createServerSupabase } from "@/lib/supabase-server";
+import type Stripe from "stripe";
 
 export type AdminOrderRecord = {
   id: string;
@@ -43,7 +44,9 @@ export async function listAdminOrders(params: {
         .filter(Boolean) as number[]
     ),
   ];
-  const buyerIds = [...new Set((orders ?? []).map((order) => order.buyer_id as string))];
+  const buyerIds = [
+    ...new Set((orders ?? []).map((order) => order.buyer_id as string)),
+  ];
 
   const [{ data: games }, { data: profiles }] = await Promise.all([
     gameIds.length
@@ -91,6 +94,43 @@ export async function listAdminOrders(params: {
   return rows;
 }
 
+function isAlreadyRefundedError(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+  const err = error as { code?: string; message?: string };
+  return (
+    err.code === "charge_already_refunded" ||
+    Boolean(err.message?.toLowerCase().includes("already been refunded"))
+  );
+}
+
+async function cancelSupporterSubscriptionIfAny(
+  stripe: Stripe,
+  session: Stripe.Checkout.Session
+) {
+  const subscriptionId =
+    typeof session.subscription === "string"
+      ? session.subscription
+      : session.subscription?.id;
+
+  if (!subscriptionId) return { cancelled: false as const };
+
+  try {
+    await stripe.subscriptions.cancel(subscriptionId);
+    return { cancelled: true as const, subscriptionId };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    // 已取消／不存在可視為成功
+    if (
+      message.includes("No such subscription") ||
+      message.includes("canceled") ||
+      message.includes("cancelled")
+    ) {
+      return { cancelled: true as const, subscriptionId };
+    }
+    throw error;
+  }
+}
+
 export async function refundAdminOrder(orderId: string, adminId: string) {
   const supabase = createServerSupabase();
   const { data: order, error } = await supabase
@@ -108,58 +148,103 @@ export async function refundAdminOrder(orderId: string, adminId: string) {
     return { error: "此訂單無 Stripe 紀錄（可能為預覽）", status: 400 as const };
   }
 
+  // CAS：先搶鎖標記退款，避免並發雙重退款
+  const { data: claimed, error: claimError } = await supabase
+    .from("orders")
+    .update({ status: "refunded" })
+    .eq("id", orderId)
+    .eq("status", "succeeded")
+    .select("id")
+    .maybeSingle();
+
+  if (claimError) throw new Error(claimError.message);
+  if (!claimed) {
+    return { error: "訂單狀態已變更，請重新整理", status: 409 as const };
+  }
+
   const { getStripeClient, isStripeConfigured } = await import(
     "@/lib/stripe-connect"
   );
 
   if (!isStripeConfigured()) {
+    await supabase
+      .from("orders")
+      .update({ status: "succeeded" })
+      .eq("id", orderId)
+      .eq("status", "refunded");
     return { error: "Stripe 未設定", status: 503 as const };
   }
 
   const stripe = getStripeClient();
-  const session = await stripe.checkout.sessions.retrieve(
-    order.stripe_session_id as string,
-    { expand: ["payment_intent"] }
-  );
 
-  const paymentIntent =
-    typeof session.payment_intent === "string"
-      ? session.payment_intent
-      : session.payment_intent?.id;
+  try {
+    const session = await stripe.checkout.sessions.retrieve(
+      order.stripe_session_id as string,
+      { expand: ["payment_intent", "subscription"] }
+    );
 
-  if (!paymentIntent) {
-    return { error: "找不到 Stripe PaymentIntent", status: 400 as const };
+    const paymentIntent =
+      typeof session.payment_intent === "string"
+        ? session.payment_intent
+        : session.payment_intent?.id;
+
+    if (!paymentIntent) {
+      await supabase
+        .from("orders")
+        .update({ status: "succeeded" })
+        .eq("id", orderId)
+        .eq("status", "refunded");
+      return { error: "找不到 Stripe PaymentIntent", status: 400 as const };
+    }
+
+    let refundId: string | null = null;
+    try {
+      const refund = await stripe.refunds.create({
+        payment_intent: paymentIntent,
+        metadata: {
+          nexusplay_order_id: order.id as string,
+          nexusplay_refunded_by: adminId,
+        },
+      });
+      refundId = refund.id;
+    } catch (refundError) {
+      if (!isAlreadyRefundedError(refundError)) {
+        throw refundError;
+      }
+    }
+
+    let subscriptionCancelled = false;
+    if (order.order_type === "supporter_pass") {
+      const cancelResult = await cancelSupporterSubscriptionIfAny(
+        stripe,
+        session
+      );
+      subscriptionCancelled = cancelResult.cancelled;
+      await revokeSupporterStatus(order.buyer_id as string, { force: true });
+    }
+
+    if (order.order_type === "game_purchase" && order.game_id) {
+      await revokeGameEntitlement({
+        userId: order.buyer_id as string,
+        gameId: order.game_id as number,
+      });
+    }
+
+    return {
+      ok: true as const,
+      refundId,
+      orderId: order.id as string,
+      subscriptionCancelled,
+    };
+  } catch (error) {
+    // Stripe 退款失敗：還原訂單狀態，避免「已標退款但沒退到錢」
+    await supabase
+      .from("orders")
+      .update({ status: "succeeded" })
+      .eq("id", orderId)
+      .eq("status", "refunded");
+    throw error;
   }
-
-  const refund = await stripe.refunds.create({
-    payment_intent: paymentIntent,
-    metadata: {
-      nexusplay_order_id: order.id as string,
-      nexusplay_refunded_by: adminId,
-    },
-  });
-
-  await supabase
-    .from("orders")
-    .update({ status: "refunded" })
-    .eq("id", orderId);
-
-  if (order.order_type === "supporter_pass") {
-    await revokeSupporterStatus(order.buyer_id as string);
-  }
-
-  if (order.order_type === "game_purchase" && order.game_id) {
-    await revokeGameEntitlement({
-      userId: order.buyer_id as string,
-      gameId: order.game_id as number,
-    });
-  }
-
-  return {
-    ok: true as const,
-    refundId: refund.id,
-    orderId: order.id as string,
-  };
 }
 
 export async function grantManualEntitlement(params: {

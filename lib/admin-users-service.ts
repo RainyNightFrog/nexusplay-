@@ -308,16 +308,21 @@ export async function updateAdminUserAccount(params: {
       if (!params.role) throw new Error("缺少 role");
       patch.role = params.role;
       break;
-    case "grant_supporter":
-      patch.is_supporter = true;
-      patch.supporter_since = new Date().toISOString();
-      patch.supporter_badge =
-        params.supporterBadge === "supporter_v2"
-          ? "supporter_v2"
-          : "supporter_v1";
-      break;
+    case "grant_supporter": {
+      const { grantSupporterStatus } = await import(
+        "@/lib/supporter-pass-service"
+      );
+      await grantSupporterStatus({
+        userId: params.userId,
+        badge:
+          params.supporterBadge === "supporter_v2"
+            ? "supporter_v2"
+            : "supporter_v1",
+      });
+      return getAdminUserDetail(params.userId);
+    }
     case "revoke_supporter":
-      await revokeSupporterStatus(params.userId);
+      await revokeSupporterStatus(params.userId, { force: true });
       return getAdminUserDetail(params.userId);
   }
 

@@ -7,6 +7,9 @@ export const SUPPORTER_BADGE_V2 = "supporter_v2" as const;
 
 export const SUPPORTER_TITLE_V1 = "平台支持者";
 export const SUPPORTER_TITLE_V2 = "熱心支持者";
+/** 永久傳說稱號（$250+ 一次性支持） */
+export const SUPPORTER_TITLE_LIFETIME = "RainyNightFrog";
+export const SUPPORTER_TITLE_LIFETIME_CSS = "title-rainynightfrog";
 
 export type SupporterDisplayTier = "none" | "basic" | "premium";
 
@@ -22,7 +25,11 @@ function hasSupporterBadge(badge: string | null | undefined) {
 
 function isSupporterEquippedTitle(title: EquippedTitle | null | undefined) {
   if (!title?.name) return false;
-  return title.name === SUPPORTER_TITLE_V1 || title.name === SUPPORTER_TITLE_V2;
+  return (
+    title.name === SUPPORTER_TITLE_V1 ||
+    title.name === SUPPORTER_TITLE_V2 ||
+    title.name === SUPPORTER_TITLE_LIFETIME
+  );
 }
 
 /** 支援 is_supporter、徽章或支持者稱號任一條件 */
@@ -39,11 +46,20 @@ export function isSupporterMember(
 export function getSupporterDisplayTier(
   isSupporter: boolean,
   badge: string | null | undefined,
-  equippedTitle?: EquippedTitle | null
+  equippedTitle?: EquippedTitle | null,
+  /** 永久傳說支持者：特效與 SVIP（premium）相同 */
+  supporterLifetime?: boolean | null
 ): SupporterDisplayTier {
-  if (!isSupporterMember(isSupporter, badge, equippedTitle)) return "none";
+  if (
+    !isSupporterMember(isSupporter, badge, equippedTitle) &&
+    supporterLifetime !== true
+  ) {
+    return "none";
+  }
   return isPremiumSupporterBadge(badge) ||
-    equippedTitle?.name === SUPPORTER_TITLE_V2
+    supporterLifetime === true ||
+    equippedTitle?.name === SUPPORTER_TITLE_V2 ||
+    equippedTitle?.name === SUPPORTER_TITLE_LIFETIME
     ? "premium"
     : "basic";
 }
@@ -51,14 +67,15 @@ export function getSupporterDisplayTier(
 export function getSupporterDisplayTierFromProfile(
   profile: Pick<
     UserProfile,
-    "is_supporter" | "supporter_badge" | "equipped_title"
+    "is_supporter" | "supporter_badge" | "equipped_title" | "supporter_lifetime"
   > | null | undefined
 ): SupporterDisplayTier {
   if (!profile) return "none";
   return getSupporterDisplayTier(
     profile.is_supporter === true,
     profile.supporter_badge,
-    profile.equipped_title
+    profile.equipped_title,
+    profile.supporter_lifetime === true
   );
 }
 
@@ -79,7 +96,7 @@ export const supporterMessageContentClassByTier = {
   premium: "supporter-username supporter-username-premium font-semibold",
 } as const;
 
-/** 僅 SVIP 打字需鏡像層（彩虹漸層）；VIP 直接在 textarea 顯示金色 */
+/** 僅 SVIP／傳說支持者打字需鏡像層（彩虹漸層）；VIP 直接在 textarea 顯示金色 */
 export const supporterComposerMirrorClassByTier = {
   basic: "font-medium text-amber-300",
   premium: "supporter-username supporter-username-premium font-semibold",

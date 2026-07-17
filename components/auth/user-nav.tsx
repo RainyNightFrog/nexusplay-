@@ -13,7 +13,7 @@ import { getCreatorDashboardHref } from "@/lib/creator-nav";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { useAuth } from "@/hooks/use-auth";
 import {
-  getSupporterDisplayTier,
+  getSupporterDisplayTierFromProfile,
   supporterUsernameClassByTier,
 } from "@/lib/supporter-tier";
 import { cn } from "@/lib/utils";
@@ -64,11 +64,7 @@ export function UserNav() {
   }
 
   const initials = getInitials(profile.display_name);
-  const supporterTier = getSupporterDisplayTier(
-    profile.is_supporter === true,
-    profile.supporter_badge,
-    profile.equipped_title
-  );
+  const supporterTier = getSupporterDisplayTierFromProfile(profile);
   const roleLabel = isAdmin
     ? t("roleAdmin")
     : isCreator

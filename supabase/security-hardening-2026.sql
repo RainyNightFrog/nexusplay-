@@ -48,6 +48,12 @@ begin
   if new.supporter_badge is distinct from old.supporter_badge then
     raise exception 'cannot modify supporter_badge';
   end if;
+  if new.supporter_lifetime is distinct from old.supporter_lifetime then
+    raise exception 'cannot modify supporter_lifetime';
+  end if;
+  if new.supporter_lifetime_announced_at is distinct from old.supporter_lifetime_announced_at then
+    raise exception 'cannot modify supporter_lifetime_announced_at';
+  end if;
 
   return new;
 end;
@@ -73,6 +79,7 @@ grant select (
   support_email,
   is_supporter,
   supporter_badge,
+  supporter_lifetime,
   created_at
 ) on table public.profiles to anon, authenticated;
 

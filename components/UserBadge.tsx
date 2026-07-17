@@ -29,6 +29,10 @@ type UserBadgeProps = {
   fallbackRoleRainbow?: boolean;
 };
 
+function isRainyNightFrogTitleClass(cssClass: string | null | undefined) {
+  return (cssClass ?? "").includes("title-rainynightfrog");
+}
+
 export function UserBadge({
   username,
   title,
@@ -50,6 +54,9 @@ export function UserBadge({
   const titleLabel = title?.name ?? null;
   const secondaryLabel = titleLabel ?? fallbackRoleLabel ?? null;
   const isRoleFallback = !titleLabel && Boolean(fallbackRoleLabel);
+  const wrapRnfFrame = Boolean(
+    title && isRainyNightFrogTitleClass(title.css_class)
+  );
 
   const titleClass = title
     ? cn(
@@ -61,7 +68,9 @@ export function UserBadge({
       )
     : isRoleFallback
       ? cn(
-          fallbackRoleRainbow ? adminRoleRainbowTextClass : "font-medium text-zinc-500",
+          fallbackRoleRainbow
+            ? adminRoleRainbowTextClass
+            : "font-medium text-zinc-500",
           titleClassName
         )
       : null;
@@ -87,6 +96,17 @@ export function UserBadge({
       />
     ) : null;
 
+  function renderTitle(extraClassName?: string) {
+    if (!secondaryLabel || !titleClass) return null;
+    const inner = (
+      <span className={cn(titleClass, extraClassName)} title={secondaryLabel}>
+        {secondaryLabel}
+      </span>
+    );
+    if (!wrapRnfFrame) return inner;
+    return <span className="title-rainynightfrog-frame">{inner}</span>;
+  }
+
   if (layout === "stacked") {
     return (
       <span className={cn("inline-flex flex-col items-center gap-0.5", className)}>
@@ -94,11 +114,7 @@ export function UserBadge({
           <span className={nameClass}>{username}</span>
           {supporterIcon}
         </span>
-        {secondaryLabel && titleClass && (
-          <span className={cn("inline-block text-[10px]", titleClass)}>
-            {secondaryLabel}
-          </span>
-        )}
+        {renderTitle("inline-block text-[10px]")}
       </span>
     );
   }
@@ -108,31 +124,25 @@ export function UserBadge({
       <span
         className={cn("inline-flex min-w-0 max-w-full items-center gap-x-1", className)}
       >
-        <span className={cn("min-w-0 truncate", nameClass)}>
-          {username}
-        </span>
+        <span className={cn("min-w-0 truncate", nameClass)}>{username}</span>
         {supporterIcon}
-        {secondaryLabel && titleClass && (
-          <span
-            className={cn("shrink-0 truncate text-[9px] sm:text-[10px]", maxTitleWidth, titleClass)}
-            title={secondaryLabel}
-          >
-            {secondaryLabel}
-          </span>
+        {renderTitle(
+          cn("shrink-0 truncate text-[9px] sm:text-[10px]", maxTitleWidth)
         )}
       </span>
     );
   }
 
   return (
-    <span className={cn("inline-flex flex-wrap items-center gap-x-1.5 gap-y-0.5", className)}>
+    <span
+      className={cn(
+        "inline-flex flex-wrap items-center gap-x-1.5 gap-y-0.5",
+        className
+      )}
+    >
       <span className={nameClass}>{username}</span>
       {supporterIcon}
-      {secondaryLabel && titleClass && (
-        <span className={cn("inline-block text-[11px] sm:text-xs", titleClass)}>
-          {secondaryLabel}
-        </span>
-      )}
+      {renderTitle("inline-block text-[11px] sm:text-xs")}
     </span>
   );
 }

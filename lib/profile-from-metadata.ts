@@ -54,5 +54,6 @@ export function profileFromUserMetadata(user: User): UserProfile {
     is_supporter: false,
     supporter_since: null,
     supporter_badge: null,
+    supporter_lifetime: false,
   };
 }

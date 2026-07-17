@@ -11,7 +11,7 @@ export type SupporterSubscriptionDeletedResult =
       handled: true;
       userId: string;
       revoked: boolean;
-      reason?: "other_active_subscription";
+      reason?: "other_active_subscription" | "lifetime";
     };
 
 function resolveStripeCustomerId(
@@ -103,7 +103,12 @@ export async function handleSupporterSubscriptionDeleted(
     }
   }
 
-  await revokeSupporterStatus(userId);
+  const result = await revokeSupporterStatus(userId);
 
-  return { handled: true, userId, revoked: true };
+  return {
+    handled: true,
+    userId,
+    revoked: result.revoked,
+    reason: result.revoked ? undefined : result.reason,
+  };
 }

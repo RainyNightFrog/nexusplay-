@@ -41,7 +41,7 @@ import {
 import { UserBadge } from "@/components/UserBadge";
 import { SupporterAvatarInsignia } from "@/components/supporter/supporter-avatar-insignia";
 import {
-  getSupporterDisplayTier,
+  getSupporterDisplayTierFromProfile,
   supporterAvatarRingClassByTier,
 } from "@/lib/supporter-tier";
 import { cn } from "@/lib/utils";
@@ -81,7 +81,7 @@ export default function ProfilePage() {
   const [achievementsOpen, setAchievementsOpen] = useState(false);
 
   const supporterTier = profile
-    ? getSupporterDisplayTier(profile.is_supporter, profile.supporter_badge)
+    ? getSupporterDisplayTierFromProfile(profile)
     : "none";
 
   const showToast = useCallback((message: string) => {

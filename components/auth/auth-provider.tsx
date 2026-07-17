@@ -197,6 +197,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await loadProfile({ silent: true });
   }, [loadProfile]);
 
+  useEffect(() => {
+    if (!profile?.supporter_lifetime || isAuthRoute(pathname)) {
+      return;
+    }
+
+    const key = `rnf-lifetime-online:${profile.id}`;
+    try {
+      if (sessionStorage.getItem(key) === "1") {
+        return;
+      }
+      sessionStorage.setItem(key, "1");
+    } catch {
+      // sessionStorage 不可用時仍嘗試廣播（伺服器有冷卻）
+    }
+
+    void fetch("/api/supporter/lifetime-online", {
+      method: "POST",
+      credentials: "same-origin",
+    }).catch(() => undefined);
+  }, [profile?.id, profile?.supporter_lifetime, pathname]);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       profile,

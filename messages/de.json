@@ -2092,6 +2092,7 @@
     "claimFailed": "Claim failed. Please try again.",
     "unlockRequirementSupporterBasic": "成為 $5 平台支持者即可獲得",
     "unlockRequirementSupporterPremium": "成為 $10 熱心支持者即可獲得",
+    "unlockRequirementSupporterLifetime": "支持 $250 USD 或以上即可永久獲得（含一年 SVIP 特效）",
     "goToSupporter": "前往支持者頁"
   },
   "about": {
@@ -2204,7 +2205,7 @@
     "perk3Title": "支持獨立開發者",
     "perk3Desc": "收益用於伺服器、金流與創作者工具，讓更多獨立遊戲能免費上架與成長。",
     "tiersTitle": "選擇方案",
-    "tiersDesc": "月費或年費訂閱，全數支持平台營運（非創作者分帳）。",
+    "tiersDesc": "月費、年費或永久傳說支持，全數支持平台營運（非創作者分帳）。",
     "tier5Monthly": "支持者月費 · $5 / 月",
     "tier10Monthly": "熱心支持者月費 · $10 / 月",
     "tier5Yearly": "支持者年費 · $50 / 年",
@@ -2230,7 +2231,22 @@
     "badgeLabel": "VIP",
     "badgeLabelPremium": "SVIP",
     "badgeTitle": "Platform Supporter VIP",
-    "badgeTitlePremium": "Enthusiast Supporter SVIP"
+    "badgeTitlePremium": "Enthusiast Supporter SVIP",
+    "tierLifetime": "永久傳說支持 · 250 USD+",
+    "tierLifetimeDesc": "完整 SVIP 特效（含輸入文字特效）一年，並獲永久特別稱號。",
+    "tierPerkSvipAll": "✓ 完整 SVIP 功能與特效（一年，含輸入文字特效）",
+    "tierPerkLifetimeTitle": "✓ 永久稱號「RainyNightFrog」",
+    "tierPerkLifetimePermanent": "✓ 稱號永久保留，不受訂閱取消影響",
+    "tierPerkWorldAnnounce": "✓ 每次上線世界頻道廣播通知",
+    "lifetimeAmountLabel": "支持金額（USD）",
+    "lifetimeAmountHint": "最低 ${min} USD，可自行輸入更高金額",
+    "lifetimeInvalidAmount": "請輸入有效的支持金額",
+    "ctaLifetime": "成為永久傳說支持者",
+    "alreadyLifetime": "你已是永久傳說支持者",
+    "tierPerkComposer": "✓ 聊天輸入文字彩虹特效",
+    "composerPreviewSample": "傳說支持者上線！",
+    "tierPerkVipText": "✓ 金色名稱與輸入文字特效",
+    "vipTextPreview": "金色文字特效"
   },
   "creatorTools": {
     "pageTitle": "Creator Toolbox",

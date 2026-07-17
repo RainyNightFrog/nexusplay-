@@ -81,6 +81,12 @@ begin
   if new.supporter_badge is distinct from old.supporter_badge then
     raise exception 'cannot modify supporter_badge';
   end if;
+  if new.supporter_lifetime is distinct from old.supporter_lifetime then
+    raise exception 'cannot modify supporter_lifetime';
+  end if;
+  if new.supporter_lifetime_announced_at is distinct from old.supporter_lifetime_announced_at then
+    raise exception 'cannot modify supporter_lifetime_announced_at';
+  end if;
   if new.account_status is distinct from old.account_status then
     raise exception 'cannot modify account_status';
   end if;
@@ -176,7 +182,7 @@ alter table public.stripe_webhook_events
 
 alter table public.stripe_webhook_events
   add constraint stripe_webhook_events_status_check
-  check (status in ('processed', 'failed', 'skipped'));
+  check (status in ('processing', 'processed', 'failed', 'skipped'));
 
 alter table public.stripe_webhook_events
   add column if not exists error_message text;

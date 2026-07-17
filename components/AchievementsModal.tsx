@@ -32,6 +32,7 @@ import {
 import { formatProgressLabel } from "@/lib/achievement-progress";
 import type { TitleWardrobeEntry } from "@/lib/titles";
 import {
+  SUPPORTER_TITLE_LIFETIME,
   SUPPORTER_TITLE_V1,
   SUPPORTER_TITLE_V2,
 } from "@/lib/supporter-tier";
@@ -489,6 +490,8 @@ function TitleCard({
                 t("unlockRequirementSupporterBasic")
               ) : title.name === SUPPORTER_TITLE_V2 ? (
                 t("unlockRequirementSupporterPremium")
+              ) : title.name === SUPPORTER_TITLE_LIFETIME ? (
+                t("unlockRequirementSupporterLifetime")
               ) : (
                 t("unlockRequirementUnknown")
               )}
@@ -526,7 +529,8 @@ function TitleCard({
               {locked &&
                 !achievement &&
                 (title.name === SUPPORTER_TITLE_V1 ||
-                  title.name === SUPPORTER_TITLE_V2) && (
+                  title.name === SUPPORTER_TITLE_V2 ||
+                  title.name === SUPPORTER_TITLE_LIFETIME) && (
                   <Link
                     href="/supporter"
                     className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs text-zinc-400 transition-colors hover:text-amber-300"

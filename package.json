@@ -32,6 +32,8 @@
     "db:profile-supporter": "node scripts/run-profile-supporter-fields.mjs",
     "db:supporter-titles": "node scripts/run-supporter-titles.mjs",
     "db:supporter-titles-backfill": "node scripts/backfill-supporter-titles.mjs",
+    "db:supporter-lifetime": "node scripts/run-supporter-lifetime.mjs",
+    "db:stripe-webhook-status": "node scripts/run-stripe-webhook-processing-status.mjs",
     "db:orders-checkout": "node scripts/run-orders-checkout.mjs",
     "db:orders-cancelled": "node scripts/run-orders-cancelled-status.mjs",
     "db:game-entitlements": "node scripts/run-game-entitlements.mjs",

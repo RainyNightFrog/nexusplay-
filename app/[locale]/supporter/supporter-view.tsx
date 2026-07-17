@@ -11,19 +11,29 @@ import {
   Palette,
   Shield,
   Sparkles,
+  Zap,
 } from "lucide-react";
 import { useRouter } from "@/i18n/navigation";
 import { SiteHeader } from "@/components/layout/site-header";
+import { RainbowSafeText } from "@/components/supporter/rainbow-safe-text";
 import { SupporterBadge } from "@/components/supporter/supporter-badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useApiError } from "@/hooks/use-api-error";
 import {
+  LIFETIME_SUPPORTER_MIN_USD,
+  LIFETIME_SUPPORTER_TIER_ID,
   SUPPORTER_PASS_TIERS,
   formatTierPriceUsd,
+  type CheckoutSelectionId,
   type SupporterPassTierId,
 } from "@/lib/supporter-pass";
-import { isPremiumSupporterBadge } from "@/lib/supporter-tier";
+import {
+  SUPPORTER_TITLE_V1,
+  SUPPORTER_TITLE_V2,
+  isPremiumSupporterBadge,
+  supporterComposerMirrorClassByTier,
+} from "@/lib/supporter-tier";
 import { cn } from "@/lib/utils";
 
 const PERK_ICONS = [Sparkles, Palette, HeartHandshake] as const;
@@ -40,13 +50,18 @@ export function SupporterView() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const [selectedTier, setSelectedTier] = useState<SupporterPassTierId>(
+  const [selectedTier, setSelectedTier] = useState<CheckoutSelectionId>(
     "supporter_5_monthly"
+  );
+  const [lifetimeAmount, setLifetimeAmount] = useState(
+    String(LIFETIME_SUPPORTER_MIN_USD)
   );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [paymentsLive, setPaymentsLive] = useState(false);
+
+  const isLifetimeSelected = selectedTier === LIFETIME_SUPPORTER_TIER_ID;
 
   useEffect(() => {
     fetch("/api/checkout/supporter-pass")
@@ -63,8 +78,13 @@ export function SupporterView() {
   }, [refreshProfile]);
 
   useEffect(() => {
-    if (searchParams.get("checkout") === "success") {
+    const checkout = searchParams.get("checkout");
+    if (checkout === "success") {
       showSuccessToast();
+      router.replace("/supporter", { scroll: false });
+      return;
+    }
+    if (checkout === "cancelled") {
       router.replace("/supporter", { scroll: false });
     }
   }, [searchParams, showSuccessToast, router]);
@@ -79,13 +99,27 @@ export function SupporterView() {
     setError(null);
 
     try {
+      const body: {
+        tierId: CheckoutSelectionId;
+        localePath: string;
+        customAmountUsd?: number;
+      } = {
+        tierId: selectedTier,
+        localePath: pathname,
+      };
+
+      if (isLifetimeSelected) {
+        const amount = Number.parseFloat(lifetimeAmount);
+        if (!Number.isFinite(amount)) {
+          throw new Error(t("lifetimeInvalidAmount"));
+        }
+        body.customAmountUsd = amount;
+      }
+
       const response = await fetch("/api/checkout/supporter-pass", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          tierId: selectedTier,
-          localePath: pathname,
-        }),
+        body: JSON.stringify(body),
       });
 
       const data = (await response.json()) as {
@@ -143,10 +177,12 @@ export function SupporterView() {
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mx-auto mt-8 flex max-w-xl items-center justify-center gap-2 rounded-2xl border border-emerald-400/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100"
+            className="mx-auto mt-8 flex max-w-xl flex-wrap items-center justify-center gap-2 rounded-2xl border border-emerald-400/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100"
           >
             <Check className="size-4 shrink-0" />
-            {t("alreadySupporter")}
+            {profile.supporter_lifetime
+              ? t("alreadyLifetime")
+              : t("alreadySupporter")}
             <SupporterBadge
               showLabel
               isSupporter
@@ -194,50 +230,178 @@ export function SupporterView() {
           </div>
 
           <div className="mx-auto mt-6 grid max-w-2xl gap-4 sm:grid-cols-2">
-            {SUPPORTER_PASS_TIERS.map((tier) => (
-              <button
-                key={tier.id}
-                type="button"
-                onClick={() => setSelectedTier(tier.id)}
-                className={cn(
-                  "rounded-2xl border p-5 text-center transition-colors",
-                  selectedTier === tier.id
-                    ? "border-amber-400/40 bg-amber-500/10 shadow-[0_0_24px_rgba(251,191,36,0.08)]"
-                    : "border-white/10 bg-zinc-950/40 hover:border-white/20"
-                )}
-              >
-                {selectedTier === tier.id && (
-                  <Check className="mx-auto mb-2 size-5 text-amber-300" />
+            {SUPPORTER_PASS_TIERS.map((tier) => {
+              const premium = isPremiumSupporterBadge(tier.badge);
+              return (
+                <button
+                  key={tier.id}
+                  type="button"
+                  onClick={() => setSelectedTier(tier.id as SupporterPassTierId)}
+                  className={cn(
+                    "rounded-2xl border p-5 text-center transition-colors",
+                    selectedTier === tier.id
+                      ? "border-amber-400/40 bg-amber-500/10 shadow-[0_0_24px_rgba(251,191,36,0.08)]"
+                      : "border-white/10 bg-zinc-950/40 hover:border-white/20"
+                  )}
+                >
+                  {selectedTier === tier.id && (
+                    <Check className="mx-auto mb-2 size-5 text-amber-300" />
+                  )}
+                  <p className="text-lg font-semibold text-white">
+                    ${formatTierPriceUsd(tier.priceCents)} USD
+                  </p>
+                  <p className="mt-1 text-sm text-zinc-400">
+                    {t(tier.labelKey)}
+                  </p>
+                  <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                    <SupporterBadge
+                      showLabel
+                      isSupporter
+                      supporterBadge={tier.badge}
+                    />
+                    <span
+                      className={cn(
+                        "text-xs font-semibold tracking-wide sm:text-sm",
+                        premium ? "title-supporter-v2" : "title-supporter-v1"
+                      )}
+                    >
+                      {premium ? SUPPORTER_TITLE_V2 : SUPPORTER_TITLE_V1}
+                    </span>
+                  </div>
+                  <p className="mt-3 text-xs text-zinc-500">
+                    {t(getBillingLabelKey(tier.interval))}
+                  </p>
+                  <ul className="mt-4 space-y-1 text-xs text-zinc-500">
+                    <li>{t("tierPerkBadge")}</li>
+                    <li>{t("tierPerkUsername")}</li>
+                    <li>
+                      {t(
+                        premium
+                          ? "tierPerkTitlePremium"
+                          : "tierPerkTitleBasic"
+                      )}
+                    </li>
+                    {!premium ? <li>{t("tierPerkVipText")}</li> : null}
+                    {premium && (
+                      <>
+                        <li>{t("tierPerkPremiumBadge")}</li>
+                        <li>{t("tierPerkPremiumGlow")}</li>
+                        <li>{t("tierPerkComposer")}</li>
+                      </>
+                    )}
+                  </ul>
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setSelectedTier(LIFETIME_SUPPORTER_TIER_ID)}
+            className={cn(
+              "mx-auto mt-4 block w-full max-w-2xl rounded-2xl border p-5 text-center transition-colors",
+              isLifetimeSelected
+                ? "border-cyan-400/45 bg-gradient-to-br from-amber-500/15 via-fuchsia-500/10 to-cyan-500/15 shadow-[0_0_28px_rgba(34,211,238,0.12)]"
+                : "border-white/10 bg-zinc-950/40 hover:border-cyan-400/25"
+            )}
+          >
+            <div className="mx-auto flex max-w-md flex-col items-center">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400/25 to-cyan-500/25">
+                <Zap className="size-5 text-amber-200" />
+              </div>
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                {isLifetimeSelected && (
+                  <Check className="size-5 text-cyan-300" />
                 )}
                 <p className="text-lg font-semibold text-white">
-                  ${formatTierPriceUsd(tier.priceCents)} USD
+                  {t("tierLifetime")}
                 </p>
-                <p className="mt-1 text-sm text-zinc-400">
-                  {t(tier.labelKey)}
-                </p>
-                <p className="mt-3 text-xs text-zinc-500">
-                  {t(getBillingLabelKey(tier.interval))}
-                </p>
-                <ul className="mt-4 space-y-1 text-xs text-zinc-500">
-                  <li>{t("tierPerkBadge")}</li>
-                  <li>{t("tierPerkUsername")}</li>
-                  <li>
-                    {t(
-                      isPremiumSupporterBadge(tier.badge)
-                        ? "tierPerkTitlePremium"
-                        : "tierPerkTitleBasic"
+                <SupporterBadge
+                  showLabel
+                  isSupporter
+                  supporterBadge="supporter_v2"
+                />
+              </div>
+              <span className="title-rainynightfrog-frame mt-2">
+                <span className="title-rainynightfrog text-xs sm:text-sm">
+                  RainyNightFrog
+                </span>
+              </span>
+              <p className="mt-2 text-sm text-zinc-400">
+                {t("tierLifetimeDesc")}
+              </p>
+              <ul className="mt-3 space-y-1 text-xs text-zinc-500">
+                <li>{t("tierPerkSvipAll")}</li>
+                <li>{t("tierPerkComposer")}</li>
+                <li>{t("tierPerkLifetimeTitle")}</li>
+                <li>{t("tierPerkLifetimePermanent")}</li>
+                <li>{t("tierPerkWorldAnnounce")}</li>
+              </ul>
+
+              <div
+                className="mt-4 w-full"
+                onClick={(event) => event.stopPropagation()}
+                onKeyDown={(event) => event.stopPropagation()}
+              >
+                <label
+                  htmlFor="lifetime-amount"
+                  className="mb-1.5 block text-xs font-medium text-zinc-300"
+                >
+                  {t("lifetimeAmountLabel")}
+                </label>
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-sm text-zinc-400">$</span>
+                  <div
+                    className={cn(
+                      "relative w-full max-w-[11rem] rounded-xl border bg-zinc-950/70",
+                      "border-violet-400/25 focus-within:border-violet-400/45 focus-within:ring-2 focus-within:ring-violet-400/20"
                     )}
-                  </li>
-                  {isPremiumSupporterBadge(tier.badge) && (
-                    <>
-                      <li>{t("tierPerkPremiumBadge")}</li>
-                      <li>{t("tierPerkPremiumGlow")}</li>
-                    </>
-                  )}
-                </ul>
-              </button>
-            ))}
-          </div>
+                  >
+                    <input
+                      id="lifetime-amount"
+                      type="text"
+                      inputMode="decimal"
+                      autoComplete="off"
+                      value={lifetimeAmount}
+                      onFocus={() => setSelectedTier(LIFETIME_SUPPORTER_TIER_ID)}
+                      onChange={(event) => {
+                        setSelectedTier(LIFETIME_SUPPORTER_TIER_ID);
+                        const next = event.target.value.replace(/[^\d.]/g, "");
+                        setLifetimeAmount(next);
+                      }}
+                      className={cn(
+                        "w-full rounded-xl border-0 bg-transparent px-3 py-2 text-center text-sm outline-none",
+                        "caret-violet-300 placeholder:text-zinc-600",
+                        lifetimeAmount.length > 0
+                          ? "text-transparent [-webkit-text-fill-color:transparent]"
+                          : "text-white"
+                      )}
+                      placeholder={String(LIFETIME_SUPPORTER_MIN_USD)}
+                    />
+                    {lifetimeAmount.length > 0 ? (
+                      <div
+                        aria-hidden
+                        className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden px-3 py-2 text-sm"
+                      >
+                        <RainbowSafeText
+                          text={lifetimeAmount}
+                          rainbowClassName={
+                            supporterComposerMirrorClassByTier.premium
+                          }
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                  <span className="text-sm text-zinc-500">USD</span>
+                </div>
+                <p className="mt-1.5 text-[11px] text-zinc-500">
+                  {t("lifetimeAmountHint", {
+                    min: LIFETIME_SUPPORTER_MIN_USD,
+                  })}
+                </p>
+              </div>
+            </div>
+          </button>
 
           <p className="mt-4 text-center text-[11px] leading-relaxed text-zinc-500">
             {t("spendingHint")}
@@ -258,14 +422,25 @@ export function SupporterView() {
               type="button"
               disabled={submitting}
               onClick={() => void handlePurchase()}
-              className="w-full max-w-md gap-2 bg-gradient-to-r from-amber-500 to-violet-600 text-white hover:from-amber-400 hover:to-violet-500"
+              className={cn(
+                "w-full max-w-md gap-2 text-white",
+                isLifetimeSelected
+                  ? "bg-gradient-to-r from-amber-500 via-fuchsia-500 to-cyan-500 hover:from-amber-400 hover:via-fuchsia-400 hover:to-cyan-400"
+                  : "bg-gradient-to-r from-amber-500 to-violet-600 hover:from-amber-400 hover:to-violet-500"
+              )}
             >
               {submitting ? (
                 <Loader2 className="size-4 animate-spin" />
+              ) : isLifetimeSelected ? (
+                <Zap className="size-4" />
               ) : (
                 <Shield className="size-4" />
               )}
-              {profile?.is_supporter ? t("extendSupport") : t("cta")}
+              {isLifetimeSelected
+                ? t("ctaLifetime")
+                : profile?.is_supporter
+                  ? t("extendSupport")
+                  : t("cta")}
             </Button>
           </div>
         </section>
