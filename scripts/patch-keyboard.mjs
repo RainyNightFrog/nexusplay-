@@ -2,7 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 const ROOT = path.resolve("public/games");
-const SDK = "/sdk/rnf-game-sdk.js?v=20260717";
+const SDK = "/sdk/rnf-game-sdk.js?v=20260723c";
+const SDK_SRC_RE = /\/sdk\/rnf-game-sdk\.js(\?v=[A-Za-z0-9]+)?/g;
 
 const SLUGS = [
   "neon-snake-extreme",
@@ -37,7 +38,7 @@ function patchStartGeneric(html) {
 for (const slug of SLUGS) {
   const file = path.join(ROOT, slug, "index.html");
   let html = fs.readFileSync(file, "utf8");
-  html = html.replace(/\/sdk\/rnf-game-sdk\.js(\?v=\d+)?/g, SDK);
+  html = html.replace(SDK_SRC_RE, SDK);
   html = patchCleanup(html);
 
   if (slug === "void-brick-breaker") {

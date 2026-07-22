@@ -1,11 +1,22 @@
 import { NextResponse } from "next/server";
 import { resolveUserRole, hasCreatorDashboardAccess } from "@/lib/auth-profile";
+import {
+  checkRateLimit,
+  getClientIp,
+  rateLimitResponse,
+} from "@/lib/rate-limit";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 
 export const maxDuration = 300;
 
 export async function POST(request: Request) {
   try {
+    const ip = getClientIp(request);
+    const limit = checkRateLimit(`games:upload:${ip}`, 5, 60_000);
+    if (!limit.allowed) {
+      return rateLimitResponse(limit.retryAfterSec);
+    }
+
     const authClient = await createAuthServerClient();
     const {
       data: { user },

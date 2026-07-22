@@ -51,6 +51,20 @@ function isSafeRnfStorageSegment(value: string): boolean {
   return /^[a-z0-9-]+$/i.test(value);
 }
 
+/** 解析 iframe 通訊目標 origin（同源嵌入用 location.origin；否則取 iframe.src） */
+function resolveIframeTargetOrigin(
+  iframe: HTMLIFrameElement | null | undefined
+): string {
+  if (typeof window === "undefined") return "";
+  const src = iframe?.getAttribute("src") || iframe?.src || "";
+  if (!src) return window.location.origin;
+  try {
+    return new URL(src, window.location.href).origin;
+  } catch {
+    return window.location.origin;
+  }
+}
+
 function buildAuthPayload(
   profile: ReturnType<typeof useAuth>["profile"],
   gameId: string,
@@ -82,8 +96,13 @@ export function GameEmbedBridge({
 
   const isMessageFromIframe = useCallback(
     (event: MessageEvent) => {
-      const iframeWindow = iframeRef.current?.contentWindow;
-      return Boolean(iframeWindow && event.source === iframeWindow);
+      const iframe = iframeRef.current;
+      const iframeWindow = iframe?.contentWindow;
+      if (!iframeWindow || event.source !== iframeWindow) return false;
+      const expectedOrigin = resolveIframeTargetOrigin(iframe);
+      if (event.origin === expectedOrigin) return true;
+      // sandbox 無 allow-same-origin 時 origin 為 "null"；source 已驗證
+      return event.origin === "null";
     },
     [iframeRef]
   );
@@ -91,6 +110,7 @@ export function GameEmbedBridge({
   const postAuth = useCallback(() => {
     const iframe = iframeRef.current;
     if (!iframe?.contentWindow) return;
+    const targetOrigin = resolveIframeTargetOrigin(iframe);
 
     iframe.contentWindow.postMessage(
       {
@@ -102,7 +122,7 @@ export function GameEmbedBridge({
             ? `/dashboard/edit/${gameId}`
             : null,
       },
-      "*"
+      targetOrigin
     );
   }, [iframeRef, profile, gameId, creatorId]);
 
@@ -111,7 +131,7 @@ export function GameEmbedBridge({
       const iframe = iframeRef.current;
       const target = iframe?.contentWindow;
       if (!target) return;
-      target.postMessage(payload, "*");
+      target.postMessage(payload, resolveIframeTargetOrigin(iframe));
     },
     [iframeRef]
   );
@@ -130,7 +150,7 @@ export function GameEmbedBridge({
           requestId,
           ...result,
         },
-        "*"
+        resolveIframeTargetOrigin(iframe)
       );
     },
     [iframeRef]
@@ -302,7 +322,7 @@ export function GameEmbedBridge({
           requestId: pending.requestId,
           confirmed,
         },
-        "*"
+        resolveIframeTargetOrigin(iframe)
       );
 
       leaveConfirmRef.current = null;
@@ -378,7 +398,7 @@ export function GameEmbedBridge({
             requestId: request.requestId,
             value,
           },
-          "*"
+          resolveIframeTargetOrigin(iframeRef.current)
         );
         return;
       }

@@ -1,42 +1,42 @@
-ï»¿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Neon Tetromino Rush Â· éœ“è™¹æ–¹å¡Šè¡åˆº</title>
+  <title>Neon Tetromino Rush ¡P ÀO­i¤è¶ô½Ä¨ë</title>
 </head>
 <body>
-<script src="/sdk/rnf-game-sdk.js?v=20260723b"></script>
+<script src="/sdk/rnf-game-sdk.js?v=20260723c"></script>
 <script>
 RNF.init();
 var shell = RNF.buildShell({
   title: "Neon Tetromino Rush",
   creator: "RetroGrid_Dev",
-  subtitle: "å¹½éˆé è¦½ Â· ä¿ç•™ Â· äº”æ ¼é è¦½ Â· éœ“è™¹ç‹‚ç†± Â· é€£æ¶ˆ Combo Â· æ‰‹æ©Ÿè™›æ“¬éµ",
+  subtitle: "«ÕÆF¹wÄı ¡P «O¯d ¡P ¤­®æ¹wÄı ¡P ÀO­i¨g¼ö ¡P ³s®ø Combo ¡P ¤â¾÷µêÀÀÁä",
   width: 960,
   height: 520,
   bgmStyle: "pulse",
-  highlights: ["äº”æ ¼é è¦½", "éœ“è™¹ç‹‚ç†±", "é€£æ¶ˆ Combo", "é›£åº¦åƒåœ¾è¡Œ", "æ‰‹æ©Ÿè™›æ“¬éµ"],
+  highlights: ["¤­®æ¹wÄı", "ÀO­i¨g¼ö", "³s®ø Combo", "Ãø«×©U§£¦æ", "¤â¾÷µêÀÀÁä"],
   help: {
-    about: "ç¶“å…¸æ–¹å¡Šå †ç–Šçš„éœ“è™¹é›»ç«¶ç‰ˆã€‚æ¶ˆé™¤æ•´è¡Œå¾—åˆ†ï¼Œå †é ‚å³å¤±æ•—ã€‚å›°é›£è¶Šé«˜æ‰è½è¶Šå¿«ï¼Œæ¥µé™é‚„æœƒé€±æœŸæ€§æ¨å…¥åƒåœ¾è¡Œã€‚",
+    about: "¸g¨å¤è¶ô°ïÅ|ªºÀO­i¹qÄvª©¡C®ø°£¾ã¦æ±o¤À¡A°ï³»§Y¥¢±Ñ¡C§xÃø¶V°ª±¼¸¨¶V§Ö¡A·¥­­ÁÙ·|¶g´Á©Ê±À¤J©U§£¦æ¡C",
     features: [
-      "å¹½éˆé è¦½è½é»ã€C ä¿ç•™ã€ç©ºç™½éµç¡¬é™éœ‡å±",
-      "äº”æ ¼ Next é è¦½èˆ‡ 7-Bag å…¬å¹³éš¨æ©Ÿ",
-      "é€£æ¶ˆ Combo å€ç‡èˆ‡éœ“è™¹æ–¹å¡ŠåŠ åˆ†",
-      "éœ“è™¹ç‹‚ç†±ï¼šé€£æ¶ˆè“„æ»¿å¾ŒçŸ­æ™‚é›™å€åˆ†èˆ‡å…‰æ³¢ç‰¹æ•ˆ",
-      "å›°é›£ï¼æ¥µé™é›£åº¦é€±æœŸåƒåœ¾è¡Œæ–½å£“"
+      "«ÕÆF¹wÄı¸¨ÂI¡BC «O¯d¡BªÅ¥ÕÁäµw­°¾_«Ì",
+      "¤­®æ Next ¹wÄı»P 7-Bag ¤½¥­ÀH¾÷",
+      "³s®ø Combo ­¿²v»PÀO­i¤è¶ô¥[¤À",
+      "ÀO­i¨g¼ö¡G³s®ø»Wº¡«áµu®ÉÂù­¿¤À»P¥úªi¯S®Ä",
+      "§xÃø¡ş·¥­­Ãø«×¶g´Á©U§£¦æ¬IÀ£"
     ],
     controls: [
-      "â† â†’ï¼šç§»å‹•ï¼ˆé•·æŒ‰é€£ç§»ï¼‰",
-      "â†‘ï¼Zï¼šé€†æ™‚é‡æ—‹è½‰ Â· Xï¼šé †æ™‚é‡æ—‹è½‰",
-      "â†“ï¼šè»Ÿé™ Â· ç©ºç™½ï¼šç¡¬é™",
-      "Cï¼šä¿ç•™ï¼ˆæ¯é¡†é™ä¸€æ¬¡ï¼‰",
-      "æ‰‹æ©Ÿï¼šå·¦å´ç§»å‹•ï¼å³å´æ—‹è½‰ã€è»Ÿé™ã€ç¡¬é™ã€ä¿ç•™"
+      "¡ö ¡÷¡G²¾°Ê¡]ªø«ö³s²¾¡^",
+      "¡ô¡şZ¡G°f®É°w±ÛÂà ¡P X¡G¶¶®É°w±ÛÂà",
+      "¡õ¡G³n­° ¡P ªÅ¥Õ¡Gµw­°",
+      "C¡G«O¯d¡]¨CÁû­­¤@¦¸¡^",
+      "¤â¾÷¡G¥ª°¼²¾°Ê¡ş¥k°¼±ÛÂà¡B³n­°¡Bµw­°¡B«O¯d"
     ],
     tips: [
-      "ä¸€æ¬¡æ¶ˆå¤šè¡Œåˆ†æ•¸æ›´é«˜ï¼Œé€£æ¶ˆç¶­æŒ Combo å€ç‡",
-      "éœ“è™¹æ–¹å¡Šï¼ˆç™¼å…‰æ ¼ï¼‰æ¶ˆè¡Œé¡å¤–åŠ åˆ†",
-      "ç‹‚ç†±æœŸé–“åˆ†æ•¸åŠ å€ï¼ŒæŠŠæ¡ç¯€å¥è¡æ¦œ"
+      "¤@¦¸®ø¦h¦æ¤À¼Æ§ó°ª¡A³s®øºû«ù Combo ­¿²v",
+      "ÀO­i¤è¶ô¡]µo¥ú®æ¡^®ø¦æÃB¥~¥[¤À",
+      "¨g¼ö´Á¶¡¤À¼Æ¥[­¿¡A§â´¤¸`«µ½Äº]"
     ]
   },
   onStop: cleanup,
@@ -142,12 +142,12 @@ function startGame() {
   shell.attachTouchControls({
     keys: keys,
     buttons: [
-      { code: "ArrowLeft", label: "â†", side: "left", hold: true },
-      { code: "ArrowRight", label: "â†’", side: "left", hold: true },
-      { code: "KeyZ", label: "æ—‹", side: "right", hold: false, onPress: function () { tryRotate(-1); } },
-      { code: "ArrowDown", label: "è»Ÿé™", side: "right", hold: true, wide: true },
-      { code: "Space", label: "ç¡¬é™", side: "right", hold: false, danger: true, onPress: function () { hardDrop(); } },
-      { code: "KeyC", label: "ä¿ç•™", side: "right", hold: false, onPress: function () { doHold(); } }
+      { code: "ArrowLeft", label: "¡ö", side: "left", hold: true },
+      { code: "ArrowRight", label: "¡÷", side: "left", hold: true },
+      { code: "KeyZ", label: "±Û", side: "right", hold: false, onPress: function () { tryRotate(-1); } },
+      { code: "ArrowDown", label: "³n­°", side: "right", hold: true, wide: true },
+      { code: "Space", label: "µw­°", side: "right", hold: false, danger: true, onPress: function () { hardDrop(); } },
+      { code: "KeyC", label: "«O¯d", side: "right", hold: false, onPress: function () { doHold(); } }
     ]
   });
   lastT = performance.now();
@@ -374,17 +374,17 @@ function onKeyUp(e) {
 
 function updateHud() {
   var feverHtml = feverActive > 0
-    ? '<div><span>ç‹‚ç†±</span><b style="color:#f472b6">' + feverActive.toFixed(1) + "s</b></div>"
-    : '<div><span>ç‹‚ç†±</span><b>' + Math.floor(fever) + "%</b></div>";
+    ? '<div><span>¨g¼ö</span><b style="color:#f472b6">' + feverActive.toFixed(1) + "s</b></div>"
+    : '<div><span>¨g¼ö</span><b>' + Math.floor(fever) + "%</b></div>";
   var comboHtml = combo > 1
     ? '<div><span>Combo</span><b style="color:#fbbf24">x' + combo + "</b></div>"
     : "";
   shell.setHud(
-    '<div><span>åˆ†æ•¸</span><b>' + score.toLocaleString() + "</b></div>" +
-    '<div><span>ç­‰ç´š</span><b>' + level + "</b></div>" +
-    '<div><span>æ¶ˆé™¤</span><b>' + lines + "</b></div>" +
+    '<div><span>¤À¼Æ</span><b>' + score.toLocaleString() + "</b></div>" +
+    '<div><span>µ¥¯Å</span><b>' + level + "</b></div>" +
+    '<div><span>®ø°£</span><b>' + lines + "</b></div>" +
     feverHtml + comboHtml +
-    '<div><span>ä¿ç•™</span><b>' + (canHold ? "å°±ç·’" : "å·²ç”¨") + "</b></div>"
+    '<div><span>«O¯d</span><b>' + (canHold ? "´Nºü" : "¤w¥Î") + "</b></div>"
   );
 }
 
@@ -463,7 +463,7 @@ function drawBlock(x, y, s, color, alpha, neon) {
 }
 
 function drawBoard() {
-  drawPanel(BOARD_X - 10, BOARD_Y - 10, COLS * BS + 20, ROWS * BS + 20, "çŸ©é™£æˆ°å ´");
+  drawPanel(BOARD_X - 10, BOARD_Y - 10, COLS * BS + 20, ROWS * BS + 20, "¯x°}¾Ô³õ");
   if (feverActive > 0 && highQ) {
     ctx.strokeStyle = "rgba(244,114,182," + (0.25 + Math.sin(animT * 8) * 0.15) + ")";
     ctx.lineWidth = 2;
@@ -509,12 +509,12 @@ function drawBoard() {
 }
 
 function drawSide() {
-  drawPanel(56, 36, 120, 200, "NEXT Ã—5");
+  drawPanel(56, 36, 120, 200, "NEXT ¡Ñ5");
   for (var i = 0; i < nextQueue.length; i++) {
     var nm = nextQueue[i];
     drawMini(SHAPES[nm].m, SHAPES[nm].c, 72, 58 + i * 36, 14, i === 0 ? 1 : 0.55 - i * 0.06);
   }
-  drawPanel(56, 250, 120, 100, "ä¿ç•™ (C)");
+  drawPanel(56, 250, 120, 100, "«O¯d (C)");
   if (hold) drawMini(hold.m, hold.c, 78, 278, 16);
 
   var bx = 620;
@@ -524,8 +524,8 @@ function drawSide() {
   ctx.fillText("RETRO GRID", bx, 48);
   ctx.fillStyle = "#64748b";
   ctx.font = "12px sans-serif";
-  ctx.fillText("éœ“è™¹æ–¹å¡Šè¡åˆº", bx, 70);
-  ctx.fillText("7-Bag Â· éœ“è™¹ç‹‚ç†± Â· Combo", bx, 92);
+  ctx.fillText("ÀO­i¤è¶ô½Ä¨ë", bx, 70);
+  ctx.fillText("7-Bag ¡P ÀO­i¨g¼ö ¡P Combo", bx, 92);
 
   var barW = 140, barH = 10;
   ctx.fillStyle = "rgba(0,0,0,0.45)";
@@ -540,7 +540,7 @@ function drawSide() {
   ctx.strokeRect(bx, 118, barW, barH);
   ctx.fillStyle = "#94a3b8";
   ctx.font = "10px sans-serif";
-  ctx.fillText(feverActive > 0 ? "NEON FEVER!" : "ç‹‚ç†±è“„åŠ›", bx, 142);
+  ctx.fillText(feverActive > 0 ? "NEON FEVER!" : "¨g¼ö»W¤O", bx, 142);
 
   if (combo > 1) {
     ctx.fillStyle = "#fbbf24";

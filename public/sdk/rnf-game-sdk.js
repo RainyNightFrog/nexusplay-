@@ -227,10 +227,33 @@
     });
   }
 
+  /** 鎖定父頁 Target Origin，避免跨網域訊息偽造 */
+  function getParentTargetOrigin() {
+    try {
+      if (document.referrer) {
+        return new URL(document.referrer).origin;
+      }
+    } catch (_e) {}
+    try {
+      return global.location.origin;
+    } catch (_e2) {
+      return "";
+    }
+  }
+
+  function isTrustedParentMessage(event) {
+    if (!event || event.source !== global.parent) return false;
+    var expected = getParentTargetOrigin();
+    if (!expected) return false;
+    return event.origin === expected;
+  }
+
   function postToParent(payload) {
     try {
       if (global.parent && global.parent !== global) {
-        global.parent.postMessage(payload, "*");
+        var targetOrigin = getParentTargetOrigin();
+        if (!targetOrigin) return;
+        global.parent.postMessage(payload, targetOrigin);
       }
     } catch (_e) {}
   }
@@ -413,6 +436,7 @@
 
   function bindApiProxy() {
     window.addEventListener("message", function (event) {
+      if (!isTrustedParentMessage(event)) return;
       var data = event.data;
       if (!data || data.type !== API_PROXY_RESPONSE) return;
       var waiter = apiProxyWaiters[data.requestId];
@@ -431,6 +455,7 @@
       }
     });
     window.addEventListener("message", function (event) {
+      if (!isTrustedParentMessage(event)) return;
       var data = event.data;
       if (!data || data.type !== STORAGE_GET_RESPONSE) return;
       var waiter = parentStorageWaiters[data.requestId];
@@ -442,6 +467,7 @@
       waiter.resolve(parentStorageCache[waiter.suffix]);
     });
     window.addEventListener("message", function (event) {
+      if (!isTrustedParentMessage(event)) return;
       var data = event.data;
       if (!data || AUTH_TYPES.indexOf(data.type) === -1) return;
       authUser = data.user || null;
@@ -814,6 +840,7 @@
 
   function bindEmbedBridge() {
     window.addEventListener("message", function (event) {
+      if (!isTrustedParentMessage(event)) return;
       var data = event.data;
       if (!data || !data.type) return;
       if (isShowMenuMessage(data.type)) {

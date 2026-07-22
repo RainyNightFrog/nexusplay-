@@ -24,7 +24,12 @@ export function buildRainyNightFrogEmbedSdkScript() {
   }
 
   function fromParent(e){
-    return e.source===window.parent;
+    if(e.source!==window.parent)return false;
+    return e.origin===location.origin;
+  }
+
+  function parentTargetOrigin(){
+    return location.origin;
   }
 
   function resolveAuth(){
@@ -60,7 +65,7 @@ export function buildRainyNightFrogEmbedSdkScript() {
         method:method,
         path:path,
         body:body||null
-      },'*');
+      },parentTargetOrigin());
     });
   }
 
@@ -208,8 +213,8 @@ export function buildRainyNightFrogEmbedSdkScript() {
   window.NexusPlay=api;
 
   try{
-    window.parent.postMessage({type:READY_TYPE,gameId:gameId},'*');
-    window.parent.postMessage({type:LEGACY_READY_TYPE,gameId:gameId},'*');
+    window.parent.postMessage({type:READY_TYPE,gameId:gameId},location.origin);
+    window.parent.postMessage({type:LEGACY_READY_TYPE,gameId:gameId},location.origin);
   }catch(_e){}
 })();
 </script>`;
@@ -255,8 +260,17 @@ export function postShowGameMenu(
 ): boolean {
   const target = iframe?.contentWindow;
   if (!target) return false;
-  target.postMessage({ type: RAINYNIGHTFROG_SHOW_MENU_MESSAGE }, "*");
-  target.postMessage({ type: RNF_SHOW_MENU_MESSAGE }, "*");
+  let targetOrigin = "*";
+  try {
+    const src = iframe?.getAttribute("src") || iframe?.src || "";
+    targetOrigin = src
+      ? new URL(src, window.location.href).origin
+      : window.location.origin;
+  } catch {
+    targetOrigin = window.location.origin;
+  }
+  target.postMessage({ type: RAINYNIGHTFROG_SHOW_MENU_MESSAGE }, targetOrigin);
+  target.postMessage({ type: RNF_SHOW_MENU_MESSAGE }, targetOrigin);
   return true;
 }
 

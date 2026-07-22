@@ -235,6 +235,15 @@ async function connectClient(candidates) {
   throw lastError ?? new Error("無法連線資料庫");
 }
 
+function resolveSeedPassword() {
+  const fromEnv = process.env.SEED_DEFAULT_PASSWORD?.trim();
+  if (fromEnv) return fromEnv;
+  console.warn(
+    "[seed] SEED_DEFAULT_PASSWORD 未設定，改用開發預設密碼（請於 .env.local 設定）"
+  );
+  return "SeedPass_RainyNightFrog_2026!";
+}
+
 async function ensureSeedUser(admin, email, displayName) {
   const { data: listData } = await admin.auth.admin.listUsers({
     page: 1,
@@ -245,7 +254,7 @@ async function ensureSeedUser(admin, email, displayName) {
 
   const { data, error } = await admin.auth.admin.createUser({
     email,
-    password: "SeedPass_RainyNightFrog_2026!",
+    password: resolveSeedPassword(),
     email_confirm: true,
     user_metadata: { display_name: displayName, role: "player" },
   });

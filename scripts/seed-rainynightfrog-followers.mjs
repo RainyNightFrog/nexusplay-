@@ -6,7 +6,6 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 
-const SEED_PASSWORD = "SeedPass_RainyNightFrog_2026!";
 const EMAIL_DOMAIN = "rainynightfrog.local";
 const CREATOR_USERNAME = "rainynightfrog";
 const DEFAULT_COUNT = 624;
@@ -23,6 +22,15 @@ function loadEnv() {
     const value = trimmed.slice(eq + 1).trim();
     if (!process.env[key]) process.env[key] = value;
   }
+}
+
+function resolveSeedPassword() {
+  const fromEnv = process.env.SEED_DEFAULT_PASSWORD?.trim();
+  if (fromEnv) return fromEnv;
+  console.warn(
+    "[seed] SEED_DEFAULT_PASSWORD 未設定，改用開發預設密碼（請於 .env.local 設定）"
+  );
+  return "SeedPass_RainyNightFrog_2026!";
 }
 
 function followerEmail(index) {
@@ -50,7 +58,7 @@ async function ensureFollowerUser(admin, usersByEmail, index) {
 
   const { data, error } = await admin.auth.admin.createUser({
     email,
-    password: SEED_PASSWORD,
+    password: resolveSeedPassword(),
     email_confirm: true,
     user_metadata: {
       display_name: `追蹤者${index}`,

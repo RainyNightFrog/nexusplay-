@@ -1,41 +1,41 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Rainy Frog Dash · 雨夜飛天蛙</title>
+  <title>Rainy Frog Dash �P �B�]���ѵ�</title>
 </head>
 <body>
-<script src="/sdk/rnf-game-sdk.js?v=20260723b"></script>
+<script src="/sdk/rnf-game-sdk.js?v=20260723c"></script>
 <script>
 RNF.init();
 var shell = RNF.buildShell({
   title: "Rainy Frog Dash",
   creator: "FroggyLab_Games",
-  subtitle: "二段跳 · 滑翔 · 護盾／火箭 · 雨夜霓虹天際 · 手機觸控就緒",
+  subtitle: "�G�q�� �P �Ƶ� �P �@�ޡ����b �P �B�]�O�i�ѻ� �P ���Ĳ���N��",
   width: 960,
   height: 520,
   bgmStyle: "ambient",
-  highlights: ["多段障礙編隊", "護盾火箭道具", "Combo 金幣", "天氣相位", "手機三鍵"],
+  highlights: ["�h�q��ê�s��", "�@�ޤ��b�D��", "Combo ����", "�Ѯ�ۦ�", "����T��"],
   help: {
-    about: "雨夜霓虹賽道跑酷。固定跳躍高度，難度越高移速與障礙密度越大。收集金幣維持 Combo，撿護盾與火箭衝刺更遠。",
+    about: "�B�]�O�i�ɹD�]�šC�T�w���D���סA���׶V�����t�P��ê�K�׶V�j�C������������ Combo�A���@�޻P���b�Ĩ�󻷡C",
     features: [
-      "閘門、低橫樑、無人機、懸空雷射、編隊組合等豐富障礙",
-      "護盾可擋一次撞擊（Z 或撿取）；火箭短時加速",
-      "金幣 Combo 倍率；距離越遠場景越密",
-      "雨勢相位：細雨 → 暴雨 → 霓虹狂潮",
-      "桌面鍵鼠與手機虛擬鍵／點擊跳躍皆可"
+      "�h���B�C��١B�L�H���B�a�Źp�g�B�s���զX���״I��ê",
+      "�@�ޥi�פ@�������]Z �ξߨ��^�F���b�u�ɥ[�t",
+      "���� Combo ���v�F�Z���V�������V�K",
+      "�B�լۦ�G�ӫB �� �ɫB �� �O�i�g��",
+      "�ୱ�乫�P�����������I�����D�ҥi"
     ],
     controls: [
-      "空白／W／↑／觸控「跳」：跳躍（可二段跳）",
-      "長按跳躍鍵：空中滑翔減速下落",
-      "Z／觸控「盾」：啟動護盾（冷卻 7 秒）",
-      "點擊畫面空白處亦可跳躍"
+      "�ťա�W������Ĳ���u���v�G���D�]�i�G�q���^",
+      "�������D��G�Ť��Ƶ���t�U��",
+      "Z��Ĳ���u�ޡv�G�Ұ��@�ޡ]�N�o 7 ���^",
+      "�I���e���ťճB��i���D"
     ],
     tips: [
-      "開局有熱身時間，先熟悉節奏",
-      "護盾被破後有短暫無敵幀",
-      "火箭期間分數與移速提升，把握撿取時機"
+      "�}���������ɶ��A�����x�`��",
+      "�@�޳Q�}�ᦳ�u�ȵL�ĴV",
+      "���b�������ƻP���t���ɡA�ⴤ�ߨ��ɾ�"
     ]
   },
   onStop: cleanup,
@@ -153,7 +153,7 @@ function initParallax() {
   for (var j = 0; j < (highQ ? 8 : 4); j++) {
     neonSigns.push({
       x: Math.random() * W, y: 60 + Math.random() * 100,
-      text: ["蛙", "雨", "GO", "RNF"][j % 4],
+      text: ["��", "�B", "GO", "RNF"][j % 4],
       color: ["#22d3ee", "#a78bfa", "#f472b6", "#fbbf24"][j % 4],
       phase: Math.random() * 6.28
     });
@@ -334,7 +334,7 @@ function startGame() {
   jumps = 0; shieldHits = 0; shieldCd = 0;
   rocketTimer = 0; scrollX = 0; animT = 0;
   graceTimer = tun.grace; patternIdx = -1; lastSpawnX = 0;
-  invulnTimer = 0; phaseT = 0; phaseLabel = "細雨";
+  invulnTimer = 0; phaseT = 0; phaseLabel = "�ӫB";
   cityGlow = 0; lightning = { t: 0, flash: 0 };
   initRain();
   initParallax();
@@ -347,9 +347,9 @@ function startGame() {
   shell.attachTouchControls({
     keys: keys,
     buttons: [
-      { code: "Space", label: "跳", side: "left", hold: true,
+      { code: "Space", label: "��", side: "left", hold: true,
         onPress: function () { jumpPressed(); } },
-      { code: "KeyZ", label: "盾", side: "right", hold: false, danger: true,
+      { code: "KeyZ", label: "��", side: "right", hold: false, danger: true,
         onPress: function () { tryShield(); } }
     ],
     swipe: {
@@ -380,16 +380,16 @@ function updateHud() {
   var diff = shell.getDifficulty();
   var comboHtml = combo > 1 ? '<div><span>Combo</span><b style="color:#fbbf24">x' + combo + "</b></div>" : "";
   var shieldHtml = shieldHits > 0
-    ? '<div><span>護盾</span><b style="color:#a78bfa">ON</b></div>'
-    : '<div><span>護盾</span><b>' + (shieldCd > 0 ? Math.ceil(shieldCd) + "s" : "就緒") + "</b></div>";
-  var status = graceTimer > 0 ? "熱身" : rocketTimer > 0 ? "火箭" : frog.onGround ? "奔跑" : "飛躍";
+    ? '<div><span>�@��</span><b style="color:#a78bfa">ON</b></div>'
+    : '<div><span>�@��</span><b>' + (shieldCd > 0 ? Math.ceil(shieldCd) + "s" : "�N��") + "</b></div>";
+  var status = graceTimer > 0 ? "����" : rocketTimer > 0 ? "���b" : frog.onGround ? "�b�]" : "���D";
   shell.setHud(
-    '<div><span>分數</span><b>' + score.toLocaleString() + "</b></div>" +
-    '<div><span>距離</span><b>' + Math.floor(scrollX) + "m</b></div>" +
-    '<div><span>天氣</span><b style="font-size:.72rem;color:#67e8f9">' + phaseLabel + "</b></div>" +
-    '<div><span>狀態</span><b>' + status + "</b></div>" +
+    '<div><span>����</span><b>' + score.toLocaleString() + "</b></div>" +
+    '<div><span>�Z��</span><b>' + Math.floor(scrollX) + "m</b></div>" +
+    '<div><span>�Ѯ�</span><b style="font-size:.72rem;color:#67e8f9">' + phaseLabel + "</b></div>" +
+    '<div><span>���A</span><b>' + status + "</b></div>" +
     shieldHtml + comboHtml +
-    (rocketTimer > 0 ? '<div><span>火箭</span><b style="color:#fbbf24">BOOST</b></div>' : "")
+    (rocketTimer > 0 ? '<div><span>���b</span><b style="color:#fbbf24">BOOST</b></div>' : "")
   );
 }
 
@@ -420,9 +420,9 @@ function rectCircle(rx, ry, rw, rh, cx, cy, cr) {
 }
 
 function updatePhase() {
-  if (scrollX < 200) { phaseLabel = "細雨"; phaseT = 0; }
-  else if (scrollX < 550) { phaseLabel = "暴雨"; phaseT = 1; }
-  else { phaseLabel = "霓虹狂潮"; phaseT = 2; }
+  if (scrollX < 200) { phaseLabel = "�ӫB"; phaseT = 0; }
+  else if (scrollX < 550) { phaseLabel = "�ɫB"; phaseT = 1; }
+  else { phaseLabel = "�O�i�g��"; phaseT = 2; }
 }
 
 function loop(ts) {
@@ -808,7 +808,7 @@ function draw(rainMult) {
     ctx.fillStyle = "rgba(34,211,238,0.18)";
     ctx.font = "bold 15px 'Microsoft JhengHei',sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("熱身中…", W * 0.5, groundY - 48);
+    ctx.fillText("�������K", W * 0.5, groundY - 48);
   }
 
   obstacles.forEach(function (o) {
@@ -847,7 +847,7 @@ function draw(rainMult) {
       ctx.font = "bold 11px sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText("盾", 0, 1);
+      ctx.fillText("��", 0, 1);
     } else {
       ctx.strokeStyle = "#22d3ee";
       ctx.lineWidth = 2;

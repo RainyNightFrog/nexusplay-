@@ -2,7 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 const ROOT = path.resolve("public/games");
-const SDK = "/sdk/rnf-game-sdk.js?v=20260714";
+const SDK = "/sdk/rnf-game-sdk.js?v=20260723c";
+const SDK_SRC_RE = /\/sdk\/rnf-game-sdk\.js(\?v=[A-Za-z0-9]+)?/g;
 
 const patches = {
   "cyber-bubble-pop": [
@@ -187,7 +188,7 @@ const patches = {
 for (const [slug, rules] of Object.entries(patches)) {
   const file = path.join(ROOT, slug, "index.html");
   let html = fs.readFileSync(file, "utf8");
-  html = html.replace(/\/sdk\/rnf-game-sdk\.js(\?v=\d+)?/g, SDK);
+  html = html.replace(SDK_SRC_RE, SDK);
   let changed = 0;
   for (const [re, rep] of rules) {
     const before = html;
@@ -201,6 +202,6 @@ for (const [slug, rules] of Object.entries(patches)) {
 // void-brick-breaker SDK bump only
 const brick = path.join(ROOT, "void-brick-breaker", "index.html");
 let brickHtml = fs.readFileSync(brick, "utf8");
-brickHtml = brickHtml.replace(/\/sdk\/rnf-game-sdk\.js(\?v=\d+)?/g, SDK);
+brickHtml = brickHtml.replace(SDK_SRC_RE, SDK);
 fs.writeFileSync(brick, brickHtml, "utf8");
 console.log("void-brick-breaker: sdk bumped");

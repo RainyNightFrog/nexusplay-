@@ -2,7 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 const ROOT = path.resolve("public/games");
-const SDK = '/sdk/rnf-game-sdk.js?v=20260714';
+const SDK = "/sdk/rnf-game-sdk.js?v=20260723c";
+const SDK_SRC_RE = /\/sdk\/rnf-game-sdk\.js(\?v=[A-Za-z0-9]+)?/g;
 
 const PATCHES = {
   "neon-snake-extreme": {
@@ -156,7 +157,7 @@ function fmtHelp(help) {
 function patchFile(slug, data) {
   const file = path.join(ROOT, slug, "index.html");
   let html = fs.readFileSync(file, "utf8");
-  html = html.replace(/\/sdk\/rnf-game-sdk\.js(\?v=\d+)?/g, SDK);
+  html = html.replace(SDK_SRC_RE, SDK);
 
   if (html.includes("help:")) {
     if (data.pong && !html.includes("MODE_BUTTONS")) {
@@ -166,7 +167,7 @@ function patchFile(slug, data) {
     } else {
       console.log(`${slug}: already has help`);
     }
-    html = html.replace(/\/sdk\/rnf-game-sdk\.js(\?v=\d+)?/g, SDK);
+    html = html.replace(SDK_SRC_RE, SDK);
     fs.writeFileSync(file, html, "utf8");
     return;
   }

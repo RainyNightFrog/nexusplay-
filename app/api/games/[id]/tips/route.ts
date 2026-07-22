@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { resolveUserProfile } from "@/lib/auth-profile";
 import {
+  checkRateLimit,
+  getClientIp,
+  rateLimitResponse,
+} from "@/lib/rate-limit";
+import {
   createTipPaymentIntent,
   getTipPaymentsState,
   loadTipCheckoutContext,
@@ -10,11 +15,21 @@ import {
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
 
+function enforceTipsRateLimit(request: Request) {
+  const ip = getClientIp(request);
+  return checkRateLimit(`games:tips:${ip}`, 20, 60_000);
+}
+
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const limit = enforceTipsRateLimit(request);
+    if (!limit.allowed) {
+      return rateLimitResponse(limit.retryAfterSec);
+    }
+
     const { id } = await params;
     const gameId = Number.parseInt(id, 10);
 
@@ -73,6 +88,11 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const limit = enforceTipsRateLimit(request);
+    if (!limit.allowed) {
+      return rateLimitResponse(limit.retryAfterSec);
+    }
+
     const authClient = await createAuthServerClient();
     const {
       data: { user },

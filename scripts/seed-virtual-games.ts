@@ -12,8 +12,16 @@ import {
 import { upsertBotProfile } from "../lib/profile-player-number";
 import { VIRTUAL_GAMES_SEED } from "../lib/virtual-games-seed-data";
 
-const SEED_PASSWORD = "SeedPass_RainyNightFrog_2026!";
 const EMAIL_DOMAIN = "rainynightfrog.local";
+
+function resolveSeedPassword(): string {
+  const fromEnv = process.env.SEED_DEFAULT_PASSWORD?.trim();
+  if (fromEnv) return fromEnv;
+  console.warn(
+    "[seed] SEED_DEFAULT_PASSWORD 未設定，改用開發預設密碼（請於 .env.local 設定）"
+  );
+  return "SeedPass_RainyNightFrog_2026!";
+}
 
 type VirtualCreator = {
   displayName: string;
@@ -107,7 +115,7 @@ async function ensureCreatorUser(
 
   const { data, error } = await admin.auth.admin.createUser({
     email,
-    password: SEED_PASSWORD,
+    password: resolveSeedPassword(),
     email_confirm: true,
     user_metadata: {
       display_name: creator.displayName,
