@@ -41,6 +41,16 @@ function cronStatusClass(status: string | null) {
   }
 }
 
+function cronStatusLabel(
+  status: string,
+  t: ReturnType<typeof useTranslations<"admin">>
+) {
+  if (status === "success") return t("cronStatus_success");
+  if (status === "failed") return t("cronStatus_failed");
+  if (status === "running") return t("cronStatus_running");
+  return status;
+}
+
 export function AdminCronPanel() {
   const t = useTranslations("admin");
   const locale = useLocale();
@@ -140,7 +150,7 @@ export function AdminCronPanel() {
                       <Badge
                         className={cn("border", cronStatusClass(job.lastStatus))}
                       >
-                        {job.lastStatus}
+                        {cronStatusLabel(job.lastStatus, t)}
                       </Badge>
                     )}
                   </div>

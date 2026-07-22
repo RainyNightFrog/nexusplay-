@@ -88,6 +88,15 @@ function orderStatusLabel(
   return map[status] ?? status;
 }
 
+function orderTypeLabel(
+  orderType: string,
+  t: ReturnType<typeof useTranslations<"admin">>
+) {
+  if (orderType === "game_purchase") return t("ordersType_game_purchase");
+  if (orderType === "supporter_pass") return t("ordersType_supporter_pass");
+  return orderType;
+}
+
 type UserAction =
   | "suspend"
   | "ban"
@@ -677,7 +686,7 @@ export function AdminUsersPanel() {
                           className="flex items-center justify-between rounded-lg border border-white/8 bg-black/20 px-3 py-2 text-sm"
                         >
                           <span className="text-zinc-300">
-                            {order.gameTitle ?? order.orderType}
+                            {order.gameTitle ?? orderTypeLabel(order.orderType, t)}
                           </span>
                           <span className="font-mono text-cyan-200">
                             ${(order.totalAmountCents / 100).toFixed(2)} ·{" "}

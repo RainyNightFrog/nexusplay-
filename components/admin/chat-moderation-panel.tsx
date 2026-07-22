@@ -15,9 +15,9 @@ import {
 import {
   Select,
   SelectContent,
+  SelectDisplayValue,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import type { AdminChatMessageRecord } from "@/lib/admin-chat-moderation-service";
 import {
@@ -26,6 +26,26 @@ import {
 } from "@/components/admin/admin-panel-header";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 import { cn } from "@/lib/utils";
+
+type ChannelFilter = "all" | "world" | "creator";
+
+function channelFilterLabel(
+  channel: ChannelFilter,
+  t: ReturnType<typeof useTranslations<"admin">>
+) {
+  if (channel === "world") return t("chatChannelWorld");
+  if (channel === "creator") return t("chatChannelCreator");
+  return t("chatChannelAll");
+}
+
+function channelLabel(
+  channel: string,
+  t: ReturnType<typeof useTranslations<"admin">>
+) {
+  if (channel === "world") return t("chatChannelWorld");
+  if (channel === "creator") return t("chatChannelCreator");
+  return channel;
+}
 
 function formatDate(value: string, locale: string) {
   try {
@@ -37,8 +57,6 @@ function formatDate(value: string, locale: string) {
     return value;
   }
 }
-
-type ChannelFilter = "all" | "world" | "creator";
 
 export function AdminChatModerationPanel() {
   const t = useTranslations("admin");
@@ -127,7 +145,9 @@ export function AdminChatModerationPanel() {
           onValueChange={(value) => setChannel(value as ChannelFilter)}
         >
           <SelectTrigger className="w-40 border-white/10 bg-zinc-900/60 text-white">
-            <SelectValue />
+            <SelectDisplayValue>
+              {channelFilterLabel(channel, t)}
+            </SelectDisplayValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{t("chatChannelAll")}</SelectItem>
@@ -164,7 +184,7 @@ export function AdminChatModerationPanel() {
                       {message.authorName}
                     </p>
                     <Badge className="border border-white/10 bg-white/5 text-zinc-300">
-                      {message.channel}
+                      {channelLabel(message.channel, t)}
                     </Badge>
                     {message.recalledAt && (
                       <Badge className="border border-amber-400/30 bg-amber-500/10 text-amber-200">

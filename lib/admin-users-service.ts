@@ -1,4 +1,5 @@
 import type { AccountStatus } from "@/lib/account-status";
+import { listAuthAdminUsers } from "@/lib/auth-admin-users-cache";
 import { revokeSupporterStatus } from "@/lib/supporter-pass-service";
 import { createServerSupabase } from "@/lib/supabase-server";
 
@@ -53,6 +54,19 @@ function roundUsd(value: unknown) {
   return Math.round(numeric * 100) / 100;
 }
 
+function countByKey(
+  rows: Array<Record<string, unknown>> | null | undefined,
+  key: string
+) {
+  const counts = new Map<string, number>();
+  for (const row of rows ?? []) {
+    const id = String(row[key] ?? "");
+    if (!id) continue;
+    counts.set(id, (counts.get(id) ?? 0) + 1);
+  }
+  return counts;
+}
+
 export async function listAdminUsers(params: {
   query?: string;
   limit?: number;
@@ -61,66 +75,80 @@ export async function listAdminUsers(params: {
   const limit = Math.min(Math.max(params.limit ?? 50, 1), 100);
   const query = params.query?.trim().toLowerCase() ?? "";
 
+  const authUsers = await listAuthAdminUsers(supabase);
+  const emailById = new Map(
+    authUsers.map((user) => [user.id, user.email ?? null] as const)
+  );
+
   let profileQuery = supabase
     .from("profiles")
     .select(
       "id, display_name, username, role, player_number, is_admin, is_supporter, supporter_badge, account_status, suspended_until, ban_reason, chat_muted_until, forum_posting_disabled, creator_balance_usd, created_at"
     )
-    .order("created_at", { ascending: false })
-    .limit(limit);
+    .order("created_at", { ascending: false });
 
   if (query) {
-    profileQuery = profileQuery.or(
-      `display_name.ilike.%${query}%,username.ilike.%${query}%`
-    );
+    const emailMatchedIds = authUsers
+      .filter((user) => user.email?.toLowerCase().includes(query))
+      .map((user) => user.id)
+      .slice(0, 50);
+
+    if (emailMatchedIds.length > 0) {
+      profileQuery = profileQuery.or(
+        `display_name.ilike.%${query}%,username.ilike.%${query}%,id.in.(${emailMatchedIds.join(",")})`
+      );
+    } else {
+      profileQuery = profileQuery.or(
+        `display_name.ilike.%${query}%,username.ilike.%${query}%`
+      );
+    }
+    profileQuery = profileQuery.limit(Math.max(limit, 80));
+  } else {
+    profileQuery = profileQuery.limit(limit);
   }
 
   const { data: profiles, error } = await profileQuery;
   if (error) throw new Error(error.message);
 
-  const rows: AdminUserRecord[] = [];
+  const profileRows = (profiles ?? []).slice(0, limit);
 
-  for (const profile of profiles ?? []) {
-    const { data: authUser } = await supabase.auth.admin.getUserById(
-      profile.id as string
-    );
-    const email = authUser.user?.email ?? null;
+  const countRows = await Promise.all(
+    profileRows.map(async (profile) => {
+      const id = profile.id as string;
+      const [gamesCount, tipsCount, ordersCount] = await Promise.all([
+        supabase
+          .from("games")
+          .select("id", { count: "exact", head: true })
+          .eq("creator_id", id),
+        supabase
+          .from("game_tips")
+          .select("id", { count: "exact", head: true })
+          .eq("payer_id", id),
+        supabase
+          .from("orders")
+          .select("id", { count: "exact", head: true })
+          .eq("buyer_id", id),
+      ]);
 
-    if (
-      query &&
-      email &&
-      !email.toLowerCase().includes(query) &&
-      !String(profile.display_name ?? "")
-        .toLowerCase()
-        .includes(query) &&
-      !String(profile.username ?? "")
-        .toLowerCase()
-        .includes(query) &&
-      !String(profile.player_number ?? "").includes(query)
-    ) {
-      continue;
-    }
+      return {
+        id,
+        gamesCount: gamesCount.count ?? 0,
+        tipsCount: tipsCount.count ?? 0,
+        ordersCount: ordersCount.count ?? 0,
+      };
+    })
+  );
 
-    const [gamesCount, tipsCount, ordersCount] = await Promise.all([
-      supabase
-        .from("games")
-        .select("id", { count: "exact", head: true })
-        .eq("creator_id", profile.id),
-      supabase
-        .from("game_tips")
-        .select("id", { count: "exact", head: true })
-        .eq("payer_id", profile.id),
-      supabase
-        .from("orders")
-        .select("id", { count: "exact", head: true })
-        .eq("buyer_id", profile.id),
-    ]);
+  const countsById = new Map(countRows.map((row) => [row.id, row] as const));
 
-    rows.push({
-      id: profile.id as string,
-      displayName: (profile.display_name as string) ?? profile.id.slice(0, 8),
+  return profileRows.map((profile) => {
+    const id = profile.id as string;
+    const counts = countsById.get(id);
+    return {
+      id,
+      displayName: (profile.display_name as string) ?? id.slice(0, 8),
       username: (profile.username as string | null) ?? null,
-      email,
+      email: emailById.get(id) ?? null,
       role: (profile.role as string | null) ?? null,
       playerNumber: (profile.player_number as number | null) ?? null,
       isAdmin: profile.is_admin === true,
@@ -133,13 +161,11 @@ export async function listAdminUsers(params: {
       forumPostingDisabled: profile.forum_posting_disabled === true,
       creatorBalanceUsd: roundUsd(profile.creator_balance_usd),
       createdAt: (profile.created_at as string | null) ?? null,
-      gamesCount: gamesCount.count ?? 0,
-      tipsCount: tipsCount.count ?? 0,
-      ordersCount: ordersCount.count ?? 0,
-    });
-  }
-
-  return rows;
+      gamesCount: counts?.gamesCount ?? 0,
+      tipsCount: counts?.tipsCount ?? 0,
+      ordersCount: counts?.ordersCount ?? 0,
+    };
+  });
 }
 
 export async function getAdminUserDetail(userId: string): Promise<AdminUserDetail> {

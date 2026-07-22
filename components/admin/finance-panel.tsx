@@ -45,6 +45,33 @@ function tipStatusClass(status: string) {
   }
 }
 
+function tipStatusLabel(
+  status: string,
+  t: ReturnType<typeof useTranslations<"admin">>
+) {
+  const map: Record<string, string> = {
+    succeeded: t("financeTipStatus_succeeded"),
+    preview: t("financeTipStatus_preview"),
+    refunded: t("financeTipStatus_refunded"),
+    failed: t("financeTipStatus_failed"),
+    pending: t("financeTipStatus_pending"),
+  };
+  return map[status] ?? status;
+}
+
+function payoutStatusLabel(
+  status: string,
+  t: ReturnType<typeof useTranslations<"admin">>
+) {
+  const map: Record<string, string> = {
+    none: t("financePayout_none"),
+    pending: t("financePayout_pending"),
+    active: t("financePayout_active"),
+    restricted: t("financePayout_restricted"),
+  };
+  return map[status] ?? status;
+}
+
 export function AdminFinancePanel() {
   const t = useTranslations("admin");
   const locale = useLocale();
@@ -176,7 +203,7 @@ export function AdminFinancePanel() {
                         {row.diffUsd != null ? `$${row.diffUsd.toFixed(2)}` : "—"}
                       </td>
                       <td className="py-3 text-xs text-zinc-500">
-                        {row.payoutStatus}
+                        {payoutStatusLabel(row.payoutStatus, t)}
                       </td>
                     </tr>
                   ))}
@@ -222,7 +249,7 @@ export function AdminFinancePanel() {
                     ${tip.amountUsd.toFixed(2)}
                   </span>
                   <Badge className={cn("border", tipStatusClass(tip.status))}>
-                    {tip.status}
+                    {tipStatusLabel(tip.status, t)}
                   </Badge>
                   {tip.status === "succeeded" && tip.stripePaymentIntentId && (
                     <Button

@@ -163,9 +163,11 @@ export async function buildLaunchChecklistReport(
   const platform = getPlatformModeStatus();
   const isProduction = isProductionRuntime();
   const db = await checkDatabase();
-  const homeProbe = await probeUrl(`${siteUrl}/`);
-  const gameApiProbe = await probeUrl(`${siteUrl}/api/games/1`);
-  const gamePageProbe = await probeUrl(`${siteUrl}/game/1`);
+  const [homeProbe, gameApiProbe, gamePageProbe] = await Promise.all([
+    probeUrl(`${siteUrl}/`),
+    probeUrl(`${siteUrl}/api/games/1`),
+    probeUrl(`${siteUrl}/game/1`),
+  ]);
 
   const siteUrlLooksProduction =
     siteUrl.startsWith("https://") && !siteUrl.includes("localhost");

@@ -286,7 +286,17 @@ export function AdminDigestReportPanel({ onError, onSuccess }: AdminDigestReport
                 <li key={sub.id} className="px-3 py-2">
                   <p className="truncate text-zinc-300">{sub.topicUrl}</p>
                   <p className="mt-0.5 text-zinc-500">
-                    {sub.status}
+                    {sub.status === "active"
+                      ? t("websubStatus_active")
+                      : sub.status === "pending"
+                        ? t("websubStatus_pending")
+                        : sub.status === "unsubscribed"
+                          ? t("websubStatus_unsubscribed")
+                          : sub.status === "expired"
+                            ? t("websubStatus_expired")
+                            : sub.status === "failed"
+                              ? t("websubStatus_failed")
+                              : sub.status}
                     {sub.lastError ? ` · ${sub.lastError}` : ""}
                   </p>
                 </li>

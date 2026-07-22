@@ -152,8 +152,9 @@ export default function AdminPage() {
     >
   >({});
   const [loadingGames, setLoadingGames] = useState(true);
-  const [loadingFeedbacks, setLoadingFeedbacks] = useState(true);
-  const [loadingLogs, setLoadingLogs] = useState(true);
+  const [loadingFeedbacks, setLoadingFeedbacks] = useState(false);
+  const [loadingLogs, setLoadingLogs] = useState(false);
+  const [activeTab, setActiveTab] = useState("games");
   const [actionId, setActionId] = useState<string | null>(null);
   const [rejectTarget, setRejectTarget] = useState<AdminGameRecord | null>(
     null
@@ -274,12 +275,16 @@ export default function AdminPage() {
   }, [loadGames]);
 
   useEffect(() => {
-    void loadFeedbacks();
-  }, [loadFeedbacks]);
+    if (activeTab === "feedbacks") {
+      void loadFeedbacks();
+    }
+  }, [activeTab, loadFeedbacks]);
 
   useEffect(() => {
-    void loadLogs();
-  }, [loadLogs]);
+    if (activeTab === "logs") {
+      void loadLogs();
+    }
+  }, [activeTab, loadLogs]);
 
   async function handleGameAction(
     game: AdminGameRecord,
@@ -409,6 +414,48 @@ export default function AdminPage() {
     return map[filter] ?? filter;
   };
 
+  const logActionLabel = (action: string) => {
+    const map: Record<string, string> = {
+      approve_game: t("logAction_approve_game"),
+      reject_game: t("logAction_reject_game"),
+      delete_game: t("logAction_delete_game"),
+      resolve_feedback: t("logAction_resolve_feedback"),
+      refund_tip: t("logAction_refund_tip"),
+      refund_order: t("logAction_refund_order"),
+      grant_admin: t("logAction_grant_admin"),
+      revoke_admin: t("logAction_revoke_admin"),
+      create_announcement: t("logAction_create_announcement"),
+      update_announcement: t("logAction_update_announcement"),
+      deactivate_announcement: t("logAction_deactivate_announcement"),
+      reactivate_announcement: t("logAction_reactivate_announcement"),
+      update_curation: t("logAction_update_curation"),
+      trigger_cron: t("logAction_trigger_cron"),
+      grant_entitlement: t("logAction_grant_entitlement"),
+      revoke_entitlement: t("logAction_revoke_entitlement"),
+      delete_chat_message: t("logAction_delete_chat_message"),
+      recall_chat_message: t("logAction_recall_chat_message"),
+      forum_post_hide: t("logAction_forum_post_hide"),
+      forum_post_unhide: t("logAction_forum_post_unhide"),
+      forum_post_lock: t("logAction_forum_post_lock"),
+      forum_post_unlock: t("logAction_forum_post_unlock"),
+      forum_post_delete: t("logAction_forum_post_delete"),
+      forum_comment_hide: t("logAction_forum_comment_hide"),
+      forum_comment_unhide: t("logAction_forum_comment_unhide"),
+      forum_comment_delete: t("logAction_forum_comment_delete"),
+      suspend: t("logAction_suspend"),
+      ban: t("logAction_ban"),
+      unban: t("logAction_unban"),
+      mute_chat: t("logAction_mute_chat"),
+      unmute_chat: t("logAction_unmute_chat"),
+      disable_forum: t("logAction_disable_forum"),
+      enable_forum: t("logAction_enable_forum"),
+      set_role: t("logAction_set_role"),
+      grant_supporter: t("logAction_grant_supporter"),
+      revoke_supporter: t("logAction_revoke_supporter"),
+    };
+    return map[action] ?? action;
+  };
+
   return (
     <AdminShell title={t("title")} description={t("description")}>
       {pageError && (
@@ -446,7 +493,20 @@ export default function AdminPage() {
         </Card>
       </div>
 
-      <Tabs defaultValue="games" className="mx-auto w-full min-w-0 gap-y-20">
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => {
+          const next = String(value);
+          if (next === "feedbacks" && feedbacks.length === 0) {
+            setLoadingFeedbacks(true);
+          }
+          if (next === "logs" && logs.length === 0) {
+            setLoadingLogs(true);
+          }
+          setActiveTab(next);
+        }}
+        className="mx-auto w-full min-w-0 gap-y-20"
+      >
         <div className="w-full rounded-lg border border-white/10 bg-zinc-900/80 p-2">
           <TabsList className="flex !h-auto min-h-0 w-full flex-wrap justify-center gap-1.5 overflow-visible border-0 bg-transparent p-0 shadow-none group-data-horizontal/tabs:!h-auto group-data-horizontal/tabs:min-h-0 [&_[data-slot=tabs-trigger]]:!h-auto [&_[data-slot=tabs-trigger]]:min-h-8 [&_[data-slot=tabs-trigger]]:flex-none [&_[data-slot=tabs-trigger]]:shrink-0">
           <TabsTrigger value="games" className="gap-1.5 px-3 shrink-0">
@@ -941,7 +1001,7 @@ export default function AdminPage() {
                   >
                     <div>
                       <p className="text-sm font-medium text-white">
-                        {log.action}
+                        {logActionLabel(log.action)}
                       </p>
                       {log.details && (
                         <p className="mt-0.5 text-sm text-zinc-400">

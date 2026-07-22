@@ -15,9 +15,9 @@ import {
 import {
   Select,
   SelectContent,
+  SelectDisplayValue,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import type { AdminOrderRecord } from "@/lib/admin-orders-service";
 import {
@@ -38,6 +38,23 @@ function orderStatusLabel(
     failed: t("ordersStatusFailed"),
   };
   return map[status] ?? status;
+}
+
+function orderTypeLabel(
+  orderType: string,
+  t: ReturnType<typeof useTranslations<"admin">>
+) {
+  if (orderType === "game_purchase") return t("ordersType_game_purchase");
+  if (orderType === "supporter_pass") return t("ordersType_supporter_pass");
+  return orderType;
+}
+
+function orderStatusFilterLabel(
+  status: string,
+  t: ReturnType<typeof useTranslations<"admin">>
+) {
+  if (status === "all") return t("filterAll");
+  return orderStatusLabel(status, t);
 }
 
 function formatDate(value: string, locale: string) {
@@ -154,7 +171,9 @@ export function AdminOrdersPanel() {
           }}
         >
           <SelectTrigger className="w-40 border-white/10 bg-zinc-900/60 text-white">
-            <SelectValue />
+            <SelectDisplayValue>
+              {orderStatusFilterLabel(status, t)}
+            </SelectDisplayValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{t("filterAll")}</SelectItem>
@@ -189,7 +208,7 @@ export function AdminOrdersPanel() {
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-white">
-                    {order.gameTitle ?? order.orderType}
+                    {order.gameTitle ?? orderTypeLabel(order.orderType, t)}
                   </p>
                   <p className="mt-0.5 text-xs text-zinc-500">
                     {formatDate(order.createdAt, locale)}
@@ -198,7 +217,7 @@ export function AdminOrdersPanel() {
                       : ` · ${order.buyerName}`}
                   </p>
                   <p className="mt-0.5 text-xs text-zinc-500">
-                    {t("ordersType")}: {order.orderType}
+                    {t("ordersType")}: {orderTypeLabel(order.orderType, t)}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">

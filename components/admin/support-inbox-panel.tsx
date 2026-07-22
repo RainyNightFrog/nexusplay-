@@ -8,9 +8,9 @@ import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
+  SelectDisplayValue,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import { ChatInput } from "@/components/chat/chat-input";
 import type { AdminSupportThread, SupportThreadStatus } from "@/lib/support-chat";
@@ -21,6 +21,17 @@ import {
 } from "@/components/admin/admin-panel-header";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 import { cn } from "@/lib/utils";
+
+function supportStatusLabel(
+  status: string,
+  t: ReturnType<typeof useTranslations<"admin">>
+) {
+  if (status === "all") return t("supportFilterAll");
+  if (status === "open") return t("supportStatusOpen");
+  if (status === "resolved") return t("supportStatusResolved");
+  if (status === "closed") return t("supportStatusClosed");
+  return status;
+}
 
 function formatDate(value: string, locale: string) {
   try {
@@ -221,7 +232,9 @@ export function AdminSupportInboxPanel() {
                 }
               >
                 <SelectTrigger className="border-white/10 bg-zinc-950/60">
-                  <SelectValue />
+                  <SelectDisplayValue>
+                    {supportStatusLabel(statusFilter, t)}
+                  </SelectDisplayValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("supportFilterAll")}</SelectItem>
@@ -283,7 +296,12 @@ export function AdminSupportInboxPanel() {
                     </p>
                     <p className="text-xs text-zinc-500">
                       {t("supportCreatorRole", {
-                        role: selectedThread.creator_role,
+                        role:
+                          selectedThread.creator_role === "creator"
+                            ? t("usersRoleCreator")
+                            : selectedThread.creator_role === "player"
+                              ? t("usersRolePlayer")
+                              : selectedThread.creator_role,
                       })}
                     </p>
                   </div>
@@ -294,7 +312,9 @@ export function AdminSupportInboxPanel() {
                     }
                   >
                     <SelectTrigger className="w-[140px] border-white/10 bg-zinc-950/60">
-                      <SelectValue />
+                      <SelectDisplayValue>
+                        {supportStatusLabel(selectedThread.status, t)}
+                      </SelectDisplayValue>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="open">{t("supportStatusOpen")}</SelectItem>

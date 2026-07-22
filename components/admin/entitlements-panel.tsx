@@ -16,9 +16,9 @@ import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
+  SelectDisplayValue,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import type { AdminUserRecord } from "@/lib/admin-users-service";
 import { AdminPanelFrame } from "@/components/admin/admin-panel-frame";
@@ -193,7 +193,17 @@ export function AdminEntitlementsPanel() {
               onValueChange={(value) => setSelectedUserId(value ?? "")}
             >
               <SelectTrigger className="border-white/10 bg-white/5">
-                <SelectValue placeholder={t("entitlementsUserPlaceholder")} />
+                <SelectDisplayValue
+                  className={!selectedUserId ? "text-muted-foreground" : undefined}
+                >
+                  {(() => {
+                    const user = users.find((item) => item.id === selectedUserId);
+                    if (!user) return t("entitlementsUserPlaceholder");
+                    return user.email
+                      ? `${user.displayName} · ${user.email}`
+                      : user.displayName;
+                  })()}
+                </SelectDisplayValue>
               </SelectTrigger>
               <SelectContent>
                 {users.map((user) => (
@@ -214,7 +224,17 @@ export function AdminEntitlementsPanel() {
               disabled={loadingGames}
             >
               <SelectTrigger className="border-white/10 bg-white/5">
-                <SelectValue placeholder={t("entitlementsGamePlaceholder")} />
+                <SelectDisplayValue
+                  className={!selectedGameId ? "text-muted-foreground" : undefined}
+                >
+                  {(() => {
+                    const game = games.find(
+                      (item) => String(item.id) === selectedGameId
+                    );
+                    if (!game) return t("entitlementsGamePlaceholder");
+                    return `#${game.id} · ${game.title}`;
+                  })()}
+                </SelectDisplayValue>
               </SelectTrigger>
               <SelectContent>
                 {games.map((game) => (

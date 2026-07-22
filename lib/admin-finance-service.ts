@@ -49,35 +49,37 @@ export async function reconcileCreatorFinance(): Promise<FinanceReconcileRow[]> 
 
   if (error) throw new Error(error.message);
 
-  const rows: FinanceReconcileRow[] = [];
+  const profilesList = profiles ?? [];
 
-  for (const profile of profiles ?? []) {
-    const ledgerUsd = roundUsd(profile.creator_balance_usd);
-    let stripeAvailableUsd: number | null = null;
-    let diffUsd: number | null = null;
+  const rows = await Promise.all(
+    profilesList.map(async (profile) => {
+      const ledgerUsd = roundUsd(profile.creator_balance_usd);
+      let stripeAvailableUsd: number | null = null;
+      let diffUsd: number | null = null;
 
-    if (paymentsLive && profile.stripe_connect_account_id) {
-      try {
-        stripeAvailableUsd = await fetchConnectAvailableBalanceUsd(
-          profile.stripe_connect_account_id
-        );
-        diffUsd = roundUsd(ledgerUsd - stripeAvailableUsd);
-      } catch {
-        stripeAvailableUsd = null;
-        diffUsd = null;
+      if (paymentsLive && profile.stripe_connect_account_id) {
+        try {
+          stripeAvailableUsd = await fetchConnectAvailableBalanceUsd(
+            profile.stripe_connect_account_id
+          );
+          diffUsd = roundUsd(ledgerUsd - stripeAvailableUsd);
+        } catch {
+          stripeAvailableUsd = null;
+          diffUsd = null;
+        }
       }
-    }
 
-    rows.push({
-      creatorId: profile.id,
-      displayName: profile.display_name ?? profile.id.slice(0, 8),
-      ledgerUsd,
-      stripeAvailableUsd,
-      diffUsd,
-      payoutStatus: profile.payout_status ?? "none",
-      stripeConnectAccountId: profile.stripe_connect_account_id,
-    });
-  }
+      return {
+        creatorId: profile.id,
+        displayName: profile.display_name ?? profile.id.slice(0, 8),
+        ledgerUsd,
+        stripeAvailableUsd,
+        diffUsd,
+        payoutStatus: profile.payout_status ?? "none",
+        stripeConnectAccountId: profile.stripe_connect_account_id,
+      } satisfies FinanceReconcileRow;
+    })
+  );
 
   return rows;
 }

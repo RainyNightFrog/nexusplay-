@@ -17,9 +17,9 @@ import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
+  SelectDisplayValue,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { AdminPanelFrame } from "@/components/admin/admin-panel-frame";
@@ -272,7 +272,13 @@ export function AdminAnnouncementsPanel() {
                   }
                 >
                   <SelectTrigger className="mt-1.5 border-white/10 bg-white/5">
-                    <SelectValue />
+                    <SelectDisplayValue>
+                      {severity === "warning"
+                        ? t("announcementsSeverityWarning")
+                        : severity === "success"
+                          ? t("announcementsSeveritySuccess")
+                          : t("announcementsSeverityInfo")}
+                    </SelectDisplayValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="info">{t("announcementsSeverityInfo")}</SelectItem>
