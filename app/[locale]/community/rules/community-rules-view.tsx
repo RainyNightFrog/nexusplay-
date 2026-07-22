@@ -65,11 +65,11 @@ export function CommunityRulesView() {
             <span className="hidden sm:inline">{tCommunity("hub")}</span>
           </Link>
 
-          <div className="flex min-w-0 flex-1 items-center gap-2.5">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-600 shadow-md shadow-violet-500/20">
-              <ScrollText className="size-4 text-white" />
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-600 shadow-md shadow-violet-500/20 sm:size-8">
+              <ScrollText className="size-3.5 text-white sm:size-4" />
             </div>
-            <span className="truncate text-base font-bold tracking-tight text-white">
+            <span className="truncate text-sm font-semibold text-white sm:text-base">
               {t("title")}
             </span>
           </div>

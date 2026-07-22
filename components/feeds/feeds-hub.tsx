@@ -1,8 +1,9 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Rss } from "lucide-react";
+import { ArrowLeft, Rss } from "lucide-react";
 import { Link } from "@/i18n/navigation";
+import { buttonVariants } from "@/components/ui/button";
 import { SiteHeader } from "@/components/layout/site-header";
 import { NavActions } from "@/components/layout/nav-actions";
 import { CategoryFeedPreviewPicker } from "@/components/feeds/category-feed-preview-picker";
@@ -16,6 +17,7 @@ import {
 import { platformGamesAtomFeedPath } from "@/lib/feed-discovery";
 import type { FeedStats } from "@/lib/feed-stats-service";
 import { useGameI18n } from "@/hooks/use-game-i18n";
+import { cn } from "@/lib/utils";
 
 const PLATFORM_FEEDS = [
   { href: "/feed.xml", labelKey: "platformGamesRss" as const },
@@ -39,10 +41,35 @@ export function FeedsHub({ stats }: FeedsHubProps) {
   return (
     <div className="dark relative min-h-full text-zinc-100">
       <SiteHeader>
-        <Link href="/" className="text-sm text-zinc-400 hover:text-white">
+        {/* 手機：返回＋標題 */}
+        <div className="flex min-w-0 flex-1 items-center gap-2 md:hidden">
+          <Link
+            href="/"
+            className={cn(
+              buttonVariants({ variant: "ghost", size: "sm" }),
+              "shrink-0 gap-1.5 px-2 text-zinc-400 hover:text-amber-300"
+            )}
+          >
+            <ArrowLeft className="size-4" />
+          </Link>
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-violet-600 shadow-md shadow-amber-500/20">
+              <Rss className="size-3.5 text-white" />
+            </div>
+            <span className="truncate text-sm font-semibold text-white">
+              {t("title")}
+            </span>
+          </div>
+        </div>
+
+        {/* 電腦：還原原本頂欄 */}
+        <Link
+          href="/"
+          className="hidden text-sm text-zinc-400 hover:text-white md:inline"
+        >
           {t("backHome")}
         </Link>
-        <NavActions className="ml-auto" />
+        <NavActions className="ml-auto hidden md:flex" />
       </SiteHeader>
 
       <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">

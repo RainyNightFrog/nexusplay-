@@ -334,7 +334,7 @@ function LeaderboardPagination({
   if (totalEntries === 0) return null;
 
   return (
-    <div className="flex shrink-0 items-center justify-between gap-3 border-t border-white/8 bg-zinc-950/80 px-4 py-2.5">
+    <div className="flex shrink-0 items-center justify-between gap-3 px-1 py-0.5">
       <Button
         type="button"
         variant="outline"
@@ -389,7 +389,7 @@ function LeaderboardTabPanel({
   const pageEntries = entries.slice(start, start + LEADERBOARD_PAGE_SIZE);
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-2.5 [scrollbar-gutter:stable]">
+    <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pt-2.5 pb-6 md:py-2.5 md:pb-2.5 [scrollbar-gutter:stable]">
       <LeaderboardList
         entries={pageEntries}
         tab={tab}
@@ -546,15 +546,15 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
       <DialogContent
         showCloseButton
         className={cn(
-          "flex max-h-[min(85dvh,85vh)] w-[min(calc(100vw-1rem),720px)] max-w-[min(calc(100vw-1rem),720px)] flex-col gap-0 overflow-hidden",
-          "sm:max-w-[720px]",
+          "flex !flex max-h-[min(92dvh,92vh)] w-[min(calc(100vw-1rem),720px)] max-w-[min(calc(100vw-1rem),720px)] flex-col gap-0 overflow-hidden",
+          "md:max-h-[min(85dvh,85vh)] sm:max-w-[720px]",
           "border-cyan-400/20 bg-zinc-950/95 p-0 text-base text-zinc-100",
           "shadow-2xl shadow-violet-500/15 backdrop-blur-xl"
         )}
       >
         <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-cyan-500/10 via-violet-500/5 to-transparent" />
 
-        <div className="relative flex min-h-0 flex-col gap-3 px-5 py-4 sm:gap-4">
+        <div className="relative flex min-h-0 flex-1 flex-col gap-2.5 overflow-hidden px-4 py-3.5 sm:gap-3 sm:px-5 sm:py-4">
           <DialogHeader className="shrink-0 space-y-1 text-center">
             <DialogTitle className="flex items-center justify-center gap-2.5 text-xl font-bold">
               <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500/20 to-fuchsia-500/20">
@@ -572,10 +572,10 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
           <Tabs
             value={activeTab}
             onValueChange={(value) => setActiveTab(value as LeaderboardTab)}
-            className="flex min-h-0 flex-col"
+            className="flex min-h-0 flex-1 flex-col overflow-hidden"
           >
-            <div className="overflow-hidden rounded-xl border border-white/10 bg-zinc-900/40">
-              <TabsList className="!flex !h-auto !w-full items-stretch gap-1.5 rounded-none border-0 border-b border-white/10 bg-zinc-900/80 p-1.5 group-data-horizontal/tabs:!h-auto">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-white/10 bg-zinc-900/40">
+              <TabsList className="!flex !h-auto !w-full shrink-0 items-stretch gap-1.5 rounded-none border-0 border-b border-white/10 bg-zinc-900/80 p-1.5 group-data-horizontal/tabs:!h-auto">
                 <TabsTrigger
                   value="online"
                   className={cn(
@@ -608,7 +608,7 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
                 </TabsTrigger>
               </TabsList>
 
-              <div className="flex items-center justify-between gap-3 border-b border-white/5 px-4 py-2.5 text-sm text-zinc-500">
+              <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/5 px-4 py-2.5 text-sm text-zinc-500">
                 <span className="min-w-0 truncate">
                   {activeTab === "donated"
                     ? t("donatedHint")
@@ -638,7 +638,9 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
 
               <div
                 className={cn(
-                  "flex h-[min(460px,55dvh)] max-h-[min(460px,55dvh)] flex-col transition-opacity",
+                  /* 手機：彈性高度可捲到底；電腦：還原固定列表高度 */
+                  "flex min-h-[min(320px,42dvh)] flex-1 flex-col transition-opacity",
+                  "md:h-[min(460px,55dvh)] md:max-h-[min(460px,55dvh)] md:min-h-0 md:flex-none",
                   refreshing && !loading && "opacity-70"
                 )}
               >
@@ -682,34 +684,34 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
             </div>
           </Tabs>
 
-          <div className="shrink-0 border-t border-white/5 pt-3">
+          <div className="shrink-0 space-y-2.5 border-t border-white/5 pt-2.5">
             <LeaderboardPagination
               page={Math.min(activePage, activeTotalPages)}
               totalPages={activeTotalPages}
               totalEntries={activeEntries.length}
               onPageChange={(page) => setTabPage(activeTab, page)}
             />
-          </div>
 
-          <div className="shrink-0 text-center">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={activePage <= 1}
-              onClick={() => setTabPage(activeTab, 1)}
-              className="gap-1.5 border-white/10 bg-white/5 text-zinc-300 hover:border-cyan-400/30 hover:text-cyan-300"
-            >
-              <ArrowLeft className="size-4" />
-              {t("backToFirstPage")}
-            </Button>
-          </div>
+            <div className="text-center">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={activePage <= 1}
+                onClick={() => setTabPage(activeTab, 1)}
+                className="gap-1.5 border-white/10 bg-white/5 text-zinc-300 hover:border-cyan-400/30 hover:text-cyan-300"
+              >
+                <ArrowLeft className="size-4" />
+                {t("backToFirstPage")}
+              </Button>
+            </div>
 
-          {profile && (
-            <p className="shrink-0 border-t border-white/5 pt-3 text-center text-xs text-zinc-500">
-              {t("loggedInHint")}
-            </p>
-          )}
+            {profile && (
+              <p className="text-center text-xs text-zinc-500">
+                {t("loggedInHint")}
+              </p>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>

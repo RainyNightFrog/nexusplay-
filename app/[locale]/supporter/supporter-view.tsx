@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { usePathname, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import {
+  ArrowLeft,
   Check,
   HeartHandshake,
   Loader2,
@@ -13,11 +14,11 @@ import {
   Sparkles,
   Zap,
 } from "lucide-react";
-import { useRouter } from "@/i18n/navigation";
+import { useRouter, Link } from "@/i18n/navigation";
 import { SiteHeader } from "@/components/layout/site-header";
 import { RainbowSafeText } from "@/components/supporter/rainbow-safe-text";
 import { SupporterBadge } from "@/components/supporter/supporter-badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useApiError } from "@/hooks/use-api-error";
 import {
@@ -44,6 +45,7 @@ function getBillingLabelKey(interval: "month" | "year") {
 
 export function SupporterView() {
   const t = useTranslations("supporter");
+  const tNav = useTranslations("nav");
   const { translateApiError } = useApiError();
   const { profile, refreshProfile } = useAuth();
   const pathname = usePathname();
@@ -157,7 +159,28 @@ export function SupporterView() {
 
   return (
     <div className="dark relative min-h-full text-zinc-100">
-      <SiteHeader maxWidth="5xl" />
+      <SiteHeader maxWidth="5xl">
+        {/* 手機才顯示返回＋標題；電腦維持原本只有品牌＋帳號 */}
+        <div className="flex min-w-0 flex-1 items-center gap-2 md:hidden">
+          <Link
+            href="/"
+            className={cn(
+              buttonVariants({ variant: "ghost", size: "sm" }),
+              "shrink-0 gap-1.5 px-2 text-zinc-400 hover:text-amber-300"
+            )}
+          >
+            <ArrowLeft className="size-4" />
+          </Link>
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-violet-600 shadow-md shadow-amber-500/20">
+              <Sparkles className="size-3.5 text-white" />
+            </div>
+            <span className="truncate text-sm font-semibold text-white">
+              {tNav("supporterPass")}
+            </span>
+          </div>
+        </div>
+      </SiteHeader>
 
       <main className="relative mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
         <div className="text-center">

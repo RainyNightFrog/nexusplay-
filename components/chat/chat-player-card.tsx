@@ -284,11 +284,56 @@ export function ChatPlayerCard({
         <div className="flex flex-col gap-3 sm:gap-4">
           <div className="flex w-full flex-col items-center gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
             <div className="flex flex-col items-center gap-3 sm:flex-row sm:gap-5">
-              <div className="relative shrink-0">
-                <SupporterAvatarInsignia
-                  tier={supporterTier}
-                  size="md"
-                />
+              {/* 手機：VIP 排在頭像上方，避免蓋住標題 */}
+              <div
+                className={cn(
+                  "relative flex shrink-0 flex-col items-center gap-1.5 pt-1 md:hidden",
+                  supporterTier === "none" && "pt-1"
+                )}
+              >
+                {supporterTier !== "none" && (
+                  <SupporterAvatarInsignia
+                    tier={supporterTier}
+                    size="md"
+                    className="!static !left-auto !top-auto !z-auto !translate-x-0 !translate-y-0"
+                  />
+                )}
+                <div className="relative">
+                  <div
+                    className={cn(
+                      "relative size-20 overflow-hidden rounded-full ring-2",
+                      isCreator
+                        ? "ring-violet-400/40"
+                        : supporterTier !== "none"
+                          ? supporterAvatarRingClassByTier[supporterTier]
+                          : isVirtual
+                            ? "ring-cyan-400/30"
+                            : "ring-white/10"
+                    )}
+                  >
+                    {avatarUrl ? (
+                      <Image
+                        src={avatarUrl}
+                        alt={displayName}
+                        fill
+                        className="object-cover"
+                        unoptimized
+                      />
+                    ) : (
+                      <div className="flex size-full items-center justify-center bg-white/8 text-2xl font-semibold text-zinc-300">
+                        {displayName.slice(0, 1)}
+                      </div>
+                    )}
+                  </div>
+                  {detail?.isOnline && (
+                    <span className="absolute bottom-0.5 right-0.5 size-3.5 rounded-full border-2 border-zinc-950 bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+                  )}
+                </div>
+              </div>
+
+              {/* 電腦：還原原本 VIP 浮在頭像上方 */}
+              <div className="relative hidden shrink-0 md:block">
+                <SupporterAvatarInsignia tier={supporterTier} size="md" />
                 <div
                   className={cn(
                     "relative mt-1 size-20 overflow-hidden rounded-full ring-2",

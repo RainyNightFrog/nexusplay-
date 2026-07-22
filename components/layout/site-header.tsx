@@ -28,23 +28,24 @@ export function SiteHeader({
   return (
     <header
       className={cn(
-        "sticky top-0 border-b border-white/5 bg-zinc-950/70 backdrop-blur-xl",
+        "sticky top-0 border-b border-white/5 bg-zinc-950/80 backdrop-blur-xl md:bg-zinc-950/70",
         zIndex === "50" ? "z-50" : "z-40",
         className
       )}
     >
       <div
         className={cn(
-          "mx-auto flex h-14 items-center gap-2 px-3 sm:h-[72px] sm:gap-4 sm:px-6 lg:px-8",
+          "mx-auto flex h-14 items-center gap-2 px-3",
+          "md:h-[72px] md:gap-4 md:px-6 lg:px-8",
           maxWidthClass[maxWidth],
           innerClassName
         )}
       >
         <SiteBrand />
-        <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
+        <div className="flex min-w-0 flex-1 items-center gap-2 md:gap-4">
           {children}
         </div>
-        <div className="flex shrink-0 items-center pl-2 sm:pl-3">
+        <div className="flex shrink-0 items-center pl-1 md:pl-3">
           <UserNav />
         </div>
       </div>

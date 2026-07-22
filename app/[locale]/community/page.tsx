@@ -83,49 +83,50 @@ export default function CommunityPage() {
   return (
     <div className="dark relative min-h-full text-zinc-100">
       <SiteHeader>
-          <Link
-            href="/"
-            className={cn(
-              buttonVariants({ variant: "ghost", size: "sm" }),
-              "gap-1.5 text-zinc-400 hover:text-cyan-300"
-            )}
-          >
-            <ArrowLeft className="size-4" />
-            <span className="hidden sm:inline">{tNav("home")}</span>
-          </Link>
-
-          {threadNav ? (
-            <button
-              type="button"
-              onClick={() => threadNav.exitThread()}
-              className={cn(
-                "flex min-w-0 flex-1 items-center gap-2.5 rounded-lg text-left outline-none",
-                "transition-colors hover:opacity-90",
-                "focus-visible:ring-2 focus-visible:ring-violet-500/40"
-              )}
-              aria-label={tForum("backToList")}
-            >
-              <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-600 shadow-md shadow-violet-500/20">
-                <MessagesSquare className="size-4 text-white" />
-              </div>
-              <span className="truncate bg-gradient-to-r from-white via-violet-100 to-fuchsia-200 bg-clip-text text-base font-bold tracking-tight text-transparent">
-                {t("hub")}
-              </span>
-            </button>
-          ) : (
-            <div className="flex min-w-0 flex-1 items-center gap-2.5">
-              <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-600 shadow-md shadow-violet-500/20">
-                <MessagesSquare className="size-4 text-white" />
-              </div>
-              <span className="truncate bg-gradient-to-r from-white via-violet-100 to-fuchsia-200 bg-clip-text text-base font-bold tracking-tight text-transparent">
-                {t("hub")}
-              </span>
-            </div>
+        <Link
+          href="/"
+          className={cn(
+            buttonVariants({ variant: "ghost", size: "sm" }),
+            "shrink-0 gap-1.5 px-2 text-zinc-400 hover:text-cyan-300 sm:px-3"
           )}
+        >
+          <ArrowLeft className="size-4" />
+          <span className="hidden sm:inline">{tNav("home")}</span>
+        </Link>
 
-          <div className="ml-auto">
-            <NavActions />
+        {threadNav ? (
+          <button
+            type="button"
+            onClick={() => threadNav.exitThread()}
+            className={cn(
+              "flex min-w-0 flex-1 items-center gap-2 rounded-lg text-left outline-none md:gap-2.5",
+              "transition-colors hover:opacity-90",
+              "focus-visible:ring-2 focus-visible:ring-violet-500/40"
+            )}
+            aria-label={tForum("backToList")}
+          >
+            <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-600 shadow-md shadow-violet-500/20 md:size-8">
+              <MessagesSquare className="size-3.5 text-white md:size-4" />
+            </div>
+            <span className="truncate text-sm font-semibold text-white md:bg-gradient-to-r md:from-white md:via-violet-100 md:to-fuchsia-200 md:bg-clip-text md:text-base md:font-bold md:tracking-tight md:text-transparent">
+              {t("hub")}
+            </span>
+          </button>
+        ) : (
+          <div className="flex min-w-0 flex-1 items-center gap-2 md:gap-2.5">
+            <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-600 shadow-md shadow-violet-500/20 md:size-8">
+              <MessagesSquare className="size-3.5 text-white md:size-4" />
+            </div>
+            <span className="truncate text-sm font-semibold text-white md:bg-gradient-to-r md:from-white md:via-violet-100 md:to-fuchsia-200 md:bg-clip-text md:text-base md:font-bold md:tracking-tight md:text-transparent">
+              {t("hub")}
+            </span>
           </div>
+        )}
+
+        {/* 電腦還原完整導覽；手機省略以免擠爆 */}
+        <div className="ml-auto hidden md:block">
+          <NavActions />
+        </div>
       </SiteHeader>
 
       <main className="relative mx-auto max-w-5xl px-4 py-8 text-center sm:px-6 sm:py-10">

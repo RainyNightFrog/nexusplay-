@@ -16,6 +16,7 @@ const brandImageClass = cn(
   "drop-shadow-[0_0_24px_rgba(167,139,250,0.35)]"
 );
 
+/** 手機頂欄精簡；md 以上還原原本大 Logo */
 export function SiteBrand({ className, showLabel = true }: SiteBrandProps) {
   if (!showLabel) {
     return (
@@ -34,7 +35,10 @@ export function SiteBrand({ className, showLabel = true }: SiteBrandProps) {
           alt="RainyNightFrog"
           width={72}
           height={72}
-          className={cn("size-11 sm:size-14 md:size-16", brandImageClass)}
+          className={cn(
+            "size-8 md:size-14 lg:size-16",
+            brandImageClass
+          )}
           priority
         />
       </Link>
@@ -58,7 +62,7 @@ export function SiteBrand({ className, showLabel = true }: SiteBrandProps) {
         width={420}
         height={178}
         className={cn(
-          "h-10 w-auto sm:h-14 md:h-16 lg:h-[70px]",
+          "h-8 w-auto md:h-14 lg:h-16 xl:h-[70px]",
           brandImageClass
         )}
         priority

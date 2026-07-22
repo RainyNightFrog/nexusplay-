@@ -141,6 +141,7 @@ function GamePageContent() {
 
   const closeFullscreen = useCallback(() => setShowFullscreen(false), []);
   const closeEmbed = useCallback(() => setShowEmbed(false), []);
+  const mobileAutoExpandDoneRef = useRef(false);
 
   useScrollLock(showFullscreen || showEmbed);
   useEscapeKey(showFullscreen, closeFullscreen);
@@ -398,6 +399,20 @@ function GamePageContent() {
   const showPurchaseGate = showCheckout;
   const editGameHref = game ? `/dashboard/edit/${game.id}` : "/dashboard";
 
+  /* 手機／觸控裝置：進頁自動展開，避免 VOID 閘道鎖死且觸控被頁面捲動吃掉 */
+  useEffect(() => {
+    if (mobileAutoExpandDoneRef.current) return;
+    if (!iframeSrc || !playable || !showCreatorFullscreen || showPurchaseGate) {
+      return;
+    }
+    const isCoarseOrNarrow = window.matchMedia(
+      "(max-width: 768px), (pointer: coarse)"
+    ).matches;
+    if (!isCoarseOrNarrow) return;
+    mobileAutoExpandDoneRef.current = true;
+    setShowFullscreen(true);
+  }, [iframeSrc, playable, showCreatorFullscreen, showPurchaseGate]);
+
   const refreshGameAfterPurchase = useCallback(async () => {
     try {
       const response = await fetch(`/api/games/${gameId}`, {
@@ -594,12 +609,16 @@ function GamePageContent() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.4 }}
-            className="min-w-0"
+            className={cn(
+              "min-w-0",
+              /* 手機提高層級避免遮罩擋觸控；電腦維持原本 z 軸 */
+              showFullscreen && iframeSrc && "relative z-[70] md:z-auto"
+            )}
           >
             <div
               className={cn(
                 showFullscreen && iframeSrc
-                  ? "fixed inset-0 z-[61] flex flex-col overflow-hidden overscroll-contain sm:inset-3 md:inset-4 lg:inset-6"
+                  ? "fixed inset-0 z-[71] flex flex-col overflow-hidden overscroll-contain touch-manipulation sm:inset-3 md:inset-4 md:z-[61] lg:inset-6"
                   : "overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/60 shadow-2xl shadow-black/50 ring-1 ring-white/5",
                 showFullscreen &&
                   iframeSrc &&
@@ -619,6 +638,9 @@ function GamePageContent() {
                 if (showFullscreen) event.stopPropagation();
               }}
               onWheel={(event) => {
+                if (showFullscreen) event.stopPropagation();
+              }}
+              onTouchMove={(event) => {
                 if (showFullscreen) event.stopPropagation();
               }}
             >
@@ -715,7 +737,7 @@ function GamePageContent() {
                       src={iframeSrc}
                       title={game.title}
                       tabIndex={0}
-                      className="absolute inset-0 size-full border-0"
+                      className="absolute inset-0 size-full border-0 touch-none md:touch-auto"
                       sandbox={sandboxForEmbedUrl(iframeSrc)}
                       allowFullScreen
                       referrerPolicy="no-referrer"
@@ -1041,10 +1063,9 @@ function GamePageContent() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] touch-none overscroll-none bg-black/90 backdrop-blur-md"
+            className="fixed inset-0 z-[60] overscroll-none bg-black/90 backdrop-blur-md"
             onClick={closeFullscreen}
             onWheel={(event) => event.preventDefault()}
-            onTouchMove={(event) => event.preventDefault()}
           />
         )}
       </AnimatePresence>
@@ -1056,10 +1077,9 @@ function GamePageContent() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[60] touch-none overscroll-none bg-black/70 backdrop-blur-sm"
+              className="fixed inset-0 z-[60] overscroll-none bg-black/70 backdrop-blur-sm"
               onClick={closeEmbed}
               onWheel={(event) => event.preventDefault()}
-              onTouchMove={(event) => event.preventDefault()}
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
