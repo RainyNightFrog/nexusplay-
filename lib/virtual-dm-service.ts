@@ -1,4 +1,7 @@
-import { pickVirtualDmReply } from "@/lib/virtual-dm-replies";
+import {
+  getVirtualDmReplyDelayMs,
+  pickVirtualDmReply,
+} from "@/lib/virtual-dm-replies";
 import type { VirtualContactSummary, VirtualDmMessage } from "@/lib/virtual-dm";
 import { VIRTUAL_DM_LIMITS } from "@/lib/virtual-dm";
 import { resolveVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
@@ -22,11 +25,22 @@ type DmRow = {
 
 function isMissingDmTable(error: { code?: string; message?: string } | null) {
   if (!error) return false;
+  if (error.code === "PGRST205") return true;
+  const message = error.message ?? "";
   return (
-    error.code === "PGRST205" ||
-    error.message?.includes("chat_virtual_dm_messages") ||
-    error.message?.includes("schema cache")
+    message.includes("schema cache") &&
+    message.includes("chat_virtual_dm_messages")
   );
+}
+
+function mapRows(rows: DmRow[]): VirtualDmMessage[] {
+  return rows.map((row) => ({
+    id: row.id,
+    virtual_player_id: row.virtual_player_id,
+    sender: row.sender,
+    content: row.content,
+    created_at: row.created_at,
+  }));
 }
 
 export async function listVirtualContacts(
@@ -64,6 +78,11 @@ export async function listVirtualContacts(
     }
   }
 
+  // 開啟通訊錄時順便派發到期回覆
+  await deliverDueVirtualDmRepliesForUser(supabase, userId, [
+    ...lastByPlayer.keys(),
+  ]);
+
   return [...lastByPlayer.entries()]
     .map(([playerId, last]) => {
       const player = getVirtualPlayerById(playerId);
@@ -88,16 +107,11 @@ export async function listVirtualContacts(
     });
 }
 
-export async function listVirtualDmMessages(
+async function fetchVirtualDmRows(
   supabase: SupabaseClient,
   userId: string,
   virtualPlayerId: string
-): Promise<VirtualDmMessage[]> {
-  const player = getVirtualPlayerById(virtualPlayerId);
-  if (!player) {
-    throw new Error("找不到此虛擬玩家");
-  }
-
+): Promise<DmRow[]> {
   const cutoff = dmHistoryCutoffIso();
   const { data, error } = await supabase
     .from("chat_virtual_dm_messages")
@@ -113,13 +127,100 @@ export async function listVirtualDmMessages(
     throw new Error(error.message);
   }
 
-  return ((data ?? []) as DmRow[]).map((row) => ({
-    id: row.id,
-    virtual_player_id: row.virtual_player_id,
-    sender: row.sender,
-    content: row.content,
-    created_at: row.created_at,
-  }));
+  return (data ?? []) as DmRow[];
+}
+
+/**
+ * 若上一輪回覆之後用戶已留言，且距「第一則未回覆」已滿本輪延遲（隨機 2～80 分），
+ * 則只插入一句口語回覆（對接近期對話）。
+ */
+export async function maybeDeliverVirtualDmReply(
+  supabase: SupabaseClient,
+  userId: string,
+  virtualPlayerId: string
+): Promise<boolean> {
+  const player = getVirtualPlayerById(virtualPlayerId);
+  if (!player) return false;
+
+  const rows = await fetchVirtualDmRows(supabase, userId, virtualPlayerId);
+  if (rows.length === 0) return false;
+
+  let lastVirtualIndex = -1;
+  for (let i = rows.length - 1; i >= 0; i -= 1) {
+    if (rows[i]!.sender === "virtual") {
+      lastVirtualIndex = i;
+      break;
+    }
+  }
+
+  const unanswered = rows
+    .slice(lastVirtualIndex + 1)
+    .filter((row) => row.sender === "user");
+  if (unanswered.length === 0) return false;
+
+  const firstUnanswered = unanswered[0]!;
+  const firstUnansweredAt = Date.parse(firstUnanswered.created_at);
+  if (!Number.isFinite(firstUnansweredAt)) return false;
+
+  const delayMs = getVirtualDmReplyDelayMs(
+    userId,
+    virtualPlayerId,
+    firstUnanswered.id || firstUnanswered.created_at
+  );
+  if (Date.now() - firstUnansweredAt < delayMs) return false;
+
+  const recentVirtual = rows
+    .filter((row) => row.sender === "virtual")
+    .slice(-5)
+    .map((row) => row.content);
+  const reply = pickVirtualDmReply(
+    player,
+    unanswered.map((row) => row.content),
+    recentVirtual
+  );
+
+  const { error } = await supabase.from("chat_virtual_dm_messages").insert({
+    user_id: userId,
+    virtual_player_id: virtualPlayerId,
+    sender: "virtual",
+    content: reply,
+  });
+
+  if (error) {
+    if (isMissingDmTable(error)) return false;
+    throw new Error(error.message);
+  }
+
+  return true;
+}
+
+async function deliverDueVirtualDmRepliesForUser(
+  supabase: SupabaseClient,
+  userId: string,
+  playerIds: string[]
+) {
+  for (const playerId of playerIds) {
+    try {
+      await maybeDeliverVirtualDmReply(supabase, userId, playerId);
+    } catch {
+      // 單一路徑失敗不阻斷其他對話
+    }
+  }
+}
+
+export async function listVirtualDmMessages(
+  supabase: SupabaseClient,
+  userId: string,
+  virtualPlayerId: string
+): Promise<VirtualDmMessage[]> {
+  const player = getVirtualPlayerById(virtualPlayerId);
+  if (!player) {
+    throw new Error("找不到此玩家");
+  }
+
+  await maybeDeliverVirtualDmReply(supabase, userId, virtualPlayerId);
+  const rows = await fetchVirtualDmRows(supabase, userId, virtualPlayerId);
+  return mapRows(rows);
 }
 
 export async function sendVirtualDmMessage(
@@ -130,7 +231,7 @@ export async function sendVirtualDmMessage(
 ): Promise<VirtualDmMessage[]> {
   const player = getVirtualPlayerById(virtualPlayerId);
   if (!player) {
-    throw new Error("找不到此虛擬玩家");
+    throw new Error("找不到此玩家");
   }
 
   const trimmed = content.trim();
@@ -152,30 +253,56 @@ export async function sendVirtualDmMessage(
 
   if (insertUserError) {
     if (isMissingDmTable(insertUserError)) {
-      throw new Error("通訊錄尚未初始化，請執行 npm run db:chat-contacts");
+      throw new Error("私訊功能尚未啟用，請稍後再試");
     }
     throw new Error(insertUserError.message);
   }
 
-  const reply = pickVirtualDmReply(player, trimmed);
-  const replyDelayMs = 800 + Math.floor(Math.random() * 1200);
+  // 不即時回覆：2～80 分鐘後由 list／cron 派發一句口語回覆
+  await maybeDeliverVirtualDmReply(supabase, userId, virtualPlayerId);
+  return listVirtualDmMessages(supabase, userId, virtualPlayerId);
+}
 
-  await new Promise((resolve) => setTimeout(resolve, replyDelayMs));
+/** Cron：掃描近期有用戶訊息的對話，派發到期回覆 */
+export async function deliverDueVirtualDmReplies() {
+  const supabase = createServerSupabase();
+  const since = new Date(Date.now() - 3 * 24 * 60 * 60_000).toISOString();
 
-  const { error: insertReplyError } = await supabase
+  const { data, error } = await supabase
     .from("chat_virtual_dm_messages")
-    .insert({
-      user_id: userId,
-      virtual_player_id: virtualPlayerId,
-      sender: "virtual",
-      content: reply,
-    });
+    .select("user_id, virtual_player_id")
+    .eq("sender", "user")
+    .gte("created_at", since)
+    .order("created_at", { ascending: false })
+    .limit(400);
 
-  if (insertReplyError) {
-    throw new Error(insertReplyError.message);
+  if (error) {
+    if (isMissingDmTable(error)) return { delivered: 0 };
+    throw new Error(error.message);
   }
 
-  return listVirtualDmMessages(supabase, userId, virtualPlayerId);
+  const pairs = new Map<string, { userId: string; playerId: string }>();
+  for (const row of data ?? []) {
+    const userId = row.user_id as string;
+    const playerId = row.virtual_player_id as string;
+    pairs.set(`${userId}:${playerId}`, { userId, playerId });
+  }
+
+  let delivered = 0;
+  for (const pair of pairs.values()) {
+    try {
+      const ok = await maybeDeliverVirtualDmReply(
+        supabase,
+        pair.userId,
+        pair.playerId
+      );
+      if (ok) delivered += 1;
+    } catch {
+      // continue
+    }
+  }
+
+  return { delivered, checked: pairs.size };
 }
 
 export async function cleanupExpiredVirtualDmMessages() {

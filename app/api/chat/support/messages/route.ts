@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
 import {
-  isCreatorAccount,
   listCreatorSupportMessages,
   sendCreatorSupportMessage,
 } from "@/lib/support-chat-service";
@@ -19,11 +18,6 @@ export async function GET() {
     }
 
     const supabase = createServerSupabase();
-    const isCreator = await isCreatorAccount(supabase, user.id);
-    if (!isCreator) {
-      return NextResponse.json({ error: "僅創作者可使用" }, { status: 403 });
-    }
-
     const payload = await listCreatorSupportMessages(supabase, user.id);
     return NextResponse.json(payload);
   } catch (error) {
@@ -51,11 +45,6 @@ export async function POST(request: Request) {
     }
 
     const supabase = createServerSupabase();
-    const isCreator = await isCreatorAccount(supabase, user.id);
-    if (!isCreator) {
-      return NextResponse.json({ error: "僅創作者可使用" }, { status: 403 });
-    }
-
     const message = await sendCreatorSupportMessage(supabase, user.id, content);
     return NextResponse.json({ message });
   } catch (error) {

@@ -41,9 +41,9 @@ export function GameSupportSection({
     >
       <div
         className={cn(
-          "rounded-2xl border border-fuchsia-400/20 bg-zinc-900/60 p-6 sm:p-8",
+          "rounded-2xl border border-amber-400/20 bg-zinc-900/60 p-6 sm:p-8",
           "shadow-lg shadow-black/40 backdrop-blur-sm",
-          "shadow-[0_0_32px_rgba(217,70,239,0.06)]"
+          "shadow-[0_0_36px_rgba(251,191,36,0.05)]"
         )}
       >
         <TipSupportPanel
@@ -63,7 +63,7 @@ export function GameSupportSection({
           gameId={gameId}
           tipsEnabled={tipsEnabled}
           refreshKey={refreshKey}
-          className="mt-6 border-t border-fuchsia-400/15 pt-6"
+          className="mt-6 border-t border-amber-400/15 pt-6"
         />
       </div>
     </motion.section>

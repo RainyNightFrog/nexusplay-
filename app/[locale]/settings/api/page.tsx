@@ -279,7 +279,7 @@ export default function ApiKeysSettingsPage() {
             <p className={accountSectionIntroClassName}>
               {t("apiKeysEndpointsDesc")}
             </p>
-            <ul className="space-y-2 text-left font-mono text-xs text-zinc-400">
+            <ul className="space-y-2 text-center font-mono text-xs text-zinc-400">
               <li className="rounded-lg border border-white/8 bg-black/20 px-3 py-2">
                 GET /api/v1/creator/games
               </li>

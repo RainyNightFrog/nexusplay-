@@ -129,6 +129,19 @@ export async function syncConnectAccountStatus(userId: string, accountId: string
   return payoutStatus as PayoutStatus;
 }
 
+export async function clearInvalidConnectAccount(userId: string) {
+  const supabase = createServerSupabase();
+  await supabase
+    .from("profiles")
+    .update({
+      stripe_account_id: null,
+      stripe_connect_account_id: null,
+      payout_status: "none",
+      stripe_details_submitted: false,
+    })
+    .eq("id", userId);
+}
+
 function resolveOnboardingPaths(params: {
   returnTo: ConnectOnboardingReturnTo;
   locale?: string;
@@ -182,12 +195,35 @@ export async function startConnectOnboarding(params: {
   const row = await readCreatorPayoutRow(supabase, params.userId);
   let accountId = resolveStripeAccountId(row);
 
+  if (accountId) {
+    const { isConnectDestinationValid } = await import("@/lib/stripe-connect");
+    const valid = await isConnectDestinationValid(accountId);
+    if (!valid) {
+      await clearInvalidConnectAccount(params.userId);
+      accountId = null;
+    }
+  }
+
   if (!accountId) {
-    const account = await createExpressConnectAccount({
-      userId: params.userId,
-      email: params.email,
-      displayName: params.displayName,
-    });
+    let account;
+    try {
+      account = await createExpressConnectAccount({
+        userId: params.userId,
+        email: params.email,
+        displayName: params.displayName,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (
+        message.includes("signed up for Connect") ||
+        message.includes("dashboard.stripe.com/connect")
+      ) {
+        throw new Error(
+          "平台尚未在 Stripe 開通 Connect。請用平台 Stripe 帳號登入後台，前往 https://dashboard.stripe.com/connect 完成 Connect 註冊後再試。"
+        );
+      }
+      throw error;
+    }
     accountId = account.id;
 
     await supabase

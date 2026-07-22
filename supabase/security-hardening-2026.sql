@@ -80,6 +80,10 @@ grant select (
   is_supporter,
   supporter_badge,
   supporter_lifetime,
+  supporter_since,
+  equipped_avatar_frame,
+  equipped_name_color,
+  equipped_chat_bubble,
   created_at
 ) on table public.profiles to anon, authenticated;
 

@@ -17,6 +17,7 @@ import {
   Maximize2,
   MessagesSquare,
   Pencil,
+  Coins,
   Share2,
   ThumbsUp,
   Upload,
@@ -43,6 +44,7 @@ import { postShowGameMenu } from "@/lib/rainynightfrog-embed-sdk";
 import { TAG_COLORS, type Game } from "@/lib/games";
 import { useGameI18n } from "@/hooks/use-game-i18n";
 import { useAuth } from "@/hooks/use-auth";
+import { requestOpenPlayerDm } from "@/lib/open-player-dm";
 import { useFormatCount } from "@/hooks/use-format-count";
 import { useApiError } from "@/hooks/use-api-error";
 import { useEscapeKey, useScrollLock } from "@/hooks/use-scroll-lock";
@@ -483,8 +485,13 @@ function GamePageContent() {
     await copyToClipboard(url, tc("linkCopied"));
   };
 
+  // demo（/demos/*.html）、RNF 上傳包（…/index.html）、同源遊戲皆可返回主選單
   const showGameMenuButton = Boolean(
-    iframeSrc && playable && /\/games\/[^/?#]+\/index\.html/i.test(iframeSrc)
+    iframeSrc &&
+      playable &&
+      (/\/demos\/[^/?#]+\.html/i.test(iframeSrc) ||
+        /\/index\.html(?:[?#]|$)/i.test(iframeSrc) ||
+        /\/games\/[^/?#]+\/index\.html/i.test(iframeSrc))
   );
 
   const handleBackToGameMenu = useCallback(() => {
@@ -504,6 +511,17 @@ function GamePageContent() {
     }, 120);
     showToast(tc("backToGameMenuDone"));
   }, [showToast, tc]);
+
+  const handleScrollToTip = useCallback(() => {
+    if (showFullscreen) {
+      setShowFullscreen(false);
+    }
+    window.setTimeout(() => {
+      document
+        .getElementById("game-tip-support")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, showFullscreen ? 80 : 0);
+  }, [showFullscreen]);
 
   useEffect(() => {
     if (!showFullscreen) return;
@@ -668,6 +686,28 @@ function GamePageContent() {
                         </span>
                       </Button>
                     )}
+                    {game.tipsEnabled && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleScrollToTip}
+                        className="gap-1.5 border-fuchsia-400/30 bg-fuchsia-500/10 px-2 text-fuchsia-100 hover:border-fuchsia-400/50 hover:bg-fuchsia-500/15 sm:px-3"
+                      >
+                        <Coins className="size-3.5" />
+                        <span className="hidden sm:inline">
+                          {t("tipSupportButton")}
+                        </span>
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleShare}
+                      className="gap-1.5 border-white/10 bg-white/5 px-2 text-zinc-300 hover:border-cyan-400/30 hover:text-white sm:px-3"
+                    >
+                      <Share2 className="size-3.5" />
+                      <span className="hidden sm:inline">{tc("share")}</span>
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon-sm"
@@ -812,15 +852,6 @@ function GamePageContent() {
                         {td("editGame")}
                       </Link>
                     )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleShare}
-                      className="gap-1.5 border-white/10 bg-white/5 text-zinc-300 hover:border-cyan-400/30 hover:text-white"
-                    >
-                      <Share2 className="size-3.5" />
-                      {tc("share")}
-                    </Button>
                     {showGameMenuButton && (
                       <Button
                         variant="outline"
@@ -833,6 +864,26 @@ function GamePageContent() {
                         {tc("backToGameMenu")}
                       </Button>
                     )}
+                    {game.tipsEnabled && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleScrollToTip}
+                        className="gap-1.5 border-fuchsia-400/30 bg-fuchsia-500/10 text-fuchsia-100 hover:border-fuchsia-400/50 hover:bg-fuchsia-500/15"
+                      >
+                        <Coins className="size-3.5" />
+                        {t("tipSupportButton")}
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleShare}
+                      className="gap-1.5 border-white/10 bg-white/5 text-zinc-300 hover:border-cyan-400/30 hover:text-white"
+                    >
+                      <Share2 className="size-3.5" />
+                      {tc("share")}
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"
@@ -1024,21 +1075,23 @@ function GamePageContent() {
         </div>
 
         {game.tipsEnabled && (
-          <GameSupportSection
-            gameId={game.id}
-            gameTitle={game.title}
-            tipsEnabled={game.tipsEnabled}
-            suggestedTipAmount={game.suggestedTipAmount}
-            isGameOwner={isGameOwner}
-            refreshKey={supporterWallRefreshKey}
-            paymentMethodsRefreshKey={paymentMethodsRefreshKey}
-            onTipSuccess={() =>
-              setSupporterWallRefreshKey((key) => key + 1)
-            }
-            onPaymentMethodsChange={() =>
-              setPaymentMethodsRefreshKey((key) => key + 1)
-            }
-          />
+          <div id="game-tip-support">
+            <GameSupportSection
+              gameId={game.id}
+              gameTitle={game.title}
+              tipsEnabled={game.tipsEnabled}
+              suggestedTipAmount={game.suggestedTipAmount}
+              isGameOwner={isGameOwner}
+              refreshKey={supporterWallRefreshKey}
+              paymentMethodsRefreshKey={paymentMethodsRefreshKey}
+              onTipSuccess={() =>
+                setSupporterWallRefreshKey((key) => key + 1)
+              }
+              onPaymentMethodsChange={() =>
+                setPaymentMethodsRefreshKey((key) => key + 1)
+              }
+            />
+          </div>
         )}
 
         {game && (
@@ -1142,6 +1195,10 @@ function GamePageContent() {
         player={creatorPreview}
         open={creatorProfileOpen}
         onOpenChange={setCreatorProfileOpen}
+        canDirectMessage={Boolean(profile)}
+        onDirectMessage={
+          profile ? (target) => requestOpenPlayerDm(target) : undefined
+        }
       />
     </div>
   );

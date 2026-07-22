@@ -41,6 +41,16 @@ function previewContent(content: string) {
   return trimmed.length > 80 ? `${trimmed.slice(0, 80)}…` : trimmed;
 }
 
+/** 隱藏自動化 smoke／測試回覆，避免出現在玩家與管理員對話中 */
+function isSmokeSupportMessage(content: string) {
+  const text = content.trim();
+  return (
+    text.startsWith("[SMOKE]") ||
+    text.includes("[SMOKE]") ||
+    text.includes("自動測試回覆")
+  );
+}
+
 function isMissingSupportTable(error: { code?: string; message?: string } | null) {
   if (!error) return false;
   return (
@@ -130,7 +140,11 @@ export async function getCreatorAdminContactSummary(
     id: ADMIN_SUPPORT_CONTACT_ID,
     displayName: "管理員對話",
     avatarUrl: "/brand-icon.png",
-    lastMessage: data?.last_message_preview ?? null,
+    lastMessage:
+      data?.last_message_preview &&
+      !isSmokeSupportMessage(data.last_message_preview)
+        ? data.last_message_preview
+        : null,
     lastMessageAt: data?.last_message_at ?? null,
     unread: data?.unread_by_user === true,
     pinned: true,
@@ -159,7 +173,9 @@ export async function listCreatorSupportMessages(
     throw new Error(error.message);
   }
 
-  const rows = (data ?? []) as MessageRow[];
+  const rows = ((data ?? []) as MessageRow[]).filter(
+    (row) => !isSmokeSupportMessage(row.content)
+  );
   const nameCache = new Map<string, string>();
 
   const messages: SupportMessage[] = [];
@@ -311,7 +327,9 @@ export async function listAdminSupportMessages(
     .update({ unread_by_admin: false })
     .eq("id", threadId);
 
-  const rows = (data ?? []) as MessageRow[];
+  const rows = ((data ?? []) as MessageRow[]).filter(
+    (row) => !isSmokeSupportMessage(row.content)
+  );
   const nameCache = new Map<string, string>();
   const messages: SupportMessage[] = [];
 

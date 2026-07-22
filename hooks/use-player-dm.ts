@@ -3,15 +3,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import type {
-  CreatorAdminContactSummary,
-  SupportMessage,
-} from "@/lib/support-chat";
+  PlayerDmContact,
+  PlayerDmMessage,
+  PlayerDmThreadSummary,
+} from "@/lib/player-dm";
 
-export function useAdminSupportContact(enabled: boolean) {
+export function usePlayerDmContacts(enabled: boolean) {
   const t = useTranslations("chat");
-  const [contact, setContact] = useState<CreatorAdminContactSummary | null>(
-    null
-  );
+  const [contacts, setContacts] = useState<PlayerDmContact[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,25 +20,25 @@ export function useAdminSupportContact(enabled: boolean) {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/chat/support", {
+      const response = await fetch("/api/chat/dms", {
         credentials: "same-origin",
         cache: "no-store",
       });
       const data = (await response.json()) as {
-        contact?: CreatorAdminContactSummary;
+        contacts?: PlayerDmContact[];
         error?: string;
       };
 
       if (!response.ok) {
-        throw new Error(data.error ?? t("adminSupportLoadFailed"));
+        throw new Error(data.error ?? t("contactsLoadFailed"));
       }
 
-      setContact(data.contact ?? null);
+      setContacts(data.contacts ?? []);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : t("adminSupportLoadFailed")
+        err instanceof Error ? err.message : t("contactsLoadFailed")
       );
-      setContact(null);
+      setContacts([]);
     } finally {
       setLoading(false);
     }
@@ -47,35 +46,70 @@ export function useAdminSupportContact(enabled: boolean) {
 
   useEffect(() => {
     if (!enabled) {
-      setContact(null);
+      setContacts([]);
       return;
     }
     void load();
+    const timer = window.setInterval(() => {
+      void load();
+    }, 20_000);
+    return () => window.clearInterval(timer);
   }, [enabled, load]);
 
-  return { contact, loading, error, reload: load };
+  return { contacts, loading, error, reload: load };
 }
 
-export function useAdminSupportChat(enabled: boolean) {
+export function useOpenPlayerDm() {
   const t = useTranslations("chat");
-  const [messages, setMessages] = useState<SupportMessage[]>([]);
+
+  return useCallback(
+    async (peerUserId: string): Promise<PlayerDmThreadSummary | null> => {
+      const response = await fetch("/api/chat/dms", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ peerUserId }),
+      });
+      const data = (await response.json()) as {
+        thread?: PlayerDmThreadSummary;
+        error?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(data.error ?? t("playerDmOpenFailed"));
+      }
+
+      return data.thread ?? null;
+    },
+    [t]
+  );
+}
+
+export function usePlayerDmChat(threadId: string | null, enabled: boolean) {
+  const t = useTranslations("chat");
+  const [thread, setThread] = useState<PlayerDmThreadSummary | null>(null);
+  const [messages, setMessages] = useState<PlayerDmMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   const loadMessages = useCallback(async () => {
-    if (!enabled) return;
+    if (!enabled || !threadId) return;
 
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/chat/support/messages", {
-        credentials: "same-origin",
-        cache: "no-store",
-      });
+      const response = await fetch(
+        `/api/chat/dms/${encodeURIComponent(threadId)}/messages`,
+        {
+          credentials: "same-origin",
+          cache: "no-store",
+        }
+      );
       const data = (await response.json()) as {
-        messages?: SupportMessage[];
+        thread?: PlayerDmThreadSummary;
+        messages?: PlayerDmMessage[];
         error?: string;
       };
 
@@ -83,16 +117,18 @@ export function useAdminSupportChat(enabled: boolean) {
         throw new Error(data.error ?? t("readFailed"));
       }
 
+      setThread(data.thread ?? null);
       setMessages(data.messages ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("readFailed"));
     } finally {
       setLoading(false);
     }
-  }, [enabled, t]);
+  }, [enabled, t, threadId]);
 
   useEffect(() => {
-    if (!enabled) {
+    if (!enabled || !threadId) {
+      setThread(null);
       setMessages([]);
       return;
     }
@@ -101,7 +137,7 @@ export function useAdminSupportChat(enabled: boolean) {
       void loadMessages();
     }, 8000);
     return () => window.clearInterval(timer);
-  }, [enabled, loadMessages]);
+  }, [enabled, threadId, loadMessages]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -109,19 +145,22 @@ export function useAdminSupportChat(enabled: boolean) {
 
   const sendMessage = useCallback(
     async (content: string) => {
-      if (!enabled) return false;
+      if (!enabled || !threadId) return false;
 
       setSending(true);
       setError(null);
       try {
-        const response = await fetch("/api/chat/support/messages", {
-          method: "POST",
-          credentials: "same-origin",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content }),
-        });
+        const response = await fetch(
+          `/api/chat/dms/${encodeURIComponent(threadId)}/messages`,
+          {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ content }),
+          }
+        );
         const data = (await response.json()) as {
-          message?: SupportMessage;
+          message?: PlayerDmMessage;
           error?: string;
         };
 
@@ -142,10 +181,11 @@ export function useAdminSupportChat(enabled: boolean) {
         setSending(false);
       }
     },
-    [enabled, loadMessages, t]
+    [enabled, loadMessages, t, threadId]
   );
 
   return {
+    thread,
     messages,
     loading,
     sending,

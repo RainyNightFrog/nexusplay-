@@ -206,7 +206,11 @@ type ChatPlayerCardProps = {
   player: ChatPlayerPreview | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onDirectMessage?: (virtualPlayerId: string) => void;
+  onDirectMessage?: (target: {
+    userId?: string;
+    virtualPlayerId?: string;
+  }) => void;
+  canDirectMessage?: boolean;
 };
 
 export function ChatPlayerCard({
@@ -214,6 +218,7 @@ export function ChatPlayerCard({
   open,
   onOpenChange,
   onDirectMessage,
+  canDirectMessage = false,
 }: ChatPlayerCardProps) {
   const t = useTranslations("chat");
   const tcx = useTranslations("common");
@@ -259,9 +264,20 @@ export function ChatPlayerCard({
   const countryLabel = detail?.countryCode
     ? formatCountryName(detail.countryCode, locale)
     : null;
-  const playerIdLabel = isVirtual
-    ? detail?.virtualPlayerId?.toUpperCase() ?? player.virtualPlayerId?.toUpperCase() ?? null
-    : formatPlayerIdLabel(detail?.playerNumber);
+  const playerIdLabel = (() => {
+    if (isVirtual) {
+      // 不露出虛擬 ID；用穩定假編號看起來像一般玩家
+      const seed =
+        detail?.virtualPlayerId ?? player.virtualPlayerId ?? player.displayName;
+      let hash = 0;
+      for (const char of seed) {
+        hash = Math.imul(31, hash) + char.charCodeAt(0);
+        hash |= 0;
+      }
+      return String(10000 + (Math.abs(hash) % 90000));
+    }
+    return formatPlayerIdLabel(detail?.playerNumber);
+  })();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -306,9 +322,7 @@ export function ChatPlayerCard({
                         ? "ring-violet-400/40"
                         : supporterTier !== "none"
                           ? supporterAvatarRingClassByTier[supporterTier]
-                          : isVirtual
-                            ? "ring-cyan-400/30"
-                            : "ring-white/10"
+                          : "ring-white/10"
                     )}
                   >
                     {avatarUrl ? (
@@ -341,9 +355,7 @@ export function ChatPlayerCard({
                       ? "ring-violet-400/40"
                       : supporterTier !== "none"
                         ? supporterAvatarRingClassByTier[supporterTier]
-                        : isVirtual
-                          ? "ring-cyan-400/30"
-                          : "ring-white/10"
+                        : "ring-white/10"
                   )}
                 >
                   {avatarUrl ? (
@@ -379,11 +391,6 @@ export function ChatPlayerCard({
                     usernameClassName="text-lg font-semibold text-zinc-100 sm:text-xl"
                     titleClassName="text-xs sm:text-sm"
                   />
-                  {!isVirtual && adminRole === "none" && !isCreator && (
-                    <span className="shrink-0 rounded-full bg-white/8 px-2 py-0.5 text-xs text-zinc-400">
-                      {t("playerCardReal")}
-                    </span>
-                  )}
                 </div>
                 {detail?.showcaseTags && detail.showcaseTags.length > 0 && (
                   <ProfileShowcaseTags
@@ -563,19 +570,41 @@ export function ChatPlayerCard({
           ) : null}
 
           <div className="flex w-full flex-col gap-2 sm:flex-row sm:justify-center">
-            {isVirtual && player.virtualPlayerId && onDirectMessage && (
-              <Button
-                type="button"
-                className="h-10 flex-1 gap-2 text-sm bg-gradient-to-r from-cyan-600 to-violet-600 text-white hover:from-cyan-500 hover:to-violet-500 sm:max-w-xs"
-                onClick={() => {
-                  onOpenChange(false);
-                  onDirectMessage(player.virtualPlayerId!);
-                }}
-              >
-                <MessageCircle className="size-4" />
-                {t("playerCardDm")}
-              </Button>
-            )}
+            {(() => {
+              const virtualPlayerId =
+                detail?.virtualPlayerId ?? player.virtualPlayerId;
+              const realUserId =
+                !isVirtual &&
+                player.userId &&
+                !isVirtualLeaderboardUserId(player.userId)
+                  ? player.userId
+                  : null;
+              const canDm =
+                canDirectMessage &&
+                onDirectMessage &&
+                !player.isOwn &&
+                (Boolean(virtualPlayerId) || Boolean(realUserId));
+
+              if (!canDm) return null;
+
+              return (
+                <Button
+                  type="button"
+                  className="h-10 flex-1 gap-2 text-sm bg-gradient-to-r from-cyan-600 to-violet-600 text-white hover:from-cyan-500 hover:to-violet-500 sm:max-w-xs"
+                  onClick={() => {
+                    onOpenChange(false);
+                    if (virtualPlayerId) {
+                      onDirectMessage!({ virtualPlayerId });
+                    } else if (realUserId) {
+                      onDirectMessage!({ userId: realUserId });
+                    }
+                  }}
+                >
+                  <MessageCircle className="size-4" />
+                  {t("playerCardDm")}
+                </Button>
+              );
+            })()}
 
             {player.isOwn && (
               <Button

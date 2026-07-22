@@ -21,6 +21,7 @@ import {
   normalizeProfileShowcaseTags,
   parseProfileShowcaseTags,
 } from "@/lib/profile-showcase-tags";
+import { isMissingProfilesRelation } from "@/lib/profiles-access";
 
 type ProfilePatchBody = {
   display_name?: string;
@@ -221,6 +222,8 @@ export async function PATCH(request: Request) {
       throw new Error(authError.message);
     }
 
+    // authenticated 僅有 display_name / username / bio / support_email 等欄位更新權限，
+    // 不可帶 role（否則整筆 update 會因欄位未授權而失敗）。
     const { error: profileError } = await supabase
       .from("profiles")
       .update({
@@ -228,16 +231,23 @@ export async function PATCH(request: Request) {
         username,
         support_email: supportEmail || null,
         bio: bio || null,
-        ...(isAdmin ? {} : { role: resolveRoleFromPreferences(developingGames) }),
       })
       .eq("id", user.id);
 
-    if (
-      profileError &&
-      profileError.code !== "PGRST205" &&
-      !profileError.message.includes("profiles")
-    ) {
+    if (profileError && !isMissingProfilesRelation(profileError)) {
       throw new Error(profileError.message);
+    }
+
+    // role 需由 service role 同步，供 RLS（profiles.role = creator）使用
+    if (!isAdmin && !isMissingProfilesRelation(profileError)) {
+      const admin = createServerSupabase();
+      const { error: roleError } = await admin
+        .from("profiles")
+        .update({ role: resolveRoleFromPreferences(developingGames) })
+        .eq("id", user.id);
+      if (roleError && !isMissingProfilesRelation(roleError)) {
+        throw new Error(roleError.message);
+      }
     }
 
     const {

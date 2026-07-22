@@ -98,6 +98,31 @@ export async function fetchConnectAccount(accountId: string) {
   return stripe.accounts.retrieve(accountId);
 }
 
+/** 確認 Connect 收款帳戶仍存在於此平台；無效時回傳 false */
+export async function isConnectDestinationValid(
+  accountId: string | null | undefined
+): Promise<boolean> {
+  if (!accountId?.trim()) return false;
+  try {
+    await fetchConnectAccount(accountId.trim());
+    return true;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    // 帳戶不存在、不屬於此平台、或無權存取 → 視為失效
+    if (
+      message.includes("No such") ||
+      message.includes("No such destination") ||
+      message.includes("platform_account_required") ||
+      message.includes("does not have access") ||
+      message.includes("account_invalid")
+    ) {
+      return false;
+    }
+    // 其他暫時性錯誤先當有效，避免誤清
+    return true;
+  }
+}
+
 export async function createStripeCustomer(params: {
   userId: string;
   email: string;

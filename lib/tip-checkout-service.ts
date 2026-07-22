@@ -18,11 +18,13 @@ import {
   getStripeClient,
   isPaymentsLive,
   isStripeConfigured,
+  isConnectDestinationValid,
 } from "@/lib/stripe-connect";
 import { ensurePayerStripeCustomer } from "@/lib/stripe-payer-customer";
 import { createServerSupabase } from "@/lib/supabase-server";
 import type { GameRecord } from "@/lib/supabase";
 import { MIN_TIP_USD, MAX_TIP_USD } from "@/lib/tip-limits";
+import { clearInvalidConnectAccount } from "@/lib/creator-payout-service";
 
 export type { TipReceipt };
 
@@ -160,6 +162,19 @@ export async function createTipPaymentIntent(params: {
 
   if (!creatorProfile.stripe_connect_account_id) {
     return { error: "創作者尚未連結 Stripe", status: 503 };
+  }
+
+  const destinationValid = await isConnectDestinationValid(
+    creatorProfile.stripe_connect_account_id
+  );
+  if (!destinationValid) {
+    if (game.creator_id) {
+      await clearInvalidConnectAccount(game.creator_id);
+    }
+    return {
+      error: "創作者收款帳戶已失效，請創作者至「設定 → 收款」重新連接 Stripe 後再試",
+      status: 503,
+    };
   }
 
   const breakdown = buildTipBreakdown(params.amountUsd, platformFeePercent);

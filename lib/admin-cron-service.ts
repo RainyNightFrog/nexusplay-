@@ -2,8 +2,12 @@ import { cleanupExpiredChatMessages } from "@/lib/chat-service";
 import { recordCronRun } from "@/lib/cron-run-recorder";
 import { dispatchWeeklyForumDigests } from "@/lib/forum-digest-dispatch";
 import { processForumDigestRetries } from "@/lib/forum-digest-retry-service";
+import { cleanupExpiredPlayerDmMessages } from "@/lib/player-dm-service";
 import { createServerSupabase } from "@/lib/supabase-server";
-import { cleanupExpiredVirtualDmMessages } from "@/lib/virtual-dm-service";
+import {
+  cleanupExpiredVirtualDmMessages,
+  deliverDueVirtualDmReplies,
+} from "@/lib/virtual-dm-service";
 
 export type AdminCronJobDefinition = {
   name: string;
@@ -15,7 +19,7 @@ export const ADMIN_CRON_JOBS: AdminCronJobDefinition[] = [
   {
     name: "chat-cleanup",
     label: "聊天清理",
-    description: "清除過期公開聊天與虛擬私訊",
+    description: "清除過期聊天，並派發到期的玩家私訊回覆",
   },
   {
     name: "forum-digest",
@@ -66,16 +70,19 @@ export async function triggerAdminCronJob(jobName: string) {
   try {
     switch (jobName) {
       case "chat-cleanup": {
-        const [channelChat, virtualDm] = await Promise.all([
-          cleanupExpiredChatMessages(),
-          cleanupExpiredVirtualDmMessages(),
-        ]);
+        const [channelChat, virtualDm, playerDm, virtualDmReplies] =
+          await Promise.all([
+            cleanupExpiredChatMessages(),
+            cleanupExpiredVirtualDmMessages(),
+            cleanupExpiredPlayerDmMessages(),
+            deliverDueVirtualDmReplies(),
+          ]);
         await recordCronRun({
           jobName,
           status: "success",
           durationMs: Date.now() - started,
         });
-        return { jobName, channelChat, virtualDm };
+        return { jobName, channelChat, virtualDm, playerDm, virtualDmReplies };
       }
       case "forum-digest": {
         const result = await dispatchWeeklyForumDigests();

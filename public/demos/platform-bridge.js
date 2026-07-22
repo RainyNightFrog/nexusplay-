@@ -763,4 +763,49 @@
   try {
     window.parent.postMessage({ type: READY_TYPE, gameId: gameId }, location.origin);
   } catch (_e) {}
+
+  var SHOW_MENU_TYPES = [
+    "rainynightfrog:show-menu",
+    "RNF_SHOW_MENU",
+    "nexusplay:show-menu",
+  ];
+  var showMenuHandler = null;
+
+  function invokeShowMenu() {
+    if (typeof showMenuHandler === "function") {
+      try {
+        showMenuHandler();
+        return true;
+      } catch (_e) {
+        return false;
+      }
+    }
+    var fallbackIds = [
+      "btnQuit",
+      "btnQuitGame",
+      "btnGoMenu",
+      "btnPauseMenu",
+      "btnResultMenu",
+    ];
+    for (var i = 0; i < fallbackIds.length; i++) {
+      var el = document.getElementById(fallbackIds[i]);
+      if (el && typeof el.click === "function") {
+        el.click();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  window.addEventListener("message", function (e) {
+    if (e.origin !== location.origin) return;
+    var d = e.data;
+    if (!d || !includesType(SHOW_MENU_TYPES, d.type)) return;
+    invokeShowMenu();
+  });
+
+  window.PlatformBridge.onShowMenu = function (handler) {
+    showMenuHandler = typeof handler === "function" ? handler : null;
+  };
+  window.PlatformBridge.showMenu = invokeShowMenu;
 })();

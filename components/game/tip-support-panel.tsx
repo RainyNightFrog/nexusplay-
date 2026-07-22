@@ -609,21 +609,21 @@ export function TipSupportPanel({
                     {t("tipSpendingHint")}
                   </p>
 
-                  <label className="flex items-start gap-3 rounded-xl border border-white/8 bg-zinc-950/40 px-3 py-3 text-left">
-                    <Checkbox
-                      checked={showNameOnWall}
-                      onCheckedChange={(value) =>
-                        setShowNameOnWall(value === true)
-                      }
-                      className="mt-0.5 border-white/20 data-checked:border-fuchsia-500 data-checked:bg-fuchsia-500"
-                    />
-                    <span>
-                      <span className="block text-sm text-zinc-200">
+                  <label className="flex flex-col items-center gap-2 rounded-xl border border-white/8 bg-zinc-950/40 px-3 py-3 text-center">
+                    <span className="flex items-center justify-center gap-2.5">
+                      <Checkbox
+                        checked={showNameOnWall}
+                        onCheckedChange={(value) =>
+                          setShowNameOnWall(value === true)
+                        }
+                        className="border-white/20 data-checked:border-fuchsia-500 data-checked:bg-fuchsia-500"
+                      />
+                      <span className="text-sm text-zinc-200">
                         {t("tipShowNameOnWallLabel")}
                       </span>
-                      <span className="mt-0.5 block text-xs text-zinc-500">
-                        {t("tipShowNameOnWallDesc")}
-                      </span>
+                    </span>
+                    <span className="max-w-sm text-xs leading-relaxed text-zinc-500">
+                      {t("tipShowNameOnWallDesc")}
                     </span>
                   </label>
 

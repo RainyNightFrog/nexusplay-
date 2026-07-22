@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
-import {
-  getCreatorAdminContactSummary,
-  isCreatorAccount,
-} from "@/lib/support-chat-service";
+import { getCreatorAdminContactSummary } from "@/lib/support-chat-service";
 
 export async function GET() {
   try {
@@ -18,11 +15,6 @@ export async function GET() {
     }
 
     const supabase = createServerSupabase();
-    const isCreator = await isCreatorAccount(supabase, user.id);
-    if (!isCreator) {
-      return NextResponse.json({ error: "僅創作者可使用" }, { status: 403 });
-    }
-
     const contact = await getCreatorAdminContactSummary(supabase, user.id);
     return NextResponse.json({ contact });
   } catch (error) {

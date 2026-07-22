@@ -8,7 +8,9 @@ import {
 } from "@/lib/ap-shop-service";
 import { resolveEquippedTitleForUser } from "@/lib/equipped-title-service";
 import { profileFromUserMetadata } from "@/lib/profile-from-metadata";
+import { isMissingProfilesRelation } from "@/lib/profiles-access";
 import { resolveRoleFromPreferences } from "@/lib/profile-settings";
+import { createServerSupabase } from "@/lib/supabase-server";
 
 export { profileFromUserMetadata } from "@/lib/profile-from-metadata";
 
@@ -20,13 +22,76 @@ function readOptionalString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
-function isMissingProfilesTable(error: { code?: string; message?: string } | null) {
-  if (!error) return false;
-  return (
-    error.code === "PGRST205" ||
-    error.message?.includes("profiles") ||
-    error.message?.includes("schema cache")
-  );
+/** authenticated SELECT 已授權欄位（不含 is_admin／外觀／supporter_since） */
+const SELECT_AUTH_GRANTED =
+  "id, display_name, avatar_url, role, created_at, support_email, equipped_title_id, bio, player_number, is_supporter, supporter_badge, supporter_lifetime, username";
+
+/** service role 完整讀取（含玩家應可見但 hardening 未授權給 client 的欄位） */
+const SELECT_FULL =
+  "id, display_name, avatar_url, role, created_at, support_email, equipped_title_id, bio, player_number, is_supporter, supporter_since, supporter_badge, supporter_lifetime, username, is_admin, equipped_avatar_frame, equipped_name_color, equipped_chat_bubble";
+
+async function loadProfileRow(
+  authClient: SupabaseClient,
+  userId: string
+): Promise<{
+  profile: Record<string, unknown> | null;
+  error: { code?: string; message?: string } | null;
+  reader: SupabaseClient;
+}> {
+  // 優先用 service role，避免 auth client 因欄位未授權而整段 SELECT 失敗、回退 metadata
+  try {
+    const admin = createServerSupabase();
+    const result = await admin
+      .from("profiles")
+      .select(SELECT_FULL)
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (!result.error) {
+      return {
+        profile: result.data as Record<string, unknown> | null,
+        error: null,
+        reader: admin,
+      };
+    }
+
+    if (!isMissingProfilesRelation(result.error)) {
+      // 欄位尚未 migration 時，退回授權欄位查詢
+      if (
+        result.error.message?.includes("column") ||
+        result.error.message?.includes("equipped_") ||
+        result.error.message?.includes("supporter_") ||
+        result.error.message?.includes("is_admin")
+      ) {
+        const fallback = await admin
+          .from("profiles")
+          .select(SELECT_AUTH_GRANTED)
+          .eq("id", userId)
+          .maybeSingle();
+        if (!fallback.error) {
+          return {
+            profile: fallback.data as Record<string, unknown> | null,
+            error: null,
+            reader: admin,
+          };
+        }
+      }
+    }
+  } catch {
+    /* 無 service key 時改走 auth client */
+  }
+
+  const granted = await authClient
+    .from("profiles")
+    .select(SELECT_AUTH_GRANTED)
+    .eq("id", userId)
+    .maybeSingle();
+
+  return {
+    profile: granted.data as Record<string, unknown> | null,
+    error: granted.error,
+    reader: authClient,
+  };
 }
 
 export async function resolveUserProfile(
@@ -35,37 +100,7 @@ export async function resolveUserProfile(
 ): Promise<UserProfile> {
   const metadataProfile = profileFromUserMetadata(user);
 
-  const selectWithLifetime =
-    "id, display_name, avatar_url, role, created_at, support_email, equipped_title_id, bio, player_number, is_supporter, supporter_since, supporter_badge, supporter_lifetime, username, is_admin, equipped_avatar_frame, equipped_name_color, equipped_chat_bubble";
-  const selectBase =
-    "id, display_name, avatar_url, role, created_at, support_email, equipped_title_id, bio, player_number, is_supporter, supporter_since, supporter_badge, username, is_admin";
-
-  let profile: Record<string, unknown> | null = null;
-  let error: { code?: string; message?: string } | null = null;
-
-  {
-    const result = await supabase
-      .from("profiles")
-      .select(selectWithLifetime)
-      .eq("id", user.id)
-      .maybeSingle();
-    error = result.error;
-    profile = result.data as Record<string, unknown> | null;
-
-    if (
-      error &&
-      (error.message?.includes("supporter_lifetime") ||
-        error.message?.includes("column"))
-    ) {
-      const fallback = await supabase
-        .from("profiles")
-        .select(selectBase)
-        .eq("id", user.id)
-        .maybeSingle();
-      error = fallback.error;
-      profile = fallback.data as Record<string, unknown> | null;
-    }
-  }
+  const { profile, error, reader } = await loadProfileRow(supabase, user.id);
 
   if (!error && profile) {
     const dbIsAdmin = profile.is_admin === true;
@@ -80,7 +115,7 @@ export async function resolveUserProfile(
         ? profile.equipped_title_id
         : null;
     const equippedTitle = equippedTitleId
-      ? await resolveEquippedTitleForUser(supabase, user.id)
+      ? await resolveEquippedTitleForUser(reader, user.id)
       : null;
 
     let cosmetics = {
@@ -94,13 +129,13 @@ export async function resolveUserProfile(
       !cosmetics.chat_bubble
     ) {
       try {
-        cosmetics = await getEquippedCosmetics(supabase, user.id);
+        cosmetics = await getEquippedCosmetics(reader, user.id);
       } catch {
         /* ignore missing columns */
       }
     }
 
-    const cssMap = await resolveCosmeticCssByCodes(supabase, [
+    const cssMap = await resolveCosmeticCssByCodes(reader, [
       cosmetics.avatar_frame ?? "",
       cosmetics.name_color ?? "",
       cosmetics.chat_bubble ?? "",
@@ -150,7 +185,7 @@ export async function resolveUserProfile(
     };
   }
 
-  if (error && !isMissingProfilesTable(error)) {
+  if (error && !isMissingProfilesRelation(error)) {
     throw new Error(error.message);
   }
 

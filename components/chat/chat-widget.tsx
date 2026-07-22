@@ -16,6 +16,7 @@ import { ChatMessageList } from "@/components/chat/chat-message-list";
 import {
   ChatPlayerCard,
   chatMessageToPlayerPreview,
+  forumAuthorToPlayerPreview,
   virtualPlayerToPlayerPreview,
   type ChatPlayerPreview,
 } from "@/components/chat/chat-player-card";
@@ -23,13 +24,17 @@ import { Button } from "@/components/ui/button";
 import { ScrollToTopButton } from "@/components/layout/scroll-to-top-button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/use-auth";
+import { useChatContactsUnread } from "@/hooks/use-chat-contacts-unread";
 import { Link } from "@/i18n/navigation";
 import {
   useAmbientChatBackgroundPoll,
   useChatMessages,
 } from "@/hooks/use-chat-messages";
 import type { ChatChannel, ChatMessage } from "@/lib/chat";
-import type { EquippedTitle } from "@/lib/titles";
+import {
+  OPEN_PLAYER_DM_EVENT,
+  type OpenPlayerDmDetail,
+} from "@/lib/open-player-dm";
 import {
   getSupporterDisplayTierFromProfile,
   type SupporterDisplayTier,
@@ -130,6 +135,8 @@ export function ChatWidget() {
   const t = useTranslations("chat");
   const { profile, isCreator } = useAuth();
   const isLoggedIn = Boolean(profile);
+  const { unreadCount, reload: reloadUnread } =
+    useChatContactsUnread(isLoggedIn);
   const [open, setOpen] = useState(false);
   const [channel, setChannel] = useState<ChatTab>("world");
   const [drafts, setDrafts] = useState<Record<ChatChannel, string>>({
@@ -140,7 +147,10 @@ export function ChatWidget() {
     null
   );
   const [playerCardOpen, setPlayerCardOpen] = useState(false);
-  const [dmTargetId, setDmTargetId] = useState<string | null>(null);
+  const [dmPeerUserId, setDmPeerUserId] = useState<string | null>(null);
+  const [dmVirtualPlayerId, setDmVirtualPlayerId] = useState<string | null>(
+    null
+  );
   const [scrollToLatestKey, setScrollToLatestKey] = useState(0);
 
   const backgroundAmbientChannels = useMemo((): ChatChannel[] => {
@@ -166,27 +176,76 @@ export function ChatWidget() {
     setPlayerCardOpen(true);
   }
 
-  function handleContactProfileClick(contact: {
-    id: string;
+  function handleDmProfileClick(target: {
+    userId?: string | null;
+    virtualPlayerId?: string | null;
     displayName: string;
-    avatarUrl: string;
-    equippedTitle?: EquippedTitle | null;
+    avatarUrl?: string | null;
   }) {
-    setPlayerPreview(virtualPlayerToPlayerPreview(contact));
+    if (target.virtualPlayerId) {
+      setPlayerPreview(
+        virtualPlayerToPlayerPreview({
+          id: target.virtualPlayerId,
+          displayName: target.displayName,
+          avatarUrl: target.avatarUrl ?? null,
+        })
+      );
+    } else if (target.userId) {
+      setPlayerPreview({
+        ...forumAuthorToPlayerPreview(target.displayName, target.userId, null),
+        avatarUrl: target.avatarUrl ?? null,
+      });
+    } else {
+      return;
+    }
     setPlayerCardOpen(true);
   }
 
-  function openDirectMessage(virtualPlayerId: string) {
+  function openDirectMessage(target: {
+    userId?: string;
+    virtualPlayerId?: string;
+  }) {
     if (!isLoggedIn) return;
-    setDmTargetId(virtualPlayerId);
-    setChannel("contacts");
+    if (target.virtualPlayerId) {
+      setDmVirtualPlayerId(target.virtualPlayerId);
+      setDmPeerUserId(null);
+      setChannel("contacts");
+      setOpen(true);
+      return;
+    }
+    if (target.userId) {
+      setDmPeerUserId(target.userId);
+      setDmVirtualPlayerId(null);
+      setChannel("contacts");
+      setOpen(true);
+    }
   }
+
+  useEffect(() => {
+    function handleOpenDm(event: Event) {
+      const detail = (event as CustomEvent<OpenPlayerDmDetail>).detail;
+      if (!isLoggedIn) return;
+      if (!detail?.userId && !detail?.virtualPlayerId) return;
+      openDirectMessage({
+        userId: detail.userId,
+        virtualPlayerId: detail.virtualPlayerId,
+      });
+    }
+    window.addEventListener(OPEN_PLAYER_DM_EVENT, handleOpenDm);
+    return () => window.removeEventListener(OPEN_PLAYER_DM_EVENT, handleOpenDm);
+  }, [isLoggedIn]);
 
   useEffect(() => {
     if (!open) return;
     if (channel === "contacts") return;
     setScrollToLatestKey((key) => key + 1);
   }, [open, channel]);
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    // 開關面板或切到通訊錄後重抓未讀，讀完訊息可較快清掉紅點
+    void reloadUnread();
+  }, [open, channel, isLoggedIn, reloadUnread]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -292,10 +351,16 @@ export function ChatWidget() {
                       </TabsTrigger>
                       <TabsTrigger
                         value="contacts"
-                        className="flex-1 gap-1 rounded-lg text-[11px] data-active:bg-emerald-500/15 data-active:text-emerald-200"
+                        className="relative flex-1 gap-1 rounded-lg text-[11px] data-active:bg-emerald-500/15 data-active:text-emerald-200"
                       >
                         <Users className="size-3.5" />
                         {t("channelContacts")}
+                        {unreadCount > 0 ? (
+                          <span
+                            className="absolute right-1.5 top-1 size-1.5 rounded-full bg-rose-500 ring-2 ring-zinc-900"
+                            aria-hidden
+                          />
+                        ) : null}
                       </TabsTrigger>
                     </TabsList>
 
@@ -303,11 +368,14 @@ export function ChatWidget() {
                       isLoggedIn ? (
                         <ChatContactsPanel
                           active
-                          isCreator={isCreator}
                           supporterTier={supporterTier}
-                          initialPlayerId={dmTargetId}
-                          onInitialPlayerConsumed={() => setDmTargetId(null)}
-                          onPlayerProfileClick={handleContactProfileClick}
+                          initialPeerUserId={dmPeerUserId}
+                          initialVirtualPlayerId={dmVirtualPlayerId}
+                          onInitialPeerConsumed={() => {
+                            setDmPeerUserId(null);
+                            setDmVirtualPlayerId(null);
+                          }}
+                          onPlayerProfileClick={handleDmProfileClick}
                         />
                       ) : (
                         <GuestLoginPrompt message={t("loginRequiredContacts")} />
@@ -347,10 +415,21 @@ export function ChatWidget() {
             onClick={() => setOpen((prev) => !prev)}
             whileHover={{ scale: 1.04 }}
             whileTap={{ scale: 0.96 }}
-            aria-label={open ? t("close") : t("open")}
-            className="inline-flex size-12 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-violet-600 text-white shadow-xl shadow-cyan-500/25 ring-2 ring-white/10 touch-manipulation sm:size-14"
+            aria-label={
+              open
+                ? t("close")
+                : unreadCount > 0
+                  ? t("openWithUnread", { count: unreadCount })
+                  : t("open")
+            }
+            className="relative inline-flex size-12 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-violet-600 text-white shadow-xl shadow-cyan-500/25 ring-2 ring-white/10 touch-manipulation sm:size-14"
           >
             <MessageCircle className="size-6" />
+            {unreadCount > 0 ? (
+              <span className="absolute -right-0.5 -top-0.5 flex min-w-[18px] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold leading-none text-white shadow-md ring-2 ring-zinc-950">
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            ) : null}
           </motion.button>
         </div>
       </div>
@@ -359,6 +438,7 @@ export function ChatWidget() {
         player={playerPreview}
         open={playerCardOpen}
         onOpenChange={setPlayerCardOpen}
+        canDirectMessage={isLoggedIn}
         onDirectMessage={isLoggedIn ? openDirectMessage : undefined}
       />
     </>

@@ -14,6 +14,18 @@ export const VIRTUAL_DM_LIMITS = {
   pageSize: 80,
 } as const;
 
+export const VIRTUAL_DM_CONTACT_PREFIX = "vp:";
+
+export function toVirtualDmContactId(virtualPlayerId: string) {
+  return `${VIRTUAL_DM_CONTACT_PREFIX}${virtualPlayerId}`;
+}
+
+export function parseVirtualDmContactId(contactId: string): string | null {
+  if (!contactId.startsWith(VIRTUAL_DM_CONTACT_PREFIX)) return null;
+  const id = contactId.slice(VIRTUAL_DM_CONTACT_PREFIX.length).trim();
+  return id || null;
+}
+
 export type VirtualContactSummary = {
   id: string;
   displayName: string;

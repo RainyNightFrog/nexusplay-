@@ -33,6 +33,7 @@ import {
   getVirtualPlayerSupporterFlags,
 } from "@/lib/virtual-player-supporter";
 import { getVirtualPlayerBio } from "@/lib/virtual-player-bios";
+import { resolveUserAvatarUrl } from "@/lib/resolve-user-avatar";
 import type { EquippedTitle } from "@/lib/titles";
 import {
   resolveAdminDisplayRole,
@@ -91,6 +92,28 @@ function readCountryCode(value: unknown): string | null {
   return /^[A-Z]{2}$/.test(normalized) ? normalized : null;
 }
 
+/** Auth Admin 失敗時降級（例如 session／JWT 金鑰問題），不阻斷公開玩家卡 */
+async function loadAuthUserMetadata(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<{
+  metadata: Record<string, unknown>;
+  createdAt: string | null;
+}> {
+  try {
+    const { data, error } = await supabase.auth.admin.getUserById(userId);
+    if (error || !data.user) {
+      return { metadata: {}, createdAt: null };
+    }
+    return {
+      metadata: (data.user.user_metadata ?? {}) as Record<string, unknown>,
+      createdAt: data.user.created_at ?? null,
+    };
+  } catch {
+    return { metadata: {}, createdAt: null };
+  }
+}
+
 async function loadRealUserProfile(
   supabase: SupabaseClient,
   userId: string,
@@ -99,7 +122,7 @@ async function loadRealUserProfile(
   profile: ChatPlayerPublicProfile;
   showcasePreferences: ProfileShowcaseTagId[] | null;
 } | null> {
-  const [profileRes, authRes] = await Promise.all([
+  const [profileRes, authMeta] = await Promise.all([
     supabase
       .from("profiles")
       .select(
@@ -107,18 +130,17 @@ async function loadRealUserProfile(
       )
       .eq("id", userId)
       .maybeSingle(),
-    supabase.auth.admin.getUserById(userId),
+    loadAuthUserMetadata(supabase, userId),
   ]);
 
   if (profileRes.error) throw new Error(profileRes.error.message);
-  if (authRes.error) throw new Error(authRes.error.message);
   const profile = profileRes.data;
   if (!profile) return null;
 
-  const metadata = authRes.data.user?.user_metadata ?? {};
+  const metadata = authMeta.metadata;
   const registeredAt =
     readOptionalString(profile.created_at) ??
-    readOptionalString(authRes.data.user?.created_at) ??
+    readOptionalString(authMeta.createdAt) ??
     null;
   const profilePublic = readBoolean(metadata.profile_public, true);
   const bio = profilePublic
@@ -129,6 +151,14 @@ async function loadRealUserProfile(
   const showcasePreferences = parseProfileShowcaseTags(
     metadata.profile_showcase_tags
   );
+  const resolvedAvatarUrl = resolveUserAvatarUrl(profile.avatar_url, metadata);
+
+  if (!profile.avatar_url && resolvedAvatarUrl) {
+    void supabase
+      .from("profiles")
+      .update({ avatar_url: resolvedAvatarUrl })
+      .eq("id", userId);
+  }
 
   const [
     activityRes,
@@ -232,7 +262,7 @@ async function loadRealUserProfile(
             ? Number(profile.player_number) || null
             : null,
       displayName: profile.display_name?.trim() || "匿名玩家",
-      avatarUrl: profile.avatar_url ?? null,
+      avatarUrl: resolvedAvatarUrl,
       equippedTitle,
       isCreator: profile.role === "creator",
       adminRole: resolveAdminDisplayRole(
@@ -356,13 +386,8 @@ async function loadProfileShowcasePreferences(
 ): Promise<ProfileShowcaseTagId[] | null> {
   if (!userId) return null;
 
-  const { data: authData, error: authError } =
-    await supabase.auth.admin.getUserById(userId);
-  if (authError) throw new Error(authError.message);
-
-  return parseProfileShowcaseTags(
-    authData.user?.user_metadata?.profile_showcase_tags
-  );
+  const { metadata } = await loadAuthUserMetadata(supabase, userId);
+  return parseProfileShowcaseTags(metadata.profile_showcase_tags);
 }
 
 async function enrichProfileWithShowcaseTags(
@@ -411,22 +436,31 @@ export async function syncUserCountryFromRequest(
   const countryCode = getCountryCodeFromHeaders(request.headers);
   if (!countryCode) return null;
 
-  const { data: authData, error: authError } =
-    await supabase.auth.admin.getUserById(userId);
-  if (authError) throw new Error(authError.message);
+  try {
+    const { data: authData, error: authError } =
+      await supabase.auth.admin.getUserById(userId);
+    if (authError || !authData.user) return null;
 
-  const currentCode = readCountryCode(authData.user?.user_metadata?.country_code);
-  if (currentCode === countryCode) return countryCode;
+    const currentCode = readCountryCode(
+      authData.user.user_metadata?.country_code
+    );
+    if (currentCode === countryCode) return countryCode;
 
-  const { error: updateError } = await supabase.auth.admin.updateUserById(userId, {
-    user_metadata: {
-      ...(authData.user?.user_metadata ?? {}),
-      country_code: countryCode,
-    },
-  });
-  if (updateError) throw new Error(updateError.message);
+    const { error: updateError } = await supabase.auth.admin.updateUserById(
+      userId,
+      {
+        user_metadata: {
+          ...(authData.user.user_metadata ?? {}),
+          country_code: countryCode,
+        },
+      }
+    );
+    if (updateError) return null;
 
-  return countryCode;
+    return countryCode;
+  } catch {
+    return null;
+  }
 }
 
 export async function getChatPlayerPublicProfile(

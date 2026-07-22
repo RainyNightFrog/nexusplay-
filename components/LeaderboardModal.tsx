@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/use-auth";
+import { requestOpenPlayerDm } from "@/lib/open-player-dm";
 import { getInitials } from "@/lib/auth";
 import { UserBadge } from "@/components/UserBadge";
 import {
@@ -720,6 +721,10 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
       player={playerPreview}
       open={playerCardOpen}
       onOpenChange={handlePlayerCardOpenChange}
+      canDirectMessage={Boolean(profile)}
+      onDirectMessage={
+        profile ? (target) => requestOpenPlayerDm(target) : undefined
+      }
     />
     </>
   );

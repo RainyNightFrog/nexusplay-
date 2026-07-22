@@ -9,10 +9,22 @@ import { createServerSupabase } from "@/lib/supabase-server";
 
 export async function GET(request: Request) {
   try {
-    const authClient = await createAuthServerClient();
-    const {
-      data: { user },
-    } = await authClient.auth.getUser();
+    let user: Awaited<
+      ReturnType<
+        Awaited<ReturnType<typeof createAuthServerClient>>["auth"]["getUser"]
+      >
+    >["data"]["user"] = null;
+
+    try {
+      const authClient = await createAuthServerClient();
+      const result = await authClient.auth.getUser();
+      if (!result.error) {
+        user = result.data.user;
+      }
+    } catch {
+      // Session JWT 驗證失敗時仍允許讀取公開玩家卡
+      user = null;
+    }
 
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get("userId")?.trim() || null;
@@ -25,7 +37,11 @@ export async function GET(request: Request) {
     const supabase = createServerSupabase();
 
     if (user && userId && userId === user.id) {
-      await syncUserCountryFromRequest(supabase, user.id, request);
+      try {
+        await syncUserCountryFromRequest(supabase, user.id, request);
+      } catch {
+        // 地區同步失敗不影響玩家卡
+      }
     }
 
     const profile = await getChatPlayerPublicProfile(supabase, {

@@ -4,6 +4,7 @@ import { resolveEquippedTitles } from "@/lib/equipped-title-service";
 import type { EquippedTitle } from "@/lib/titles";
 
 export type GameSupporter = {
+  payerId: string | null;
   displayName: string;
   amountUsd: number;
   createdAt: string;
@@ -42,7 +43,10 @@ export async function listGameSupporters(
     .in("id", payerIds);
 
   const payerMap = new Map(
-    (payers ?? []).map((payer) => [payer.id, payer.display_name as string])
+    (payers ?? []).map((payer) => [
+      payer.id,
+      typeof payer.display_name === "string" ? payer.display_name.trim() : "",
+    ])
   );
 
   const titleMap = await resolveEquippedTitles(supabase, payerIds);
@@ -50,11 +54,13 @@ export async function listGameSupporters(
   return tips.map((tip) => {
     const payerId = tip.payer_id as string;
     const isAnonymous = tip.public_anonymous === true;
+    const displayName = isAnonymous
+      ? "__anonymous__"
+      : payerMap.get(payerId) || "Supporter";
 
     return {
-      displayName: isAnonymous
-        ? "__anonymous__"
-        : payerMap.get(payerId) ?? "Supporter",
+      payerId: isAnonymous ? null : payerId,
+      displayName,
       amountUsd:
         Math.round(Number.parseFloat(String(tip.amount_usd)) * 100) / 100,
       createdAt: tip.created_at as string,

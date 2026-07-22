@@ -89,6 +89,10 @@ export function useVirtualDm(playerId: string | null, enabled: boolean) {
       return;
     }
     void loadMessages();
+    const timer = window.setInterval(() => {
+      void loadMessages();
+    }, 30_000);
+    return () => window.clearInterval(timer);
   }, [enabled, loadMessages, playerId]);
 
   useEffect(() => {

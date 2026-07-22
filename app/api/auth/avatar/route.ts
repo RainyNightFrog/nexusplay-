@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { resolveUserProfile } from "@/lib/auth-profile";
+import { isMissingProfilesRelation } from "@/lib/profiles-access";
 import { PROFILE_LIMITS } from "@/lib/profile-settings";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
@@ -86,11 +87,7 @@ export async function POST(request: Request) {
       .update({ avatar_url: avatarUrl })
       .eq("id", user.id);
 
-    if (
-      profileError &&
-      profileError.code !== "PGRST205" &&
-      !profileError.message.includes("profiles")
-    ) {
+    if (profileError && !isMissingProfilesRelation(profileError)) {
       throw new Error(profileError.message);
     }
 

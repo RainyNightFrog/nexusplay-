@@ -3,7 +3,9 @@ import { accountIntentToProfile } from "@/lib/account-intent";
 import { resolveUserProfile } from "@/lib/auth-profile";
 import { isAdminUser } from "@/lib/admin-auth";
 import { resolveRoleFromPreferences } from "@/lib/profile-settings";
+import { isMissingProfilesRelation } from "@/lib/profiles-access";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
+import { createServerSupabase } from "@/lib/supabase-server";
 import type { UserRole } from "@/lib/auth";
 
 function parseIntent(value: unknown): UserRole | null {
@@ -55,20 +57,17 @@ export async function POST(request: Request) {
       throw new Error(authError.message);
     }
 
-    const { error: profileError } = await supabase.from("profiles").upsert(
-      {
-        id: user.id,
+    // authenticated 無 INSERT，且不可更新 role；改以 service role 同步身分
+    const admin = createServerSupabase();
+    const { error: profileError } = await admin
+      .from("profiles")
+      .update({
         display_name: currentProfile.display_name,
         role: resolveRoleFromPreferences(developing_games),
-      },
-      { onConflict: "id" }
-    );
+      })
+      .eq("id", user.id);
 
-    if (
-      profileError &&
-      profileError.code !== "PGRST205" &&
-      !profileError.message.includes("profiles")
-    ) {
+    if (profileError && !isMissingProfilesRelation(profileError)) {
       throw new Error(profileError.message);
     }
 

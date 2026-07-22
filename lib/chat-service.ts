@@ -7,6 +7,7 @@ import {
   isValidChatChannel,
 } from "@/lib/chat";
 import { getAmbientUserPlayerMap } from "@/lib/ambient-user-index";
+import { listAuthAdminUsers } from "@/lib/auth-admin-users-cache";
 import { resolveVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
 import { resolveEquippedTitles } from "@/lib/equipped-title-service";
 import {
@@ -15,6 +16,7 @@ import {
 } from "@/lib/ap-shop-service";
 import { formatForumAuthor } from "@/lib/forum";
 import { resolveAdminDisplayRole } from "@/lib/admin-display-role";
+import { resolveUserAvatarUrl } from "@/lib/resolve-user-avatar";
 import { resolveSupporterProfiles } from "@/lib/supporter-profile";
 import { getVirtualPlayerSupporterFlags } from "@/lib/virtual-player-supporter";
 import { createServerSupabase } from "@/lib/supabase-server";
@@ -80,14 +82,42 @@ async function resolveAuthorProfiles(userIds: string[]) {
     .select("id, display_name, avatar_url, role, is_admin")
     .in("id", uniqueIds);
 
+  const missingAvatarIds: string[] = [];
   for (const userId of uniqueIds) {
     const profile = profiles?.find((row) => row.id === userId);
+    const avatarUrl = profile?.avatar_url ?? null;
+    if (!avatarUrl) missingAvatarIds.push(userId);
     profileMap.set(userId, {
       display_name: profile?.display_name ?? null,
-      avatar_url: profile?.avatar_url ?? null,
+      avatar_url: avatarUrl,
       role: profile?.role ?? null,
       is_admin: profile?.is_admin === true,
     });
+  }
+
+  if (missingAvatarIds.length > 0) {
+    try {
+      const authUsers = await listAuthAdminUsers(supabase);
+      const byId = new Map(authUsers.map((user) => [user.id, user]));
+      for (const userId of missingAvatarIds) {
+        const authUser = byId.get(userId);
+        const current = profileMap.get(userId);
+        if (!current) continue;
+        const resolved = resolveUserAvatarUrl(
+          current.avatar_url,
+          (authUser?.user_metadata ?? {}) as Record<string, unknown>
+        );
+        if (resolved) {
+          profileMap.set(userId, { ...current, avatar_url: resolved });
+          void supabase
+            .from("profiles")
+            .update({ avatar_url: resolved })
+            .eq("id", userId);
+        }
+      }
+    } catch {
+      // Auth 列表失敗時維持 profiles 結果
+    }
   }
 
   return profileMap;

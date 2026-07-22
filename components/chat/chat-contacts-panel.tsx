@@ -1,26 +1,90 @@
 "use client";
 
-import Image from "next/image";
 import { ArrowLeft, Loader2, MessageCircle, Shield } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { ChatInput } from "@/components/chat/chat-input";
-import { UserBadge } from "@/components/UserBadge";
 import { RainbowSafeText } from "@/components/supporter/rainbow-safe-text";
+import {
+  useAdminSupportChat,
+  useAdminSupportContact,
+} from "@/hooks/use-admin-support-chat";
+import {
+  useOpenPlayerDm,
+  usePlayerDmChat,
+  usePlayerDmContacts,
+} from "@/hooks/use-player-dm";
 import { useVirtualContacts, useVirtualDm } from "@/hooks/use-virtual-dm";
-import { useAdminSupportChat, useAdminSupportContact } from "@/hooks/use-admin-support-chat";
-import { ADMIN_SUPPORT_CONTACT_ID, SUPPORT_CHAT_LIMITS } from "@/lib/support-chat";
-import type { SupporterDisplayTier } from "@/lib/supporter-tier";
+import {
+  ADMIN_SUPPORT_CONTACT_ID,
+  SUPPORT_CHAT_LIMITS,
+} from "@/lib/support-chat";
+import { PLAYER_DM_LIMITS } from "@/lib/player-dm";
+import {
+  parseVirtualDmContactId,
+  toVirtualDmContactId,
+  VIRTUAL_DM_LIMITS,
+} from "@/lib/virtual-dm";
+import { resolveVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
+import { getVirtualPlayerById } from "@/lib/virtual-players";
+import { getVirtualPlayerSupporterFlags } from "@/lib/virtual-player-supporter";
 import {
   getSupporterDisplayTier,
   supporterMessageContentClassByTier,
+  type SupporterDisplayTier,
 } from "@/lib/supporter-tier";
-import { getVirtualPlayerSupporterFlags } from "@/lib/virtual-player-supporter";
-import type { EquippedTitle } from "@/lib/titles";
-import { resolveVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
-import { getVirtualPlayerById, listVirtualChatDiscoverPlayers } from "@/lib/virtual-players";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+
+function DmMessageBubble({
+  content,
+  isOwn,
+  senderName,
+  supporterTier = "none",
+}: {
+  content: string;
+  isOwn: boolean;
+  senderName?: string | null;
+  supporterTier?: SupporterDisplayTier;
+}) {
+  const isSupporter = supporterTier !== "none";
+  return (
+    <div className={cn("flex", isOwn ? "justify-end" : "justify-start")}>
+      <div
+        className={cn(
+          "max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap break-words",
+          isOwn
+            ? "bg-gradient-to-r from-cyan-600 to-violet-600"
+            : "border border-white/10 bg-white/5"
+        )}
+      >
+        {!isOwn && senderName ? (
+          <p className="mb-1 text-[10px] font-medium text-zinc-400">
+            {senderName}
+          </p>
+        ) : null}
+        {isSupporter && supporterTier === "premium" ? (
+          <RainbowSafeText
+            text={content}
+            rainbowClassName={supporterMessageContentClassByTier.premium}
+          />
+        ) : (
+          <span
+            className={cn(
+              isSupporter
+                ? supporterMessageContentClassByTier[supporterTier]
+                : isOwn
+                  ? "text-white"
+                  : "text-zinc-100"
+            )}
+          >
+            {content}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function ContactListItem({
   contact,
@@ -28,20 +92,20 @@ function ContactListItem({
   onSelect,
   pinned,
   isAdminContact,
+  avatarUrl,
 }: {
   contact: {
     id: string;
     displayName: string;
-    avatarUrl?: string;
     lastMessage: string | null;
     lastMessageAt: string | null;
-    equippedTitle?: EquippedTitle | null;
     unread?: boolean;
   };
   active: boolean;
   onSelect: () => void;
   pinned?: boolean;
   isAdminContact?: boolean;
+  avatarUrl?: string | null;
 }) {
   return (
     <button
@@ -54,36 +118,42 @@ function ContactListItem({
       )}
     >
       <div className="relative size-10 shrink-0 overflow-hidden rounded-full ring-1 ring-white/10">
-        {isAdminContact ? (
-          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-amber-500/30 to-cyan-500/20 text-amber-200">
-            <Shield className="size-5" />
-          </div>
-        ) : (
-          <Image
-            src={contact.avatarUrl ?? ""}
-            alt={contact.displayName}
-            fill
-            className="object-cover"
-            unoptimized
+        {avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={avatarUrl}
+            alt=""
+            className="h-full w-full object-cover"
           />
+        ) : (
+          <div
+            className={cn(
+              "flex h-full w-full items-center justify-center",
+              isAdminContact
+                ? "bg-gradient-to-br from-amber-500/30 to-cyan-500/20 text-amber-200"
+                : "bg-white/8 text-zinc-300"
+            )}
+          >
+            {isAdminContact ? (
+              <Shield className="size-5" />
+            ) : (
+              <span className="text-sm font-semibold">
+                {contact.displayName.slice(0, 1)}
+              </span>
+            )}
+          </div>
         )}
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          {isAdminContact ? (
-            <span className="truncate text-sm font-semibold text-amber-100">
-              {contact.displayName}
-            </span>
-          ) : (
-            <UserBadge
-              username={contact.displayName}
-              title={contact.equippedTitle}
-              layout="compact"
-              animateTitle={false}
-              usernameClassName="text-sm text-zinc-100"
-              titleClassName="text-[9px]"
-            />
-          )}
+          <span
+            className={cn(
+              "truncate text-sm font-semibold",
+              isAdminContact ? "text-amber-100" : "text-zinc-100"
+            )}
+          >
+            {contact.displayName}
+          </span>
           {contact.unread && (
             <Badge className="border-cyan-400/30 bg-cyan-500/15 px-1.5 py-0 text-[10px] text-cyan-200">
               NEW
@@ -198,30 +268,39 @@ function AdminSupportThread({
   );
 }
 
-function VirtualDmThread({
-  playerId,
-  displayName,
-  avatarUrl,
-  equippedTitle,
+function PlayerDmThread({
+  threadId,
+  fallbackName,
   onBack,
   onProfileClick,
   supporterTier = "none",
 }: {
-  playerId: string;
-  displayName: string;
-  avatarUrl: string;
-  equippedTitle?: EquippedTitle | null;
+  threadId: string;
+  fallbackName?: string;
   onBack: () => void;
-  onProfileClick: () => void;
+  onProfileClick?: (target: {
+    userId?: string | null;
+    virtualPlayerId?: string | null;
+    displayName: string;
+    avatarUrl?: string | null;
+  }) => void;
   supporterTier?: SupporterDisplayTier;
 }) {
   const t = useTranslations("chat");
   const [draft, setDraft] = useState("");
-  const dm = useVirtualDm(playerId, true);
-  const virtualSupporter = getVirtualPlayerSupporterFlags(playerId);
-  const virtualSupporterTier = virtualSupporter
-    ? getSupporterDisplayTier(true, virtualSupporter.badge)
-    : "none";
+  const chat = usePlayerDmChat(threadId, true);
+  const title = chat.thread?.peerDisplayName ?? fallbackName ?? t("playerDmTitle");
+  const peerUserId = chat.thread?.peerUserId ?? null;
+  const peerAvatarUrl = chat.thread?.peerAvatarUrl ?? null;
+
+  function openProfile() {
+    if (!onProfileClick || !peerUserId) return;
+    onProfileClick({
+      userId: peerUserId,
+      displayName: title,
+      avatarUrl: peerAvatarUrl,
+    });
+  }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -236,102 +315,55 @@ function VirtualDmThread({
         </button>
         <button
           type="button"
-          onClick={onProfileClick}
-          className="relative size-8 shrink-0 overflow-hidden rounded-full ring-1 ring-white/10 transition-opacity hover:opacity-85"
-          aria-label={displayName}
+          onClick={openProfile}
+          disabled={!onProfileClick || !peerUserId}
+          className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-1 py-0.5 text-left transition-colors hover:bg-white/5 disabled:pointer-events-none"
         >
-          <Image
-            src={avatarUrl}
-            alt={displayName}
-            fill
-            className="object-cover"
-            unoptimized
-          />
-        </button>
-        <button
-          type="button"
-          onClick={onProfileClick}
-          className="min-w-0 flex-1 text-left transition-opacity hover:opacity-85"
-        >
-          <UserBadge
-            username={displayName}
-            title={equippedTitle}
-            isSupporter={virtualSupporter != null}
-            supporterBadge={virtualSupporter?.badge ?? null}
-            showSupporterBadge={false}
-            layout="compact"
-            animateTitle={false}
-            usernameClassName="text-sm font-semibold text-zinc-100"
-            titleClassName="text-[9px]"
-          />
-          <p className="text-[10px] text-zinc-500">{t("contactsVirtualHint")}</p>
+          <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/8 text-zinc-200 ring-1 ring-white/10">
+            {peerAvatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={peerAvatarUrl}
+                alt=""
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <MessageCircle className="size-4" />
+            )}
+          </div>
+          <div className="min-w-0 flex-1 text-left">
+            <p className="truncate text-sm font-semibold text-zinc-100 underline-offset-2 hover:underline">
+              {title}
+            </p>
+          </div>
         </button>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
-        {dm.loading ? (
+        {chat.loading && chat.messages.length === 0 ? (
           <div className="flex items-center justify-center py-10 text-sm text-zinc-500">
             <Loader2 className="mr-2 size-4 animate-spin" />
             {t("loading")}
           </div>
-        ) : dm.messages.length === 0 ? (
-          <p className="py-10 text-center text-sm text-zinc-500">
-            {t("contactsEmptyThread")}
-          </p>
+        ) : chat.messages.length === 0 ? (
+          <div className="space-y-2 px-2 py-8 text-center">
+            <p className="text-sm text-zinc-300">{t("contactsEmptyThread")}</p>
+            <p className="text-xs leading-relaxed text-zinc-500">
+              {t("playerDmEmptyHint")}
+            </p>
+          </div>
         ) : (
           <div className="space-y-2.5">
-            {dm.messages.map((message) => {
-              const isUser = message.sender === "user";
-              const tier = isUser
-                ? supporterTier
-                : virtualSupporterTier;
-              const useRainbow = tier === "premium";
-              const contentClass = useRainbow
-                ? undefined
-                : isUser
-                  ? supporterTier !== "none"
-                    ? supporterMessageContentClassByTier[supporterTier]
-                    : "text-white"
-                  : virtualSupporterTier !== "none"
-                    ? supporterMessageContentClassByTier[virtualSupporterTier]
-                    : "text-zinc-200";
-
-              return (
-                <div
-                  key={message.id}
-                  className={cn("flex", isUser ? "justify-end" : "justify-start")}
-                >
-                  <div
-                    className={cn(
-                      "max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed",
-                      isUser
-                        ? "bg-gradient-to-r from-cyan-600 to-violet-600"
-                        : "border border-white/8 bg-zinc-900/80"
-                    )}
-                  >
-                    {useRainbow ? (
-                      <RainbowSafeText
-                        text={message.content}
-                        rainbowClassName={
-                          supporterMessageContentClassByTier.premium
-                        }
-                      />
-                    ) : (
-                      <span className={contentClass}>{message.content}</span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-            {dm.sending && (
-              <div className="flex justify-start">
-                <div className="rounded-2xl border border-white/8 bg-zinc-900/80 px-3 py-2 text-xs text-zinc-500">
-                  <Loader2 className="mr-1 inline size-3 animate-spin" />
-                  {t("contactsTyping")}
-                </div>
-              </div>
-            )}
-            <div ref={dm.bottomRef} />
+            {chat.messages.map((message) => (
+              <DmMessageBubble
+                key={message.id}
+                content={message.content}
+                isOwn={message.is_own}
+                senderName={message.sender_display_name}
+                supporterTier={message.sender_supporter_tier ?? "none"}
+              />
+            ))}
+            <div ref={chat.bottomRef} />
           </div>
         )}
       </div>
@@ -339,18 +371,146 @@ function VirtualDmThread({
       <ChatInput
         value={draft}
         onChange={setDraft}
-        sending={dm.sending}
+        sending={chat.sending}
+        maxLength={PLAYER_DM_LIMITS.content}
         supporterTier={supporterTier}
         onSend={async (content) => {
-          const ok = await dm.sendMessage(content);
+          const ok = await chat.sendMessage(content);
           if (ok) setDraft("");
           return ok;
         }}
       />
 
-      {dm.error && (
+      {chat.error && (
         <div className="border-t border-rose-500/20 bg-rose-500/10 px-3 py-2 text-center text-xs text-rose-300">
-          {dm.error}
+          {chat.error}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function VirtualDmThread({
+  virtualPlayerId,
+  fallbackName,
+  fallbackAvatar,
+  onBack,
+  onProfileClick,
+  supporterTier = "none",
+}: {
+  virtualPlayerId: string;
+  fallbackName?: string;
+  fallbackAvatar?: string | null;
+  onBack: () => void;
+  onProfileClick?: (target: {
+    userId?: string | null;
+    virtualPlayerId?: string | null;
+    displayName: string;
+    avatarUrl?: string | null;
+  }) => void;
+  supporterTier?: SupporterDisplayTier;
+}) {
+  const t = useTranslations("chat");
+  const [draft, setDraft] = useState("");
+  const chat = useVirtualDm(virtualPlayerId, true);
+  const player = getVirtualPlayerById(virtualPlayerId);
+  const title =
+    player?.displayName ?? fallbackName ?? t("playerDmTitle");
+  const avatarUrl =
+    fallbackAvatar ?? resolveVirtualPlayerAvatarUrl(virtualPlayerId);
+
+  function openProfile() {
+    if (!onProfileClick) return;
+    onProfileClick({
+      virtualPlayerId,
+      displayName: title,
+      avatarUrl,
+    });
+  }
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex items-center gap-2 border-b border-white/8 px-3 py-2.5">
+        <button
+          type="button"
+          onClick={onBack}
+          className="inline-flex size-8 items-center justify-center rounded-lg text-zinc-400 hover:bg-white/8 hover:text-white"
+          aria-label={t("contactsBack")}
+        >
+          <ArrowLeft className="size-4" />
+        </button>
+        <button
+          type="button"
+          onClick={openProfile}
+          disabled={!onProfileClick}
+          className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-1 py-0.5 text-left transition-colors hover:bg-white/5 disabled:pointer-events-none"
+        >
+          <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/8 text-zinc-200 ring-1 ring-white/10">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+          </div>
+          <div className="min-w-0 flex-1 text-left">
+            <p className="truncate text-sm font-semibold text-zinc-100 underline-offset-2 hover:underline">
+              {title}
+            </p>
+          </div>
+        </button>
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
+        {chat.loading && chat.messages.length === 0 ? (
+          <div className="flex items-center justify-center py-10 text-sm text-zinc-500">
+            <Loader2 className="mr-2 size-4 animate-spin" />
+            {t("loading")}
+          </div>
+        ) : chat.messages.length === 0 ? (
+          <div className="space-y-2 px-2 py-8 text-center">
+            <p className="text-sm text-zinc-300">{t("contactsEmptyThread")}</p>
+            <p className="text-xs leading-relaxed text-zinc-500">
+              {t("playerDmEmptyHint")}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2.5">
+            {chat.messages.map((message) => {
+              const isOwn = message.sender === "user";
+              const peerFlags = getVirtualPlayerSupporterFlags(virtualPlayerId);
+              const messageTier = isOwn
+                ? supporterTier
+                : getSupporterDisplayTier(
+                    peerFlags?.isSupporter === true,
+                    peerFlags?.badge ?? null
+                  );
+              return (
+                <DmMessageBubble
+                  key={message.id}
+                  content={message.content}
+                  isOwn={isOwn}
+                  supporterTier={messageTier}
+                />
+              );
+            })}
+            <div ref={chat.bottomRef} />
+          </div>
+        )}
+      </div>
+
+      <ChatInput
+        value={draft}
+        onChange={setDraft}
+        sending={chat.sending}
+        maxLength={VIRTUAL_DM_LIMITS.content}
+        supporterTier={supporterTier}
+        onSend={async (content) => {
+          const ok = await chat.sendMessage(content);
+          if (ok) setDraft("");
+          return ok;
+        }}
+      />
+
+      {chat.error && (
+        <div className="border-t border-rose-500/20 bg-rose-500/10 px-3 py-2 text-center text-xs text-rose-300">
+          {chat.error}
         </div>
       )}
     </div>
@@ -359,36 +519,84 @@ function VirtualDmThread({
 
 export function ChatContactsPanel({
   active,
-  isCreator,
   supporterTier = "none",
-  initialPlayerId,
-  onInitialPlayerConsumed,
+  initialPeerUserId = null,
+  initialVirtualPlayerId = null,
+  onInitialPeerConsumed,
   onPlayerProfileClick,
 }: {
   active: boolean;
-  isCreator: boolean;
   supporterTier?: SupporterDisplayTier;
-  initialPlayerId?: string | null;
-  onInitialPlayerConsumed?: () => void;
-  onPlayerProfileClick?: (contact: {
-    id: string;
+  initialPeerUserId?: string | null;
+  initialVirtualPlayerId?: string | null;
+  onInitialPeerConsumed?: () => void;
+  onPlayerProfileClick?: (target: {
+    userId?: string | null;
+    virtualPlayerId?: string | null;
     displayName: string;
-    avatarUrl: string;
-    equippedTitle?: EquippedTitle | null;
+    avatarUrl?: string | null;
   }) => void;
 }) {
   const t = useTranslations("chat");
-  const { contacts, loading, error, reload } = useVirtualContacts(active);
-  const adminContact = useAdminSupportContact(active, isCreator);
+  const adminContact = useAdminSupportContact(active);
+  const dmContacts = usePlayerDmContacts(active);
+  const virtualContacts = useVirtualContacts(active);
+  const openPlayerDm = useOpenPlayerDm();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [openingPeer, setOpeningPeer] = useState(false);
+  const [openError, setOpenError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!active || !initialPlayerId) return;
-    setSelectedId(initialPlayerId);
-    onInitialPlayerConsumed?.();
-  }, [active, initialPlayerId, onInitialPlayerConsumed]);
+    if (!active) return;
+
+    if (initialVirtualPlayerId) {
+      setSelectedId(toVirtualDmContactId(initialVirtualPlayerId));
+      setOpeningPeer(false);
+      onInitialPeerConsumed?.();
+      void virtualContacts.reload();
+      return;
+    }
+
+    if (!initialPeerUserId) return;
+
+    let cancelled = false;
+    setOpeningPeer(true);
+    setOpenError(null);
+
+    void (async () => {
+      try {
+        const thread = await openPlayerDm(initialPeerUserId);
+        if (cancelled) return;
+        if (thread) {
+          setSelectedId(thread.id);
+          void dmContacts.reload();
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setOpenError(
+            err instanceof Error ? err.message : t("playerDmOpenFailed")
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setOpeningPeer(false);
+          onInitialPeerConsumed?.();
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [active, initialPeerUserId, initialVirtualPlayerId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!active) return null;
+
+  const reloadList = () => {
+    void adminContact.reload();
+    void dmContacts.reload();
+    void virtualContacts.reload();
+  };
 
   if (selectedId === ADMIN_SUPPORT_CONTACT_ID) {
     return (
@@ -396,54 +604,84 @@ export function ChatContactsPanel({
         supporterTier={supporterTier}
         onBack={() => {
           setSelectedId(null);
-          void reload();
-          void adminContact.reload();
+          reloadList();
         }}
       />
     );
   }
 
-  const selectedFromContacts =
-    contacts.find((contact) => contact.id === selectedId) ?? null;
-  const selectedPlayer = selectedId
-    ? selectedFromContacts ??
-      (() => {
-        const player = getVirtualPlayerById(selectedId);
-        if (!player) return null;
-        return {
-          id: player.id,
-          displayName: player.displayName,
-          avatarUrl: resolveVirtualPlayerAvatarUrl(player.id),
-          lastMessage: null,
-          lastMessageAt: null,
-          equippedTitle: null,
-        };
-      })()
+  const virtualPlayerId = selectedId
+    ? parseVirtualDmContactId(selectedId)
     : null;
 
-  if (selectedPlayer) {
+  if (virtualPlayerId) {
+    const contact = virtualContacts.contacts.find(
+      (item) => item.id === virtualPlayerId
+    );
     return (
       <VirtualDmThread
-        playerId={selectedPlayer.id}
-        displayName={selectedPlayer.displayName}
-        avatarUrl={selectedPlayer.avatarUrl}
-        equippedTitle={selectedPlayer.equippedTitle ?? null}
+        virtualPlayerId={virtualPlayerId}
+        fallbackName={contact?.displayName}
+        fallbackAvatar={contact?.avatarUrl}
         supporterTier={supporterTier}
+        onProfileClick={onPlayerProfileClick}
         onBack={() => {
           setSelectedId(null);
-          void reload();
+          reloadList();
         }}
-        onProfileClick={() =>
-          onPlayerProfileClick?.({
-            id: selectedPlayer.id,
-            displayName: selectedPlayer.displayName,
-            avatarUrl: selectedPlayer.avatarUrl,
-            equippedTitle: selectedPlayer.equippedTitle ?? null,
-          })
-        }
       />
     );
   }
+
+  if (selectedId) {
+    const peerName = dmContacts.contacts.find(
+      (c) => c.threadId === selectedId
+    )?.displayName;
+    return (
+      <PlayerDmThread
+        threadId={selectedId}
+        fallbackName={peerName}
+        supporterTier={supporterTier}
+        onProfileClick={onPlayerProfileClick}
+        onBack={() => {
+          setSelectedId(null);
+          reloadList();
+        }}
+      />
+    );
+  }
+
+  const loading =
+    (adminContact.loading && !adminContact.contact) ||
+    ((dmContacts.loading || virtualContacts.loading) &&
+      dmContacts.contacts.length === 0 &&
+      virtualContacts.contacts.length === 0) ||
+    openingPeer;
+
+  const mergedContacts = [
+    ...dmContacts.contacts.map((contact) => ({
+      key: contact.threadId,
+      id: contact.threadId,
+      displayName: contact.displayName,
+      lastMessage: contact.lastMessage,
+      lastMessageAt: contact.lastMessageAt,
+      unread: contact.unread,
+      avatarUrl: contact.avatarUrl,
+    })),
+    ...virtualContacts.contacts.map((contact) => ({
+      key: toVirtualDmContactId(contact.id),
+      id: toVirtualDmContactId(contact.id),
+      displayName: contact.displayName,
+      lastMessage: contact.lastMessage,
+      lastMessageAt: contact.lastMessageAt,
+      unread: false,
+      avatarUrl: contact.avatarUrl as string | null,
+    })),
+  ].sort((a, b) => {
+    const aTime = a.lastMessageAt ? Date.parse(a.lastMessageAt) : 0;
+    const bTime = b.lastMessageAt ? Date.parse(b.lastMessageAt) : 0;
+    return bTime - aTime;
+  });
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -457,72 +695,55 @@ export function ChatContactsPanel({
             <Loader2 className="mr-2 size-4 animate-spin" />
             {t("loading")}
           </div>
-        ) : error ? (
-          <p className="py-10 text-center text-sm text-rose-300">{error}</p>
-        ) : contacts.length === 0 && !isCreator ? (
-          <div className="flex flex-col gap-4 px-2 py-6">
-            <div className="flex flex-col items-center gap-3 px-2 text-center">
-              <div className="flex size-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-300">
-                <MessageCircle className="size-6" />
-              </div>
-              <p className="text-sm text-zinc-300">{t("contactsEmpty")}</p>
-              <p className="text-xs leading-relaxed text-zinc-500">
-                {t("contactsEmptyHint")}
-              </p>
-            </div>
-
-            <div className="rounded-xl border border-white/8 bg-white/[0.02] p-2">
-              <p className="px-2 py-1.5 text-center text-xs font-medium text-zinc-400">
-                {t("contactsDiscoverTitle")}
-              </p>
-              <p className="mb-2 px-2 text-center text-[10px] leading-relaxed text-zinc-600">
-                {t("contactsDiscoverHint")}
-              </p>
-              <div className="space-y-1">
-                {listVirtualChatDiscoverPlayers().map((player) => (
-                  <ContactListItem
-                    key={player.id}
-                    contact={{
-                      id: player.id,
-                      displayName: player.displayName,
-                      avatarUrl: resolveVirtualPlayerAvatarUrl(player.id),
-                      lastMessage: t("contactsDiscoverPreview"),
-                      lastMessageAt: null,
-                    }}
-                    active={false}
-                    onSelect={() => setSelectedId(player.id)}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
+        ) : adminContact.error &&
+          dmContacts.error &&
+          virtualContacts.error ? (
+          <p className="py-10 text-center text-sm text-rose-300">
+            {adminContact.error}
+          </p>
         ) : (
           <div className="space-y-1">
-            {isCreator && (
+            <ContactListItem
+              contact={{
+                id: ADMIN_SUPPORT_CONTACT_ID,
+                displayName: t("contactsAdminTitle"),
+                lastMessage:
+                  adminContact.contact?.lastMessage ??
+                  t("contactsAdminDefaultPreview"),
+                lastMessageAt: adminContact.contact?.lastMessageAt ?? null,
+                unread: adminContact.contact?.unread,
+              }}
+              active={false}
+              pinned
+              isAdminContact
+              onSelect={() => setSelectedId(ADMIN_SUPPORT_CONTACT_ID)}
+            />
+
+            {mergedContacts.map((contact) => (
               <ContactListItem
+                key={contact.key}
                 contact={{
-                  id: ADMIN_SUPPORT_CONTACT_ID,
-                  displayName: t("contactsAdminTitle"),
-                  lastMessage:
-                    adminContact.contact?.lastMessage ??
-                    t("contactsAdminDefaultPreview"),
-                  lastMessageAt: adminContact.contact?.lastMessageAt ?? null,
-                  unread: adminContact.contact?.unread,
+                  id: contact.id,
+                  displayName: contact.displayName,
+                  lastMessage: contact.lastMessage,
+                  lastMessageAt: contact.lastMessageAt,
+                  unread: contact.unread,
                 }}
-                active={false}
-                pinned
-                isAdminContact
-                onSelect={() => setSelectedId(ADMIN_SUPPORT_CONTACT_ID)}
-              />
-            )}
-            {contacts.map((contact) => (
-              <ContactListItem
-                key={contact.id}
-                contact={contact}
+                avatarUrl={contact.avatarUrl}
                 active={false}
                 onSelect={() => setSelectedId(contact.id)}
               />
             ))}
+
+            {(openError || dmContacts.error || virtualContacts.error) && (
+              <p className="px-3 py-2 text-center text-xs text-rose-300">
+                {openError ?? dmContacts.error ?? virtualContacts.error}
+              </p>
+            )}
+
+            <p className="px-3 py-4 text-center text-xs leading-relaxed text-zinc-600">
+              {t("contactsEmptyHint")}
+            </p>
           </div>
         )}
       </div>

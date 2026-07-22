@@ -30,6 +30,7 @@ import { ForumContentView } from "@/components/game/forum-content-view";
 import { ForumRichTextEditor } from "@/components/game/forum-rich-text-editor";
 import { ForumSearchInput } from "@/components/game/forum-search-input";
 import { useAuth } from "@/hooks/use-auth";
+import { requestOpenPlayerDm } from "@/lib/open-player-dm";
 import { useApiError } from "@/hooks/use-api-error";
 import {
   FORUM_CATEGORIES,
@@ -1229,6 +1230,12 @@ export function CommunityForum({
         player={playerPreview}
         open={playerCardOpen}
         onOpenChange={setPlayerCardOpen}
+        canDirectMessage={Boolean(profile)}
+        onDirectMessage={
+          profile
+            ? (target) => requestOpenPlayerDm(target)
+            : undefined
+        }
       />
     </div>
   );

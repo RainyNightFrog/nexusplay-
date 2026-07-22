@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { cleanupExpiredChatMessages } from "@/lib/chat-service";
-import { cleanupExpiredVirtualDmMessages } from "@/lib/virtual-dm-service";
+import { cleanupExpiredPlayerDmMessages } from "@/lib/player-dm-service";
+import {
+  cleanupExpiredVirtualDmMessages,
+  deliverDueVirtualDmReplies,
+} from "@/lib/virtual-dm-service";
 import { verifyCronSecret } from "@/lib/cron-auth";
 import { recordCronRun } from "@/lib/cron-run-recorder";
 import { getPlatformModeStatus } from "@/lib/platform-mode";
@@ -11,10 +15,13 @@ export async function GET(request: Request) {
 
   try {
     const started = Date.now();
-    const [channelChat, virtualDm] = await Promise.all([
-      cleanupExpiredChatMessages(),
-      cleanupExpiredVirtualDmMessages(),
-    ]);
+    const [channelChat, virtualDm, playerDm, virtualDmReplies] =
+      await Promise.all([
+        cleanupExpiredChatMessages(),
+        cleanupExpiredVirtualDmMessages(),
+        cleanupExpiredPlayerDmMessages(),
+        deliverDueVirtualDmReplies(),
+      ]);
     await recordCronRun({
       jobName: "chat-cleanup",
       status: "success",
@@ -23,6 +30,8 @@ export async function GET(request: Request) {
     return NextResponse.json({
       channelChat,
       virtualDm,
+      playerDm,
+      virtualDmReplies,
       ...getPlatformModeStatus(),
     });
   } catch (error) {
