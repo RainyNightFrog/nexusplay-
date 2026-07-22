@@ -93,21 +93,28 @@
       ".rnf-score-big{font-size:clamp(2rem,6vw,3rem);font-weight:900;color:#22d3ee;margin:.5rem 0;font-variant-numeric:tabular-nums;text-shadow:0 0 24px rgba(34,211,238,.5)}" +
       ".rnf-hint{font-size:.72rem;color:#64748b;margin-top:.35rem}" +
       ".rnf-diff-label{font-size:.72rem;color:#64748b;letter-spacing:.12em;margin:.65rem 0 .35rem}" +
-      ".rnf-lb-list{text-align:left;margin:.75rem 0;max-height:42vh;overflow-y:auto;border:1px solid rgba(34,211,238,.15);border-radius:10px;background:rgba(0,0,0,.35)}" +
+      ".rnf-lb-list{text-align:left;margin:.55rem 0 .75rem;max-height:42vh;overflow-y:auto;border:1px solid rgba(34,211,238,.15);border-radius:10px;background:rgba(0,0,0,.35)}" +
       ".rnf-lb-row{display:grid;grid-template-columns:2rem 1fr auto;gap:.45rem;align-items:center;padding:.5rem .65rem;border-bottom:1px solid rgba(255,255,255,.05);font-size:.78rem}" +
+      ".rnf-lb-row:last-child{border-bottom:none}" +
       ".rnf-lb-row.me{background:rgba(34,211,238,.08)}" +
       ".rnf-lb-rank{font-weight:800;color:#64748b;font-variant-numeric:tabular-nums}" +
       ".rnf-lb-rank.top{color:#fbbf24}" +
-      ".rnf-lb-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#cbd5e1;text-align:center}" +
-      ".rnf-lb-player{text-align:center;min-width:0}" +
+      ".rnf-lb-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#cbd5e1;text-align:left}" +
+      ".rnf-lb-player{text-align:left;min-width:0}" +
       ".rnf-lb-score{font-weight:700;color:#22d3ee;font-variant-numeric:tabular-nums}" +
-      ".rnf-lb-meta{font-size:.62rem;color:#64748b;margin-top:.15rem;text-align:center}" +
+      ".rnf-lb-meta{font-size:.62rem;color:#64748b;margin-top:.12rem;text-align:left}" +
       ".rnf-lb-empty{color:#64748b;font-size:.82rem;padding:1.25rem;text-align:center}" +
       ".rnf-lb-section-title{font-size:.72rem;color:#22d3ee;letter-spacing:.12em;text-align:center;margin:.85rem 0 .35rem;padding-left:0}" +
-      ".rnf-lb-note{font-size:.72rem;color:#94a3b8;line-height:1.55;text-align:center;margin:.5rem 0;padding:.55rem .65rem;border-radius:8px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25)}" +
+      ".rnf-lb-note{font-size:.72rem;color:#94a3b8;line-height:1.55;text-align:center;margin:.35rem 0 .15rem;padding:.45rem .6rem;border-radius:8px;background:rgba(15,23,42,.55);border:1px solid rgba(148,163,184,.2)}" +
+      ".rnf-lb-note.warn{background:rgba(251,191,36,.08);border-color:rgba(251,191,36,.28)}" +
+      ".rnf-lb-tabs{display:flex;gap:.4rem;justify-content:center;flex-wrap:wrap;margin:.35rem 0 .15rem}" +
+      ".rnf-lb-tab{cursor:pointer;border:1px solid rgba(148,163,184,.3);background:rgba(0,0,0,.28);color:#94a3b8;padding:.4rem .85rem;font-size:.76rem;font-weight:600;border-radius:999px;transition:all .18s}" +
+      ".rnf-lb-tab:hover{border-color:rgba(34,211,238,.45);color:#cbd5e1}" +
+      ".rnf-lb-tab.active{background:rgba(34,211,238,.18);border-color:#22d3ee;color:#fff;box-shadow:0 0 14px rgba(34,211,238,.18)}" +
       ".rnf-lb-tag{display:inline-block;font-size:.58rem;padding:.12rem .4rem;border-radius:4px;margin-left:.35rem;vertical-align:middle}" +
       ".rnf-lb-tag.cloud{background:rgba(34,211,238,.15);color:#67e8f9;border:1px solid rgba(34,211,238,.35)}" +
       ".rnf-lb-tag.local{background:rgba(167,139,250,.12);color:#c4b5fd;border:1px solid rgba(167,139,250,.3)}" +
+      ".rnf-lb-tag.me{background:rgba(251,191,36,.14);color:#fbbf24;border:1px solid rgba(251,191,36,.35)}" +
       ".rnf-scroll{scrollbar-width:thin;scrollbar-color:#22d3ee rgba(6,10,18,.88)}" +
       ".rnf-scroll::-webkit-scrollbar{width:8px;height:8px}" +
       ".rnf-scroll::-webkit-scrollbar-track{background:rgba(6,10,18,.88);border-radius:999px;border:1px solid rgba(34,211,238,.1);margin:2px}" +
@@ -689,33 +696,41 @@
     return map[diff] || String(diff);
   }
 
-  function renderLeaderboardHtml(entries, loading, error) {
+  function renderLeaderboardHtml(entries, loading, error, options) {
+    options = options || {};
     if (loading) return '<p class="rnf-lb-empty">載入排行榜中…</p>';
     if (error) return '<p class="rnf-lb-empty">' + error + "</p>";
     if (!entries || !entries.length) return "";
+    var showSourceTag = !!options.showSourceTag;
+    var showDiffMeta = options.showDiffMeta !== false;
     return entries.map(function (e, i) {
       var rank = e.rank || i + 1;
-      var diffLabel = formatDifficultyMeta(e.meta);
-      var tag =
-        e.source === "cloud"
-          ? '<span class="rnf-lb-tag cloud">平台</span>'
-          : e.local || e.source === "local"
-            ? '<span class="rnf-lb-tag local">本機</span>'
-            : "";
+      var diffLabel = showDiffMeta ? formatDifficultyMeta(e.meta) : "";
+      var tag = "";
+      if (e.isMe) tag += '<span class="rnf-lb-tag me">你</span>';
+      if (showSourceTag) {
+        tag +=
+          e.source === "cloud"
+            ? '<span class="rnf-lb-tag cloud">全站</span>'
+            : e.local || e.source === "local"
+              ? '<span class="rnf-lb-tag local">本機</span>'
+              : "";
+      }
       var timeLabel = "";
       if (e.updatedAt) {
         try {
           timeLabel = new Date(e.updatedAt).toLocaleDateString("zh-TW");
         } catch (_e) {}
       }
+      var metaBits = [];
+      if (diffLabel) metaBits.push(diffLabel);
+      if (timeLabel) metaBits.push(timeLabel);
       return (
         '<div class="rnf-lb-row' + (e.isMe ? " me" : "") + '">' +
         '<span class="rnf-lb-rank' + (rank <= 3 ? " top" : "") + '">' + rank + "</span>" +
         '<div class="rnf-lb-player"><div class="rnf-lb-name">' + (e.playerName || "匿名") + tag + "</div>" +
-        '<div class="rnf-lb-meta">' +
-        (diffLabel ? "難度 · " + diffLabel + (timeLabel ? " · " : "") : "") +
-        (timeLabel || "") +
-        "</div></div>" +
+        (metaBits.length ? '<div class="rnf-lb-meta">' + metaBits.join(" · ") + "</div>" : "") +
+        "</div>" +
         '<span class="rnf-lb-score">' + Number(e.score || 0).toLocaleString() + "</span></div>"
       );
     }).join("");
@@ -729,42 +744,44 @@
     return msg;
   }
 
-  function renderLeaderboardPanel(bundle, diffLabel) {
+  function renderLeaderboardPanel(bundle, diffLabel, source) {
+    source = source === "local" ? "local" : "cloud";
     var html = "";
-    var sectionTitle = diffLabel ? "「" + diffLabel + "」排行榜" : "排行榜";
+    var isLocal = source === "local";
+
+    if (isLocal) {
+      html +=
+        '<p class="rnf-lb-note">僅此電腦看得到，其他玩家看不到這份名單。</p>';
+      var localEntries = (bundle.local || []).map(function (e, i) {
+        return Object.assign({}, e, { rank: i + 1, source: "local", local: true });
+      });
+      if (localEntries.length) {
+        html += renderLeaderboardHtml(localEntries, false, null, { showSourceTag: false, showDiffMeta: false });
+      } else {
+        html += '<p class="rnf-lb-empty">此難度尚無本機紀錄，先玩一局吧！</p>';
+      }
+      return html;
+    }
+
     if (!bundle.loggedIn) {
       html +=
-        '<p class="rnf-lb-note">未登入帳號：結算分數只會存在本機。登入後再玩，才會寫入<strong>平台排行榜</strong>。</p>';
-    } else {
-      html +=
-        '<p class="rnf-lb-note" style="background:rgba(34,211,238,.08);border-color:rgba(34,211,238,.25)">已登入：下方「平台」標籤為平台排行榜紀錄。</p>';
+        '<p class="rnf-lb-note warn">未登入：分數只會留在「僅此電腦」。登入後再玩，才會出現在全站榜。</p>';
     }
-    html += '<p class="rnf-lb-section-title">平台 · ' + sectionTitle + "</p>";
+
     if (bundle.cloudOk && bundle.cloud.length) {
-      html += renderLeaderboardHtml(bundle.cloud, false, null);
+      html += renderLeaderboardHtml(bundle.cloud, false, null, { showSourceTag: false, showDiffMeta: false });
     } else if (bundle.cloudOk) {
-      html += '<p class="rnf-lb-empty">此難度尚無玩家上榜。登入後完成一局即可成為第一位！</p>';
+      html +=
+        '<p class="rnf-lb-empty">' +
+        (bundle.loggedIn
+          ? "此難度尚無玩家上榜，完成一局即可成為第一位！"
+          : "此難度尚無全站紀錄。登入後完成一局即可上榜。") +
+        "</p>";
     } else {
       html +=
-        '<p class="rnf-lb-empty">無法載入平台排行榜' +
+        '<p class="rnf-lb-empty">無法載入全站榜' +
         (bundle.cloudError ? "：" + formatCloudError(bundle.cloudError) : "") +
         "</p>";
-    }
-    var localEntries = (bundle.local || []).filter(function (e) {
-      return e.local !== false || e.source === "local";
-    });
-    if (localEntries.length) {
-      html += '<p class="rnf-lb-section-title">本機試玩 · ' + sectionTitle + "</p>";
-      html += renderLeaderboardHtml(
-        localEntries.map(function (e, i) {
-          return Object.assign({}, e, { rank: i + 1, source: "local", local: true });
-        }),
-        false,
-        null
-      );
-    }
-    if (!bundle.cloud.length && !localEntries.length) {
-      html += '<p class="rnf-lb-empty">此難度尚無任何紀錄，先玩一局吧！</p>';
     }
     return html;
   }
@@ -1032,6 +1049,7 @@
     var difficulties = options.difficulties || DEFAULT_DIFFICULTIES;
     var selectedDifficulty = localSave.difficulty || difficulties[1]?.id || difficulties[0].id;
     var lbDifficulty = selectedDifficulty;
+    var lbSource = null;
 
     function getBestForDifficulty(diffId) {
       if (localSave.bestScores && localSave.bestScores[diffId] != null) {
@@ -1152,26 +1170,40 @@
 
     function renderLeaderboardScreen() {
       var diffCfg = difficulties.find(function (d) { return d.id === lbDifficulty; }) || getDifficultyConfig();
+      if (!lbSource) lbSource = isUserLoggedIn() ? "cloud" : "local";
       var tabButtons = difficulties.map(function (d) {
         return '<button class="rnf-btn' + (d.id === lbDifficulty ? " selected" : "") + '" data-lb-diff="' + d.id + '">' + d.label + "</button>";
       }).join("");
+      var sourceTabs =
+        '<div class="rnf-lb-tabs">' +
+        '<button type="button" class="rnf-lb-tab' + (lbSource === "cloud" ? " active" : "") + '" data-lb-source="cloud">全站榜</button>' +
+        '<button type="button" class="rnf-lb-tab' + (lbSource === "local" ? " active" : "") + '" data-lb-source="local">僅此電腦</button>' +
+        "</div>";
       leaderboardPanel.innerHTML =
         '<div class="rnf-badge">LEADERBOARD</div>' +
         '<h1 class="rnf-title" style="font-size:1.45rem">排行榜</h1>' +
-        '<p class="rnf-sub">各難度獨立分榜 · 平台與本機試玩分開顯示</p>' +
-        '<p class="rnf-diff-label">選擇難度分榜</p>' +
+        '<p class="rnf-sub">每種難度獨立計分；全站榜才是其他玩家看得到的</p>' +
+        '<p class="rnf-diff-label">難度</p>' +
         '<div class="rnf-btn-row" id="rnf-lb-diff-row">' + tabButtons + "</div>" +
+        sourceTabs +
         '<div class="rnf-lb-list rnf-scroll" id="rnf-lb-list"><p class="rnf-lb-empty">載入中…</p></div>' +
         '<div class="rnf-btn-row"><button class="rnf-btn primary" id="rnf-lb-back">返回</button></div>';
       show("rnf-leaderboard");
       var listEl = leaderboardPanel.querySelector("#rnf-lb-list");
       fetchLeaderboardBundle(15, lbDifficulty).then(function (bundle) {
-        listEl.innerHTML = renderLeaderboardPanel(bundle, diffCfg.label);
+        listEl.innerHTML = renderLeaderboardPanel(bundle, diffCfg.label, lbSource);
       });
       leaderboardPanel.querySelectorAll("[data-lb-diff]").forEach(function (btn) {
         btn.onclick = function () {
           SFX.click();
           lbDifficulty = btn.getAttribute("data-lb-diff");
+          renderLeaderboardScreen();
+        };
+      });
+      leaderboardPanel.querySelectorAll("[data-lb-source]").forEach(function (btn) {
+        btn.onclick = function () {
+          SFX.click();
+          lbSource = btn.getAttribute("data-lb-source");
           renderLeaderboardScreen();
         };
       });
@@ -1346,8 +1378,8 @@
       pushLocalScore(finalScore, meta);
       submitScore(finalScore, meta);
       var uploadHint = isUserLoggedIn()
-        ? "分數已提交至平台排行榜"
-        : "分數已存本機試玩紀錄；登入後再玩才會寫入平台排行榜";
+        ? "已上傳至全站榜"
+        : "已存僅此電腦；登入後再玩才會上全站榜";
       overPanel.innerHTML =
         '<div class="rnf-badge">GAME OVER</div><h1 class="rnf-title" style="font-size:1.6rem">任務結束</h1>' +
         '<div class="rnf-score-big">' + finalScore.toLocaleString() + "</div>" +

@@ -1,10 +1,10 @@
-ï»?<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Neon Snake Extreme ï¿? ?????</title>
-  <script src="/sdk/rnf-game-sdk.js?v=20260720"></script>
+  <title>Neon Snake Extreme Â· éœ“è™¹æ¥µé€Ÿè²ªé£Ÿè›‡</title>
+  <script src="/sdk/rnf-game-sdk.js?v=20260723"></script>
 </head>
 <body>
 <script>
@@ -12,30 +12,16 @@ RNF.init();
 var shell = RNF.buildShell({
   title: "Neon Snake Extreme",
   creator: "CyberViper_Studio",
-  subtitle: "?–¹??‘éµ/WASD ç§»å?? Â· Shift æ°®æ°£?? é?? Â· ???çº????é£Ÿç?©ç´¯ç©é????Šå?ç?? Â· ??•æ­»å­å????????",
+  subtitle: "æ–¹å‘éµï¼WASD ç§»å‹• Â· Shift æ°®æ°£åŠ é€Ÿ Â· é€£æ“Šç´¯ç©å€ç‡ Â· ç€•æ­»å­å½ˆæ™‚é–“",
   width: 960,
   height: 520,
   bgmStyle: "pulse",
-  highlights: ["??›æ®µ?›£åº?", "å­å????????", "??’è?Œæ??", "?????åº¦ï¼é?Ÿåº¦"],
+  highlights: ["å››æ®µé›£åº¦","å­å½ˆæ™‚é–“","æ’è¡Œæ¦œ","éˆæ•åº¦ï¼é€Ÿåº¦"],
   help: {
-    about: "ç¶“å?¸è²ªé£Ÿè?????è³½å?šé›»ç«¶ç????????é£Ÿç?©è?“è??èº«è?Šé•·???????•¸??é?˜ï?›é??çº?????¯ç´¯ç?é????Šå?ç??????? è?‘å±?šª??????è§¸ç™¼å­å???????“æ?¢å?•ä?œã??",
-    features: [
-      "??›æ®µ?›£åº¦é?¸æ??ï¼Œç?ç?—å???•¸ä¾é›£åº¦å? æ?ä¸¦ä¸Šå?³æ?’è?Œæ??",
-      "??•æ­»å­å???????“æ?¢å?•ä?œï?Œç?­å?–å?æ?‰æ?????",
-      "?›°?›£ä»¥ä?Šå‡º?¾??œç?™ç?šã????‘è‰² ??? é£Ÿç?©è?? Combo é£Ÿç??",
-      "è¨­å?šå¯èª¿æ?ä?œé????åº¦?????Šæ?²é?Ÿåº¦"
-    ],
-    controls: [
-      "??‘â?“â?â?? ??? WASDï¼šæ§??¶è?????ç§»å?•æ–¹???",
-      "Shiftï¼šæ°®æ°??? é??ï¼?æ¶???—æ°®æ°?æ¢ûH?Œé????‹å?Œç·©??¢å?å¾©ï¼?",
-      "?›°?›£ä»¥ä?Šï?šåœ°??–æ???‡º?¾??œæ?‹é?œç?™ç?šï?Œæ?å?°å³å¤±æ??"
-    ],
-    tips: [
-      "??‘è‰² ??? é£Ÿç?©å?—å????ºä????¬é?Ÿç?©ç?? 3 ???",
-      "Combo é£Ÿç?©ï??é»??‰²ï¼‰å¯å»¶é•·?????Šè?????",
-      "ä¸»é?¸å–®?¯èª¿é›£åº¦è????ä?œé????åº¦ï¼é?Šæ?²é?Ÿåº¦",
-      "çµç?—å???•¸???ä¾é›£åº¦å? æ?ä¸¦ä¸Šå?³æ?’è?Œæ?œï??????™»??¥ï??"
-    ]
+    about: "ç¶“å…¸è²ªé£Ÿè›‡çš„è³½åšé›»ç«¶ç‰ˆã€‚åƒé£Ÿç‰©è®“è›‡èº«è®Šé•·ã€åˆ†æ•¸æé«˜ï¼›é€£çºŒåƒå¯ç´¯ç©é€£æ“Šå€ç‡ã€‚é è¿‘å±éšªæ™‚æœƒè§¸ç™¼å­å½ˆæ™‚é–“æ…¢å‹•ä½œã€‚",
+    features: ["å››æ®µé›£åº¦é¸æ“‡ï¼Œçµç®—åˆ†æ•¸ä¾é›£åº¦åŠ æˆä¸¦ä¸Šå‚³æ’è¡Œæ¦œ","ç€•æ­»å­å½ˆæ™‚é–“æ…¢å‹•ä½œï¼Œçˆ­å–åæ‡‰æ™‚é–“","å›°é›£ä»¥ä¸Šå‡ºç¾éšœç¤™ç£šã€é‡‘è‰² â˜… é£Ÿç‰©èˆ‡ Combo é£Ÿç‰©","è¨­å®šå¯èª¿æ“ä½œéˆæ•åº¦èˆ‡éŠæˆ²é€Ÿåº¦"],
+    controls: ["â†‘â†“â†â†’ æˆ– WASDï¼šæ§åˆ¶è›‡çš„ç§»å‹•æ–¹å‘","Shiftï¼šæ°®æ°£åŠ é€Ÿï¼ˆæ¶ˆè€—æ°®æ°£æ¢ï¼Œé¬†é–‹å¾Œç·©æ…¢å›å¾©ï¼‰","å›°é›£ä»¥ä¸Šï¼šåœ°åœ–æœƒå‡ºç¾éœæ…‹éšœç¤™ç£šï¼Œæ’åˆ°å³å¤±æ•—"],
+    tips: ["é‡‘è‰² â˜… é£Ÿç‰©å¾—åˆ†ç‚ºä¸€èˆ¬é£Ÿç‰©çš„ 3 å€","Combo é£Ÿç‰©ï¼ˆé»ƒè‰²ï¼‰å¯å»¶é•·é€£æ“Šè¨ˆæ™‚","ä¸»é¸å–®å¯èª¿é›£åº¦èˆ‡æ“ä½œéˆæ•åº¦ï¼éŠæˆ²é€Ÿåº¦","çµç®—åˆ†æ•¸æœƒä¾é›£åº¦åŠ æˆä¸¦ä¸Šå‚³æ’è¡Œæ¦œï¼ˆéœ€ç™»å…¥ï¼‰"]
   },
   onStop: cleanup,
   onStart: startGame
@@ -46,8 +32,21 @@ var ctx = shell.ctx, canvas = shell.canvas;
 var particles = shell.particles;
 var animId = null, running = false, keys = {};
 var GRID = 20, COLS = W / GRID, ROWS = H / GRID;
-var snake, dir, nextDir, food, score, combo, comboTimer, nitro, nitroFuel;
-var bulletTime, nearMiss, tickAcc, baseSpeed, moveTimer, gameEnded, speedScale = 1;
+
+var snake, dir, nextDir, dirQueue, food, foods, obstacles;
+var score, combo, comboTimer, maxCombo, nitro, nitroFuel;
+var bulletTime, nearMiss, baseSpeed, moveTimer, moveProgress, gameEnded;
+var speedScale = 1, diffId = "normal", animT = 0, intensity = 0;
+var floaters = [], pulseRings = [], afterImages = [], scorePopFlash = 0;
+var wallPulse = 0, comboFlash = 0, lastEatT = 0;
+
+var FOOD_CFG = {
+  normal: { color: "#22d3ee", glow: "#22d3ee", pts: 10, label: "éœ“è™¹æ ¸" },
+  combo:  { color: "#fbbf24", glow: "#f59e0b", pts: 18, label: "é€£æ“Šæ ¸" },
+  star:   { color: "#fde68a", glow: "#fbbf24", pts: 30, label: "æ˜Ÿæ ¸" },
+  nitro:  { color: "#f472b6", glow: "#ec4899", pts: 12, label: "æ°®æ°£ç½" },
+  shrink: { color: "#a78bfa", glow: "#8b5cf6", pts: 8,  label: "å£“ç¸®æ ¸" }
+};
 
 function cleanup() {
   shell.detachKeyboard();
@@ -61,67 +60,228 @@ function cleanup() {
 function onKey(e) {
   keys[e.code] = true;
   var k = e.key.toLowerCase();
-  if (k === "arrowup" || k === "w") { if (dir.y !== 1) nextDir = { x: 0, y: -1 }; e.preventDefault(); }
-  if (k === "arrowdown" || k === "s") { if (dir.y !== -1) nextDir = { x: 0, y: 1 }; e.preventDefault(); }
-  if (k === "arrowleft" || k === "a") { if (dir.x !== 1) nextDir = { x: -1, y: 0 }; e.preventDefault(); }
-  if (k === "arrowright" || k === "d") { if (dir.x !== -1) nextDir = { x: 1, y: 0 }; e.preventDefault(); }
+  var nd = null;
+  if (k === "arrowup" || k === "w") nd = { x: 0, y: -1 };
+  if (k === "arrowdown" || k === "s") nd = { x: 0, y: 1 };
+  if (k === "arrowleft" || k === "a") nd = { x: -1, y: 0 };
+  if (k === "arrowright" || k === "d") nd = { x: 1, y: 0 };
+  if (nd) {
+    e.preventDefault();
+    queueDir(nd);
+  }
 }
+
 function onKeyUp(e) { keys[e.code] = false; }
 
-function spawnFood() {
+function queueDir(nd) {
+  var base = dirQueue.length ? dirQueue[dirQueue.length - 1] : (nextDir.x !== dir.x || nextDir.y !== dir.y ? nextDir : dir);
+  if (nd.x === -base.x && nd.y === -base.y) return;
+  if (nd.x === base.x && nd.y === base.y) return;
+  if (dirQueue.length < 2) dirQueue.push(nd);
+}
+
+function cellKey(x, y) { return x + "," + y; }
+
+function occupiedMap() {
   var occupied = {};
-  snake.forEach(function (s) { occupied[s.x + "," + s.y] = true; });
-  var tries = 0;
+  snake.forEach(function (s) { occupied[cellKey(s.x, s.y)] = true; });
+  obstacles.forEach(function (o) { occupied[cellKey(o.x, o.y)] = true; });
+  foods.forEach(function (f) { occupied[cellKey(f.x, f.y)] = true; });
+  return occupied;
+}
+
+function randomEmptyCell(occupied) {
+  var tries = 0, x, y;
   do {
-    food = {
-      x: Math.floor(Math.random() * COLS),
-      y: Math.floor(Math.random() * ROWS),
-      type: Math.random() < 0.15 ? "combo" : "normal",
-      pulse: Math.random() * Math.PI * 2
-    };
+    x = Math.floor(Math.random() * COLS);
+    y = Math.floor(Math.random() * ROWS);
     tries++;
-  } while (occupied[food.x + "," + food.y] && tries < 200);
+  } while (occupied[cellKey(x, y)] && tries < 300);
+  if (occupied[cellKey(x, y)]) return null;
+  occupied[cellKey(x, y)] = true;
+  return { x: x, y: y };
+}
+
+function pickFoodType() {
+  var r = Math.random();
+  if (diffId === "easy" || diffId === "normal") {
+    if (r < 0.12) return "combo";
+    if (r < 0.18) return "nitro";
+    return "normal";
+  }
+  if (r < 0.14) return "star";
+  if (r < 0.28) return "combo";
+  if (r < 0.38) return "nitro";
+  if (r < 0.46 && snake.length > 6) return "shrink";
+  return "normal";
+}
+
+function spawnOneFood(occupied) {
+  var cell = randomEmptyCell(occupied || occupiedMap());
+  if (!cell) return null;
+  var type = pickFoodType();
+  return {
+    x: cell.x,
+    y: cell.y,
+    type: type,
+    pulse: Math.random() * Math.PI * 2,
+    spin: Math.random() * Math.PI * 2,
+    life: 0
+  };
+}
+
+function ensureFoods() {
+  var target = diffId === "extreme" ? 3 : diffId === "hard" ? 2 : 1;
+  var occupied = occupiedMap();
+  while (foods.length < target) {
+    var f = spawnOneFood(occupied);
+    if (!f) break;
+    foods.push(f);
+  }
+  food = foods[0] || null;
+}
+
+function spawnObstacles() {
+  obstacles = [];
+  if (diffId !== "hard" && diffId !== "extreme") return;
+  var count = diffId === "extreme" ? 18 : 10;
+  var occupied = occupiedMap();
+  var cx = Math.floor(COLS / 2), cy = Math.floor(ROWS / 2);
+  for (var i = -2; i <= 5; i++) {
+    occupied[cellKey(cx - i, cy)] = true;
+    occupied[cellKey(cx - i, cy - 1)] = true;
+    occupied[cellKey(cx - i, cy + 1)] = true;
+  }
+  var patterns = buildObstaclePatterns();
+  patterns.forEach(function (p) {
+    if (obstacles.length >= count) return;
+    if (!occupied[cellKey(p.x, p.y)]) {
+      occupied[cellKey(p.x, p.y)] = true;
+      obstacles.push({ x: p.x, y: p.y, hue: Math.random(), phase: Math.random() * Math.PI * 2 });
+    }
+  });
+  while (obstacles.length < count) {
+    var cell = randomEmptyCell(occupied);
+    if (!cell) break;
+    if (Math.abs(cell.x - cx) < 4 && Math.abs(cell.y - cy) < 3) continue;
+    obstacles.push({ x: cell.x, y: cell.y, hue: Math.random(), phase: Math.random() * Math.PI * 2 });
+  }
+}
+
+function buildObstaclePatterns() {
+  var list = [];
+  var margin = 2;
+  // corner L shapes
+  [[margin, margin], [COLS - 1 - margin, margin], [margin, ROWS - 1 - margin], [COLS - 1 - margin, ROWS - 1 - margin]].forEach(function (c) {
+    var sx = c[0] < COLS / 2 ? 1 : -1;
+    var sy = c[1] < ROWS / 2 ? 1 : -1;
+    for (var i = 0; i < 3; i++) {
+      list.push({ x: c[0] + i * sx, y: c[1] });
+      list.push({ x: c[0], y: c[1] + i * sy });
+    }
+  });
+  // fx
+  var midY = Math.floor(ROWS / 2);
+  var midX = Math.floor(COLS / 2);
+  for (var x = 8; x < COLS - 8; x += 3) {
+    if (Math.abs(x - midX) > 5) list.push({ x: x, y: midY - 6 });
+    if (Math.abs(x - midX) > 5) list.push({ x: x, y: midY + 6 });
+  }
+  for (var y = 5; y < ROWS - 5; y += 4) {
+    if (Math.abs(y - midY) > 3) {
+      list.push({ x: 10, y: y });
+      list.push({ x: COLS - 11, y: y });
+    }
+  }
+  if (diffId === "extreme") {
+    for (var i = 0; i < 6; i++) {
+      list.push({ x: midX - 8 + i, y: 4 });
+      list.push({ x: midX - 8 + i, y: ROWS - 5 });
+    }
+  }
+  return list;
+}
+
+function isBlocked(x, y) {
+  if (x < 0 || x >= COLS || y < 0 || y >= ROWS) return true;
+  for (var i = 0; i < obstacles.length; i++) {
+    if (obstacles[i].x === x && obstacles[i].y === y) return true;
+  }
+  return false;
 }
 
 function checkNearMiss() {
   var head = snake[0];
   var danger = false;
-  for (var i = 1; i < snake.length; i++) {
+  for (var i = 3; i < snake.length; i++) {
     var s = snake[i];
     var dx = Math.abs(head.x - s.x), dy = Math.abs(head.y - s.y);
-    if ((dx <= 1 && dy <= 1) && !(dx === 0 && dy === 0)) danger = true;
+    if (dx + dy === 1) danger = true;
   }
+  obstacles.forEach(function (o) {
+    if (Math.abs(head.x - o.x) + Math.abs(head.y - o.y) === 1) danger = true;
+  });
   if (head.x <= 0 || head.x >= COLS - 1 || head.y <= 0 || head.y >= ROWS - 1) danger = true;
+  // fx
+  var fx = head.x + dir.x, fy = head.y + dir.y;
+  if (isBlocked(fx, fy)) danger = true;
+
   if (danger && !nearMiss) {
     nearMiss = true;
-    bulletTime = 0.6;
+    bulletTime = Math.max(bulletTime, 0.55);
+    wallPulse = 1;
     RNF.sfx.power();
+    shell.triggerShake(4, 0.15);
   }
   if (!danger) nearMiss = false;
 }
 
-function startGame(isRetry) {
+function addFloater(x, y, text, color) {
+  floaters.push({ x: x, y: y, text: text, color: color || "#fff", life: 0.9, vy: -40 });
+}
+
+function addPulseRing(x, y, color) {
+  pulseRings.push({ x: x, y: y, color: color, r: 4, life: 0.45 });
+}
+
+function startGame() {
   cleanup();
   speedScale = shell.getSpeedScale();
+  var diff = shell.getDifficulty();
+  diffId = diff.id || "normal";
   snake = [{ x: Math.floor(COLS / 2), y: Math.floor(ROWS / 2) }];
   for (var i = 1; i < 4; i++) snake.push({ x: snake[0].x - i, y: snake[0].y });
   dir = { x: 1, y: 0 };
   nextDir = { x: 1, y: 0 };
+  dirQueue = [];
   score = 0;
   combo = 0;
   comboTimer = 0;
+  maxCombo = 0;
   nitro = false;
   nitroFuel = 100;
   bulletTime = 0;
   nearMiss = false;
-  tickAcc = 0;
-  baseSpeed = 0.18 / speedScale;
+  baseSpeed = 0.17 / speedScale;
   moveTimer = 0;
+  moveProgress = 0;
   gameEnded = false;
+  animT = 0;
+  intensity = 0;
+  floaters = [];
+  pulseRings = [];
+  afterImages = [];
+  scorePopFlash = 0;
+  wallPulse = 0;
+  comboFlash = 0;
+  lastEatT = 0;
+  foods = [];
+  food = null;
   running = true;
   keys = {};
+  spawnObstacles();
+  ensureFoods();
   shell.attachKeyboard(keys);
-  spawnFood();
   window.addEventListener("keydown", onKey);
   window.addEventListener("keyup", onKeyUp);
   updateHud();
@@ -132,12 +292,21 @@ function startGame(isRetry) {
 var lastTs = 0;
 
 function updateHud() {
+  var diff = shell.getDifficulty();
+  var mult = (1 + combo * 0.5).toFixed(1);
+  var btHtml = bulletTime > 0
+    ? '<div><span>å­å½ˆæ™‚é–“</span><b style="color:#f472b6">ON</b></div>'
+    : '';
+  var comboHtml = combo > 0
+    ? '<div><span>é€£æ“Š</span><b style="color:#fbbf24">x' + combo + '</b></div>'
+    : '';
   shell.setHud(
-    '<div><span>????•¸</span><b>' + score + '</b></div>' +
-    '<div><span>??????</span><b>x' + (1 + combo * 0.5).toFixed(1) + '</b></div>' +
-    '<div><span>æ°®æ°£</span><b>' + Math.floor(nitroFuel) + '%</b></div>' +
-    '<div><span>?•·åº?</span><b>' + snake.length + '</b></div>' +
-    (bulletTime > 0 ? '<div><span>å­å????????</span><b style="color:#f472b6">ON</b></div>' : '')
+    '<div><span>åˆ†æ•¸</span><b>' + score.toLocaleString() + '</b></div>' +
+    '<div><span>å€ç‡</span><b style="color:#22d3ee">x' + mult + '</b></div>' +
+    '<div><span>æ°®æ°£</span><b style="color:' + (nitro ? '#f472b6' : '#e2e8f0') + '">' + Math.floor(nitroFuel) + '%</b></div>' +
+    '<div><span>èº«é•·</span><b>' + snake.length + '</b></div>' +
+    '<div><span>é›£åº¦</span><b style="font-size:.78rem;color:#c4b5fd">' + diff.label + '</b></div>' +
+    comboHtml + btHtml
   );
 }
 
@@ -145,63 +314,169 @@ function die() {
   if (gameEnded) return;
   gameEnded = true;
   running = false;
-  shell.triggerShake(12, 0.4);
-  particles.burst(snake[0].x * GRID + GRID / 2, snake[0].y * GRID + GRID / 2, "#f472b6", 30);
+  shell.triggerShake(14, 0.45);
+  var hx = snake[0].x * GRID + GRID / 2;
+  var hy = snake[0].y * GRID + GRID / 2;
+  particles.burst(hx, hy, "#f472b6", 36);
+  particles.burst(hx, hy, "#22d3ee", 18);
   RNF.sfx.die();
   cleanup();
-  shell.gameOver(score, { combo: combo, length: snake.length });
+  shell.gameOver(score, { combo: maxCombo, length: snake.length });
+}
+
+function applyDirQueue() {
+  if (dirQueue.length) {
+    var nd = dirQueue.shift();
+    if (!(nd.x === -dir.x && nd.y === -dir.y)) nextDir = nd;
+  }
+}
+
+function eatFood(f, head) {
+  var cfg = FOOD_CFG[f.type] || FOOD_CFG.normal;
+  combo++;
+  maxCombo = Math.max(maxCombo, combo);
+  comboTimer = f.type === "combo" ? 6.5 : 4.2;
+  comboFlash = 0.35;
+  scorePopFlash = 0.25;
+  lastEatT = animT;
+  intensity = Math.min(1, intensity + 0.08);
+
+  var mult = 1 + combo * 0.5;
+  var pts = Math.floor((f.type === "star" ? 30 : cfg.pts) * mult);
+  score += pts;
+
+  var px = head.x * GRID + GRID / 2;
+  var py = head.y * GRID + GRID / 2;
+  addFloater(px, py - 8, "+" + pts + (combo > 1 ? "  x" + combo : ""), cfg.color);
+  addPulseRing(px, py, cfg.glow);
+  particles.burst(px, py, cfg.glow, f.type === "star" ? 28 : 16);
+  if (f.type === "star") particles.burst(px, py, "#fff", 10);
+  RNF.sfx.combo(combo);
+  shell.triggerShake(f.type === "star" ? 6 : 3, 0.12);
+
+  if (f.type === "nitro") {
+    nitroFuel = Math.min(100, nitroFuel + 45);
+    addFloater(px, py + 12, "æ°®æ°£ +45", "#f472b6");
+  }
+  if (f.type === "shrink" && snake.length > 5) {
+    var cut = Math.min(3, snake.length - 4);
+    for (var i = 0; i < cut; i++) snake.pop();
+    addFloater(px, py + 12, "ç¸®çŸ­ -" + cut, "#a78bfa");
+  }
+
+  // fx
+  var accel = 0.0022 + Math.min(0.002, combo * 0.00015);
+  baseSpeed = Math.max(0.045, baseSpeed - accel);
+
+  foods = foods.filter(function (item) { return item !== f; });
+  ensureFoods();
+}
+
+function stepSnake() {
+  applyDirQueue();
+  dir = { x: nextDir.x, y: nextDir.y };
+  var head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+
+  if (isBlocked(head.x, head.y)) { die(); return false; }
+  for (var i = 0; i < snake.length; i++) {
+    if (snake[i].x === head.x && snake[i].y === head.y) { die(); return false; }
+  }
+
+  snake.unshift(head);
+
+  var ate = null;
+  for (var fi = 0; fi < foods.length; fi++) {
+    if (foods[fi].x === head.x && foods[fi].y === head.y) {
+      ate = foods[fi];
+      break;
+    }
+  }
+
+  if (ate) {
+    eatFood(ate, head);
+  } else {
+    snake.pop();
+  }
+
+  checkNearMiss();
+  return true;
 }
 
 function loop(ts) {
   if (!running) return;
   var dt = Math.min(0.05, (ts - lastTs) / 1000);
   lastTs = ts;
-  var timeScale = bulletTime > 0 ? 0.35 : 1;
+  animT += dt;
+  var timeScale = bulletTime > 0 ? 0.32 : 1;
   bulletTime = Math.max(0, bulletTime - dt);
   comboTimer = Math.max(0, comboTimer - dt);
-  if (comboTimer <= 0 && combo > 0) combo = Math.max(0, combo - 1);
+  if (comboTimer <= 0 && combo > 0) {
+    combo = Math.max(0, combo - 1);
+    if (combo > 0) comboTimer = 1.2;
+  }
+  wallPulse = Math.max(0, wallPulse - dt * 1.8);
+  comboFlash = Math.max(0, comboFlash - dt * 2.5);
+  scorePopFlash = Math.max(0, scorePopFlash - dt * 3);
+  intensity = Math.max(0, intensity - dt * 0.04);
 
-  nitro = keys["ShiftLeft"] || keys["ShiftRight"];
-  if (nitro && nitroFuel > 0) {
-    nitroFuel = Math.max(0, nitroFuel - dt * 35);
+  nitro = (keys["ShiftLeft"] || keys["ShiftRight"]) && nitroFuel > 0;
+  if (nitro) {
+    nitroFuel = Math.max(0, nitroFuel - dt * 38);
+    if (nitroFuel <= 0) nitro = false;
   } else {
-    nitro = false;
-    nitroFuel = Math.min(100, nitroFuel + dt * 12);
+    nitroFuel = Math.min(100, nitroFuel + dt * 14);
   }
 
-  var speed = baseSpeed / (nitro ? 2.2 : 1);
+  var speed = baseSpeed / (nitro ? 2.35 : 1);
   moveTimer += dt * timeScale;
   if (moveTimer > speed * 2) moveTimer = speed * 2;
   var maxSteps = 2;
   while (moveTimer >= speed && maxSteps-- > 0) {
     moveTimer -= speed;
-    dir = nextDir;
-    var head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
-    if (head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS) { die(); return; }
-    for (var i = 0; i < snake.length; i++) {
-      if (snake[i].x === head.x && snake[i].y === head.y) { die(); return; }
-    }
-    snake.unshift(head);
-    if (head.x === food.x && head.y === food.y) {
-      combo++;
-      comboTimer = 4;
-      var mult = 1 + combo * 0.5;
-      var pts = Math.floor(10 * mult * (food.type === "combo" ? 2 : 1));
-      score += pts;
-      RNF.sfx.combo(combo);
-      shell.triggerShake(3, 0.12);
-      particles.burst(head.x * GRID + GRID / 2, head.y * GRID + GRID / 2, food.type === "combo" ? "#fbbf24" : "#22d3ee", 16);
-      spawnFood();
-      baseSpeed = Math.max(0.05, baseSpeed - 0.002);
-    } else {
-      snake.pop();
-    }
-    checkNearMiss();
+    if (!stepSnake()) return;
   }
+  moveProgress = speed > 0 ? Math.min(1, moveTimer / speed) : 0;
 
-  var hx = snake[0].x * GRID + GRID / 2, hy = snake[0].y * GRID + GRID / 2;
-  particles.trail(hx, hy, nitro ? "#f472b6" : "#22d3ee");
-  if (nitro && RNF.isHighQuality()) particles.trail(hx, hy, "#a78bfa");
+  // fx
+  foods.forEach(function (f) {
+    f.pulse += dt * 5;
+    f.spin += dt * (f.type === "star" ? 3.5 : 1.8);
+    f.life += dt;
+  });
+
+  // fx
+  floaters.forEach(function (fl) {
+    fl.life -= dt;
+    fl.y += fl.vy * dt;
+    fl.vy *= 0.96;
+  });
+  floaters = floaters.filter(function (fl) { return fl.life > 0; });
+
+  pulseRings.forEach(function (r) {
+    r.life -= dt;
+    r.r += dt * 90;
+  });
+  pulseRings = pulseRings.filter(function (r) { return r.life > 0; });
+
+  var hx = snake[0].x * GRID + GRID / 2;
+  var hy = snake[0].y * GRID + GRID / 2;
+  // fx
+  var ihx = hx + dir.x * GRID * moveProgress;
+  var ihy = hy + dir.y * GRID * moveProgress;
+
+  particles.trail(ihx, ihy, nitro ? "#f472b6" : "#22d3ee");
+  if (nitro && RNF.isHighQuality()) {
+    particles.trail(ihx, ihy, "#a78bfa");
+    if (Math.random() < 0.35) {
+      afterImages.push({
+        segs: snake.slice(0, Math.min(8, snake.length)).map(function (s) { return { x: s.x, y: s.y }; }),
+        life: 0.28,
+        progress: moveProgress
+      });
+    }
+  }
+  afterImages.forEach(function (a) { a.life -= dt; });
+  afterImages = afterImages.filter(function (a) { return a.life > 0; });
 
   particles.update(dt);
   draw();
@@ -210,15 +485,365 @@ function loop(ts) {
 }
 
 function drawBg() {
-  ctx.fillStyle = "#060a12";
+  var g = ctx.createRadialGradient(W * 0.5, H * 0.45, 40, W * 0.5, H * 0.5, W * 0.7);
+  g.addColorStop(0, bulletTime > 0 ? "#1a0a18" : "#0a1220");
+  g.addColorStop(0.55, "#060a12");
+  g.addColorStop(1, "#030508");
+  ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
-  ctx.strokeStyle = "rgba(34,211,238,0.06)";
+
+  // fx
+  var glowA = ctx.createRadialGradient(W * 0.2, H * 0.15, 0, W * 0.2, H * 0.15, 220);
+  glowA.addColorStop(0, "rgba(34,211,238," + (0.07 + intensity * 0.06) + ")");
+  glowA.addColorStop(1, "rgba(34,211,238,0)");
+  ctx.fillStyle = glowA;
+  ctx.fillRect(0, 0, W, H);
+
+  var glowB = ctx.createRadialGradient(W * 0.85, H * 0.8, 0, W * 0.85, H * 0.8, 240);
+  glowB.addColorStop(0, "rgba(167,139,250," + (0.06 + intensity * 0.05) + ")");
+  glowB.addColorStop(1, "rgba(167,139,250,0)");
+  ctx.fillStyle = glowB;
+  ctx.fillRect(0, 0, W, H);
+
+  // fx
+  var gridAlpha = 0.05 + Math.sin(animT * 1.2) * 0.015 + intensity * 0.04;
+  ctx.strokeStyle = "rgba(34,211,238," + gridAlpha + ")";
   ctx.lineWidth = 1;
-  for (var x = 0; x <= W; x += GRID) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
-  for (var y = 0; y <= H; y += GRID) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+  var drift = (animT * 8) % GRID;
+  for (var x = -GRID; x <= W + GRID; x += GRID) {
+    ctx.beginPath();
+    ctx.moveTo(x + drift * 0.15, 0);
+    ctx.lineTo(x + drift * 0.15, H);
+    ctx.stroke();
+  }
+  for (var y = -GRID; y <= H + GRID; y += GRID) {
+    ctx.beginPath();
+    ctx.moveTo(0, y + drift * 0.1);
+    ctx.lineTo(W, y + drift * 0.1);
+    ctx.stroke();
+  }
+
+  // fx
+  if (RNF.isHighQuality()) {
+    ctx.fillStyle = "rgba(255,255,255,0.015)";
+    for (var sy = 0; sy < H; sy += 3) ctx.fillRect(0, sy, W, 1);
+  }
+
+  // fx
   if (bulletTime > 0) {
-    ctx.fillStyle = "rgba(244,114,182,0.08)";
+    ctx.fillStyle = "rgba(244,114,182," + (0.06 + bulletTime * 0.08) + ")";
     ctx.fillRect(0, 0, W, H);
+  }
+
+  // fx
+  if (wallPulse > 0 || nearMiss) {
+    var wa = (wallPulse > 0 ? wallPulse : 0.35) * 0.55;
+    ctx.strokeStyle = "rgba(244,114,182," + wa + ")";
+    ctx.lineWidth = 4;
+    ctx.strokeRect(3, 3, W - 6, H - 6);
+    ctx.shadowBlur = 18;
+    ctx.shadowColor = "#f472b6";
+    ctx.strokeRect(6, 6, W - 12, H - 12);
+    ctx.shadowBlur = 0;
+  }
+
+  // fx
+  if (comboFlash > 0) {
+    ctx.fillStyle = "rgba(251,191,36," + (comboFlash * 0.12) + ")";
+    ctx.fillRect(0, 0, W, H);
+  }
+}
+
+function drawObstacles() {
+  obstacles.forEach(function (o) {
+    var sx = o.x * GRID + 1, sy = o.y * GRID + 1, sz = GRID - 2;
+    var pulse = 0.55 + Math.sin(animT * 3 + o.phase) * 0.2;
+    ctx.save();
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = "rgba(248,113,113," + pulse + ")";
+    var grad = ctx.createLinearGradient(sx, sy, sx + sz, sy + sz);
+    grad.addColorStop(0, "#4c1d24");
+    grad.addColorStop(0.5, "#9f1239");
+    grad.addColorStop(1, "#3f0a16");
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.roundRect(sx, sy, sz, sz, 3);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(252,165,165," + (0.35 + pulse * 0.4) + ")";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    // fx
+    ctx.clip();
+    ctx.strokeStyle = "rgba(255,255,255,0.08)";
+    ctx.lineWidth = 1;
+    for (var i = -sz; i < sz * 2; i += 4) {
+      ctx.beginPath();
+      ctx.moveTo(sx + i, sy);
+      ctx.lineTo(sx + i + sz, sy + sz);
+      ctx.stroke();
+    }
+    ctx.restore();
+  });
+}
+
+function drawStar(cx, cy, spikes, outer, inner) {
+  ctx.beginPath();
+  for (var i = 0; i < spikes * 2; i++) {
+    var r = i % 2 === 0 ? outer : inner;
+    var a = -Math.PI / 2 + (i * Math.PI) / spikes;
+    var px = cx + Math.cos(a) * r;
+    var py = cy + Math.sin(a) * r;
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+}
+
+function drawFoods() {
+  foods.forEach(function (f) {
+    var fx = f.x * GRID + GRID / 2;
+    var fy = f.y * GRID + GRID / 2;
+    var cfg = FOOD_CFG[f.type] || FOOD_CFG.normal;
+    var fp = Math.sin(f.pulse) * 0.18 + 0.9;
+    var r = GRID * 0.34 * fp;
+
+    // fx
+    ctx.save();
+    ctx.globalAlpha = 0.25 + Math.sin(f.pulse) * 0.1;
+    ctx.fillStyle = cfg.glow;
+    ctx.beginPath();
+    ctx.arc(fx, fy, r * 1.85, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(fx, fy);
+    ctx.rotate(f.spin);
+    ctx.shadowBlur = 18;
+    ctx.shadowColor = cfg.glow;
+
+    if (f.type === "star") {
+      drawStar(0, 0, 5, r * 1.15, r * 0.48);
+      ctx.fillStyle = cfg.color;
+      ctx.fill();
+      ctx.strokeStyle = "#fff8";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    } else if (f.type === "combo") {
+      ctx.fillStyle = cfg.color;
+      ctx.beginPath();
+      ctx.moveTo(0, -r);
+      ctx.lineTo(r * 0.75, 0);
+      ctx.lineTo(0, r);
+      ctx.lineTo(-r * 0.75, 0);
+      ctx.closePath();
+      ctx.fill();
+    } else if (f.type === "nitro") {
+      ctx.fillStyle = cfg.color;
+      ctx.beginPath();
+      ctx.roundRect(-r * 0.55, -r * 0.85, r * 1.1, r * 1.7, 3);
+      ctx.fill();
+      ctx.fillStyle = "#fff";
+      ctx.globalAlpha = 0.7;
+      ctx.fillRect(-r * 0.2, -r * 0.55, r * 0.4, r * 0.9);
+    } else if (f.type === "shrink") {
+      ctx.fillStyle = cfg.color;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#fff";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.45, 0);
+      ctx.lineTo(r * 0.45, 0);
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = cfg.color;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.45)";
+      ctx.beginPath();
+      ctx.arc(-r * 0.25, -r * 0.25, r * 0.28, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  });
+}
+
+function segPos(i) {
+  // fx
+  var seg = snake[i];
+  if (i === 0) {
+    return {
+      x: seg.x * GRID + GRID / 2 + dir.x * GRID * moveProgress,
+      y: seg.y * GRID + GRID / 2 + dir.y * GRID * moveProgress
+    };
+  }
+  var prev = snake[i - 1];
+  var dx = (prev.x - seg.x) * moveProgress;
+  var dy = (prev.y - seg.y) * moveProgress;
+  return {
+    x: (seg.x + dx) * GRID + GRID / 2,
+    y: (seg.y + dy) * GRID + GRID / 2
+  };
+}
+
+function drawAfterImages() {
+  afterImages.forEach(function (a) {
+    var alpha = (a.life / 0.28) * 0.25;
+    a.segs.forEach(function (seg, i) {
+      ctx.globalAlpha = alpha * (1 - i / a.segs.length);
+      ctx.fillStyle = "#f472b6";
+      var sx = seg.x * GRID + 3, sy = seg.y * GRID + 3, sz = GRID - 6;
+      ctx.beginPath();
+      ctx.roundRect(sx, sy, sz, sz, 4);
+      ctx.fill();
+    });
+  });
+  ctx.globalAlpha = 1;
+}
+
+function drawSnake() {
+  drawAfterImages();
+
+  // fx
+  if (snake.length > 1 && RNF.isHighQuality()) {
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.shadowBlur = nitro ? 16 : 10;
+    ctx.shadowColor = nitro ? "#f472b6" : "#22d3ee";
+    ctx.strokeStyle = nitro ? "rgba(244,114,182,0.55)" : "rgba(34,211,238,0.45)";
+    ctx.lineWidth = GRID * 0.55;
+    ctx.beginPath();
+    for (var i = 0; i < snake.length; i++) {
+      var p = segPos(i);
+      if (i === 0) ctx.moveTo(p.x, p.y);
+      else ctx.lineTo(p.x, p.y);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  for (var i = snake.length - 1; i >= 0; i--) {
+    var t = i / Math.max(1, snake.length - 1);
+    var p = segPos(i);
+    var sz = GRID - 2 - t * 2;
+    if (i === 0) sz = GRID - 1;
+
+    var r, g, b;
+    if (nitro) {
+      r = Math.floor(244 - t * 80);
+      g = Math.floor(114 - t * 40);
+      b = Math.floor(182 - t * 60);
+    } else {
+      r = Math.floor(34 + t * 40);
+      g = Math.floor(211 - t * 90);
+      b = Math.floor(238 - t * 120);
+    }
+
+    ctx.save();
+    ctx.shadowBlur = i === 0 ? 18 : 6;
+    ctx.shadowColor = nitro ? "#f472b6" : "#22d3ee";
+    ctx.fillStyle = "rgb(" + r + "," + g + "," + b + ")";
+    ctx.beginPath();
+    ctx.roundRect(p.x - sz / 2, p.y - sz / 2, sz, sz, i === 0 ? 6 : 4);
+    ctx.fill();
+
+    // fx
+    if (i < 4) {
+      ctx.fillStyle = "rgba(255,255,255," + (0.28 - i * 0.05) + ")";
+      ctx.beginPath();
+      ctx.roundRect(p.x - sz * 0.28, p.y - sz * 0.35, sz * 0.35, sz * 0.22, 2);
+      ctx.fill();
+    }
+
+    if (i === 0) {
+      // fx
+      var ex = dir.x * sz * 0.18;
+      var ey = dir.y * sz * 0.18;
+      var ox = -dir.y * sz * 0.22;
+      var oy = dir.x * sz * 0.22;
+      ctx.fillStyle = "#fff";
+      ctx.shadowBlur = 0;
+      ctx.beginPath();
+      ctx.arc(p.x + ex + ox, p.y + ey + oy, 2.4, 0, Math.PI * 2);
+      ctx.arc(p.x + ex - ox, p.y + ey - oy, 2.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#0f172a";
+      ctx.beginPath();
+      ctx.arc(p.x + ex + ox + dir.x, p.y + ey + oy + dir.y, 1.2, 0, Math.PI * 2);
+      ctx.arc(p.x + ex - ox + dir.x, p.y + ey - oy + dir.y, 1.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+function drawFx() {
+  pulseRings.forEach(function (r) {
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, r.life / 0.45);
+    ctx.strokeStyle = r.color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(r.x, r.y, r.r, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  });
+
+  floaters.forEach(function (fl) {
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, fl.life / 0.9);
+    ctx.fillStyle = fl.color;
+    ctx.font = "bold 14px 'Segoe UI', system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = fl.color;
+    ctx.fillText(fl.text, fl.x, fl.y);
+    ctx.restore();
+  });
+
+  // fx
+  var barH = 5;
+  var barY = H - 10;
+  ctx.fillStyle = "rgba(15,23,42,0.7)";
+  ctx.fillRect(W * 0.25, barY, W * 0.5, barH);
+  var fuelW = W * 0.5 * (nitroFuel / 100);
+  var ng = ctx.createLinearGradient(W * 0.25, 0, W * 0.25 + fuelW, 0);
+  ng.addColorStop(0, nitro ? "#f472b6" : "#22d3ee");
+  ng.addColorStop(1, nitro ? "#a78bfa" : "#67e8f9");
+  ctx.fillStyle = ng;
+  ctx.shadowBlur = nitro ? 12 : 0;
+  ctx.shadowColor = "#f472b6";
+  ctx.fillRect(W * 0.25, barY, fuelW, barH);
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = "rgba(148,163,184,0.35)";
+  ctx.strokeRect(W * 0.25, barY, W * 0.5, barH);
+
+  // fx
+  if (combo >= 3) {
+    ctx.save();
+    ctx.globalAlpha = 0.85;
+    ctx.fillStyle = "#fbbf24";
+    ctx.font = "bold 16px 'Segoe UI', system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.shadowBlur = 12;
+    ctx.shadowColor = "#f59e0b";
+    ctx.fillText("COMBO x" + combo, W / 2, 28);
+    ctx.restore();
+  }
+
+  // fx
+  if (bulletTime > 0) {
+    ctx.save();
+    ctx.globalAlpha = 0.7 + Math.sin(animT * 12) * 0.2;
+    ctx.fillStyle = "#f472b6";
+    ctx.font = "bold 13px 'Segoe UI', system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("BULLET TIME", W / 2, H - 24);
+    ctx.restore();
   }
 }
 
@@ -226,42 +851,11 @@ function draw() {
   ctx.save();
   shell.applyShake(ctx);
   drawBg();
-  food.pulse += 0.08;
-  var fp = Math.sin(food.pulse) * 0.15 + 0.85;
-  var fx = food.x * GRID + GRID / 2, fy = food.y * GRID + GRID / 2;
-  ctx.shadowBlur = 16;
-  ctx.shadowColor = food.type === "combo" ? "#fbbf24" : "#22d3ee";
-  ctx.fillStyle = food.type === "combo" ? "#fbbf24" : "#22d3ee";
-  ctx.beginPath();
-  ctx.arc(fx, fy, GRID * 0.35 * fp, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.shadowBlur = 0;
-
-  snake.forEach(function (seg, i) {
-    var t = i / snake.length;
-    var r = Math.floor(34 + t * 80), g = Math.floor(211 - t * 60), b = Math.floor(238 - t * 100);
-    ctx.fillStyle = "rgb(" + r + "," + g + "," + b + ")";
-    ctx.shadowBlur = i === 0 ? 14 : 6;
-    ctx.shadowColor = "#22d3ee";
-    var sx = seg.x * GRID + 1, sy = seg.y * GRID + 1;
-    var sz = GRID - 2;
-    ctx.beginPath();
-    ctx.roundRect(sx, sy, sz, sz, 4);
-    ctx.fill();
-    if (i === 0) {
-      ctx.fillStyle = "#fff";
-      ctx.fillRect(sx + sz * 0.6, sy + sz * 0.25, 3, 3);
-      ctx.fillRect(sx + sz * 0.75, sy + sz * 0.25, 3, 3);
-    }
-  });
-  ctx.shadowBlur = 0;
+  drawObstacles();
+  drawFoods();
+  drawSnake();
   particles.draw(ctx);
-  if (nitro) {
-    ctx.globalAlpha = 0.3;
-    ctx.fillStyle = "#f472b6";
-    ctx.fillRect(0, H - 4, W * (nitroFuel / 100), 4);
-    ctx.globalAlpha = 1;
-  }
+  drawFx();
   ctx.restore();
 }
 </script>
