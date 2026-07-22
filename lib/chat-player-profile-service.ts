@@ -1,4 +1,5 @@
 import type { DonationPrivacyTier } from "@/lib/platform-leaderboard";
+import { isUserOnline, usdCentsToHkd } from "@/lib/platform-leaderboard";
 import { resolvePlayerLeaderboardRanks } from "@/lib/platform-leaderboard-ranks";
 import {
   parseProfileShowcaseTags,
@@ -19,8 +20,6 @@ import {
   isVirtualLeaderboardUserId,
   VIRTUAL_LEADERBOARD_USER_PREFIX,
 } from "@/lib/platform-leaderboard-virtual";
-import { isUserOnline } from "@/lib/platform-leaderboard";
-import { getUserContributionHkd } from "@/lib/platform-leaderboard-service";
 import { resolveEquippedTitleForUser } from "@/lib/equipped-title-service";
 import { resolveVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
 import { getVirtualPlayerSocialStats } from "@/lib/virtual-player-public-profile";
@@ -96,26 +95,30 @@ async function loadRealUserProfile(
   supabase: SupabaseClient,
   userId: string,
   viewer?: { userId?: string | null; isAdmin?: boolean }
-): Promise<ChatPlayerPublicProfile | null> {
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select(
-      "id, display_name, avatar_url, role, bio, player_number, is_supporter, supporter_badge, is_admin, created_at"
-    )
-    .eq("id", userId)
-    .maybeSingle();
+): Promise<{
+  profile: ChatPlayerPublicProfile;
+  showcasePreferences: ProfileShowcaseTagId[] | null;
+} | null> {
+  const [profileRes, authRes] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select(
+        "id, display_name, avatar_url, role, bio, player_number, is_supporter, supporter_badge, is_admin, created_at"
+      )
+      .eq("id", userId)
+      .maybeSingle(),
+    supabase.auth.admin.getUserById(userId),
+  ]);
 
-  if (profileError) throw new Error(profileError.message);
+  if (profileRes.error) throw new Error(profileRes.error.message);
+  if (authRes.error) throw new Error(authRes.error.message);
+  const profile = profileRes.data;
   if (!profile) return null;
 
-  const { data: authData, error: authError } =
-    await supabase.auth.admin.getUserById(userId);
-  if (authError) throw new Error(authError.message);
-
-  const metadata = authData.user?.user_metadata ?? {};
+  const metadata = authRes.data.user?.user_metadata ?? {};
   const registeredAt =
     readOptionalString(profile.created_at) ??
-    readOptionalString(authData.user?.created_at) ??
+    readOptionalString(authRes.data.user?.created_at) ??
     null;
   const profilePublic = readBoolean(metadata.profile_public, true);
   const bio = profilePublic
@@ -123,6 +126,9 @@ async function loadRealUserProfile(
     : null;
   const website = profilePublic ? readOptionalString(metadata.website) : null;
   const countryCode = readCountryCode(metadata.country_code);
+  const showcasePreferences = parseProfileShowcaseTags(
+    metadata.profile_showcase_tags
+  );
 
   const [
     activityRes,
@@ -132,6 +138,7 @@ async function loadRealUserProfile(
     publishedGamesRes,
     followerCountRes,
     equippedTitle,
+    ordersRes,
   ] = await Promise.all([
     supabase
       .from("user_activity_stats")
@@ -165,7 +172,16 @@ async function loadRealUserProfile(
       .select("follower_id", { count: "exact", head: true })
       .eq("creator_id", userId),
     resolveEquippedTitleForUser(supabase, userId),
+    supabase
+      .from("orders")
+      .select("total_amount_cents")
+      .eq("buyer_id", userId)
+      .eq("order_type", "supporter_pass")
+      .eq("status", "succeeded"),
   ]);
+
+  if (activityRes.error) throw new Error(activityRes.error.message);
+  if (ordersRes.error) throw new Error(ordersRes.error.message);
 
   const activity = activityRes.data;
   const lastActiveAt = activity?.last_active_at ?? null;
@@ -194,49 +210,57 @@ async function loadRealUserProfile(
       }));
   }
 
-  const rawDonated = await getUserContributionHkd(supabase, userId);
+  const tipsHkd = Number(activity?.total_donated ?? 0);
+  const supporterHkd = (ordersRes.data ?? []).reduce(
+    (sum, row) => sum + usdCentsToHkd(Number(row.total_amount_cents ?? 0)),
+    0
+  );
+  const rawDonated = tipsHkd + supporterHkd;
   const revealDonation = maskDonationTotalForProfile(rawDonated, {
     isSelf: viewer?.userId === userId,
     isAdmin: viewer?.isAdmin,
   });
 
   return {
-    userId,
-    virtualPlayerId: null,
-    playerNumber:
-      typeof profile.player_number === "number"
-        ? profile.player_number
-        : profile.player_number != null
-          ? Number(profile.player_number) || null
-          : null,
-    displayName: profile.display_name?.trim() || "匿名玩家",
-    avatarUrl: profile.avatar_url ?? null,
-    equippedTitle,
-    isCreator: profile.role === "creator",
-    adminRole: resolveAdminDisplayRole(
-      profile.is_admin === true,
-      authData.user?.user_metadata?.role === "admin"
-    ),
-    isVirtual: false,
-    isOnline: lastActiveAt ? isUserOnline(lastActiveAt) : false,
-    bio,
-    registeredAt: registeredAt,
-    website: website,
-    profilePublic,
-    achievementCount: achievementCountRes.count ?? achievementHighlights.length,
-    achievementHighlights,
-    forumPostCount: forumPostsRes.count ?? 0,
-    donatedTotal: revealDonation,
-    donationTier: resolveDonationTier(rawDonated),
-    followerCount: followerCountRes.count ?? 0,
-    publishedGames: publishedGamesRes.count ?? 0,
-    onlineSeconds: activity?.total_online_time ?? 0,
-    playSeconds: activity?.total_play_time ?? 0,
-    lastActiveAt,
-    countryCode,
-    isSupporter: profile.is_supporter === true,
-    supporterBadge: readOptionalString(profile.supporter_badge),
-    showcaseTags: [],
+    profile: {
+      userId,
+      virtualPlayerId: null,
+      playerNumber:
+        typeof profile.player_number === "number"
+          ? profile.player_number
+          : profile.player_number != null
+            ? Number(profile.player_number) || null
+            : null,
+      displayName: profile.display_name?.trim() || "匿名玩家",
+      avatarUrl: profile.avatar_url ?? null,
+      equippedTitle,
+      isCreator: profile.role === "creator",
+      adminRole: resolveAdminDisplayRole(
+        profile.is_admin === true,
+        metadata.role === "admin"
+      ),
+      isVirtual: false,
+      isOnline: lastActiveAt ? isUserOnline(lastActiveAt) : false,
+      bio,
+      registeredAt: registeredAt,
+      website: website,
+      profilePublic,
+      achievementCount: achievementCountRes.count ?? achievementHighlights.length,
+      achievementHighlights,
+      forumPostCount: forumPostsRes.count ?? 0,
+      donatedTotal: revealDonation,
+      donationTier: resolveDonationTier(rawDonated),
+      followerCount: followerCountRes.count ?? 0,
+      publishedGames: publishedGamesRes.count ?? 0,
+      onlineSeconds: activity?.total_online_time ?? 0,
+      playSeconds: activity?.total_play_time ?? 0,
+      lastActiveAt,
+      countryCode,
+      isSupporter: profile.is_supporter === true,
+      supporterBadge: readOptionalString(profile.supporter_badge),
+      showcaseTags: [],
+    },
+    showcasePreferences,
   };
 }
 
@@ -420,6 +444,7 @@ export async function getChatPlayerPublicProfile(
     isAdmin: options.viewerIsAdmin,
   };
   let profile: ChatPlayerPublicProfile | null = null;
+  let showcasePreferences: ProfileShowcaseTagId[] | null | undefined;
 
   let userId = options.userId?.trim() || null;
   let virtualPlayerId = options.virtualPlayerId?.trim() || null;
@@ -433,15 +458,12 @@ export async function getChatPlayerPublicProfile(
     const ambientMap = await getAmbientUserPlayerMap(supabase);
     const mappedVirtualId = ambientMap.get(userId);
     if (mappedVirtualId) {
-      profile = await loadVirtualPlayerProfile(
-        supabase,
-        virtualPlayerId ?? mappedVirtualId
-      );
-      const realProfile = await loadRealUserProfile(
-        supabase,
-        userId,
-        viewer
-      );
+      const [virtualProfile, realLoaded] = await Promise.all([
+        loadVirtualPlayerProfile(supabase, virtualPlayerId ?? mappedVirtualId),
+        loadRealUserProfile(supabase, userId, viewer),
+      ]);
+      profile = virtualProfile;
+      showcasePreferences = realLoaded?.showcasePreferences ?? null;
       if (profile) {
         const ambientUserId = await getAmbientUserIdForVirtualPlayer(
           supabase,
@@ -451,19 +473,22 @@ export async function getChatPlayerPublicProfile(
         profile = {
           ...profile,
           userId: ambientUserId ?? userId,
-          ...(realProfile?.bio ? { bio: realProfile.bio } : {}),
-          ...(realProfile?.registeredAt
-            ? { registeredAt: realProfile.registeredAt }
+          ...(realLoaded?.profile.bio ? { bio: realLoaded.profile.bio } : {}),
+          ...(realLoaded?.profile.registeredAt
+            ? { registeredAt: realLoaded.profile.registeredAt }
             : {}),
         };
       }
     } else {
-      profile = await loadRealUserProfile(supabase, userId, viewer);
+      const loaded = await loadRealUserProfile(supabase, userId, viewer);
+      profile = loaded?.profile ?? null;
+      showcasePreferences = loaded?.showcasePreferences ?? null;
     }
   }
 
   if (!profile && virtualPlayerId) {
     profile = await loadVirtualPlayerProfile(supabase, virtualPlayerId);
+    showcasePreferences = null;
   }
 
   if (!profile) return null;
@@ -489,5 +514,6 @@ export async function getChatPlayerPublicProfile(
   return enrichProfileWithShowcaseTags(supabase, profile, {
     viewerUserId: options.viewerUserId,
     viewerIsAdmin: options.viewerIsAdmin,
+    showcasePreferences,
   });
 }

@@ -12,6 +12,7 @@ import { resolveAdminDisplayRole } from "@/lib/admin-display-role";
 import { maskDonationAmount } from "@/lib/activity-stats-masking";
 import { resolveEquippedTitles } from "@/lib/equipped-title-service";
 import { isAmbientLocalEmail } from "@/lib/ambient-local-email";
+import { listAuthAdminUsers } from "@/lib/auth-admin-users-cache";
 import {
   getVirtualPlatformLeaderboardEntries,
   mergePlatformLeaderboardEntries,
@@ -75,12 +76,10 @@ async function loadAuthUserFlags(supabase: SupabaseClient): Promise<{
     return authUserFlagsCache;
   }
 
-  const { data, error } = await supabase.auth.admin.listUsers({
-    page: 1,
-    perPage: 1000,
-  });
-
-  if (error) {
+  let users;
+  try {
+    users = await listAuthAdminUsers(supabase);
+  } catch {
     return (
       authUserFlagsCache ?? {
         ambientBotIds: new Set(),
@@ -92,7 +91,7 @@ async function loadAuthUserFlags(supabase: SupabaseClient): Promise<{
   const ambientBotIds = new Set<string>();
   const metadataAdminIds = new Set<string>();
 
-  for (const user of data.users ?? []) {
+  for (const user of users) {
     if (isAmbientLocalEmail(user.email)) {
       ambientBotIds.add(user.id);
     }
@@ -371,9 +370,11 @@ async function loadLeaderboardCore(
     return leaderboardCoreCache;
   }
 
-  await ensureActivityStatsBackfill(supabase);
-
-  const authFlags = await loadAuthUserFlags(supabase);
+  // 冷啟動時 backfill 與 listUsers 並行，避免串行多等一輪 Auth API
+  const [, authFlags] = await Promise.all([
+    ensureActivityStatsBackfill(supabase),
+    loadAuthUserFlags(supabase),
+  ]);
   const ambientBotIds = authFlags.ambientBotIds;
 
   const [onlineRows, playRows, donatedRows] = await Promise.all([

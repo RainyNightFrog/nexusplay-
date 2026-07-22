@@ -190,7 +190,7 @@ export function AdminEntitlementsPanel() {
             <Label>{t("entitlementsUserLabel")}</Label>
             <Select
               value={selectedUserId || undefined}
-              onValueChange={setSelectedUserId}
+              onValueChange={(value) => setSelectedUserId(value ?? "")}
             >
               <SelectTrigger className="border-white/10 bg-white/5">
                 <SelectValue placeholder={t("entitlementsUserPlaceholder")} />
@@ -210,7 +210,7 @@ export function AdminEntitlementsPanel() {
             <Label>{t("entitlementsGameLabel")}</Label>
             <Select
               value={selectedGameId || undefined}
-              onValueChange={setSelectedGameId}
+              onValueChange={(value) => setSelectedGameId(value ?? "")}
               disabled={loadingGames}
             >
               <SelectTrigger className="border-white/10 bg-white/5">

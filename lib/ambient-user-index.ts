@@ -1,3 +1,4 @@
+import { listAuthAdminUsers } from "@/lib/auth-admin-users-cache";
 import { parseAmbientPlayerIdFromEmail } from "@/lib/virtual-players";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -13,15 +14,10 @@ export async function getAmbientUserPlayerMap(
     return cachedMap;
   }
 
+  const users = await listAuthAdminUsers(supabase);
   const map = new Map<string, string>();
-  const { data, error } = await supabase.auth.admin.listUsers({
-    page: 1,
-    perPage: 1000,
-  });
 
-  if (error) throw new Error(error.message);
-
-  for (const user of data.users ?? []) {
+  for (const user of users) {
     const playerId = parseAmbientPlayerIdFromEmail(user.email);
     if (playerId) {
       map.set(user.id, playerId);
