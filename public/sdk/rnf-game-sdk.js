@@ -135,7 +135,17 @@
       ".rnf-help-list li{margin-bottom:.2rem}" +
       ".rnf-game-home{position:absolute;top:.35rem;right:.35rem;z-index:20;cursor:pointer;border:1px solid rgba(34,211,238,.45);background:rgba(0,0,0,.72);color:#67e8f9;padding:.32rem .62rem;font-size:.68rem;font-weight:700;border-radius:8px;letter-spacing:.08em;display:none;backdrop-filter:blur(6px);transition:all .2s;pointer-events:auto}" +
       ".rnf-game-home.visible{display:block}" +
-      ".rnf-game-home:hover{background:rgba(34,211,238,.18);box-shadow:0 0 16px rgba(34,211,238,.25)}";
+      ".rnf-game-home:hover{background:rgba(34,211,238,.18);box-shadow:0 0 16px rgba(34,211,238,.25)}" +
+      ".rnf-touch-pad{position:absolute;left:0;right:0;bottom:0;z-index:18;display:flex;align-items:flex-end;justify-content:space-between;gap:.4rem;padding:.35rem .45rem calc(.45rem + env(safe-area-inset-bottom,0px));pointer-events:none;background:linear-gradient(180deg,transparent,rgba(0,0,0,.45))}" +
+      ".rnf-touch-pad.rnf-touch-hidden{display:none}" +
+      ".rnf-touch-cluster{display:flex;gap:.35rem;align-items:flex-end;pointer-events:auto}" +
+      ".rnf-touch-btn{touch-action:none;user-select:none;-webkit-user-select:none;min-width:3.1rem;min-height:3.1rem;padding:.35rem .55rem;border-radius:14px;border:1px solid rgba(34,211,238,.5);background:rgba(6,10,18,.72);color:#67e8f9;font-size:.72rem;font-weight:700;letter-spacing:.06em;backdrop-filter:blur(8px);box-shadow:0 0 16px rgba(34,211,238,.12);display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.15}" +
+      ".rnf-touch-btn.active,.rnf-touch-btn:active{background:rgba(34,211,238,.32);border-color:#22d3ee;color:#fff;box-shadow:0 0 22px rgba(34,211,238,.35)}" +
+      ".rnf-touch-btn.wide{min-width:4.2rem}" +
+      ".rnf-touch-btn.danger{border-color:rgba(244,114,182,.55);color:#f9a8d4}" +
+      ".rnf-touch-btn.danger.active,.rnf-touch-btn.danger:active{background:rgba(244,114,182,.28);border-color:#f472b6}" +
+      "@media (min-width:900px){.rnf-touch-pad.rnf-touch-auto{opacity:.0;pointer-events:none}.rnf-touch-pad.rnf-touch-auto.rnf-touch-force{opacity:1;pointer-events:auto}.rnf-touch-pad.rnf-touch-auto .rnf-touch-cluster{pointer-events:none}.rnf-touch-pad.rnf-touch-auto.rnf-touch-force .rnf-touch-cluster{pointer-events:auto}}" +
+      "@media (max-width:899px){.rnf-touch-pad.rnf-touch-auto{opacity:1}}";
     var style = document.createElement("style");
     style.id = "rnf-sdk-styles";
     style.textContent = css;
@@ -1016,6 +1026,217 @@
     return { attach: attach, detach: detach, clear: clearKeys };
   }
 
+  /** 可重用虛擬按鍵／滑動手勢，對齊 attachKeyboard 生命週期 */
+  function createTouchControls(hostEl, canvas) {
+    var pad = null;
+    var buttons = [];
+    var keysRef = null;
+    var opts = null;
+    var swipeState = null;
+    var bound = false;
+    var forceVisible = false;
+    var onPointerDown = null;
+    var onPointerMove = null;
+    var onPointerUp = null;
+    var onCanvasSwipeStart = null;
+    var onFirstTouch = null;
+
+    function setKey(code, down) {
+      if (!keysRef || !code) return;
+      keysRef[code] = !!down;
+    }
+
+    function clearMappedKeys() {
+      if (!keysRef || !opts || !opts.buttons) return;
+      opts.buttons.forEach(function (b) {
+        var codes = b.codes || (b.code ? [b.code] : []);
+        codes.forEach(function (c) { setKey(c, false); });
+      });
+    }
+
+    function markActive(el, on) {
+      if (!el) return;
+      if (on) el.classList.add("active");
+      else el.classList.remove("active");
+    }
+
+    function bindButton(btnEl, cfg) {
+      var codes = cfg.codes || (cfg.code ? [cfg.code] : []);
+      var hold = cfg.hold !== false;
+      var pressed = false;
+      var pointerId = null;
+
+      function press(e) {
+        if (e && e.cancelable) e.preventDefault();
+        if (e) {
+          try { btnEl.setPointerCapture(e.pointerId); } catch (_e) {}
+          pointerId = e.pointerId;
+        }
+        pressed = true;
+        markActive(btnEl, true);
+        codes.forEach(function (c) { setKey(c, true); });
+        if (typeof cfg.onPress === "function") cfg.onPress();
+        if (!hold) {
+          setTimeout(function () {
+            codes.forEach(function (c) { setKey(c, false); });
+            markActive(btnEl, false);
+            pressed = false;
+          }, 80);
+        }
+      }
+
+      function release(e) {
+        if (e && pointerId != null && e.pointerId !== pointerId) return;
+        if (!pressed) return;
+        pressed = false;
+        pointerId = null;
+        markActive(btnEl, false);
+        if (hold) codes.forEach(function (c) { setKey(c, false); });
+        if (typeof cfg.onRelease === "function") cfg.onRelease();
+      }
+
+      btnEl.addEventListener("pointerdown", press);
+      btnEl.addEventListener("pointerup", release);
+      btnEl.addEventListener("pointercancel", release);
+      btnEl.addEventListener("pointerleave", function (e) {
+        if (hold && pressed) release(e);
+      });
+      buttons.push({ el: btnEl, press: press, release: release });
+    }
+
+    function ensurePad() {
+      if (pad) return pad;
+      var wrap = hostEl.querySelector(".rnf-canvas-wrap") || hostEl;
+      pad = document.createElement("div");
+      pad.className = "rnf-touch-pad rnf-touch-auto";
+      pad.setAttribute("aria-hidden", "true");
+      wrap.appendChild(pad);
+      return pad;
+    }
+
+    function attach(options) {
+      detach();
+      opts = options || {};
+      keysRef = opts.keys || {};
+      bound = true;
+      forceVisible = !!opts.forceVisible;
+      var el = ensurePad();
+      el.innerHTML = "";
+      el.classList.toggle("rnf-touch-force", forceVisible);
+      el.classList.toggle("rnf-touch-hidden", opts.hidden === true);
+
+      var left = document.createElement("div");
+      left.className = "rnf-touch-cluster";
+      var right = document.createElement("div");
+      right.className = "rnf-touch-cluster";
+      el.appendChild(left);
+      el.appendChild(right);
+
+      (opts.buttons || []).forEach(function (cfg) {
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "rnf-touch-btn" + (cfg.wide ? " wide" : "") + (cfg.danger ? " danger" : "");
+        btn.textContent = cfg.label || cfg.code || "·";
+        if (cfg.title) btn.title = cfg.title;
+        var side = cfg.side === "left" ? left : right;
+        side.appendChild(btn);
+        bindButton(btn, cfg);
+      });
+
+      if (opts.swipe && canvas) {
+        swipeState = { x0: 0, y0: 0, active: false, id: null };
+        var thresh = opts.swipe.threshold || 36;
+        onCanvasSwipeStart = function (e) {
+          if (e.target && e.target.closest && e.target.closest(".rnf-touch-btn")) return;
+          if (e.pointerType === "mouse" && e.button !== 0) return;
+          swipeState.active = true;
+          swipeState.id = e.pointerId;
+          swipeState.x0 = e.clientX;
+          swipeState.y0 = e.clientY;
+        };
+        onPointerMove = function (e) {
+          if (!swipeState || !swipeState.active || e.pointerId !== swipeState.id) return;
+        };
+        onPointerUp = function (e) {
+          if (!swipeState || !swipeState.active || e.pointerId !== swipeState.id) return;
+          var dx = e.clientX - swipeState.x0;
+          var dy = e.clientY - swipeState.y0;
+          swipeState.active = false;
+          if (Math.abs(dx) < thresh && Math.abs(dy) < thresh) {
+            if (typeof opts.swipe.tap === "function") opts.swipe.tap(e);
+            else if (opts.swipe.tapCode) {
+              setKey(opts.swipe.tapCode, true);
+              setTimeout(function () { setKey(opts.swipe.tapCode, false); }, 70);
+            }
+            return;
+          }
+          var code = null;
+          if (Math.abs(dy) >= Math.abs(dx)) {
+            code = dy < 0 ? opts.swipe.up : opts.swipe.down;
+          } else {
+            code = dx < 0 ? opts.swipe.left : opts.swipe.right;
+          }
+          if (typeof code === "function") code();
+          else if (code) {
+            setKey(code, true);
+            setTimeout(function () { setKey(code, false); }, 90);
+          }
+        };
+        canvas.style.touchAction = "none";
+        canvas.addEventListener("pointerdown", onCanvasSwipeStart);
+        window.addEventListener("pointermove", onPointerMove);
+        window.addEventListener("pointerup", onPointerUp);
+        window.addEventListener("pointercancel", onPointerUp);
+      }
+
+      onFirstTouch = function () {
+        forceVisible = true;
+        el.classList.add("rnf-touch-force");
+      };
+      window.addEventListener("touchstart", onFirstTouch, { passive: true, once: true });
+
+      return {
+        pad: el,
+        setVisible: function (v) {
+          el.classList.toggle("rnf-touch-hidden", !v);
+        },
+        forceShow: function () {
+          forceVisible = true;
+          el.classList.add("rnf-touch-force");
+        },
+      };
+    }
+
+    function detach() {
+      if (!bound && !pad) return;
+      bound = false;
+      clearMappedKeys();
+      buttons.forEach(function (b) {
+        b.el.removeEventListener("pointerdown", b.press);
+        b.el.removeEventListener("pointerup", b.release);
+        b.el.removeEventListener("pointercancel", b.release);
+      });
+      buttons = [];
+      if (canvas && onCanvasSwipeStart) {
+        canvas.removeEventListener("pointerdown", onCanvasSwipeStart);
+      }
+      if (onPointerMove) window.removeEventListener("pointermove", onPointerMove);
+      if (onPointerUp) {
+        window.removeEventListener("pointerup", onPointerUp);
+        window.removeEventListener("pointercancel", onPointerUp);
+      }
+      if (onFirstTouch) window.removeEventListener("touchstart", onFirstTouch);
+      onCanvasSwipeStart = onPointerMove = onPointerUp = onFirstTouch = null;
+      swipeState = null;
+      if (pad && pad.parentNode) pad.parentNode.removeChild(pad);
+      pad = null;
+      keysRef = null;
+      opts = null;
+    }
+
+    return { attach: attach, detach: detach };
+  }
+
   function buildShell(options) {
     injectStyles();
     options = options || {};
@@ -1045,6 +1266,7 @@
     var ctx = canvas.getContext("2d");
     var particles = createParticles();
     var keyGuard = createKeyGuard(canvas);
+    var touchControls = createTouchControls(root.querySelector(".rnf-game-wrap") || root, canvas);
     var localSave = loadLocalSave() || {};
     var difficulties = options.difficulties || DEFAULT_DIFFICULTIES;
     var selectedDifficulty = localSave.difficulty || difficulties[1]?.id || difficulties[0].id;
@@ -1365,6 +1587,10 @@
     function gameOver(score, extra) {
       stopBgm();
       keyGuard.detach();
+      touchControls.detach();
+      if (options.onStop) {
+        try { options.onStop(); } catch (_e) {}
+      }
       var diffCfg = getDifficultyConfig();
       var rawScore = Math.floor(Number(score) || 0);
       var meta = Object.assign({ slug: slug, difficulty: diffCfg.id, rawScore: rawScore }, extra || {});
@@ -1438,6 +1664,8 @@
       attachKeyboard: function (keys) { keyGuard.attach(keys); return keys; },
       detachKeyboard: function () { keyGuard.detach(); },
       clearKeyboard: function () { keyGuard.clear(); },
+      attachTouchControls: function (options) { return touchControls.attach(options); },
+      detachTouchControls: function () { touchControls.detach(); },
       applyShake: applyShake,
       triggerShake: triggerShake,
       isHighQuality: isHighQuality,

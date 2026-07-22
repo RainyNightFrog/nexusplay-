@@ -2,9 +2,9 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Void Brick Breaker · 虛空打磚塊</title>
-  <script src="/sdk/rnf-game-sdk.js?v=20260723"></script>
+  <script src="/sdk/rnf-game-sdk.js?v=20260723b"></script>
 </head>
 <body>
 <script>
@@ -12,25 +12,30 @@ RNF.init();
 var shell = RNF.buildShell({
   title: "Void Brick Breaker",
   creator: "PixelArchitect",
-  subtitle: "←→ 移動擋板 · 空白鍵雷射 · 多球分裂 · 黑洞磁力強化 · 星塵粒子特效",
+  subtitle: "多球分裂 · 雷射擋板 · 黑洞磁力 · 爆炸／鋼鐵磚 · 手機拖曳＋虛擬鍵",
   width: 960,
   height: 520,
   bgmStyle: "pulse",
-  highlights: ["四段難度", "多球／雷射", "不可破壞磚", "排行榜"],
+  highlights: ["四段難度", "多球／雷射", "特殊磚塊", "Combo 連破", "觸控就緒"],
   help: {
     about: "虛空矩陣中的經典打磚塊。用擋板反彈球體擊碎磚塊，清空可破壞磚即可過關。",
     features: [
-      "四段難度調整球速與磚塊列數",
-      "多球分裂、磁力吸附、雷射冷卻射擊",
-      "極限模式有不可破壞灰色磚"
+      "四段難度：球速、磚塊 HP、道具掉落率同步調整",
+      "多球分裂、磁力吸附、雷射連射、加寬擋板、黏球、額外生命",
+      "鋼鐵磚僅雷射可破、爆炸磚連鎖、金磚高分獎勵",
+      "連續破磚 Combo 倍率加分與霓虹粒子",
+      "桌面鍵盤＋手機拖曳擋板／虛擬方向鍵／發射鍵"
     ],
     controls: [
       "← → 或 A D：移動擋板",
-      "空白鍵：發射雷射（有冷卻）"
+      "空白鍵／觸控「射」：發射雷射（有冷卻）",
+      "手機：在畫面上拖曳可快速定位擋板"
     ],
     tips: [
       "多球道具可同時破壞多排磚塊",
-      "磁力道具讓球偏向擋板方向"
+      "磁力道具讓球偏向擋板方向",
+      "爆炸磚會震傷周圍磚塊，善用連鎖清場",
+      "鋼鐵灰磚需用雷射擊破"
     ]
   },
   onStop: cleanup,
@@ -38,31 +43,55 @@ var shell = RNF.buildShell({
 });
 
 var W = shell.width, H = shell.height;
-var ctx = shell.ctx;
-var particles = shell.particles;
-var animId = null, running = false, gameEnded = false, keys = {};
-var paddle, balls, bricks, lasers, powerups, score, lives, level;
-var laserCooldown = 0, magnetTimer = 0, stars = [];
-var speedScale = 1;
-var PADDLE_SPEED = 340;
-var BALL_SPEED = 230;
+var ctx, particles, animId, running, gameEnded, keys, lastTs;
+var paddle, balls, bricks, lasers, powerups, stars, score, lives, level;
+var laserCooldown, magnetTimer, wideTimer, stickyTimer, laserModeTimer;
+var combo, comboTimer, speedScale, diffId, highQ, diffTun;
+var PADDLE_SPEED = 360, BALL_BASE = 240;
 
-function bindInput() {
-  shell.canvas.addEventListener("pointermove", onPointerMove);
-  shell.canvas.addEventListener("touchmove", onPointerMove, { passive: true });
+function diffTuning() {
+  var map = {
+    easy: { hpMult: 0.85, ballMult: 0.88, powerRate: 0.14, laserCd: 0.28, rowsBonus: 0 },
+    normal: { hpMult: 1, ballMult: 1, powerRate: 0.1, laserCd: 0.24, rowsBonus: 0 },
+    hard: { hpMult: 1.25, ballMult: 1.12, powerRate: 0.08, laserCd: 0.2, rowsBonus: 1 },
+    extreme: { hpMult: 1.55, ballMult: 1.22, powerRate: 0.06, laserCd: 0.17, rowsBonus: 2 }
+  };
+  return map[diffId] || map.normal;
 }
 
 function cleanup() {
   shell.detachKeyboard();
+  shell.detachTouchControls();
   running = false;
   if (animId) cancelAnimationFrame(animId);
   animId = null;
   window.removeEventListener("keydown", onKey, true);
   window.removeEventListener("keyup", onKeyUp, true);
   if (shell && shell.canvas) {
+    shell.canvas.removeEventListener("pointerdown", onPointerDown);
     shell.canvas.removeEventListener("pointermove", onPointerMove);
-    shell.canvas.removeEventListener("touchmove", onPointerMove);
+    shell.canvas.removeEventListener("pointerup", onPointerUp);
+    shell.canvas.removeEventListener("pointercancel", onPointerUp);
   }
+}
+
+var dragActive = false;
+function onPointerDown(e) {
+  if (!running) return;
+  dragActive = true;
+  movePaddleToEvent(e);
+}
+function onPointerMove(e) {
+  if (!running || !dragActive) return;
+  movePaddleToEvent(e);
+}
+function onPointerUp() { dragActive = false; }
+function movePaddleToEvent(e) {
+  var rect = shell.canvas.getBoundingClientRect();
+  if (!rect.width) return;
+  var clientX = e.clientX != null ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+  var x = (clientX - rect.left) * (W / rect.width);
+  paddle.x = Math.max(8, Math.min(W - paddle.w - 8, x - paddle.w / 2));
 }
 
 function onKey(e) {
@@ -73,7 +102,6 @@ function onKey(e) {
   if (e.code === "Space") keys.fire = true;
   if (e.code === "ArrowLeft" || e.code === "ArrowRight" || e.code === "Space") e.preventDefault();
 }
-
 function onKeyUp(e) {
   keys[e.code] = false;
   if (e.code === "ArrowLeft" || e.code === "KeyA") keys.left = false;
@@ -81,37 +109,45 @@ function onKeyUp(e) {
   if (e.code === "Space") keys.fire = false;
 }
 
-function onPointerMove(e) {
-  if (!running) return;
-  var rect = shell.canvas.getBoundingClientRect();
-  if (!rect.width || !rect.height) return;
-  var clientX = e.touches ? e.touches[0].clientX : e.clientX;
-  var x = (clientX - rect.left) * (W / rect.width);
-  paddle.x = Math.max(10, Math.min(W - paddle.w - 10, x - paddle.w / 2));
-}
-
 function initStars() {
   stars = [];
-  for (var i = 0; i < 80; i++) {
-    stars.push({ x: Math.random() * W, y: Math.random() * H, s: Math.random() * 2, sp: 0.2 + Math.random() * 0.8 });
+  var n = highQ ? 90 : 40;
+  for (var i = 0; i < n; i++) {
+    stars.push({ x: Math.random() * W, y: Math.random() * H, s: Math.random() * 2 + 0.5, sp: 0.15 + Math.random() * 0.9 });
   }
+}
+
+function pickPower() {
+  if (Math.random() > diffTun.powerRate) return null;
+  var pool = ["multiball", "magnet", "wide", "laser", "life"];
+  if (Math.random() < 0.12) pool.push("sticky");
+  return pool[Math.floor(Math.random() * pool.length)];
 }
 
 function makeLevel(lv) {
   bricks = [];
-  var rows = Math.min(6 + lv, 10), cols = 14;
-  var bw = (W - 40) / cols, bh = 22;
-  var colors = ["#22d3ee", "#a78bfa", "#f472b6", "#34d399", "#fbbf24"];
+  var rows = Math.min(5 + lv + diffTun.rowsBonus, 11), cols = 14;
+  var bw = (W - 36) / cols, bh = 20;
+  var palette = ["#22d3ee", "#a78bfa", "#f472b6", "#34d399", "#fbbf24"];
   for (var r = 0; r < rows; r++) {
     for (var c = 0; c < cols; c++) {
-      if (Math.random() < 0.92) {
+      if (Math.random() < 0.9) {
+        var type = "normal";
+        var roll = Math.random();
+        if (roll < 0.06 && lv >= 2) type = "steel";
+        else if (roll < 0.12) type = "explosive";
+        else if (roll < 0.18) type = "golden";
+        else if (roll < 0.35 && r < 3) type = "reinforced";
+        var hp = Math.max(1, Math.round((1 + Math.floor(r / 2) + Math.floor(lv / 2)) * diffTun.hpMult));
+        if (type === "steel") hp = 999;
+        else if (type === "reinforced") hp += 1;
+        else if (type === "golden") hp = 1;
         bricks.push({
-          x: 20 + c * bw + 1, y: 40 + r * (bh + 3),
-          w: bw - 2, h: bh,
-          hp: 1 + Math.floor(r / 3),
-          maxHp: 1 + Math.floor(r / 3),
-          color: colors[r % colors.length],
-          power: Math.random() < 0.08 ? (Math.random() < 0.5 ? "multiball" : "magnet") : null
+          x: 18 + c * bw + 1, y: 36 + r * (bh + 3),
+          w: bw - 2, h: bh, hp: hp, maxHp: hp,
+          type: type,
+          color: type === "steel" ? "#64748b" : type === "golden" ? "#fbbf24" : type === "explosive" ? "#fb7185" : palette[r % palette.length],
+          power: type === "normal" || type === "reinforced" ? pickPower() : (type === "golden" && Math.random() < 0.5 ? pickPower() : null)
         });
       }
     }
@@ -119,54 +155,124 @@ function makeLevel(lv) {
 }
 
 function spawnBall(x, y, vx, vy) {
-  var sm = speedScale;
+  var sm = speedScale * diffTun.ballMult;
   balls.push({
     x: x != null ? x : W / 2,
-    y: y != null ? y : H - 80,
-    vx: vx != null ? vx : (Math.random() - 0.5) * 150 * sm,
-    vy: vy != null ? vy : -BALL_SPEED * sm,
-    r: 7
+    y: y != null ? y : H - 72,
+    vx: vx != null ? vx : (Math.random() - 0.5) * 160 * sm,
+    vy: vy != null ? vy : -BALL_BASE * sm,
+    r: 7, stuck: false
   });
 }
 
 function startGame() {
   cleanup();
+  ctx = shell.ctx;
+  particles = shell.particles;
+  highQ = shell.isHighQuality();
   speedScale = shell.getSpeedScale();
-  score = 0; lives = 3; level = 1;
+  diffId = (shell.getDifficulty() || {}).id || "normal";
+  diffTun = diffTuning();
+  score = 0; lives = 3; level = 1; combo = 0; comboTimer = 0;
   keys = { left: false, right: false, fire: false };
   shell.attachKeyboard(keys);
-  paddle = { x: W/2 - 55, y: H - 44, w: 110, h: 14, laser: false };
+  paddle = { x: W / 2 - 55, y: H - 42, w: 110, h: 14, baseW: 110 };
   balls = []; lasers = []; powerups = [];
-  laserCooldown = 0; magnetTimer = 0; gameEnded = false;
+  laserCooldown = 0; magnetTimer = 0; wideTimer = 0; stickyTimer = 0; laserModeTimer = 0;
+  gameEnded = false;
   initStars();
   makeLevel(level);
   spawnBall();
   running = true;
   window.addEventListener("keydown", onKey, true);
   window.addEventListener("keyup", onKeyUp, true);
-  bindInput();
+  shell.canvas.addEventListener("pointerdown", onPointerDown);
+  shell.canvas.addEventListener("pointermove", onPointerMove);
+  shell.canvas.addEventListener("pointerup", onPointerUp);
+  shell.canvas.addEventListener("pointercancel", onPointerUp);
+  shell.attachTouchControls({
+    keys: keys,
+    buttons: [
+      { code: "ArrowLeft", label: "◀", side: "left", hold: true },
+      { code: "ArrowRight", label: "▶", side: "left", hold: true },
+      { code: "Space", label: "射", side: "right", hold: true, danger: true, wide: true }
+    ]
+  });
   lastTs = performance.now();
   animId = requestAnimationFrame(loop);
 }
 
-var lastTs = 0;
-
 function fireLaser() {
+  var cd = laserModeTimer > 0 ? diffTun.laserCd * 0.45 : diffTun.laserCd;
   if (laserCooldown > 0) return;
-  laserCooldown = 0.22;
-  var vy = -480 * speedScale;
-  lasers.push({ x: paddle.x + paddle.w / 2 - 2, y: paddle.y, w: 4, h: 16, vy: vy });
-  lasers.push({ x: paddle.x + paddle.w / 2 + 2, y: paddle.y, w: 4, h: 16, vy: vy });
+  laserCooldown = cd;
+  var vy = -520 * speedScale;
+  var cx = paddle.x + paddle.w / 2;
+  lasers.push({ x: cx - 2, y: paddle.y, w: 4, h: 18, vy: vy });
+  if (laserModeTimer > 0 || wideTimer > 0) {
+    lasers.push({ x: cx - 14, y: paddle.y, w: 3, h: 14, vy: vy * 0.95 });
+    lasers.push({ x: cx + 11, y: paddle.y, w: 3, h: 14, vy: vy * 0.95 });
+  }
   RNF.sfx.laser();
+  particles.burst(cx, paddle.y, "#fbbf24", highQ ? 6 : 3);
+}
+
+function breakBrick(br, byLaser) {
+  if (br.dead) return;
+  if (br.type === "steel" && !byLaser) {
+    RNF.sfx.hit();
+    return;
+  }
+  br.hp--;
+  if (br.hp > 0) { RNF.sfx.hit(); return; }
+  br.dead = true;
+  combo++; comboTimer = 2.8;
+  var mult = 1 + Math.min(combo, 12) * 0.08;
+  var pts = br.type === "golden" ? 50 : br.type === "explosive" ? 25 : 10;
+  score += Math.floor(pts * level * mult);
+  shell.triggerShake(br.type === "explosive" ? 6 : 3, 0.12);
+  particles.burst(br.x + br.w / 2, br.y + br.h / 2, br.color, highQ ? 16 : 8);
+  RNF.sfx.pop();
+  if (combo > 2) RNF.sfx.combo(Math.min(combo, 10));
+  if (br.power) {
+    powerups.push({ x: br.x + br.w / 2, y: br.y + br.h / 2, vy: 100 * speedScale, type: br.power, spin: 0 });
+  }
+  if (br.type === "explosive") {
+    var cx = br.x + br.w / 2, cy = br.y + br.h / 2;
+    bricks.forEach(function (nb) {
+      if (nb.dead) return;
+      if (Math.hypot(nb.x + nb.w / 2 - cx, nb.y + nb.h / 2 - cy) < 70) {
+        nb.hp -= 2;
+        if (nb.hp <= 0) breakBrick(nb, false);
+      }
+    });
+  }
+}
+
+function applyPower(type) {
+  RNF.sfx.power();
+  shell.triggerShake(5, 0.14);
+  if (type === "multiball") {
+    var copy = balls.slice();
+    copy.forEach(function (b) {
+      spawnBall(b.x, b.y, -b.vx * 0.85 + (Math.random() - 0.5) * 40, -Math.abs(b.vy) * 1.05);
+    });
+  } else if (type === "magnet") magnetTimer = 9;
+  else if (type === "wide") wideTimer = 10;
+  else if (type === "laser") laserModeTimer = 12;
+  else if (type === "sticky") stickyTimer = 8;
+  else if (type === "life") { lives = Math.min(5, lives + 1); RNF.sfx.confirm(); }
 }
 
 function updateHud() {
   shell.setHud(
-    '<div><span>分數</span><b>' + score + '</b></div>' +
+    '<div><span>分數</span><b>' + score.toLocaleString() + '</b></div>' +
     '<div><span>生命</span><b>' + lives + '</b></div>' +
     '<div><span>關卡</span><b>' + level + '</b></div>' +
     '<div><span>球數</span><b>' + balls.length + '</b></div>' +
-    (magnetTimer > 0 ? '<div><span>黑洞</span><b style="color:#a78bfa">ON</b></div>' : '')
+    (combo > 1 ? '<div><span>Combo</span><b style="color:#fbbf24">x' + combo + '</b></div>' : '') +
+    (magnetTimer > 0 ? '<div><span>磁力</span><b style="color:#a78bfa">ON</b></div>' : '') +
+    (laserModeTimer > 0 ? '<div><span>雷射+</span><b style="color:#fbbf24">ON</b></div>' : '')
   );
 }
 
@@ -177,64 +283,79 @@ function die() {
   RNF.sfx.die();
   shell.triggerShake(12, 0.4);
   cleanup();
-  shell.gameOver(score, { level: level });
+  shell.gameOver(score, { level: level, combo: combo });
 }
 
 function loop(ts) {
   if (!running) return;
-  var dt = Math.min(0.05, (ts - lastTs) / 1000);
+  var dt = Math.min(0.033, (ts - lastTs) / 1000);
   lastTs = ts;
 
   var spd = PADDLE_SPEED * speedScale * dt;
   if (keys.left || keys["ArrowLeft"] || keys["KeyA"]) paddle.x -= spd;
   if (keys.right || keys["ArrowRight"] || keys["KeyD"]) paddle.x += spd;
-  paddle.x = Math.max(10, Math.min(W - paddle.w - 10, paddle.x));
+  paddle.x = Math.max(8, Math.min(W - paddle.w - 8, paddle.x));
   if (keys.fire || keys["Space"]) fireLaser();
 
   laserCooldown = Math.max(0, laserCooldown - dt);
   magnetTimer = Math.max(0, magnetTimer - dt);
-  if (magnetTimer > 0) paddle.w = 140;
-  else paddle.w = 110;
+  wideTimer = Math.max(0, wideTimer - dt);
+  stickyTimer = Math.max(0, stickyTimer - dt);
+  laserModeTimer = Math.max(0, laserModeTimer - dt);
+  comboTimer = Math.max(0, comboTimer - dt);
+  if (comboTimer <= 0 && combo > 0) combo = 0;
+
+  paddle.w = wideTimer > 0 ? paddle.baseW * 1.35 : paddle.baseW;
 
   balls.forEach(function (b) {
-    if (magnetTimer > 0 && b.y > H * 0.5) {
-      b.vx += (paddle.x + paddle.w / 2 - b.x) * 2.8 * dt;
+    if (b.stuck) {
+      b.x = paddle.x + paddle.w / 2;
+      b.y = paddle.y - b.r - 1;
+      if (!stickyTimer) {
+        b.stuck = false;
+        b.vy = -Math.abs(BALL_BASE * speedScale * diffTun.ballMult);
+      }
+      return;
+    }
+    if (magnetTimer > 0 && b.y > H * 0.45) {
+      b.vx += (paddle.x + paddle.w / 2 - b.x) * 3.2 * dt;
     }
     b.x += b.vx * dt;
     b.y += b.vy * dt;
-    if (b.x < b.r || b.x > W - b.r) { b.vx *= -1; RNF.sfx.hit(); }
-    if (b.y < b.r) { b.vy *= -1; }
-    if (b.y > H + 30) b.dead = true;
+    if (b.x < b.r) { b.x = b.r; b.vx = Math.abs(b.vx); RNF.sfx.hit(); }
+    if (b.x > W - b.r) { b.x = W - b.r; b.vx = -Math.abs(b.vx); RNF.sfx.hit(); }
+    if (b.y < b.r) { b.y = b.r; b.vy = Math.abs(b.vy); }
+    if (b.y > H + 40) b.dead = true;
 
-    if (b.y + b.r >= paddle.y && b.y - b.r <= paddle.y + paddle.h &&
-        b.x >= paddle.x && b.x <= paddle.x + paddle.w && b.vy > 0) {
-      b.vy = -Math.abs(b.vy);
-      var hit = (b.x - paddle.x) / paddle.w - 0.5;
-      b.vx = hit * 220 * speedScale;
+    if (b.y + b.r >= paddle.y && b.y - b.r <= paddle.y + paddle.h && b.x >= paddle.x - 4 && b.x <= paddle.x + paddle.w + 4 && b.vy > 0) {
+      b.y = paddle.y - b.r;
+      if (stickyTimer > 0) {
+        b.stuck = true; b.vx = 0; b.vy = 0;
+      } else {
+        b.vy = -Math.abs(b.vy);
+        var hit = (b.x - paddle.x) / paddle.w - 0.5;
+        b.vx = hit * 260 * speedScale;
+      }
       RNF.sfx.hit();
-      particles.burst(b.x, b.y, "#22d3ee", 6);
+      particles.burst(b.x, b.y, "#22d3ee", 5);
     }
 
     bricks.forEach(function (br) {
       if (br.dead) return;
       if (b.x + b.r > br.x && b.x - b.r < br.x + br.w && b.y + b.r > br.y && b.y - b.r < br.y + br.h) {
-        br.hp--;
-        b.vy *= -1;
-        if (br.hp <= 0) {
-          br.dead = true;
-          score += 10 * level;
-          shell.triggerShake(3, 0.1);
-          particles.burst(br.x + br.w/2, br.y + br.h/2, br.color, 14);
-          RNF.sfx.pop();
-          if (br.power) {
-            powerups.push({ x: br.x + br.w/2, y: br.y + br.h/2, vy: 95 * speedScale, type: br.power });
-          }
+        if (br.type !== "steel") {
+          br.hp--;
+          b.vy *= -1;
+          if (br.hp <= 0) breakBrick(br, false);
+          else RNF.sfx.hit();
         } else {
+          b.vy *= -1;
           RNF.sfx.hit();
+          particles.burst(b.x, b.y, "#94a3b8", 4);
         }
       }
     });
-    particles.trail(b.x, b.y, "#a78bfa");
+    if (highQ) particles.trail(b.x, b.y, "#a78bfa");
   });
 
   balls = balls.filter(function (b) { return !b.dead; });
@@ -248,46 +369,37 @@ function loop(ts) {
   lasers.forEach(function (l) {
     l.y += l.vy * dt;
     bricks.forEach(function (br) {
-      if (br.dead) return;
+      if (br.dead || l.dead) return;
       if (l.x + l.w > br.x && l.x < br.x + br.w && l.y < br.y + br.h && l.y + l.h > br.y) {
-        br.hp = 0; br.dead = true;
-        score += 15;
-        particles.burst(br.x + br.w/2, br.y + br.h/2, br.color, 10);
+        breakBrick(br, true);
         l.dead = true;
       }
     });
   });
-  lasers = lasers.filter(function (l) { return !l.dead && l.y > -20; });
+  lasers = lasers.filter(function (l) { return !l.dead && l.y > -30; });
 
   powerups.forEach(function (p) {
+    p.spin += dt * 4;
     p.y += p.vy * dt;
-    if (p.x > paddle.x && p.x < paddle.x + paddle.w && p.y > paddle.y - 10 && p.y < paddle.y + paddle.h) {
+    if (p.x > paddle.x && p.x < paddle.x + paddle.w && p.y > paddle.y - 12 && p.y < paddle.y + paddle.h + 8) {
       p.dead = true;
-      RNF.sfx.power();
-      if (p.type === "multiball") {
-        var copy = balls.slice();
-        copy.forEach(function (b) {
-          spawnBall(b.x, b.y, -b.vx * 0.8, -Math.abs(b.vy));
-        });
-        shell.triggerShake(5, 0.15);
-      } else if (p.type === "magnet") {
-        magnetTimer = 8;
-        shell.triggerShake(4, 0.12);
-      }
+      applyPower(p.type);
     }
   });
-  powerups = powerups.filter(function (p) { return !p.dead && p.y < H; });
+  powerups = powerups.filter(function (p) { return !p.dead && p.y < H + 10; });
 
   bricks = bricks.filter(function (b) { return !b.dead; });
-  if (bricks.length === 0) {
+  if (bricks.filter(function (b) { return b.type !== "steel"; }).length === 0) {
     level++;
     RNF.sfx.score();
+    shell.triggerShake(8, 0.25);
     makeLevel(level);
-    balls = [{ x: W/2, y: H - 80, vx: (Math.random()-0.5)*150*speedScale, vy: -BALL_SPEED*speedScale, r: 7 }];
+    balls = [{ x: W / 2, y: H - 72, vx: (Math.random() - 0.5) * 140 * speedScale, vy: -BALL_BASE * speedScale * diffTun.ballMult, r: 7, stuck: false }];
+    score += 100 * level;
   }
 
   stars.forEach(function (s) {
-    s.y += s.sp * 45 * dt;
+    s.y += s.sp * 50 * dt;
     if (s.y > H) { s.y = 0; s.x = Math.random() * W; }
   });
 
@@ -297,6 +409,37 @@ function loop(ts) {
   animId = requestAnimationFrame(loop);
 }
 
+function drawBrick(br) {
+  ctx.save();
+  if (br.type === "steel") {
+    ctx.fillStyle = "#475569";
+    ctx.strokeStyle = "#94a3b8";
+  } else {
+    ctx.shadowBlur = highQ ? 10 : 4;
+    ctx.shadowColor = br.color;
+    ctx.fillStyle = br.color;
+    ctx.globalAlpha = 0.35 + (br.maxHp > 1 ? br.hp / br.maxHp : 1) * 0.55;
+    ctx.strokeStyle = "rgba(255,255,255,0.25)";
+  }
+  ctx.fillRect(br.x, br.y, br.w, br.h);
+  ctx.strokeRect(br.x + 0.5, br.y + 0.5, br.w - 1, br.h - 1);
+  if (br.type === "explosive") {
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 9px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("!", br.x + br.w / 2, br.y + br.h / 2 + 3);
+  } else if (br.type === "golden") {
+    ctx.fillStyle = "rgba(255,255,255,0.5)";
+    ctx.fillRect(br.x + 2, br.y + 2, br.w - 4, 3);
+  } else if (br.maxHp > 1 && br.type !== "steel") {
+    ctx.fillStyle = "#fff";
+    ctx.font = "9px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(br.hp, br.x + br.w / 2, br.y + br.h / 2 + 3);
+  }
+  ctx.restore();
+}
+
 function draw() {
   ctx.save();
   shell.applyShake(ctx);
@@ -304,42 +447,33 @@ function draw() {
   ctx.fillRect(0, 0, W, H);
 
   stars.forEach(function (s) {
-    ctx.globalAlpha = 0.3 + s.sp * 0.3;
+    ctx.globalAlpha = 0.25 + s.sp * 0.35;
     ctx.fillStyle = "#fff";
     ctx.fillRect(s.x, s.y, s.s, s.s);
   });
   ctx.globalAlpha = 1;
 
-  bricks.forEach(function (br) {
-    ctx.shadowBlur = 8;
-    ctx.shadowColor = br.color;
-    ctx.fillStyle = br.color;
-    ctx.globalAlpha = 0.4 + (br.hp / br.maxHp) * 0.6;
-    ctx.fillRect(br.x, br.y, br.w, br.h);
-    ctx.strokeStyle = "rgba(255,255,255,0.3)";
-    ctx.strokeRect(br.x, br.y, br.w, br.h);
-    ctx.globalAlpha = 1;
-    ctx.shadowBlur = 0;
-  });
+  bricks.forEach(drawBrick);
 
-  ctx.shadowBlur = 12;
-  ctx.shadowColor = magnetTimer > 0 ? "#a78bfa" : "#22d3ee";
-  ctx.fillStyle = magnetTimer > 0 ? "#a78bfa" : "#22d3ee";
+  ctx.shadowBlur = 14;
+  ctx.shadowColor = magnetTimer > 0 ? "#a78bfa" : wideTimer > 0 ? "#34d399" : "#22d3ee";
+  ctx.fillStyle = magnetTimer > 0 ? "#a78bfa" : wideTimer > 0 ? "#34d399" : "#22d3ee";
   ctx.beginPath();
-  ctx.roundRect(paddle.x, paddle.y, paddle.w, paddle.h, 6);
+  if (ctx.roundRect) ctx.roundRect(paddle.x, paddle.y, paddle.w, paddle.h, 6);
+  else ctx.rect(paddle.x, paddle.y, paddle.w, paddle.h);
   ctx.fill();
   if (magnetTimer > 0) {
-    ctx.strokeStyle = "#a78bfa";
+    ctx.strokeStyle = "rgba(167,139,250,0.6)";
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.arc(paddle.x + paddle.w/2, paddle.y + paddle.h/2, paddle.w * 0.6, 0, Math.PI * 2);
+    ctx.arc(paddle.x + paddle.w / 2, paddle.y + paddle.h / 2, paddle.w * 0.55, 0, Math.PI * 2);
     ctx.stroke();
   }
   ctx.shadowBlur = 0;
 
   balls.forEach(function (b) {
-    ctx.shadowBlur = 14;
-    ctx.shadowColor = "#f472b6";
+    ctx.shadowBlur = 12;
+    ctx.shadowColor = b.stuck ? "#34d399" : "#f472b6";
     ctx.fillStyle = "#fff";
     ctx.beginPath();
     ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
@@ -349,22 +483,34 @@ function draw() {
 
   lasers.forEach(function (l) {
     ctx.fillStyle = "#fbbf24";
-    ctx.shadowBlur = 10;
+    ctx.shadowBlur = 8;
     ctx.shadowColor = "#fbbf24";
     ctx.fillRect(l.x, l.y, l.w, l.h);
   });
   ctx.shadowBlur = 0;
 
+  var labels = { multiball: "多", magnet: "磁", wide: "寬", laser: "雷", sticky: "黏", life: "♥" };
   powerups.forEach(function (p) {
-    ctx.fillStyle = p.type === "multiball" ? "#34d399" : "#a78bfa";
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.spin);
+    ctx.fillStyle = p.type === "life" ? "#f472b6" : "#34d399";
     ctx.beginPath();
-    ctx.arc(p.x, p.y, 10, 0, Math.PI * 2);
+    ctx.arc(0, 0, 11, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = "#fff";
-    ctx.font = "10px sans-serif";
+    ctx.font = "bold 10px sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText(p.type === "multiball" ? "S" : "M", p.x, p.y + 4);
+    ctx.fillText(labels[p.type] || "?", 0, 4);
+    ctx.restore();
   });
+
+  if (combo > 2 && comboTimer > 0) {
+    ctx.fillStyle = "rgba(251,191,36," + (0.4 + Math.sin(performance.now() * 0.01) * 0.2) + ")";
+    ctx.font = "bold 18px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("COMBO x" + combo, W / 2, 28);
+  }
 
   particles.draw(ctx);
   ctx.restore();

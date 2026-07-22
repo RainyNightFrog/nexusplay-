@@ -28,7 +28,7 @@ export const VIRTUAL_GAMES_SEED: VirtualGameSeed[] = [
     creatorName: "CyberViper_Studio",
     creatorUsername: "cyberviper-studio",
     description:
-      "氮氣加速、蛇身霓虹粒子拖尾、Combo 食物倍率與險境 Bullet Time 慢動作。在 960×600 賽博棋盤上刷新你的極限紀錄！",
+      "五種食物、移動障礙、氮氣加速與子彈時間慢動作；連擊倍率、觸控 D-pad／滑動轉向。四段難度刷新極限紀錄！",
     category: "休閒",
     tags: ["賽博朋克", "霓虹", "復古", "像素風", "快節奏", "單機", "鍵鼠操作", "2D", "高難度", "程序生成"],
     playsCount: 4_280,
@@ -44,7 +44,7 @@ export const VIRTUAL_GAMES_SEED: VirtualGameSeed[] = [
     creatorName: "BubbleMaster_X",
     creatorUsername: "bubblemaster-x",
     description:
-      "連擊消行震屏粒子、雷電與黑洞特殊泡泡、狂暴 Combo 時限。經典泡泡龍的賽博電競重製版。",
+      "彈道預覽、頂部下壓、閃電／黑洞／炸彈特殊球與連鎖 Combo 限時倍率。經典泡泡龍的賽博電競重製版，手機觸控就緒。",
     category: "益智",
     tags: ["賽博朋克", "霓虹", "復古", "快節奏", "單機", "鍵鼠操作", "2D", "解謎機制", "競技", "明亮"],
     playsCount: 5_640,
@@ -60,7 +60,7 @@ export const VIRTUAL_GAMES_SEED: VirtualGameSeed[] = [
     creatorName: "LogicKnight_HK",
     creatorUsername: "logicknight-hk",
     description:
-      "倒數計時心跳音效、5×5 五子連珠擴充、閃爍晶片棋子與勝率記錄。在量子棋盤上超越 AI 對手！",
+      "5×5 連五對決、量子糾纏雙格落子與回合限時；四段 AI 難度、連勝統計與觸控落子，在量子棋盤上超越對手！",
     category: "益智",
     tags: ["賽博朋克", "霓虹", "科幻", "回合制", "單機", "鍵鼠操作", "2D", "解謎機制", "快節奏", "教育"],
     playsCount: 3_280,
@@ -76,7 +76,7 @@ export const VIRTUAL_GAMES_SEED: VirtualGameSeed[] = [
     creatorName: "PixelArchitect",
     creatorUsername: "pixelarchitect",
     description:
-      "多球分裂、雷射發射板、黑洞磁力板與星塵爆裂特效。虛空磚塊矩陣等你粉碎！",
+      "多球／雷射／磁力／黏球道具、爆炸與鋼鐵特殊磚、Combo 連破倍率與星塵粒子。四段難度虛空打磚塊，支援拖曳與虛擬鍵。",
     category: "動作",
     tags: ["賽博朋克", "霓虹", "復古", "快節奏", "單機", "鍵鼠操作", "2D", "硬核", "割草", "明亮"],
     playsCount: 7_350,
@@ -92,7 +92,7 @@ export const VIRTUAL_GAMES_SEED: VirtualGameSeed[] = [
     creatorName: "FroggyLab_Games",
     creatorUsername: "froggylab-games",
     description:
-      "Flappy 青蛙衝刺、二段跳躍、空氣護盾與火箭噴射道具。在雨夜霓虹天際線中飛越障礙！",
+      "雨夜霓虹跑酷：二段跳、滑翔、護盾與火箭道具、金幣 Combo、多段障礙編隊與天氣相位。手機觸控就緒！",
     category: "平台跳躍",
     tags: ["賽博朋克", "霓虹", "可愛", "快節奏", "單機", "鍵鼠操作", "2D", "橫向捲軸", "觸控友善", "明亮"],
     playsCount: 8_920,
@@ -108,9 +108,9 @@ export const VIRTUAL_GAMES_SEED: VirtualGameSeed[] = [
     creatorName: "RetroGrid_Dev",
     creatorUsername: "retrogrid-dev",
     description:
-      "Ghost 預覽落點、Hold 存牌、Hard Drop 震屏與全螢幕消行霓虹光波。經典方塊的電競極速版。",
+      "幽靈預覽、保留、五格 Next、7-Bag 隨機、霓虹狂熱雙倍分、連消 Combo 與難度垃圾行。手機虛擬鍵支援。",
     category: "益智",
-    tags: ["賽博朋克", "霓虹", "復古", "16-bit", "快節奏", "單機", "鍵鼠操作", "2D", "競技", "硬核"],
+    tags: ["賽博朋克", "霓虹", "復古", "16-bit", "快節奏", "單機", "鍵鼠操作", "2D", "競技", "觸控友善"],
     playsCount: 9_680,
     likesCount: 589,
     sharesCount: 467,
@@ -124,7 +124,7 @@ export const VIRTUAL_GAMES_SEED: VirtualGameSeed[] = [
     creatorName: "NebulaCraft",
     creatorUsername: "nebulacraft",
     description:
-      "武器多段升級彈幕、護盾系統、血條震屏巨型 Boss 戰。保衛地球對抗 2026 星際入侵！",
+      "Lv1～4 武器升級、護盾吸收、四段彈幕 Boss 血條戰與追蹤／環形彈幕。復古射擊星際強化版，手機虛擬鍵就緒。",
     category: "射擊",
     tags: ["賽博朋克", "科幻", "霓虹", "快節奏", "單機", "鍵鼠操作", "2D", "割草", "高難度", "機甲"],
     playsCount: 6_140,
@@ -140,7 +140,7 @@ export const VIRTUAL_GAMES_SEED: VirtualGameSeed[] = [
     creatorName: "NeuralMind",
     creatorUsername: "neuralmind",
     description:
-      "限時解密、黑客代碼 Glitch 翻牌特效、連擊音階加成。在矩陣中配對所有加密晶片！",
+      "限時翻牌配對、Glitch 故障特效與連擊倍率；炸彈懲罰、錯配扣秒、完美通關獎勵。觸控翻牌，解鎖駭客矩陣！",
     category: "益智",
     tags: ["賽博朋克", "霓虹", "黑暗", "解謎機制", "單機", "鍵鼠操作", "2D", "快節奏", "教育", "科幻"],
     playsCount: 3_560,
@@ -156,7 +156,7 @@ export const VIRTUAL_GAMES_SEED: VirtualGameSeed[] = [
     creatorName: "HyperPong_Studio",
     creatorUsername: "hyperpong-studio",
     description:
-      "曲球弧線、重力磁場、單人 AI（簡單/極限）與雙人對戰，光束軌跡劃破球場。",
+      "曲球 spin、三重重力井與預測 AI；觸控拖曳擋板、粒子拖尾與本地雙人對戰，先達標分數者勝！",
     category: "運動競技",
     tags: ["賽博朋克", "霓虹", "復古", "競技", "本地多人", "單機", "鍵鼠操作", "2D", "快節奏", "明亮"],
     playsCount: 3_420,
@@ -172,7 +172,7 @@ export const VIRTUAL_GAMES_SEED: VirtualGameSeed[] = [
     creatorName: "NightCity_Runner",
     creatorUsername: "nightcity-runner",
     description:
-      "滑行/跳躍/雷射槍擊碎障礙物、金幣收集與極速動態背景。在 Night City 中奔跑到黎明！",
+      "多型障礙、護盾磁鐵加速道具、金幣 Combo 倍率與里程碑事件；雷射彈藥節奏破障。桌面鍵鼠與手機觸控皆可在 Night City 衝刺到黎明！",
     category: "動作",
     tags: ["賽博朋克", "霓虹", "快節奏", "程序生成", "單機", "鍵鼠操作", "2D", "橫向捲軸", "割草", "高難度"],
     playsCount: 9_960,

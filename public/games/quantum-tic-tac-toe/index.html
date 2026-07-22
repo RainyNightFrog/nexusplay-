@@ -2,9 +2,9 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Quantum Tic-Tac-Toe · 量子五子棋</title>
-  <script src="/sdk/rnf-game-sdk.js?v=20260723"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Quantum Tic-Tac-Toe · 量子過三關</title>
+  <script src="/sdk/rnf-game-sdk.js?v=20260723b"></script>
 </head>
 <body>
 <script>
@@ -12,27 +12,29 @@ RNF.init();
 var shell = RNF.buildShell({
   title: "Quantum Tic-Tac-Toe",
   creator: "LogicKnight_HK",
-  subtitle: "滑鼠點格落子 · 5×5 連五獲勝 · 限時倒數心跳音效 · 對戰 AI · 勝率統計",
+  subtitle: "5×5 連五 · 量子糾纏落子 · 限時回合 · AI 難度 · 連勝統計 · 觸控落子",
   width: 960,
   height: 520,
   bgmStyle: "ambient",
-  highlights: ["四段難度", "強化 AI", "限時對局", "勝率統計"],
+  highlights: ["量子糾纏", "5×5 連五", "限時回合", "連勝紀錄", "觸控落子"],
   help: {
-    about: "5×5 量子棋盤上的連五對決。與 AI 輪流落子，先連成五子者獲勝。每回合有倒數計時，超時自動落子。",
+    about: "5×5 量子棋盤上的連五對決。每局擁有量子充能，可一次在兩格放置糾纏態，下回合自動坍縮為你的棋子。與 AI 輪流落子，先連成五子者獲勝。",
     features: [
-      "四段難度縮短回合限時（45 秒 → 15 秒）",
-      "困難以上 AI 會連五、擋招並搶佔中心與四角",
-      "本機勝率統計顯示於主選單 HUD",
-      "設定中的遊戲速度會加快倒數節奏"
+      "四段難度縮短回合限時並強化 AI",
+      "量子模式（Q／觸控「量」）：選兩格糾纏，對手回合後坍縮",
+      "困難以上 AI 會連五、擋招並搶佔要位",
+      "連勝紀錄與勝率統計顯示於 HUD",
+      "觸控直接點格落子"
     ],
     controls: [
-      "滑鼠左鍵：在空格落子",
-      "每回合倒數結束前必須落子，逾時會自動落子"
+      "滑鼠／觸控：在空格落子",
+      "Q 或觸控「量」：進入量子模式，再點兩格放置糾纏",
+      "每回合倒數結束前必須落子，逾時判負"
     ],
     tips: [
-      "困難以上 AI 會優先連五、阻擋你的連線",
-      "限時依難度縮短",
-      "設定中的「遊戲速度」會加快倒數節奏"
+      "量子落子可同時威脅兩條線，但會消耗充能",
+      "困難 AI 會優先連五與阻擋",
+      "連勝越高，結算分數加成越多"
     ]
   },
   onStop: cleanup,
@@ -40,47 +42,52 @@ var shell = RNF.buildShell({
 });
 
 var W = shell.width, H = shell.height;
-var ctx = shell.ctx;
+var ctx = shell.ctx, canvas = shell.canvas;
 var particles = shell.particles;
-var animId = null, running = false, gameEnded = false, speedScale = 1;
-var SIZE = 5, CELL, board, turn, timer, timerMax, heartbeatAcc, glitchT;
-var wins = 0, losses = 0, draws = 0;
+var animId = null, running = false, gameEnded = false, keys = {};
+var SIZE = 5, CELL, board, quantum, turn, timer, timerMax, heartbeatAcc, animT = 0;
+var speedScale = 1, diffId = "normal", glitchT = 0;
+var wins = 0, losses = 0, draws = 0, winStreak = 0, bestStreak = 0;
+var quantumMode = false, quantumPick = [], quantumCharges = 2;
+var hoverCell = null, collapseAnim = [], lastPlaced = null;
+
 var save = shell.getSave();
 if (save.wins) wins = save.wins;
 if (save.losses) losses = save.losses;
 if (save.draws) draws = save.draws;
+if (save.winStreak) winStreak = save.winStreak;
+if (save.bestStreak) bestStreak = save.bestStreak;
+
+var TIMER_BY_DIFF = { easy: 50, normal: 38, hard: 26, extreme: 16 };
 
 function cleanup() {
   shell.detachKeyboard();
+  shell.detachTouchControls();
   running = false;
   if (animId) cancelAnimationFrame(animId);
   animId = null;
-  canvas.removeEventListener("click", onClick);
+  canvas.removeEventListener("pointerdown", onPointer);
+  canvas.removeEventListener("pointermove", onPointerMove);
+  window.removeEventListener("keydown", onKeyDown);
 }
 
-function onClick(e) {
-  if (gameEnded || turn !== "X") return;
-  var rect = shell.canvas.getBoundingClientRect();
-  var mx = (e.clientX - rect.left) * (W / rect.width);
-  var my = (e.clientY - rect.top) * (H / rect.height);
-  var ox = (W - CELL * SIZE) / 2, oy = (H - CELL * SIZE) / 2 + 20;
-  var c = Math.floor((mx - ox) / CELL), r = Math.floor((my - oy) / CELL);
-  if (r >= 0 && r < SIZE && c >= 0 && c < SIZE && !board[r][c]) {
-    place(r, c, "X");
-    RNF.sfx.click();
-    if (checkWin("X")) { endRound("win"); return; }
-    if (isFull()) { endRound("draw"); return; }
-    turn = "O";
-    setTimeout(aiMove, 400);
-  }
+function winRate() {
+  var t = wins + losses + draws;
+  return t ? Math.round(wins / t * 100) : 0;
 }
 
-function place(r, c, p) {
-  board[r][c] = p;
-  var ox = (W - CELL * SIZE) / 2, oy = (H - CELL * SIZE) / 2 + 20;
-  particles.burst(ox + c * CELL + CELL / 2, oy + r * CELL + CELL / 2, p === "X" ? "#22d3ee" : "#f472b6", 12);
-  shell.triggerShake(2, 0.08);
+function boardOffset() {
+  return { ox: (W - CELL * SIZE) / 2, oy: (H - CELL * SIZE) / 2 + 18 };
 }
+
+function cellFromPos(mx, my) {
+  var o = boardOffset();
+  var c = Math.floor((mx - o.ox) / CELL), r = Math.floor((my - o.oy) / CELL);
+  if (r >= 0 && r < SIZE && c >= 0 && c < SIZE) return { r: r, c: c };
+  return null;
+}
+
+function isEmpty(r, c) { return !board[r][c] && !quantum[r][c]; }
 
 function checkWin(p) {
   for (var r = 0; r < SIZE; r++) {
@@ -103,201 +110,369 @@ function checkWin(p) {
 }
 
 function isFull() {
-  for (var r = 0; r < SIZE; r++) for (var c = 0; c < SIZE; c++) if (!board[r][c]) return false;
+  for (var r = 0; r < SIZE; r++)
+    for (var c = 0; c < SIZE; c++)
+      if (isEmpty(r, c)) return false;
   return true;
 }
 
-function scoreCell(r, c, p, opp) {
-  if (board[r][c]) return -9999;
-  var s = 0;
-  var dirs = [[0,1],[1,0],[1,1],[1,-1]];
+function collapseQuantum() {
+  var list = [];
+  for (var r = 0; r < SIZE; r++) {
+    for (var c = 0; c < SIZE; c++) {
+      if (quantum[r][c]) list.push({ r: r, c: c, owner: quantum[r][c].owner, pair: quantum[r][c].pair });
+    }
+  }
+  list.forEach(function (q) {
+    if (board[q.r][q.c]) { quantum[q.r][q.c] = null; return; }
+    board[q.r][q.c] = q.owner;
+    quantum[q.r][q.c] = null;
+    var o = boardOffset();
+    collapseAnim.push({ r: q.r, c: q.c, t: 0, x: o.ox + q.c * CELL + CELL / 2, y: o.oy + q.r * CELL + CELL / 2 });
+    particles.burst(o.ox + q.c * CELL + CELL / 2, o.oy + q.r * CELL + CELL / 2, q.owner === "X" ? "#22d3ee" : "#f472b6", 14);
+  });
+  RNF.sfx.power();
+  shell.triggerShake(5, 0.15);
+}
+
+function placeQuantum(r, c) {
+  quantumPick.push({ r: r, c: c });
+  quantum[r][c] = { owner: "X", pair: quantumPick.length, phase: Math.random() * Math.PI * 2 };
+  RNF.sfx.laser();
+  if (quantumPick.length >= 2) {
+    quantumCharges--;
+    quantumMode = false;
+    quantumPick = [];
+    turn = "O";
+    timer = timerMax;
+    setTimeout(aiMove, diffId === "extreme" ? 200 : 450);
+  }
+}
+
+function place(r, c, p) {
+  board[r][c] = p;
+  lastPlaced = { r: r, c: c, t: 0 };
+  var o = boardOffset();
+  particles.burst(o.ox + c * CELL + CELL / 2, o.oy + r * CELL + CELL / 2, p === "X" ? "#22d3ee" : "#f472b6", 12);
+  shell.triggerShake(2, 0.08);
+}
+
+function scoreCell(r, c, p) {
+  if (!isEmpty(r, c)) return -99999;
+  var s = 0, dirs = [[0,1],[1,0],[1,1],[1,-1]];
   dirs.forEach(function (d) {
     var cnt = 0, open = 0;
     for (var i = 1; i < 5; i++) {
-      var nr = r + d[0]*i, nc = c + d[1]*i;
+      var nr = r + d[0] * i, nc = c + d[1] * i;
       if (nr < 0 || nr >= SIZE || nc < 0 || nc >= SIZE) break;
-      if (board[nr][nc] === p) cnt++; else if (!board[nr][nc]) { open++; break; } else break;
+      if (board[nr][nc] === p) cnt++;
+      else if (!board[nr][nc]) { open++; break; } else break;
     }
     for (var j = 1; j < 5; j++) {
-      var nr2 = r - d[0]*j, nc2 = c - d[1]*j;
+      var nr2 = r - d[0] * j, nc2 = c - d[1] * j;
       if (nr2 < 0 || nr2 >= SIZE || nc2 < 0 || nc2 >= SIZE) break;
-      if (board[nr2][nc2] === p) cnt++; else if (!board[nr2][nc2]) { open++; break; } else break;
+      if (board[nr2][nc2] === p) cnt++;
+      else if (!board[nr2][nc2]) { open++; break; } else break;
     }
-    if (cnt >= 4) s += 8000;
-    else if (cnt === 3 && open >= 1) s += 400;
-    else if (cnt === 2) s += 40;
-    else if (cnt === 1) s += 5;
+    if (cnt >= 4) s += 12000;
+    else if (cnt === 3 && open >= 1) s += 600;
+    else if (cnt === 2) s += 45;
+    else if (cnt === 1) s += 6;
   });
+  if (r === 2 && c === 2) s += 20;
   return s;
 }
 
-function aiMove() {
-  if (gameEnded) return;
-  var best = -99999, br = 0, bc = 0;
+function tryWinBlock(p) {
   for (var r = 0; r < SIZE; r++) {
     for (var c = 0; c < SIZE; c++) {
-      var s = scoreCell(r, c, "O", "X") + scoreCell(r, c, "X", "O") * 0.9;
-      if (r === 2 && c === 2) s += 15;
-      if (s > best) { best = s; br = r; bc = c; }
+      if (!isEmpty(r, c)) continue;
+      board[r][c] = p;
+      var win = checkWin(p);
+      board[r][c] = null;
+      if (win) return { r: r, c: c };
     }
+  }
+  return null;
+}
+
+function aiMove() {
+  if (gameEnded || turn !== "O") return;
+  var win = tryWinBlock("O");
+  if (win) { place(win.r, win.c, "O"); afterAiMove(); return; }
+  var block = tryWinBlock("X");
+  if (block) { place(block.r, block.c, "O"); afterAiMove(); return; }
+
+  var depth = diffId === "easy" ? 0 : diffId === "normal" ? 1 : 2;
+  var best = -99999, br = 0, bc = 0, candidates = [];
+  for (var r = 0; r < SIZE; r++) {
+    for (var c = 0; c < SIZE; c++) {
+      if (!isEmpty(r, c)) continue;
+      var s = scoreCell(r, c, "O") + scoreCell(r, c, "X") * (diffId === "easy" ? 0.7 : 0.95);
+      if (depth >= 2) {
+        board[r][c] = "O";
+        if (checkWin("O")) s += 50000;
+        board[r][c] = null;
+      }
+      candidates.push({ r: r, c: c, s: s });
+    }
+  }
+  candidates.sort(function (a, b) { return b.s - a.s; });
+  var pool = candidates.slice(0, diffId === "extreme" ? 3 : 5);
+  if (diffId === "easy" && pool.length > 1 && Math.random() < 0.35) {
+    var pick = pool[Math.floor(Math.random() * pool.length)];
+    br = pick.r; bc = pick.c;
+  } else {
+    pool.forEach(function (p) {
+      if (p.s > best) { best = p.s; br = p.r; bc = p.c; }
+    });
   }
   place(br, bc, "O");
   RNF.sfx.hit();
+  collapseQuantum();
+  if (checkWin("X")) { endRound("win"); return; }
+  afterAiMove();
+}
+
+function afterAiMove() {
   if (checkWin("O")) { endRound("lose"); return; }
   if (isFull()) { endRound("draw"); return; }
   turn = "X";
+  timer = timerMax;
 }
 
 function endRound(result) {
-  gameEnded = true;
-  running = false;
+  gameEnded = true; running = false;
   var score = 0;
   if (result === "win") {
-    wins++;
-    score = Math.floor(timer * 10) + 500;
+    wins++; winStreak++;
+    bestStreak = Math.max(bestStreak, winStreak);
+    score = Math.floor(timer * 15) + 600 + winStreak * 80 + (quantumCharges > 0 ? 50 : 0);
     RNF.sfx.score();
     shell.triggerShake(8, 0.3);
-    particles.burst(W/2, H/2, "#22d3ee", 40);
+    particles.burst(W / 2, H / 2, "#22d3ee", 40);
   } else if (result === "lose") {
-    losses++;
-    score = Math.floor(timer * 2);
+    losses++; winStreak = 0;
+    score = Math.floor(timer * 3);
     RNF.sfx.die();
     shell.triggerShake(10, 0.35);
   } else {
-    draws++;
-    score = 100;
+    draws++; winStreak = Math.max(0, winStreak - 1);
+    score = 150;
     RNF.sfx.confirm();
   }
-  shell.saveProgress({ wins: wins, losses: losses, draws: draws });
+  shell.saveProgress({ wins: wins, losses: losses, draws: draws, winStreak: winStreak, bestStreak: bestStreak });
   cleanup();
-  shell.gameOver(score, { result: result, winRate: winRate() });
-}
-
-function winRate() {
-  var total = wins + losses + draws;
-  return total ? Math.round(wins / total * 100) : 0;
+  shell.gameOver(score, { result: result, winRate: winRate(), winStreak: winStreak, bestStreak: bestStreak });
 }
 
 function updateHud() {
+  var diff = shell.getDifficulty();
   shell.setHud(
     '<div><span>回合</span><b>' + (turn === "X" ? "你 (X)" : "AI (O)") + '</b></div>' +
     '<div><span>倒數</span><b style="color:' + (timer < 10 ? "#f472b6" : "#22d3ee") + '">' + Math.ceil(timer) + 's</b></div>' +
+    '<div><span>連勝</span><b style="color:#fbbf24">' + winStreak + '</b></div>' +
+    '<div><span>量子</span><b>' + quantumCharges + '</b></div>' +
     '<div><span>勝率</span><b>' + winRate() + '%</b></div>' +
-    '<div><span>戰績</span><b>' + wins + 'W ' + losses + 'L</b></div>'
+    '<div><span>難度</span><b style="font-size:.72rem;color:#c4b5fd">' + diff.label + '</b></div>'
   );
+}
+
+function handleCell(r, c) {
+  if (gameEnded || turn !== "X" || !isEmpty(r, c)) return;
+  if (quantumMode && quantumCharges > 0) {
+    if (quantumPick.some(function (p) { return p.r === r && p.c === c; })) return;
+    placeQuantum(r, c);
+    updateHud();
+    if (turn === "O") return;
+    return;
+  }
+  place(r, c, "X");
+  RNF.sfx.click();
+  if (checkWin("X")) { endRound("win"); return; }
+  if (isFull()) { endRound("draw"); return; }
+  turn = "O";
+  timer = timerMax;
+  setTimeout(aiMove, diffId === "extreme" ? 200 : 400);
+}
+
+function onPointer(e) {
+  if (gameEnded || turn !== "X") return;
+  var rect = canvas.getBoundingClientRect();
+  var mx = (e.clientX - rect.left) * (W / rect.width);
+  var my = (e.clientY - rect.top) * (H / rect.height);
+  var cell = cellFromPos(mx, my);
+  if (cell) handleCell(cell.r, cell.c);
+}
+
+function onPointerMove(e) {
+  var rect = canvas.getBoundingClientRect();
+  var mx = (e.clientX - rect.left) * (W / rect.width);
+  var my = (e.clientY - rect.top) * (H / rect.height);
+  hoverCell = cellFromPos(mx, my);
+}
+
+function onKeyDown(e) {
+  keys[e.code] = true;
+  if (e.code === "KeyQ" && turn === "X" && quantumCharges > 0) {
+    quantumMode = !quantumMode;
+    quantumPick = [];
+    RNF.sfx.power();
+  }
 }
 
 function startGame() {
   cleanup();
   speedScale = shell.getSpeedScale();
+  diffId = (shell.getDifficulty() || {}).id || "normal";
   CELL = Math.min((W - 80) / SIZE, (H - 120) / SIZE);
-  board = [];
+  board = []; quantum = [];
   for (var r = 0; r < SIZE; r++) {
-    board[r] = [];
-    for (var c = 0; c < SIZE; c++) board[r][c] = null;
+    board[r] = []; quantum[r] = [];
+    for (var c = 0; c < SIZE; c++) { board[r][c] = null; quantum[r][c] = null; }
   }
   turn = "X";
-  timer = 60;
-  timerMax = 60;
-  heartbeatAcc = 0;
-  glitchT = 0;
-  gameEnded = false;
-  running = true;
-  shell.attachKeyboard({});
-  shell.canvas.addEventListener("click", onClick);
+  timerMax = TIMER_BY_DIFF[diffId] || 38;
+  timer = timerMax;
+  heartbeatAcc = 0; glitchT = 0; animT = 0;
+  gameEnded = false; running = true;
+  quantumMode = false; quantumPick = []; quantumCharges = diffId === "easy" ? 3 : 2;
+  collapseAnim = []; lastPlaced = null; hoverCell = null;
+  keys = {};
+  shell.attachKeyboard(keys);
+  shell.attachTouchControls({
+    keys: keys,
+    buttons: [
+      { code: "KeyQ", label: "量", side: "right", hold: false, wide: true,
+        onPress: function () {
+          if (turn === "X" && quantumCharges > 0) {
+            quantumMode = !quantumMode; quantumPick = []; RNF.sfx.power();
+          }
+        }
+      }
+    ],
+    swipe: { threshold: 40, tap: function (e) {
+      var rect = canvas.getBoundingClientRect();
+      var mx = (e.clientX - rect.left) * (W / rect.width);
+      var my = (e.clientY - rect.top) * (H / rect.height);
+      var cell = cellFromPos(mx, my);
+      if (cell) handleCell(cell.r, cell.c);
+    }}
+  });
+  canvas.addEventListener("pointerdown", onPointer);
+  canvas.addEventListener("pointermove", onPointerMove);
+  window.addEventListener("keydown", onKeyDown);
   lastTs = performance.now();
   animId = requestAnimationFrame(loop);
 }
 
 var lastTs = 0;
-var canvas = shell.canvas;
 
 function loop(ts) {
   if (!running) return;
   var dt = Math.min(0.05, (ts - lastTs) / 1000);
-  lastTs = ts;
-  glitchT += dt;
-
+  lastTs = ts; animT += dt; glitchT += dt;
   if (turn === "X") {
     timer -= dt * speedScale;
     heartbeatAcc += dt;
-    if (timer < 15 && heartbeatAcc >= (timer < 5 ? 0.35 : 0.7)) {
-      RNF.sfx.heartbeat();
-      heartbeatAcc = 0;
+    if (timer < 12 && heartbeatAcc >= (timer < 5 ? 0.35 : 0.75)) {
+      RNF.sfx.heartbeat(); heartbeatAcc = 0;
     }
     if (timer <= 0) { endRound("lose"); return; }
   }
-
+  if (lastPlaced) lastPlaced.t += dt;
+  collapseAnim.forEach(function (a) { a.t += dt; });
+  collapseAnim = collapseAnim.filter(function (a) { return a.t < 0.6; });
   particles.update(dt);
-  draw();
-  updateHud();
+  draw(); updateHud();
   animId = requestAnimationFrame(loop);
 }
 
-function drawChip(x, y, p, t) {
-  var glitch = Math.sin(t * 20 + x) * (timer < 10 ? 2 : 0.5);
+function drawQuantumCell(r, c, q) {
+  var o = boardOffset();
+  var x = o.ox + c * CELL + CELL / 2, y = o.oy + r * CELL + CELL / 2;
+  var flicker = 0.5 + Math.sin(animT * 8 + q.phase) * 0.35;
   ctx.save();
-  ctx.translate(x + glitch, y);
-  ctx.shadowBlur = 14;
-  ctx.shadowColor = p === "X" ? "#22d3ee" : "#f472b6";
-  ctx.fillStyle = "rgba(8,12,24,0.9)";
+  ctx.globalAlpha = flicker;
+  ctx.strokeStyle = "#a78bfa"; ctx.lineWidth = 2;
+  ctx.shadowBlur = 20; ctx.shadowColor = "#a78bfa";
+  ctx.beginPath(); ctx.arc(x, y, CELL * 0.32, 0, Math.PI * 2); ctx.stroke();
+  ctx.fillStyle = "rgba(167,139,250,0.25)";
+  ctx.fill();
+  ctx.fillStyle = "#c4b5fd"; ctx.font = "bold " + Math.floor(CELL * 0.28) + "px monospace";
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText("◈", x, y);
+  ctx.restore();
+}
+
+function drawChip(x, y, p) {
+  ctx.save();
+  ctx.shadowBlur = 14; ctx.shadowColor = p === "X" ? "#22d3ee" : "#f472b6";
+  ctx.fillStyle = "rgba(8,12,24,0.92)";
   ctx.strokeStyle = p === "X" ? "#22d3ee" : "#f472b6";
   ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.roundRect(-CELL * 0.38, -CELL * 0.38, CELL * 0.76, CELL * 0.76, 6);
-  ctx.fill();
-  ctx.stroke();
+  ctx.beginPath(); ctx.roundRect(x - CELL * 0.38, y - CELL * 0.38, CELL * 0.76, CELL * 0.76, 8);
+  ctx.fill(); ctx.stroke();
   ctx.fillStyle = p === "X" ? "#22d3ee" : "#f472b6";
-  ctx.font = "bold " + Math.floor(CELL * 0.45) + "px monospace";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  if (Math.random() < 0.02 && timer < 8) {
-    ctx.globalAlpha = 0.7;
-    ctx.fillText(p, (Math.random()-0.5)*4, (Math.random()-0.5)*4);
-  }
-  ctx.globalAlpha = 1;
-  ctx.fillText(p, 0, 0);
+  ctx.font = "bold " + Math.floor(CELL * 0.42) + "px monospace";
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText(p, x, y);
   ctx.restore();
 }
 
 function draw() {
-  ctx.save();
-  shell.applyShake(ctx);
-  ctx.fillStyle = "#060a12";
-  ctx.fillRect(0, 0, W, H);
+  ctx.save(); shell.applyShake(ctx);
+  var bg = ctx.createRadialGradient(W / 2, H / 2, 20, W / 2, H / 2, W * 0.6);
+  bg.addColorStop(0, "#0c1220"); bg.addColorStop(1, "#04060c");
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
 
-  var ox = (W - CELL * SIZE) / 2, oy = (H - CELL * SIZE) / 2 + 20;
-  ctx.strokeStyle = "rgba(34,211,238,0.25)";
-  ctx.lineWidth = 1;
+  if (shell.isHighQuality()) {
+    ctx.strokeStyle = "rgba(34,211,238,0.04)";
+    for (var i = 0; i < 20; i++) {
+      ctx.beginPath(); ctx.moveTo(Math.random() * W, 0); ctx.lineTo(Math.random() * W, H); ctx.stroke();
+    }
+  }
+
+  var o = boardOffset();
+  ctx.strokeStyle = "rgba(34,211,238,0.3)"; ctx.lineWidth = 1.5;
   for (var i = 0; i <= SIZE; i++) {
-    ctx.beginPath();
-    ctx.moveTo(ox, oy + i * CELL);
-    ctx.lineTo(ox + SIZE * CELL, oy + i * CELL);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(ox + i * CELL, oy);
-    ctx.lineTo(ox + i * CELL, oy + SIZE * CELL);
-    ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(o.ox, o.oy + i * CELL); ctx.lineTo(o.ox + SIZE * CELL, o.oy + i * CELL); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(o.ox + i * CELL, o.oy); ctx.lineTo(o.ox + i * CELL, o.oy + SIZE * CELL); ctx.stroke();
+  }
+
+  if (hoverCell && isEmpty(hoverCell.r, hoverCell.c) && turn === "X") {
+    ctx.fillStyle = quantumMode ? "rgba(167,139,250,0.15)" : "rgba(34,211,238,0.12)";
+    ctx.fillRect(o.ox + hoverCell.c * CELL + 2, o.oy + hoverCell.r * CELL + 2, CELL - 4, CELL - 4);
   }
 
   for (var r = 0; r < SIZE; r++) {
     for (var c = 0; c < SIZE; c++) {
+      if (quantum[r][c]) drawQuantumCell(r, c, quantum[r][c]);
       if (board[r][c]) {
-        drawChip(ox + c * CELL + CELL / 2, oy + r * CELL + CELL / 2, board[r][c], glitchT + r + c);
+        drawChip(o.ox + c * CELL + CELL / 2, o.oy + r * CELL + CELL / 2, board[r][c]);
       }
     }
   }
 
-  var barW = SIZE * CELL;
-  ctx.fillStyle = "rgba(0,0,0,0.4)";
-  ctx.fillRect(ox, oy - 18, barW, 8);
-  ctx.fillStyle = timer < 10 ? "#f472b6" : "#22d3ee";
-  ctx.fillRect(ox, oy - 18, barW * (timer / timerMax), 8);
+  if (lastPlaced && lastPlaced.t < 0.5) {
+    ctx.strokeStyle = "rgba(251,191,36," + (0.6 - lastPlaced.t) + ")";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(o.ox + lastPlaced.c * CELL + 1, o.oy + lastPlaced.r * CELL + 1, CELL - 2, CELL - 2);
+  }
 
-  ctx.fillStyle = "#94a3b8";
-  ctx.font = "13px sans-serif";
-  ctx.textAlign = "center";
-  ctx.fillText("量子晶片對弈 · 連五獲勝", W / 2, oy + SIZE * CELL + 30);
+  var barW = SIZE * CELL;
+  ctx.fillStyle = "rgba(0,0,0,0.45)"; ctx.fillRect(o.ox, o.oy - 16, barW, 8);
+  ctx.fillStyle = timer < 10 ? "#f472b6" : "#22d3ee";
+  ctx.fillRect(o.ox, o.oy - 16, barW * (timer / timerMax), 8);
+
+  if (quantumMode) {
+    ctx.fillStyle = "rgba(167,139,250,0.85)"; ctx.font = "bold 13px 'Microsoft JhengHei',sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("量子模式：再選 " + (2 - quantumPick.length) + " 格", W / 2, o.oy + SIZE * CELL + 28);
+  } else {
+    ctx.fillStyle = "#94a3b8"; ctx.font = "13px 'Microsoft JhengHei',sans-serif"; ctx.textAlign = "center";
+    ctx.fillText("5×5 連五 · Q 或「量」啟用量子落子", W / 2, o.oy + SIZE * CELL + 28);
+  }
 
   particles.draw(ctx);
   ctx.restore();

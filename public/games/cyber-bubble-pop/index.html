@@ -2,9 +2,9 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cyber Bubble Pop · 賽博泡泡</title>
-  <script src="/sdk/rnf-game-sdk.js?v=20260723"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Cyber Bubble Pop · 賽博泡泡龍</title>
+  <script src="/sdk/rnf-game-sdk.js?v=20260723b"></script>
 </head>
 <body>
 <script>
@@ -12,29 +12,29 @@ RNF.init();
 var shell = RNF.buildShell({
   title: "Cyber Bubble Pop",
   creator: "BubbleMaster_X",
-  subtitle: "←→ 瞄準 · 空白鍵發射 · 三消以上連鎖 · 閃電/黑洞特殊球 · 連擊限時加分",
+  subtitle: "彈道預覽 · 閃電／黑洞／炸彈 · 連鎖 Combo · 頂部下壓 · 觸控瞄準",
   width: 960,
   height: 520,
   bgmStyle: "ambient",
-  highlights: ["四段難度", "特殊泡泡", "連鎖消除", "排行榜"],
+  highlights: ["四段難度", "特殊泡泡", "連鎖消除", "頂部下壓", "觸控就緒"],
   help: {
     about: "經典泡泡龍的霓虹重製版。發射泡泡與上方同色泡泡相鄰三顆以上即可消除並得分，連鎖消除可觸發震屏與加分。",
     features: [
-      "四段難度：影響初始列數、發射冷卻與警戒線高度",
-      "閃電球消除整行、黑洞球吸收同色、炸彈球清除範圍（困難+）",
-      "連鎖限時內繼續消除可維持 Combo 加成",
-      "設定可調瞄準靈敏度，分數上傳排行榜"
+      "四段難度：初始列數、頂部下壓速度、發射冷卻與警戒線高度",
+      "閃電球消除整行、黑洞球吸收周圍、炸彈球清除範圍（困難+）",
+      "彈道預覽含牆壁反彈，連鎖限時內維持 Combo 倍率",
+      "桌面鍵盤＋手機虛擬鍵／畫面拖曳瞄準"
     ],
     controls: [
       "← →：調整發射角度",
-      "空白鍵：發射泡泡",
-      "設定可調「操作靈敏度」改變瞄準速度"
+      "空白鍵／觸控「射」：發射泡泡",
+      "手機：在發射區拖曳可快速調整角度"
     ],
     tips: [
       "閃電球：消除整行並產生連鎖",
-      "黑洞球：吸收周圍同色泡泡",
+      "黑洞球：吸收周圍同色與鄰近泡泡",
       "炸彈球（困難+）：清除小範圍泡泡",
-      "連擊限時內繼續消除可維持 Combo 加成"
+      "頂部定時下壓，勿讓泡泡觸及底線"
     ]
   },
   onStop: cleanup,
@@ -42,51 +42,90 @@ var shell = RNF.buildShell({
 });
 
 var W = shell.width, H = shell.height;
-var ctx = shell.ctx;
-var particles = shell.particles;
-var animId = null, running = false, gameEnded = false, speedScale = 1, frameDt = 0.016;
+var ctx, particles, animId, running, gameEnded, keys, lastTs, frameDt;
 var COLORS = ["#22d3ee", "#a78bfa", "#f472b6", "#34d399", "#fbbf24", "#fb7185"];
-var RADIUS = 18, ROWS = 12, COLS = 16;
-var grid, shooter, aimAngle, currentBubble, nextBubble, score, combo, comboTimer;
-var falling = [], animating = false, shootCooldown = 0, projectile = null;
+var RADIUS = 18, ROWS = 13, COLS = 16;
+var grid, aimAngle, currentBubble, nextBubble, score, combo, comboTimer;
+var falling, shootCooldown, projectile, dropTimer, dangerY, speedScale, diffId, diffTun, highQ;
+var sens = 1;
+
+function diffTuning() {
+  var map = {
+    easy: { initRows: 4, dropEvery: 14, shootCd: 0.32, dangerRow: ROWS - 2, specialRate: 0.07, bombOk: false },
+    normal: { initRows: 5, dropEvery: 11, shootCd: 0.26, dangerRow: ROWS - 2, specialRate: 0.06, bombOk: false },
+    hard: { initRows: 6, dropEvery: 8.5, shootCd: 0.22, dangerRow: ROWS - 3, specialRate: 0.08, bombOk: true },
+    extreme: { initRows: 7, dropEvery: 6.5, shootCd: 0.18, dangerRow: ROWS - 3, specialRate: 0.09, bombOk: true }
+  };
+  return map[diffId] || map.normal;
+}
 
 function cleanup() {
   shell.detachKeyboard();
+  shell.detachTouchControls();
   running = false;
   if (animId) cancelAnimationFrame(animId);
   animId = null;
   window.removeEventListener("keydown", onKeyDown);
   window.removeEventListener("keyup", onKeyUp);
+  if (shell && shell.canvas) {
+    shell.canvas.removeEventListener("pointerdown", onAimPointer);
+    shell.canvas.removeEventListener("pointermove", onAimPointer);
+  }
 }
 
 var keys = {};
 function onKeyDown(e) {
-  if (gameEnded || animating) return;
+  if (gameEnded) return;
   keys[e.code] = true;
   if ((e.key === " " || e.code === "Space") && !e.repeat) { e.preventDefault(); shoot(); }
 }
 function onKeyUp(e) { keys[e.code] = false; }
 
+function onAimPointer(e) {
+  if (!running || gameEnded || projectile) return;
+  var rect = shell.canvas.getBoundingClientRect();
+  if (!rect.width) return;
+  var cx = e.clientX != null ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+  var cy = e.clientY != null ? e.clientY : (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+  var px = (cx - rect.left) * (W / rect.width);
+  var py = (cy - rect.top) * (H / rect.height);
+  if (py < H * 0.55) return;
+  var sx = W / 2, sy = H - 44;
+  var ang = Math.atan2(px - sx, sy - py);
+  aimAngle = Math.max(-1.35, Math.min(1.35, ang));
+}
+
 function makeBubble(c, r, color, special) {
-  return { c: c, r: r, x: c * RADIUS * 2 + (r % 2 ? RADIUS : 0) + RADIUS, y: r * RADIUS * 1.732 + RADIUS + 10, color: color, special: special || null };
+  return {
+    c: c, r: r,
+    x: c * RADIUS * 2 + (r % 2 ? RADIUS : 0) + RADIUS,
+    y: r * RADIUS * 1.732 + RADIUS + 12,
+    color: color, special: special || null
+  };
 }
 
 function initGrid() {
   grid = [];
-  for (var r = 0; r < 5; r++) {
+  for (var r = 0; r < diffTun.initRows; r++) {
     for (var c = 0; c < COLS; c++) {
-      if (Math.random() < 0.85) {
-        var sp = null;
-        if (Math.random() < 0.04) sp = "lightning";
-        else if (Math.random() < 0.03) sp = "blackhole";
-        grid.push(makeBubble(c, r, COLORS[Math.floor(Math.random() * COLORS.length)], sp));
+      if (Math.random() < 0.88) {
+        grid.push(makeBubble(c, r, COLORS[Math.floor(Math.random() * COLORS.length)], rollSpecial()));
       }
     }
   }
 }
 
+function rollSpecial() {
+  if (Math.random() > diffTun.specialRate) return null;
+  var r = Math.random();
+  if (r < 0.4) return "lightning";
+  if (r < 0.75) return "blackhole";
+  if (diffTun.bombOk && r < 0.95) return "bomb";
+  return null;
+}
+
 function snapPos(x, y) {
-  var r = Math.round((y - RADIUS - 10) / (RADIUS * 1.732));
+  var r = Math.round((y - RADIUS - 12) / (RADIUS * 1.732));
   r = Math.max(0, Math.min(ROWS - 1, r));
   var offset = r % 2 ? RADIUS : 0;
   var c = Math.round((x - RADIUS - offset) / (RADIUS * 2));
@@ -104,8 +143,8 @@ function getBubble(c, r) {
 function neighbors(c, r) {
   var odd = r % 2;
   var dirs = odd
-    ? [[-1,0],[1,0],[0,-1],[1,-1],[0,1],[1,1]]
-    : [[-1,0],[1,0],[-1,-1],[0,-1],[-1,1],[0,1]];
+    ? [[-1, 0], [1, 0], [0, -1], [1, -1], [0, 1], [1, 1]]
+    : [[-1, 0], [1, 0], [-1, -1], [0, -1], [-1, 1], [0, 1]];
   var list = [];
   dirs.forEach(function (d) {
     var b = getBubble(c + d[0], r + d[1]);
@@ -121,7 +160,7 @@ function findCluster(start, color) {
     var b = queue.shift();
     cluster.push(b);
     neighbors(b.c, b.r).forEach(function (n) {
-      if (!visited[n.c + "," + n.r] && n.color === color) {
+      if (!visited[n.c + "," + n.r] && n.color === color && !n.special) {
         visited[n.c + "," + n.r] = true;
         queue.push(n);
       }
@@ -141,7 +180,9 @@ function floatingBubbles() {
         if (vis[k]) continue;
         vis[k] = true;
         connected[k] = true;
-        neighbors(cur.c, cur.r).forEach(function (n) { if (!vis[n.c + "," + n.r]) q.push(n); });
+        neighbors(cur.c, cur.r).forEach(function (n) {
+          if (!vis[n.c + "," + n.r]) q.push(n);
+        });
       }
     }
   });
@@ -152,80 +193,161 @@ function floatingBubbles() {
   });
   drop.forEach(function (b) {
     falling.push({ x: b.x, y: b.y, vy: 0, color: b.color, life: 1 });
-    score += 5;
+    score += Math.floor(8 * (1 + combo * 0.15));
   });
   if (drop.length) {
-    shell.triggerShake(5, 0.2);
-    RNF.sfx.combo(Math.min(drop.length, 8));
+    shell.triggerShake(4 + Math.min(drop.length, 6), 0.18);
+    RNF.sfx.combo(Math.min(drop.length + combo, 10));
   }
 }
 
-function popCluster(cluster, special) {
+function removeBubble(b) {
+  particles.burst(b.x, b.y, b.color, highQ ? 12 : 6);
+}
+
+function activateSpecial(b) {
+  if (b.special === "lightning") {
+    grid.forEach(function (g) {
+      if (g.c === b.c) {
+        removeBubble(g);
+        score += 15;
+      }
+    });
+    grid = grid.filter(function (g) { return g.c !== b.c; });
+    shell.triggerShake(8, 0.2);
+    RNF.sfx.power();
+  } else if (b.special === "blackhole") {
+    var cx = b.x, cy = b.y, rad = RADIUS * 4.5;
+    grid.forEach(function (g) {
+      if (Math.hypot(g.x - cx, g.y - cy) < rad) {
+        removeBubble(g);
+        score += 12;
+      }
+    });
+    grid = grid.filter(function (g) { return Math.hypot(g.x - cx, g.y - cy) >= rad; });
+    particles.burst(cx, cy, "#a78bfa", highQ ? 24 : 12);
+    shell.triggerShake(10, 0.22);
+    RNF.sfx.power();
+  } else if (b.special === "bomb") {
+    var bx = b.x, by = b.y, br = RADIUS * 3.2;
+    grid.forEach(function (g) {
+      if (Math.hypot(g.x - bx, g.y - by) < br) {
+        removeBubble(g);
+        score += 10;
+      }
+    });
+    grid = grid.filter(function (g) { return Math.hypot(g.x - bx, g.y - by) >= br; });
+    shell.triggerShake(12, 0.25);
+    RNF.sfx.power();
+  }
+}
+
+function popCluster(cluster) {
   cluster.forEach(function (b) {
-    particles.burst(b.x, b.y, b.color, 10);
-    if (b.special === "lightning") {
-      grid.forEach(function (g) {
-        if (g.c === b.c) {
-          particles.burst(g.x, g.y, "#fbbf24", 8);
-        }
-      });
-      grid = grid.filter(function (g) { return g.c !== b.c; });
-    } else if (b.special === "blackhole") {
-      var cx = b.x, cy = b.y;
-      grid.forEach(function (g) {
-        var d = Math.hypot(g.x - cx, g.y - cy);
-        if (d < RADIUS * 5) particles.burst(g.x, g.y, "#a78bfa", 6);
-      });
-      grid = grid.filter(function (g) { return Math.hypot(g.x - cx, g.y - cy) >= RADIUS * 5; });
-    }
+    removeBubble(b);
+    if (b.special) activateSpecial(b);
   });
-  if (!special) {
-    var remove = {};
-    cluster.forEach(function (b) { remove[b.c + "," + b.r] = true; });
-    grid = grid.filter(function (b) { return !remove[b.c + "," + b.r]; });
-  }
+  var remove = {};
+  cluster.forEach(function (b) { remove[b.c + "," + b.r] = true; });
+  grid = grid.filter(function (b) { return !remove[b.c + "," + b.r]; });
 }
 
-function processMatches(placed) {
-  animating = true;
+function processMatches(placed, chainDepth) {
+  chainDepth = chainDepth || 0;
   var cluster = findCluster(placed, placed.color);
   if (cluster.length >= 3) {
     combo++;
-    comboTimer = 5;
-    var pts = cluster.length * 10 * (1 + combo * 0.3);
+    comboTimer = 4.5;
+    var pts = cluster.length * 12 * (1 + combo * 0.35 + chainDepth * 0.2);
     score += Math.floor(pts);
     RNF.sfx.pop();
-    shell.triggerShake(4 + combo, 0.18);
-    RNF.sfx.combo(combo);
+    shell.triggerShake(3 + combo + chainDepth * 2, 0.16);
+    if (combo > 1) RNF.sfx.combo(Math.min(combo, 12));
     popCluster(cluster);
     floatingBubbles();
-  } else {
+    if (grid.length) {
+      var again = false;
+      grid.forEach(function (g) {
+        if (findCluster(g, g.color).length >= 3) again = true;
+      });
+      if (again) processMatches(placed, chainDepth + 1);
+    }
+  } else if (chainDepth === 0) {
     combo = 0;
   }
-  if (grid.some(function (b) { return b.r >= ROWS - 2; })) endGame();
-  animating = false;
+}
+
+function pushCeiling() {
+  var maxR = 0;
+  grid.forEach(function (b) { if (b.r > maxR) maxR = b.r; });
+  if (maxR >= ROWS - 2) { endGame(); return; }
+  grid.forEach(function (b) {
+    b.r++;
+    b.y = b.r * RADIUS * 1.732 + RADIUS + 12;
+    b.x = b.c * RADIUS * 2 + (b.r % 2 ? RADIUS : 0) + RADIUS;
+  });
+  var newRow = [];
+  for (var c = 0; c < COLS; c++) {
+    if (Math.random() < 0.82) {
+      newRow.push(makeBubble(c, 0, COLORS[Math.floor(Math.random() * COLORS.length)], rollSpecial()));
+    }
+  }
+  grid = newRow.concat(grid);
+  shell.triggerShake(5, 0.15);
+  RNF.sfx.heartbeat();
+  checkDanger();
+}
+
+function checkDanger() {
+  dangerY = diffTun.dangerRow * RADIUS * 1.732 + RADIUS + 12;
+  if (grid.some(function (b) { return b.r >= diffTun.dangerRow; })) endGame();
 }
 
 function landBubble(f) {
   var pos = snapPos(f.x, f.y);
-  if (getBubble(pos.c, pos.r)) pos.r = Math.min(pos.r + 1, ROWS - 1);
+  if (getBubble(pos.c, pos.r)) {
+    var placed = false;
+    var tries = [[0, 1], [-1, 0], [1, 0], [0, -1], [-1, 1], [1, 1], [-1, -1], [1, -1]];
+    for (var i = 0; i < tries.length; i++) {
+      var nc = pos.c + tries[i][0], nr = pos.r + tries[i][1];
+      if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && !getBubble(nc, nr)) {
+        pos = { c: nc, r: nr }; placed = true; break;
+      }
+    }
+    if (!placed) pos.r = Math.min(pos.r + 1, ROWS - 1);
+  }
   var nb = makeBubble(pos.c, pos.r, f.color, f.special);
   nb.x = pos.c * RADIUS * 2 + (pos.r % 2 ? RADIUS : 0) + RADIUS;
-  nb.y = pos.r * RADIUS * 1.732 + RADIUS + 10;
+  nb.y = pos.r * RADIUS * 1.732 + RADIUS + 12;
   grid.push(nb);
   projectile = null;
   RNF.sfx.hit();
-  processMatches(nb);
+  var cluster = findCluster(nb, nb.color);
+  if (cluster.length >= 3) {
+    processMatches(nb);
+  } else if (nb.special) {
+    activateSpecial(nb);
+    var rk = nb.c + "," + nb.r;
+    grid = grid.filter(function (g) { return g.c + "," + g.r !== rk; });
+    floatingBubbles();
+  } else {
+    combo = 0;
+  }
   currentBubble = nextBubble;
   nextBubble = randomBubble();
+  checkDanger();
 }
 
 function shoot() {
-  if (shootCooldown > 0 || !currentBubble || projectile) return;
-  shootCooldown = 0.25;
-  var sx = W / 2, sy = H - 40;
+  if (shootCooldown > 0 || !currentBubble || projectile || gameEnded) return;
+  shootCooldown = diffTun.shootCd / speedScale;
+  var sx = W / 2, sy = H - 44;
   var dx = Math.sin(aimAngle), dy = -Math.cos(aimAngle);
-  projectile = { x: sx, y: sy, vx: dx * 380 * speedScale, vy: dy * 380 * speedScale, color: currentBubble.color, special: currentBubble.special };
+  projectile = {
+    x: sx, y: sy,
+    vx: dx * 420 * speedScale, vy: dy * 420 * speedScale,
+    color: currentBubble.color, special: currentBubble.special
+  };
   currentBubble = null;
   RNF.sfx.laser();
 }
@@ -235,8 +357,9 @@ function updateProjectile() {
   var f = projectile;
   f.x += f.vx * frameDt;
   f.y += f.vy * frameDt;
-  if (f.x < RADIUS || f.x > W - RADIUS) f.vx *= -1;
-  if (f.y < RADIUS + 10) { landBubble(f); return; }
+  if (f.x < RADIUS) { f.x = RADIUS; f.vx = Math.abs(f.vx); RNF.sfx.hit(); }
+  if (f.x > W - RADIUS) { f.x = W - RADIUS; f.vx = -Math.abs(f.vx); RNF.sfx.hit(); }
+  if (f.y < RADIUS + 12) { landBubble(f); return; }
   for (var i = 0; i < grid.length; i++) {
     var g = grid[i];
     if (Math.hypot(f.x - g.x, f.y - g.y) < RADIUS * 1.85) { landBubble(f); return; }
@@ -244,9 +367,23 @@ function updateProjectile() {
 }
 
 function randomBubble() {
-  var sp = null;
-  if (Math.random() < 0.06) sp = Math.random() < 0.5 ? "lightning" : "blackhole";
-  return { color: COLORS[Math.floor(Math.random() * COLORS.length)], special: sp };
+  return { color: COLORS[Math.floor(Math.random() * COLORS.length)], special: rollSpecial() };
+}
+
+function aimGuidePoints() {
+  var sx = W / 2, sy = H - 44;
+  var dx = Math.sin(aimAngle), dy = -Math.cos(aimAngle);
+  var pts = [{ x: sx, y: sy }];
+  var x = sx, y = sy, vx = dx, vy = dy;
+  for (var i = 0; i < 6; i++) {
+    var step = 28;
+    x += vx * step; y += vy * step;
+    if (x < RADIUS) { x = RADIUS; vx = Math.abs(vx); }
+    if (x > W - RADIUS) { x = W - RADIUS; vx = -Math.abs(vx); }
+    pts.push({ x: x, y: y });
+    if (y < RADIUS + 20) break;
+  }
+  return pts;
 }
 
 function endGame() {
@@ -261,93 +398,117 @@ function endGame() {
 
 function updateHud() {
   shell.setHud(
-    '<div><span>分數</span><b>' + score + '</b></div>' +
-    '<div><span>連擊</span><b>x' + combo + '</b></div>' +
+    '<div><span>分數</span><b>' + score.toLocaleString() + '</b></div>' +
+    '<div><span>連擊</span><b style="color:' + (combo > 1 ? "#fbbf24" : "#22d3ee") + '">x' + combo + '</b></div>' +
     '<div><span>限時</span><b>' + comboTimer.toFixed(1) + 's</b></div>' +
-    '<div><span>泡泡</span><b>' + grid.length + '</b></div>'
+    '<div><span>泡泡</span><b>' + grid.length + '</b></div>' +
+    '<div><span>下壓</span><b>' + Math.max(0, dropTimer).toFixed(0) + 's</b></div>'
   );
 }
 
 function startGame() {
   cleanup();
+  ctx = shell.ctx;
+  particles = shell.particles;
+  highQ = shell.isHighQuality();
   speedScale = shell.getSpeedScale();
+  diffId = (shell.getDifficulty() || {}).id || "normal";
+  diffTun = diffTuning();
+  sens = (shell.getTuning && shell.getTuning().sensitivity) || 1;
   score = 0; combo = 0; comboTimer = 0;
-  aimAngle = 0; shootCooldown = 0;
-  falling = []; gameEnded = false; animating = false; projectile = null;
+  aimAngle = 0; shootCooldown = 0; dropTimer = diffTun.dropEvery;
+  falling = []; gameEnded = false; projectile = null;
   initGrid();
   currentBubble = randomBubble();
   nextBubble = randomBubble();
+  dangerY = diffTun.dangerRow * RADIUS * 1.732 + RADIUS + 12;
   running = true;
   keys = {};
   shell.attachKeyboard(keys);
+  shell.attachTouchControls({
+    keys: keys,
+    buttons: [
+      { code: "ArrowLeft", label: "◀", side: "left", hold: true },
+      { code: "ArrowRight", label: "▶", side: "left", hold: true },
+      { code: "Space", label: "射", side: "right", hold: false, wide: true, onPress: function () { shoot(); } }
+    ]
+  });
   window.addEventListener("keydown", onKeyDown);
   window.addEventListener("keyup", onKeyUp);
+  shell.canvas.addEventListener("pointerdown", onAimPointer);
+  shell.canvas.addEventListener("pointermove", onAimPointer);
   lastTs = performance.now();
   animId = requestAnimationFrame(loop);
 }
 
-var lastTs = 0;
-
 function loop(ts) {
   if (!running) return;
-  var dt = Math.min(0.05, (ts - lastTs) / 1000);
+  var dt = Math.min(0.033, (ts - lastTs) / 1000);
   lastTs = ts;
   frameDt = dt;
   shootCooldown = Math.max(0, shootCooldown - dt);
   comboTimer = Math.max(0, comboTimer - dt);
   if (comboTimer <= 0 && combo > 0) combo = 0;
 
+  dropTimer -= dt;
+  if (dropTimer <= 0) {
+    pushCeiling();
+    dropTimer = diffTun.dropEvery / speedScale;
+  }
+
+  var aimSpd = 1.8 * sens * speedScale;
+  if (keys["ArrowLeft"]) aimAngle -= aimSpd * dt;
+  if (keys["ArrowRight"]) aimAngle += aimSpd * dt;
+  aimAngle = Math.max(-1.35, Math.min(1.35, aimAngle));
+
   falling.forEach(function (f) {
-    f.vy += 280 * frameDt;
+    f.vy += 320 * frameDt;
     f.y += f.vy * frameDt;
-    f.life -= dt;
-    particles.trail(f.x, f.y, f.color);
+    f.life -= dt * 0.8;
+    if (highQ) particles.trail(f.x, f.y, f.color);
   });
   falling = falling.filter(function (f) { return f.life > 0 && f.y < H + 20; });
 
-  if (keys["ArrowLeft"]) aimAngle -= 1.6 * frameDt * speedScale;
-  if (keys["ArrowRight"]) aimAngle += 1.6 * frameDt * speedScale;
-  aimAngle = Math.max(-1.2, Math.min(1.2, aimAngle));
   updateProjectile();
   particles.update(dt);
   draw();
   updateHud();
   if (grid.length === 0) {
-    score += 500;
+    score += 800;
     RNF.sfx.score();
+    shell.triggerShake(8, 0.25);
     initGrid();
+    dropTimer = diffTun.dropEvery;
   }
   animId = requestAnimationFrame(loop);
 }
 
-function drawBubble(b, alpha) {
+function drawBubble(b, alpha, scale) {
+  scale = scale || 1;
   ctx.globalAlpha = alpha || 1;
-  ctx.shadowBlur = 12;
+  ctx.shadowBlur = highQ ? 14 : 6;
   ctx.shadowColor = b.color;
   ctx.fillStyle = b.color;
   ctx.beginPath();
-  ctx.arc(b.x, b.y, RADIUS - 2, 0, Math.PI * 2);
+  ctx.arc(b.x, b.y, (RADIUS - 2) * scale, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = "rgba(255,255,255,0.35)";
   ctx.beginPath();
-  ctx.arc(b.x - 5, b.y - 5, 5, 0, Math.PI * 2);
+  ctx.arc(b.x - 5 * scale, b.y - 5 * scale, 5 * scale, 0, Math.PI * 2);
   ctx.fill();
   if (b.special === "lightning") {
-    ctx.strokeStyle = "#fbbf24";
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = "#fbbf24"; ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(b.x - 4, b.y - 8);
-    ctx.lineTo(b.x + 2, b.y);
-    ctx.lineTo(b.x - 2, b.y);
-    ctx.lineTo(b.x + 4, b.y + 8);
+    ctx.moveTo(b.x - 4, b.y - 8); ctx.lineTo(b.x + 2, b.y); ctx.lineTo(b.x - 2, b.y); ctx.lineTo(b.x + 4, b.y + 8);
     ctx.stroke();
   } else if (b.special === "blackhole") {
     ctx.fillStyle = "#0f0a1a";
-    ctx.beginPath();
-    ctx.arc(b.x, b.y, RADIUS * 0.5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = "#a78bfa";
-    ctx.stroke();
+    ctx.beginPath(); ctx.arc(b.x, b.y, RADIUS * 0.55 * scale, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "#a78bfa"; ctx.stroke();
+  } else if (b.special === "bomb") {
+    ctx.fillStyle = "#fb7185";
+    ctx.font = "bold 11px sans-serif"; ctx.textAlign = "center";
+    ctx.fillText("💣", b.x, b.y + 4);
   }
   ctx.shadowBlur = 0;
   ctx.globalAlpha = 1;
@@ -358,29 +519,55 @@ function draw() {
   shell.applyShake(ctx);
   ctx.fillStyle = "#060a12";
   ctx.fillRect(0, 0, W, H);
-  ctx.strokeStyle = "rgba(167,139,250,0.15)";
-  ctx.strokeRect(RADIUS, 10, W - RADIUS * 2, ROWS * RADIUS * 1.732);
+
+  ctx.strokeStyle = "rgba(167,139,250,0.12)";
+  ctx.strokeRect(RADIUS, 10, W - RADIUS * 2, ROWS * RADIUS * 1.732 + 8);
+
+  ctx.strokeStyle = "rgba(244,114,182,0.35)";
+  ctx.setLineDash([8, 8]);
+  ctx.beginPath();
+  ctx.moveTo(RADIUS, dangerY);
+  ctx.lineTo(W - RADIUS, dangerY);
+  ctx.stroke();
+  ctx.setLineDash([]);
 
   grid.forEach(function (b) { drawBubble(b); });
   falling.forEach(function (f) { drawBubble({ x: f.x, y: f.y, color: f.color }, f.life); });
 
-  var sx = W / 2, sy = H - 40;
-  ctx.strokeStyle = "rgba(34,211,238,0.5)";
+  var sx = W / 2, sy = H - 44;
+  var guide = aimGuidePoints();
+  ctx.strokeStyle = "rgba(34,211,238,0.45)";
   ctx.lineWidth = 2;
-  ctx.setLineDash([6, 6]);
+  ctx.setLineDash([5, 5]);
   ctx.beginPath();
-  ctx.moveTo(sx, sy);
-  ctx.lineTo(sx + Math.sin(aimAngle) * 120, sy - Math.cos(aimAngle) * 120);
+  ctx.moveTo(guide[0].x, guide[0].y);
+  for (var gi = 1; gi < guide.length; gi++) ctx.lineTo(guide[gi].x, guide[gi].y);
   ctx.stroke();
   ctx.setLineDash([]);
 
+  ctx.fillStyle = "rgba(34,211,238,0.15)";
+  ctx.beginPath();
+  ctx.moveTo(sx, sy);
+  ctx.lineTo(sx + Math.sin(aimAngle) * 140, sy - Math.cos(aimAngle) * 140);
+  ctx.lineTo(sx + Math.sin(aimAngle + 0.08) * 60, sy - Math.cos(aimAngle + 0.08) * 60);
+  ctx.closePath();
+  ctx.fill();
+
   if (projectile) drawBubble(projectile);
   else if (currentBubble) drawBubble({ x: sx, y: sy, color: currentBubble.color, special: currentBubble.special });
-  drawBubble({ x: sx + 50, y: sy + 20, color: nextBubble.color, special: nextBubble.special });
+  drawBubble({ x: sx + 52, y: sy + 18, color: nextBubble.color, special: nextBubble.special }, 1, 0.75);
 
   ctx.fillStyle = "#64748b";
-  ctx.font = "11px sans-serif";
-  ctx.fillText("NEXT", sx + 35, sy + 38);
+  ctx.font = "10px sans-serif";
+  ctx.textAlign = "left";
+  ctx.fillText("NEXT", sx + 38, sy + 36);
+
+  if (combo > 1 && comboTimer > 0) {
+    ctx.fillStyle = "#fbbf24";
+    ctx.font = "bold 20px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("COMBO x" + combo, W / 2, H - 8);
+  }
 
   particles.draw(ctx);
   ctx.restore();

@@ -2,47 +2,59 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cyber Neon Runner · 賽博霓虹跑酷</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Cyber Neon Runner · 賽博霓虹無盡跑酷</title>
 </head>
 <body>
-<script src="/sdk/rnf-game-sdk.js?v=20260723"></script>
+<script src="/sdk/rnf-game-sdk.js?v=20260723b"></script>
 <script>
 RNF.init();
 var shell = RNF.buildShell({
   title: "Cyber Neon Runner",
   creator: "NightCity_Runner",
-  subtitle: "空白 跳躍 · ↓ 滑行 · Z 雷射 · 收集金幣 · 視差霓虹背景 · 摧毀障礙物",
+  subtitle: "跳躍／滑行／雷射破障 · 道具與 Combo · 里程碑事件 · 手機觸控就緒",
   width: 960,
   height: 520,
   bgmStyle: "pulse",
-  highlights: ["雷射破障", "金幣磁吸", "視差背景", "四段難度"],
+  highlights: ["多型障礙", "護盾磁鐵加速", "Combo 倍率", "里程碑事件", "手機三鍵"],
   help: {
-    about: "賽博都市無盡跑酷。跳躍與滑行避開障礙，收集金幣，距離越遠分數越高。",
+    about: "在 Night City 無盡奔跑。跳躍與滑行閃避多型障礙，雷射摧毀可破障礙，收集金幣維持 Combo，撿取護盾／磁鐵／加速道具，挑戰更遠里程碑。",
     features: [
-      "Z 鍵雷射摧毀障礙",
-      "困難以上金幣磁吸",
-      "多層視差霓虹背景"
+      "矮欄、高牆、空中無人機、雷射門、移動平台等多型障礙",
+      "護盾、磁鐵、加速短時道具與金幣 Combo 倍率",
+      "距離里程碑觸發限時挑戰與霓虹爆發",
+      "雷射有冷卻與彈藥，需節奏運用",
+      "桌面鍵鼠與手機虛擬鍵／上滑跳下潤滑皆可"
     ],
     controls: [
-      "空白鍵：跳躍",
-      "↓ 或 S：滑行",
-      "Z：發射雷射"
+      "空白／W／↑／觸控「跳」：跳躍（可短按二段氣躍）",
+      "↓／S／觸控「滑」：滑行躲高障與雷射門下緣",
+      "Z／觸控「射」：發射雷射摧毀可破障礙",
+      "手機亦可在畫面上滑＝跳、下滑＝滑行"
     ],
     tips: [
-      "連續收集金幣維持 Combo",
-      "碰撞即結束，分數上傳排行榜"
+      "護盾可擋一次致命撞擊；磁鐵自動吸金幣",
+      "連續拾金維持 Combo，斷線會重置倍率",
+      "雷射門必須滑行或跳躍通過，無法擊破",
+      "極限難度反應窗更緊、障礙更密"
     ]
   },
   onStop: cleanup,
   onStart: startGame
 });
 
+var W = 960, H = 520;
 var ctx, particles, running, loopId, lastT, keys = {};
-var player, obstacles, coins, lasers, speed, score, dist, parallax, groundY, shootCd, slideT, spawnTimer, speedScale = 1;
+var player, obstacles, coins, lasers, pickups, speed, score, dist;
+var parallax, groundY, shootCd, ammo, maxAmmo, slideWanted, spawnTimer;
+var speedScale = 1;
+var combo, comboTimer, magnetT, shieldHits, hasteT, graceT, flashT, milestoneIdx;
+var diffId, highQ, cityLights, trailBuf, nextEventAt, eventLabel, eventT;
+var coyoteT, jumpBufferT, airJumps;
 
 function cleanup() {
   shell.detachKeyboard();
+  shell.detachTouchControls();
   running = false;
   if (loopId) cancelAnimationFrame(loopId);
   loopId = null;
@@ -50,243 +62,729 @@ function cleanup() {
   window.removeEventListener("keyup", onKeyUp);
 }
 
+function diffTuning() {
+  var d = (shell.getDifficulty() || {}).id || "normal";
+  var map = {
+    easy: { spawnBase: 1.55, spawnFloor: 0.85, speedCap: 300, dens: 0.85, hpBonus: 0, ammo: 5, coyote: 0.12, grace: 0.45 },
+    normal: { spawnBase: 1.35, spawnFloor: 0.72, speedCap: 340, dens: 1, hpBonus: 0, ammo: 4, coyote: 0.09, grace: 0.28 },
+    hard: { spawnBase: 1.15, spawnFloor: 0.58, speedCap: 390, dens: 1.15, hpBonus: 1, ammo: 3, coyote: 0.06, grace: 0.16 },
+    extreme: { spawnBase: 0.95, spawnFloor: 0.45, speedCap: 450, dens: 1.35, hpBonus: 1, ammo: 2, coyote: 0.04, grace: 0.08 }
+  };
+  return map[d] || map.normal;
+}
+
 function startGame() {
   cleanup();
   speedScale = shell.getSpeedScale();
   ctx = shell.ctx;
   particles = shell.particles;
+  highQ = shell.isHighQuality();
+  diffId = (shell.getDifficulty() || {}).id || "normal";
+  var tun = diffTuning();
   groundY = 420;
-  player = { x: 140, y: groundY - 48, w: 36, h: 48, vy: 0, onGround: true, sliding: false };
-  obstacles = []; coins = []; lasers = [];
-  speed = 190 * speedScale; score = 0; dist = 0; shootCd = 0; slideT = 0;
+  player = {
+    x: 130, y: groundY - 48, w: 34, h: 48, vy: 0,
+    onGround: true, sliding: false, standH: 48, slideH: 22
+  };
+  obstacles = []; coins = []; lasers = []; pickups = [];
+  speed = 185 * speedScale;
+  score = 0; dist = 0; shootCd = 0; slideWanted = false;
+  maxAmmo = tun.ammo; ammo = maxAmmo;
+  combo = 0; comboTimer = 0; magnetT = 0; shieldHits = 0; hasteT = 0;
+  graceT = tun.grace; flashT = 0; milestoneIdx = 0;
+  coyoteT = 0; jumpBufferT = 0; airJumps = 1;
+  spawnTimer = 0.4;
+  nextEventAt = 400; eventLabel = ""; eventT = 0;
+  trailBuf = [];
   parallax = [
-    { color: "rgba(34,211,238,0.08)", spd: 0.2, h: 120, off: 0, blocks: [] },
-    { color: "rgba(167,139,250,0.1)", spd: 0.45, h: 180, off: 0, blocks: [] },
-    { color: "rgba(244,114,182,0.12)", spd: 0.75, h: 260, off: 0, blocks: [] }
+    { color: "rgba(34,211,238,0.07)", spd: 0.15, h: 100, blocks: [] },
+    { color: "rgba(167,139,250,0.1)", spd: 0.35, h: 160, blocks: [] },
+    { color: "rgba(244,114,182,0.12)", spd: 0.55, h: 230, blocks: [] },
+    { color: "rgba(56,189,248,0.14)", spd: 0.8, h: 300, blocks: [] }
   ];
-  parallax.forEach(function (l) {
-    for (var i = 0; i < 12; i++)
-      l.blocks.push({ x: i * 120, w: 40 + Math.random() * 60, h: 20 + Math.random() * 80 });
+  parallax.forEach(function (l, li) {
+    for (var i = 0; i < 14; i++) {
+      l.blocks.push({
+        x: i * 110 + Math.random() * 30,
+        w: 28 + Math.random() * (50 + li * 8),
+        h: 30 + Math.random() * (70 + li * 20),
+        glow: Math.random()
+      });
+    }
   });
-  spawnTimer = 0;
+  cityLights = [];
+  for (var i = 0; i < (highQ ? 40 : 16); i++) {
+    cityLights.push({
+      x: Math.random() * W,
+      y: 80 + Math.random() * 220,
+      s: 0.8 + Math.random() * 1.6,
+      a: 0.2 + Math.random() * 0.6,
+      spd: 0.1 + Math.random() * 0.25
+    });
+  }
   updateHud();
   running = true;
   keys = {};
   shell.attachKeyboard(keys);
+  shell.attachTouchControls({
+    keys: keys,
+    forceVisible: false,
+    buttons: [
+      { code: "Space", label: "跳", side: "left", hold: false, onPress: function () { tryJump(true); } },
+      { code: "ArrowDown", label: "滑", side: "right", hold: true, wide: true,
+        onPress: function () { slideWanted = true; startSlide(); },
+        onRelease: function () { slideWanted = false; endSlide(); }
+      },
+      { code: "KeyZ", label: "射", side: "right", hold: false, danger: true, onPress: function () { tryShoot(); } }
+    ],
+    swipe: {
+      threshold: 40,
+      up: function () { tryJump(true); },
+      down: function () {
+        slideWanted = true;
+        startSlide();
+        setTimeout(function () { slideWanted = false; endSlide(); }, 520);
+      },
+      tap: function () { tryJump(true); }
+    }
+  });
   lastT = performance.now();
   window.addEventListener("keydown", onKeyDown);
   window.addEventListener("keyup", onKeyUp);
   loopId = requestAnimationFrame(loop);
 }
 
+function tryJump(fromInput) {
+  if (!running || !player) return;
+  if (fromInput) jumpBufferT = 0.12;
+  var canCoyote = coyoteT > 0 && player.vy >= 0;
+  if ((player.onGround || canCoyote) && !player.sliding) {
+    player.vy = -455;
+    player.onGround = false;
+    coyoteT = 0;
+    jumpBufferT = 0;
+    airJumps = 1;
+    RNF.sfx.power();
+    if (highQ) particles.burst(player.x + player.w / 2, player.y + player.h, "#22d3ee", 8);
+    return;
+  }
+  if (!player.onGround && airJumps > 0 && jumpBufferT > 0) {
+    airJumps -= 1;
+    jumpBufferT = 0;
+    player.vy = -340;
+    RNF.sfx.power();
+    if (highQ) particles.burst(player.x + player.w / 2, player.y + player.h / 2, "#a78bfa", 10);
+  }
+}
+
+function startSlide() {
+  if (!player || !player.onGround) return;
+  player.sliding = true;
+  player.h = player.slideH;
+  player.y = groundY - player.h;
+}
+
+function endSlide() {
+  if (!player || !player.sliding) return;
+  if (keys["ArrowDown"] || keys["KeyS"] || slideWanted) return;
+  player.sliding = false;
+  player.h = player.standH;
+  player.y = groundY - player.h;
+}
+
+function tryShoot() {
+  if (!running || shootCd > 0 || ammo <= 0) return;
+  shootCd = 0.38;
+  ammo -= 1;
+  lasers.push({
+    x: player.x + player.w,
+    y: player.y + player.h * 0.35,
+    vx: 680,
+    w: 32,
+    h: 5,
+    life: 0.9
+  });
+  RNF.sfx.laser();
+  shell.triggerShake(2, 0.05);
+  if (highQ) particles.burst(player.x + player.w, player.y + player.h * 0.35, "#67e8f9", 6);
+}
+
 function onKeyDown(e) {
   if (!running) return;
   keys[e.code] = true;
-  if (e.code === "Space") {
+  if (e.code === "Space" || e.code === "KeyW" || e.code === "ArrowUp") {
     e.preventDefault();
-    if (player.onGround && !player.sliding) {
-      player.vy = -420;
-      player.onGround = false;
-      RNF.sfx.power();
-      particles.burst(player.x, player.y + player.h, "#22d3ee", 6);
-    }
+    tryJump(true);
   }
-  if (e.code === "ArrowDown" && player.onGround) {
-    player.sliding = true;
-    slideT = 0.6;
-    player.h = 24;
-    player.y = groundY - player.h;
+  if (e.code === "ArrowDown" || e.code === "KeyS") {
+    e.preventDefault();
+    slideWanted = true;
+    startSlide();
   }
-  if (e.code === "KeyZ" && shootCd <= 0) {
-    shootCd = 0.35;
-    lasers.push({ x: player.x + player.w, y: player.y + player.h / 2 - 3, vx: 620, w: 28, h: 4 });
-    RNF.sfx.laser();
-    shell.triggerShake(2, 0.06);
+  if (e.code === "KeyZ") {
+    e.preventDefault();
+    tryShoot();
   }
 }
 
 function onKeyUp(e) {
   keys[e.code] = false;
-  if (e.code === "ArrowDown" && player.sliding) {
-    player.sliding = false;
-    player.h = 48;
-    player.y = groundY - player.h;
+  if (e.code === "ArrowDown" || e.code === "KeyS") {
+    slideWanted = false;
+    endSlide();
   }
 }
 
-function spawnObstacle() {
-  var type = Math.random() < 0.55 ? "block" : "drone";
-  if (type === "block")
-    obstacles.push({ x: 980, y: groundY - (40 + Math.random() * 30), w: 28 + Math.random() * 20, h: 40 + Math.random() * 30, type: "block", hp: 1 });
-  else
-    obstacles.push({ x: 980, y: groundY - 120 - Math.random() * 80, w: 36, h: 28, type: "drone", hp: 1, bob: Math.random() * 6 });
-  if (Math.random() < 0.45)
-    coins.push({ x: 980 + 40, y: groundY - 60 - Math.random() * 100, r: 10, taken: false });
+function rollObstacleType(progress) {
+  var r = Math.random();
+  var dens = diffTuning().dens;
+  if (progress > 0.35 && r < 0.14 * dens) return "gate";
+  if (progress > 0.2 && r < 0.28) return "drone";
+  if (progress > 0.45 && r < 0.18) return "mover";
+  if (r < 0.42) return "low";
+  return "wall";
+}
+
+function spawnWave() {
+  var tun = diffTuning();
+  var progress = Math.min(1, dist / 2500);
+  var type = rollObstacleType(progress);
+  var x = W + 40;
+  if (type === "low") {
+    obstacles.push({ type: "low", x: x, y: groundY - 34, w: 36, h: 34, hp: 1, breakable: true, color: "#a78bfa" });
+  } else if (type === "wall") {
+    var wh = 70 + Math.random() * 40;
+    obstacles.push({ type: "wall", x: x, y: groundY - wh, w: 30, h: wh, hp: 1 + tun.hpBonus, breakable: true, color: "#c084fc" });
+  } else if (type === "drone") {
+    obstacles.push({
+      type: "drone", x: x, y: groundY - 130 - Math.random() * 90, w: 38, h: 26,
+      hp: 1, breakable: true, color: "#f472b6", bob: Math.random() * 8, baseY: 0
+    });
+    obstacles[obstacles.length - 1].baseY = obstacles[obstacles.length - 1].y;
+  } else if (type === "gate") {
+    obstacles.push({
+      type: "gate", x: x, y: groundY - 118, w: 18, h: 96, hp: 999, breakable: false, color: "#f43f5e", pulse: 0
+    });
+  } else if (type === "mover") {
+    obstacles.push({
+      type: "mover", x: x, y: groundY - 55, w: 44, h: 22, hp: 1, breakable: true, color: "#38bdf8",
+      phase: Math.random() * Math.PI * 2, amp: 40 + Math.random() * 35
+    });
+  }
+
+  if (Math.random() < 0.55) {
+    var cy = groundY - 55 - Math.random() * 130;
+    for (var i = 0; i < 3; i++) {
+      coins.push({ x: x + 50 + i * 28, y: cy - Math.sin(i) * 12, r: 9, taken: false });
+    }
+  }
+  if (Math.random() < 0.12 + progress * 0.08) {
+    var kinds = ["shield", "magnet", "haste", "ammo"];
+    var kind = kinds[Math.floor(Math.random() * kinds.length)];
+    pickups.push({
+      kind: kind, x: x + 90, y: groundY - 90 - Math.random() * 100,
+      r: 14, taken: false
+    });
+  }
+}
+
+function triggerMilestone() {
+  var labels = ["霓虹過載", "巷戰突襲", "極速航道", "黎明衝刺"];
+  eventLabel = labels[milestoneIdx % labels.length];
+  eventT = 2.4;
+  flashT = 0.45;
+  score += 150 + milestoneIdx * 80;
+  ammo = Math.min(maxAmmo, ammo + 2);
+  RNF.sfx.score();
+  shell.triggerShake(6, 0.18);
+  if (highQ) {
+    for (var i = 0; i < 3; i++) {
+      particles.burst(200 + i * 200, groundY - 80, "#fbbf24", 16);
+    }
+  }
+  milestoneIdx += 1;
+  nextEventAt += 450 + milestoneIdx * 80;
+  // burst denser obstacles briefly
+  for (var j = 0; j < 2; j++) setTimeout(spawnWave, j * 180);
+}
+
+function takeDamage() {
+  if (!running || graceT > 0) return;
+  if (shieldHits > 0) {
+    shieldHits -= 1;
+    graceT = 0.7;
+    RNF.sfx.hit();
+    shell.triggerShake(8, 0.2);
+    particles.burst(player.x + player.w / 2, player.y + player.h / 2, "#67e8f9", 18);
+    return;
+  }
+  running = false;
+  RNF.sfx.die();
+  shell.triggerShake(14, 0.4);
+  particles.burst(player.x + player.w / 2, player.y + player.h / 2, "#f472b6", 28);
+  shell.gameOver(Math.floor(score), {
+    distance: Math.floor(dist),
+    combo: combo,
+    difficulty: diffId
+  });
+}
+
+function pickupKind(kind) {
+  if (kind === "shield") { shieldHits = Math.min(2, shieldHits + 1); RNF.sfx.power(); }
+  else if (kind === "magnet") { magnetT = Math.max(magnetT, 6); RNF.sfx.power(); }
+  else if (kind === "haste") { hasteT = Math.max(hasteT, 4.5); RNF.sfx.power(); }
+  else if (kind === "ammo") { ammo = Math.min(maxAmmo, ammo + 2); RNF.sfx.score(); }
+  score += 40;
+  if (highQ) particles.burst(player.x, player.y, "#4ade80", 12);
+}
+
+function rectHit(a, b, pad) {
+  pad = pad || 0;
+  return a.x + a.w > b.x + pad && a.x < b.x + b.w - pad &&
+    a.y + a.h > b.y + pad && a.y < b.y + b.h - pad;
 }
 
 function updateHud() {
+  var mult = 1 + Math.min(4, Math.floor(combo / 5)) * 0.25;
+  var buffs = [];
+  if (shieldHits > 0) buffs.push("盾×" + shieldHits);
+  if (magnetT > 0) buffs.push("磁");
+  if (hasteT > 0) buffs.push("速");
   shell.setHud(
-    '<div><span>分數</span><b>' + score.toLocaleString() + '</b></div>' +
+    '<div><span>分數</span><b>' + Math.floor(score).toLocaleString() + '</b></div>' +
     '<div><span>距離</span><b>' + Math.floor(dist) + 'm</b></div>' +
-    '<div><span>速度</span><b>' + Math.floor(speed) + '</b></div>' +
-    '<div><span>狀態</span><b>' + (player.sliding ? "滑行" : player.onGround ? "奔跑" : "跳躍") + '</b></div>'
+    '<div><span>Combo</span><b>×' + mult.toFixed(2).replace(/\.00$/, "") + ' (' + combo + ')</b></div>' +
+    '<div><span>彈藥</span><b>' + ammo + '/' + maxAmmo + '</b></div>' +
+    '<div><span>狀態</span><b>' + (buffs.length ? buffs.join(" ") : (player && player.sliding ? "滑行" : player && player.onGround ? "奔跑" : "跳躍")) + '</b></div>'
   );
-}
-
-function hitPlayer() {
-  RNF.sfx.die();
-  shell.triggerShake(12, 0.35);
-  particles.burst(player.x, player.y + player.h / 2, "#f472b6", 25);
-  shell.gameOver(score, { distance: Math.floor(dist) });
 }
 
 function loop(now) {
   if (!running) return;
-  var dt = Math.min(0.033, (now - lastT) / 1000);
+  var dt = Math.min(0.032, (now - lastT) / 1000);
   lastT = now;
-  dist += speed * dt * 0.1;
-  score += Math.floor(speed * dt * 0.05);
-  speed = Math.min(360 * speedScale, 190 * speedScale + dist * 0.045);
-  shootCd = Math.max(0, shootCd - dt);
-  if (slideT > 0) { slideT -= dt; if (slideT <= 0 && !keys["ArrowDown"]) { player.sliding = false; player.h = 48; player.y = groundY - player.h; } }
+  var tun = diffTuning();
+  var hasteMul = hasteT > 0 ? 1.28 : 1;
+  var worldSpd = speed * hasteMul;
 
-  player.vy += 980 * dt;
+  dist += worldSpd * dt * 0.12;
+  var baseGain = worldSpd * dt * 0.055;
+  var mult = 1 + Math.min(4, Math.floor(combo / 5)) * 0.25;
+  score += baseGain * mult;
+  speed = Math.min(tun.speedCap * speedScale, 185 * speedScale + dist * 0.042);
+  shootCd = Math.max(0, shootCd - dt);
+  magnetT = Math.max(0, magnetT - dt);
+  hasteT = Math.max(0, hasteT - dt);
+  graceT = Math.max(0, graceT - dt);
+  flashT = Math.max(0, flashT - dt);
+  eventT = Math.max(0, eventT - dt);
+  comboTimer = Math.max(0, comboTimer - dt);
+  if (comboTimer <= 0) combo = 0;
+  coyoteT = Math.max(0, coyoteT - dt);
+  jumpBufferT = Math.max(0, jumpBufferT - dt);
+
+  if (dist >= nextEventAt) triggerMilestone();
+
+  // jump buffer consume
+  if (jumpBufferT > 0) tryJump(false);
+
+  if ((keys["ArrowDown"] || keys["KeyS"] || slideWanted) && player.onGround) startSlide();
+  else if (player.sliding) endSlide();
+
+  var wasGround = player.onGround;
+  player.vy += 1180 * dt;
+  if (player.vy > 820) player.vy = 820;
   player.y += player.vy * dt;
   if (player.y + player.h >= groundY) {
     player.y = groundY - player.h;
     player.vy = 0;
     player.onGround = true;
+    if (!wasGround && highQ) particles.burst(player.x + player.w / 2, groundY, "#22d3ee", 4);
+  } else {
+    if (wasGround) coyoteT = tun.coyote;
+    player.onGround = false;
   }
 
-  spawnTimer += dt;
-  if (spawnTimer > Math.max(0.7, 1.6 - dist * 0.002)) {
-    spawnTimer = 0;
-    spawnObstacle();
+  spawnTimer -= dt;
+  var spawnGap = Math.max(tun.spawnFloor, tun.spawnBase - dist * 0.00035) / tun.dens;
+  if (spawnTimer <= 0) {
+    spawnTimer = spawnGap * (0.85 + Math.random() * 0.35);
+    spawnWave();
+  }
+
+  // ammo regen slowly
+  if (ammo < maxAmmo) {
+    player._ammoAcc = (player._ammoAcc || 0) + dt;
+    if (player._ammoAcc > 3.2) {
+      player._ammoAcc = 0;
+      ammo += 1;
+    }
   }
 
   parallax.forEach(function (l) {
-    l.off = (l.off + speed * l.spd * dt) % 1200;
     l.blocks.forEach(function (b) {
-      b.x -= speed * l.spd * dt;
-      if (b.x + b.w < 0) b.x += 1200;
-    });
-  });
-
-  obstacles.forEach(function (o) {
-    o.x -= speed * dt;
-    if (o.type === "drone") o.y += Math.sin(performance.now() * 0.005 + o.bob) * 0.4;
-  });
-  coins.forEach(function (c) { c.x -= speed * dt; });
-  lasers.forEach(function (l) { l.x += l.vx * dt; });
-
-  lasers.forEach(function (l, li) {
-    obstacles.forEach(function (o, oi) {
-      if (o.hp > 0 && l.x < o.x + o.w && l.x + l.w > o.x && l.y < o.y + o.h && l.y + l.h > o.y) {
-        o.hp = 0;
-        lasers.splice(li, 1);
-        score += 50;
-        RNF.sfx.hit();
-        shell.triggerShake(5, 0.12);
-        particles.burst(o.x + o.w / 2, o.y + o.h / 2, "#4ade80", 12);
+      b.x -= worldSpd * l.spd * dt;
+      if (b.x + b.w < -20) {
+        b.x += 1200 + Math.random() * 80;
+        b.h = 30 + Math.random() * 100;
+        b.w = 28 + Math.random() * 70;
       }
     });
   });
-  obstacles = obstacles.filter(function (o) { return o.x > -80 && o.hp > 0; });
-  lasers = lasers.filter(function (l) { return l.x < 980; });
+  cityLights.forEach(function (L) {
+    L.x -= worldSpd * L.spd * dt;
+    if (L.x < -4) L.x = W + Math.random() * 40;
+  });
 
   obstacles.forEach(function (o) {
-    if (player.x + player.w > o.x + 6 && player.x < o.x + o.w - 6 &&
-        player.y + player.h > o.y + 4 && player.y < o.y + o.h - 4) hitPlayer();
+    o.x -= worldSpd * dt;
+    if (o.type === "drone") {
+      o.y = o.baseY + Math.sin(now * 0.004 + o.bob) * 18;
+    } else if (o.type === "mover") {
+      o.y = groundY - 55 - Math.sin(now * 0.003 + o.phase) * o.amp;
+    } else if (o.type === "gate") {
+      o.pulse = (o.pulse || 0) + dt * 6;
+    }
   });
 
   coins.forEach(function (c) {
-    if (!c.taken && Math.abs(c.x - (player.x + player.w / 2)) < 24 && Math.abs(c.y - (player.y + player.h / 2)) < 30) {
-      c.taken = true;
-      score += 25;
-      RNF.sfx.score();
-      particles.burst(c.x, c.y, "#fbbf24", 8);
-      updateHud();
+    c.x -= worldSpd * dt;
+    if (magnetT > 0) {
+      var px = player.x + player.w / 2;
+      var py = player.y + player.h / 2;
+      var dx = px - c.x, dy = py - c.y;
+      var distP = Math.sqrt(dx * dx + dy * dy) || 1;
+      if (distP < 160) {
+        c.x += (dx / distP) * 320 * dt;
+        c.y += (dy / distP) * 320 * dt;
+      }
     }
   });
-  coins = coins.filter(function (c) { return !c.taken && c.x > -20; });
 
-  if (shell.isHighQuality()) particles.trail(player.x + player.w / 2, player.y + player.h / 2, "#22d3ee");
+  pickups.forEach(function (p) {
+    p.x -= worldSpd * dt;
+    p.y += Math.sin(now * 0.005 + p.x * 0.01) * 0.3;
+  });
+
+  lasers.forEach(function (l) {
+    l.x += l.vx * dt;
+    l.life -= dt;
+  });
+
+  // laser vs obstacles
+  for (var li = lasers.length - 1; li >= 0; li--) {
+    var l = lasers[li];
+    for (var oi = obstacles.length - 1; oi >= 0; oi--) {
+      var o = obstacles[oi];
+      if (!o.breakable) continue;
+      if (l.x < o.x + o.w && l.x + l.w > o.x && l.y < o.y + o.h && l.y + l.h > o.y) {
+        o.hp -= 1;
+        lasers.splice(li, 1);
+        if (o.hp <= 0) {
+          score += 60 * mult;
+          RNF.sfx.hit();
+          shell.triggerShake(4, 0.1);
+          particles.burst(o.x + o.w / 2, o.y + o.h / 2, "#4ade80", 14);
+          obstacles.splice(oi, 1);
+        } else {
+          RNF.sfx.hit();
+          particles.burst(o.x + o.w / 2, o.y + o.h / 2, "#fbbf24", 6);
+        }
+        break;
+      }
+    }
+  }
+  lasers = lasers.filter(function (l) { return l.x < W + 40 && l.life > 0; });
+  obstacles = obstacles.filter(function (o) { return o.x > -100; });
+
+  // player collision
+  var hitBox = {
+    x: player.x + 6,
+    y: player.y + (player.sliding ? 2 : 4),
+    w: player.w - 12,
+    h: player.h - (player.sliding ? 4 : 8)
+  };
+  obstacles.forEach(function (o) {
+    if (o.type === "gate") {
+      // must slide under (gate hangs from above) — collision if not sliding enough
+      var gatePad = player.sliding ? 0 : 4;
+      if (rectHit(hitBox, o, gatePad)) takeDamage();
+      return;
+    }
+    if (rectHit(hitBox, o, 5)) takeDamage();
+  });
+
+  coins.forEach(function (c) {
+    if (c.taken) return;
+    var px = player.x + player.w / 2;
+    var py = player.y + player.h / 2;
+    if (Math.abs(c.x - px) < 22 && Math.abs(c.y - py) < 26) {
+      c.taken = true;
+      combo += 1;
+      comboTimer = 2.4;
+      score += 22 * mult;
+      RNF.sfx.score();
+      if (highQ) particles.burst(c.x, c.y, "#fbbf24", 7);
+    }
+  });
+  coins = coins.filter(function (c) { return !c.taken && c.x > -30; });
+
+  pickups.forEach(function (p) {
+    if (p.taken) return;
+    var px = player.x + player.w / 2;
+    var py = player.y + player.h / 2;
+    if (Math.abs(p.x - px) < 26 && Math.abs(p.y - py) < 28) {
+      p.taken = true;
+      pickupKind(p.kind);
+    }
+  });
+  pickups = pickups.filter(function (p) { return !p.taken && p.x > -30; });
+
+  if (highQ) {
+    trailBuf.push({ x: player.x + 8, y: player.y + player.h / 2, life: 0.28 });
+    if (trailBuf.length > 18) trailBuf.shift();
+    particles.trail(player.x + player.w / 2, player.y + player.h / 2, hasteT > 0 ? "#fbbf24" : "#22d3ee");
+  }
+  trailBuf.forEach(function (t) { t.life -= dt; });
+  trailBuf = trailBuf.filter(function (t) { return t.life > 0; });
+
   particles.update(dt);
-  draw();
+  draw(now);
   updateHud();
   loopId = requestAnimationFrame(loop);
 }
 
-function draw() {
+function drawRunner(x, y, w, h, sliding) {
+  ctx.save();
+  ctx.translate(x, y);
+  var bodyH = h;
+  var col = hasteT > 0 ? "#fbbf24" : (shieldHits > 0 ? "#67e8f9" : "#22d3ee");
+  ctx.fillStyle = col;
+  ctx.shadowBlur = highQ ? 18 : 6;
+  ctx.shadowColor = col;
+  // torso
+  ctx.beginPath();
+  if (sliding) {
+    ctx.roundRect ? ctx.roundRect(2, 4, w - 4, bodyH - 6, 6) : ctx.rect(2, 4, w - 4, bodyH - 6);
+  } else {
+    ctx.roundRect ? ctx.roundRect(4, 2, w - 10, bodyH - 10, 8) : ctx.rect(4, 2, w - 10, bodyH - 10);
+  }
+  ctx.fill();
+  // head
+  if (!sliding) {
+    ctx.fillStyle = "#e2e8f0";
+    ctx.beginPath();
+    ctx.arc(w * 0.62, 12, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#0ea5e9";
+    ctx.fillRect(w * 0.62 + 1, 10, 5, 3);
+  } else {
+    ctx.fillStyle = "#e2e8f0";
+    ctx.fillRect(w - 14, 6, 10, 8);
+  }
+  // legs suggestion
+  if (!sliding) {
+    var leg = (Math.floor(dist / 8) % 2) ? 1 : -1;
+    ctx.strokeStyle = col;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(10, bodyH - 10);
+    ctx.lineTo(10 + leg * 6, bodyH);
+    ctx.moveTo(18, bodyH - 10);
+    ctx.lineTo(18 - leg * 6, bodyH);
+    ctx.stroke();
+  }
+  ctx.shadowBlur = 0;
+  ctx.restore();
+}
+
+function draw(now) {
   ctx.save();
   shell.applyShake(ctx);
-  var sky = ctx.createLinearGradient(0, 0, 0, 520);
-  sky.addColorStop(0, "#0a0618");
-  sky.addColorStop(0.5, "#12082a");
-  sky.addColorStop(1, "#060810");
+
+  var sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, "#07041a");
+  sky.addColorStop(0.45, "#12082e");
+  sky.addColorStop(1, "#05070f");
   ctx.fillStyle = sky;
-  ctx.fillRect(0, 0, 960, 520);
+  ctx.fillRect(0, 0, W, H);
+
+  if (flashT > 0) {
+    ctx.fillStyle = "rgba(251,191,36," + (flashT * 0.35) + ")";
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  // distant stars / lights
+  cityLights.forEach(function (L) {
+    ctx.globalAlpha = L.a * (0.6 + 0.4 * Math.sin(now * 0.003 + L.x));
+    ctx.fillStyle = "#a5f3fc";
+    ctx.fillRect(L.x, L.y, L.s, L.s);
+  });
+  ctx.globalAlpha = 1;
 
   parallax.forEach(function (l, li) {
     ctx.fillStyle = l.color;
     l.blocks.forEach(function (b) {
-      var x = b.x - l.off * 0.3;
-      ctx.fillRect(x, groundY - l.h - b.h * 0.3, b.w, b.h);
+      var by = groundY - l.h - b.h * 0.25;
+      ctx.fillRect(b.x, by, b.w, b.h);
+      if (highQ && b.glow > 0.7) {
+        ctx.fillStyle = "rgba(34,211,238,0.15)";
+        ctx.fillRect(b.x + 4, by + 8, 4, 4);
+        ctx.fillStyle = l.color;
+      }
     });
-    ctx.fillRect(0, groundY - li * 8, 960, 2);
+    ctx.fillStyle = "rgba(34,211,238," + (0.04 + li * 0.02) + ")";
+    ctx.fillRect(0, groundY - 6 - li * 5, W, 2);
   });
 
-  ctx.fillStyle = "#1e293b";
-  ctx.fillRect(0, groundY, 960, 520 - groundY);
+  // ground
+  var ggrad = ctx.createLinearGradient(0, groundY, 0, H);
+  ggrad.addColorStop(0, "#141c2e");
+  ggrad.addColorStop(1, "#070a12");
+  ctx.fillStyle = ggrad;
+  ctx.fillRect(0, groundY, W, H - groundY);
   ctx.strokeStyle = "#22d3ee";
-  ctx.shadowBlur = 8; ctx.shadowColor = "#22d3ee";
-  ctx.beginPath(); ctx.moveTo(0, groundY); ctx.lineTo(960, groundY); ctx.stroke();
+  ctx.shadowBlur = highQ ? 12 : 0;
+  ctx.shadowColor = "#22d3ee";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, groundY);
+  ctx.lineTo(W, groundY);
+  ctx.stroke();
   ctx.shadowBlur = 0;
-  for (var gx = -(dist * 3) % 60; gx < 960; gx += 60) {
-    ctx.strokeStyle = "rgba(34,211,238,0.15)";
-    ctx.beginPath(); ctx.moveTo(gx, groundY); ctx.lineTo(gx - 30, 520); ctx.stroke();
+  ctx.lineWidth = 1;
+  for (var gx = -((dist * 3.2) % 56); gx < W; gx += 56) {
+    ctx.strokeStyle = "rgba(34,211,238,0.12)";
+    ctx.beginPath();
+    ctx.moveTo(gx, groundY);
+    ctx.lineTo(gx - 28, H);
+    ctx.stroke();
   }
+
+  // trails
+  trailBuf.forEach(function (t) {
+    ctx.globalAlpha = Math.max(0, t.life / 0.28) * 0.35;
+    ctx.fillStyle = "#22d3ee";
+    ctx.fillRect(t.x, t.y - 4, 10, 8);
+  });
+  ctx.globalAlpha = 1;
 
   coins.forEach(function (c) {
     if (c.taken) return;
     ctx.fillStyle = "#fbbf24";
-    ctx.shadowBlur = 12; ctx.shadowColor = "#fbbf24";
-    ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "#fff";
-    ctx.font = "bold 10px sans-serif";
+    ctx.shadowBlur = highQ ? 14 : 4;
+    ctx.shadowColor = "#fbbf24";
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#fff7ed";
+    ctx.font = "bold 9px sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("₿", c.x, c.y + 4);
+    ctx.fillText("₿", c.x, c.y + 3);
   });
-
-  obstacles.forEach(function (o) {
-    ctx.fillStyle = o.type === "drone" ? "#f472b6" : "#a78bfa";
-    ctx.shadowBlur = 10; ctx.shadowColor = ctx.fillStyle;
-    ctx.fillRect(o.x, o.y, o.w, o.h);
-    if (o.type === "drone") {
-      ctx.fillStyle = "#22d3ee";
-      ctx.fillRect(o.x + 4, o.y + o.h / 2 - 2, o.w - 8, 4);
-    }
-  });
-
-  lasers.forEach(function (l) {
-    ctx.fillStyle = "#22d3ee";
-    ctx.shadowBlur = 16; ctx.shadowColor = "#22d3ee";
-    ctx.fillRect(l.x, l.y, l.w, l.h);
-  });
-
-  ctx.fillStyle = player.sliding ? "#60a5fa" : "#22d3ee";
-  ctx.shadowBlur = 16; ctx.shadowColor = "#22d3ee";
-  ctx.fillRect(player.x, player.y, player.w, player.h);
-  ctx.fillStyle = "#fff";
-  ctx.fillRect(player.x + 22, player.y + 8, 8, 8);
   ctx.shadowBlur = 0;
 
-  ctx.fillStyle = "rgba(0,0,0,0.35)";
-  ctx.fillRect(0, 0, 960, 36);
+  pickups.forEach(function (p) {
+    if (p.taken) return;
+    var col = p.kind === "shield" ? "#67e8f9" : p.kind === "magnet" ? "#c084fc" : p.kind === "haste" ? "#fbbf24" : "#4ade80";
+    ctx.fillStyle = col;
+    ctx.shadowBlur = highQ ? 16 : 4;
+    ctx.shadowColor = col;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "bold 10px sans-serif";
+    ctx.textAlign = "center";
+    var label = p.kind === "shield" ? "盾" : p.kind === "magnet" ? "磁" : p.kind === "haste" ? "速" : "彈";
+    ctx.fillText(label, p.x, p.y + 4);
+  });
+  ctx.shadowBlur = 0;
+
+  obstacles.forEach(function (o) {
+    ctx.save();
+    if (o.type === "gate") {
+      var pulse = 0.55 + 0.45 * Math.sin(o.pulse || 0);
+      ctx.strokeStyle = "rgba(244,63,94," + pulse + ")";
+      ctx.fillStyle = "rgba(244,63,94,0.25)";
+      ctx.shadowBlur = highQ ? 20 : 6;
+      ctx.shadowColor = "#f43f5e";
+      ctx.fillRect(o.x, o.y, o.w, o.h);
+      ctx.strokeRect(o.x, o.y, o.w, o.h);
+      ctx.fillStyle = "#fda4af";
+      ctx.font = "9px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("GATE", o.x + o.w / 2, o.y - 6);
+      ctx.fillText("滑行", o.x + o.w / 2, o.y + o.h + 12);
+    } else if (o.type === "drone") {
+      ctx.fillStyle = o.color;
+      ctx.shadowBlur = highQ ? 14 : 4;
+      ctx.shadowColor = o.color;
+      ctx.beginPath();
+      ctx.ellipse(o.x + o.w / 2, o.y + o.h / 2, o.w / 2, o.h / 2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#22d3ee";
+      ctx.fillRect(o.x + 6, o.y + o.h / 2 - 2, o.w - 12, 4);
+    } else {
+      ctx.fillStyle = o.color;
+      ctx.shadowBlur = highQ ? 12 : 4;
+      ctx.shadowColor = o.color;
+      ctx.fillRect(o.x, o.y, o.w, o.h);
+      ctx.strokeStyle = "rgba(255,255,255,0.25)";
+      ctx.strokeRect(o.x + 1, o.y + 1, o.w - 2, o.h - 2);
+      if (o.hp > 1) {
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 10px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(String(o.hp), o.x + o.w / 2, o.y + o.h / 2 + 3);
+      }
+    }
+    ctx.restore();
+  });
+  ctx.shadowBlur = 0;
+
+  lasers.forEach(function (l) {
+    ctx.fillStyle = "#67e8f9";
+    ctx.shadowBlur = highQ ? 18 : 6;
+    ctx.shadowColor = "#22d3ee";
+    ctx.fillRect(l.x, l.y, l.w, l.h);
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(l.x + l.w - 6, l.y + 1, 6, l.h - 2);
+  });
+  ctx.shadowBlur = 0;
+
+  if (graceT > 0 && Math.floor(now / 60) % 2 === 0) ctx.globalAlpha = 0.45;
+  drawRunner(player.x, player.y, player.w, player.h, player.sliding);
+  ctx.globalAlpha = 1;
+
+  // shield ring
+  if (shieldHits > 0) {
+    ctx.strokeStyle = "rgba(103,232,249,0.7)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(player.x + player.w / 2, player.y + player.h / 2, player.w * 0.85, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.lineWidth = 1;
+  }
+
+  if (eventT > 0) {
+    ctx.fillStyle = "rgba(0,0,0,0.35)";
+    ctx.fillRect(W / 2 - 120, 48, 240, 36);
+    ctx.fillStyle = "#fbbf24";
+    ctx.font = "bold 16px 'Microsoft JhengHei',sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(eventLabel, W / 2, 72);
+  }
+
+  ctx.fillStyle = "rgba(0,0,0,0.4)";
+  ctx.fillRect(0, 0, W, 34);
   ctx.fillStyle = "#a78bfa";
   ctx.font = "12px 'Microsoft JhengHei',sans-serif";
   ctx.textAlign = "left";
-  ctx.fillText("NightCity · 賽博霓虹跑酷", 16, 22);
+  ctx.fillText("NightCity · 賽博霓虹無盡跑酷", 14, 22);
+  ctx.textAlign = "right";
+  ctx.fillStyle = "#67e8f9";
+  ctx.fillText((shell.getDifficulty() || {}).label || diffId, W - 14, 22);
 
   particles.draw(ctx);
   ctx.restore();

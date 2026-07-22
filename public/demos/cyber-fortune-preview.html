@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>CyberFortune 012</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -14,6 +14,9 @@
       color: #f0e6d3;
       font-family: "Segoe UI", "Microsoft JhengHei", system-ui, sans-serif;
       overflow: hidden;
+      overscroll-behavior: none;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
     }
     #bgCanvas { position: fixed; inset: 0; z-index: 0; }
     .scanlines {
@@ -31,7 +34,7 @@
       overflow: hidden;
     }
     .screen.active { display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    #game.active { justify-content: flex-start; padding: 0.35rem 0.45rem 0.45rem; overflow-y: auto; overflow-x: hidden; }
+    #game.active { justify-content: flex-start; padding: 0.35rem 0.45rem max(0.45rem, env(safe-area-inset-bottom)); overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; }
     .frame {
       position: relative;
       padding: 1.4rem 1.6rem;
@@ -466,6 +469,35 @@
       color: #00ffc8!important;
       background: rgba(0,255,200,0.1)!important;
     }
+    .round-banner {
+      position: fixed; top: 18%; left: 50%; transform: translateX(-50%) scale(0);
+      z-index: 19; pointer-events: none; text-align: center;
+      padding: 0.55rem 1.2rem;
+      border: 1px solid rgba(212,175,55,0.45);
+      background: rgba(0,0,0,0.82);
+      box-shadow: 0 0 40px rgba(0,255,200,0.15);
+    }
+    .round-banner.show { animation: roundBanner 1.4s ease forwards; }
+    @keyframes roundBanner {
+      0% { opacity: 0; transform: translateX(-50%) scale(0.6); }
+      18% { opacity: 1; transform: translateX(-50%) scale(1.05); }
+      75% { opacity: 1; transform: translateX(-50%) scale(1); }
+      100% { opacity: 0; transform: translateX(-50%) scale(0.92) translateY(-12px); }
+    }
+    .round-banner b { display: block; font-size: 1.15rem; color: #d4af37; letter-spacing: 0.12em; }
+    .round-banner span { font-size: 0.72rem; color: #00ffc8; letter-spacing: 0.08em; }
+    @media (max-width: 560px) {
+      .hud { grid-template-columns: repeat(2, 1fr); }
+      .battle-top { grid-template-columns: 1fr; gap: 0.35rem; }
+      .versus-core { text-align: center; padding: 0.2rem 0; }
+      .tool-btn, .battle-actions button { min-height: 44px; font-size: 0.72rem; }
+      .hand-wrap .battle-card { width: 68px; height: 92px; }
+      .hand-wrap .battle-card .card-val { font-size: 1.75rem; }
+      .lane-col { min-height: 118px; padding: 0.35rem 0.25rem; }
+      .lane-slot { min-height: 52px; }
+      .pick-btn { width: 58px; height: 70px; }
+      .combo-popup { font-size: 1.45rem; top: 16%; }
+    }
     .help-close-btn:hover {
       background: rgba(0,255,200,0.2)!important;
       box-shadow: 0 0 12px rgba(0,255,200,0.25)!important;
@@ -482,6 +514,7 @@
   <div class="flash-overlay" id="flash"></div>
   <div class="countdown-overlay" id="countdown"><div class="countdown-num" id="countdownNum">3</div></div>
   <div class="combo-popup" id="comboPopup"></div>
+  <div class="round-banner" id="roundBanner"><b id="roundBannerTitle">第 1 回合</b><span id="roundBannerSub">佈陣階段</span></div>
 
   <div id="menu" class="screen active">
     <div class="frame">
@@ -500,6 +533,7 @@
         <button class="diff-btn selected" data-diff="easy">初級</button>
         <button class="diff-btn" data-diff="normal">中級</button>
         <button class="diff-btn" data-diff="hard">高級</button>
+        <button class="diff-btn" data-diff="extreme">極限</button>
       </div>
       <div class="btn-row">
         <button class="gold" id="btnStart">▶ 進入對戰</button>
@@ -552,9 +586,10 @@
         </ul>
         <h3>⏱️ 佈陣限時</h3>
         <ul>
-          <li><strong>初級：</strong> 每回合 26 秒佈陣</li>
-          <li><strong>中級：</strong> 每回合 20 秒佈陣</li>
-          <li><strong>高級：</strong> 每回合 15 秒佈陣</li>
+          <li><strong>初級：</strong> 每回合 28 秒佈陣，AI 較保守</li>
+          <li><strong>中級：</strong> 每回合 20 秒，AI 會搶占共鳴線路</li>
+          <li><strong>高級：</strong> 每回合 15 秒，AI 常發動全餐戰術</li>
+          <li><strong>極限：</strong> 每回合 12 秒，AI 高強度博弈</li>
           <li>時間到會自動以目前佈陣確認對戰</li>
         </ul>
         <h3>🏆 電競評級</h3>
@@ -590,25 +625,25 @@
       </div>
       <div class="battle-top">
         <div class="fighter">
-          <span class="fighter-tag">PLAYER</span>
+          <span class="fighter-tag">玩家</span>
           <div class="hp-wrap"><div class="hp-fill player-hp" id="playerHpFill" style="width:100%"></div></div>
           <b id="playerHp">100</b>
         </div>
         <div class="versus-core">VS</div>
         <div class="fighter">
-          <span class="fighter-tag">AI · NEXUS</span>
+          <span class="fighter-tag">AI · 核心</span>
           <div class="hp-wrap"><div class="hp-fill opp-hp" id="oppHpFill" style="width:100%"></div></div>
           <b id="oppHp">100</b>
         </div>
       </div>
       <div class="hud">
-        <div class="hud-block"><span class="hud-label">ROUND</span><b id="hudRound">1</b>/<span id="hudTotal" style="font-size:0.85rem;color:#6a6458">8</span></div>
-        <div class="hud-block"><span class="hud-label">SCORE</span><b id="hudScore">0</b></div>
-        <div class="hud-block combo-active" id="comboBlock"><span class="hud-label">COMBO</span><b id="hudCombo">0</b></div>
-        <div class="hud-block"><span class="hud-label">LANE WIN</span><b id="hudLaneWins">0</b></div>
+        <div class="hud-block"><span class="hud-label">回合</span><b id="hudRound">1</b>/<span id="hudTotal" style="font-size:0.85rem;color:#6a6458">8</span></div>
+        <div class="hud-block"><span class="hud-label">得分</span><b id="hudScore">0</b></div>
+        <div class="hud-block combo-active" id="comboBlock"><span class="hud-label">連擊</span><b id="hudCombo">0</b></div>
+        <div class="hud-block"><span class="hud-label">戰線勝</span><b id="hudLaneWins">0</b></div>
       </div>
       <div class="progress-wrap">
-        <div class="progress-label"><span>BATTLE PROGRESS</span><span id="progressPct">0%</span></div>
+        <div class="progress-label"><span>對戰進度</span><span id="progressPct">0%</span></div>
         <div class="progress-bar"><div class="progress-fill" id="sessionProgress" style="width:0%"></div></div>
       </div>
       <div class="timer-wrap">
@@ -616,7 +651,7 @@
         <div class="timer-bar"><div class="timer-fill" id="timerFill" style="width:100%"></div></div>
       </div>
       <div class="battle-arena">
-        <div class="arena-title">012 MATRIX BATTLE · <span id="roundTag">DEPLOY PHASE</span></div>
+        <div class="arena-title">012 矩陣對戰 · <span id="roundTag">佈陣階段</span></div>
         <div class="matrix-board" id="matrixBoard"></div>
         <p class="deploy-hint" id="deployHint">① 點選手牌 → ② 點戰線部署 → ③ 確認佈陣</p>
         <div class="hand-row" id="handRow"></div>
@@ -645,7 +680,7 @@
       <div class="result-breakdown">
         <div>戰線勝<b id="resCorrect">0</b></div>
         <div>最高連擊<b id="resCombo">0</b></div>
-        <div>準確率<b id="resAcc">0%</b></div>
+        <div>剩餘 HP<b id="resAcc">0%</b></div>
       </div>
       <p class="sub" id="resultMsg"></p>
       <div class="btn-row">
@@ -658,11 +693,12 @@
 
   <script>
     const DIFF = {
-      easy:   { rounds: 6, deployTime: 26, aiSkill: 0.38, maxHp: 100 },
-      normal: { rounds: 8, deployTime: 20, aiSkill: 0.58, maxHp: 120 },
-      hard:   { rounds: 10, deployTime: 15, aiSkill: 0.8, maxHp: 140 },
+      easy:    { rounds: 6,  deployTime: 28, aiSkill: 0.32, maxHp: 100, aiDmg: 0.82, tierBoost: 0 },
+      normal:  { rounds: 8,  deployTime: 20, aiSkill: 0.58, maxHp: 115, aiDmg: 1.0,  tierBoost: 0.05 },
+      hard:    { rounds: 10, deployTime: 15, aiSkill: 0.78, maxHp: 130, aiDmg: 1.18, tierBoost: 0.12 },
+      extreme: { rounds: 12, deployTime: 12, aiSkill: 0.9,  maxHp: 145, aiDmg: 1.35, tierBoost: 0.18 },
     };
-    const ROUND_TAGS = ['DEPLOY PHASE','MATRIX CLASH','FULL MEAL DUEL','NEURAL WAR','QUANTUM STORM'];
+    const ROUND_TAGS = ['佈陣階段', '矩陣交鋒', '全餐對決', '神經戰', '量子風暴'];
     const SUITS = ['♠', '♥', '♦', '♣'];
     const TIER_SPEC = {
       S: { power: [28, 36], color: '#ffd700' },
@@ -678,8 +714,9 @@
     let selectedCardId = null, selectedLane = null, locked = false;
     let timerId = null, timeLeft = 0, totalTime = 0, deployStart = 0;
     let bestScore = 0, bestCombo = 0, bestGrade = '—';
-    let fxParticles = [];
+    let fxParticles = [], fxLast = 0;
     let paused = false, gameActive = false, helpFromGame = false;
+    let commitLock = false, lastHandTap = 0;
 
     const $ = (id) => document.getElementById(id);
     const screens = { menu: $('menu'), help: $('help'), game: $('game'), result: $('result'), leaderboard: $('leaderboard') };
@@ -712,10 +749,13 @@
     }
     drawBg();
 
-    function drawFx() {
+    function drawFx(now) {
+      if (!fxLast) fxLast = now;
+      const dt = DemoEnhance.clamp(now - fxLast, 0, DemoEnhance.MAX_DELTA);
+      fxLast = now;
       fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
       fxParticles.forEach(p => {
-        p.x += p.vx; p.y += p.vy; p.life -= 16; p.vy += 0.05;
+        p.x += p.vx * (dt / 16); p.y += p.vy * (dt / 16); p.life -= dt; p.vy += 0.05 * (dt / 16);
         fxCtx.globalAlpha = Math.max(0, p.life / 600);
         fxCtx.fillStyle = p.color;
         fxCtx.beginPath();
@@ -723,15 +763,26 @@
         fxCtx.fill();
       });
       fxParticles = fxParticles.filter(p => p.life > 0);
+      DemoEnhance.capParticles(fxParticles);
       requestAnimationFrame(drawFx);
     }
-    drawFx();
+    drawFx(performance.now());
 
     function burst(x, y, color, n = 20) {
       for (let i = 0; i < n; i++) {
         const a = Math.random() * Math.PI * 2, s = 2 + Math.random() * 5;
         fxParticles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 400 + Math.random() * 300, color, size: 2 + Math.random() * 2 });
       }
+      DemoEnhance.capParticles(fxParticles);
+    }
+
+    function showRoundBanner(title, sub) {
+      const el = $('roundBanner');
+      $('roundBannerTitle').textContent = title;
+      $('roundBannerSub').textContent = sub || '';
+      el.classList.remove('show');
+      void el.offsetWidth;
+      el.classList.add('show');
     }
 
     function flash(type) {
@@ -743,7 +794,8 @@
     function showCombo(n) {
       if (n < 2) return;
       const el = $('comboPopup');
-      el.textContent = `${n}x COMBO!`;
+      const labels = { 2: '雙線制霸', 3: '三線連勝', 4: '矩陣暴走', 5: '傳說連擊' };
+      el.textContent = (labels[n] || n + ' 連擊') + '!';
       el.classList.remove('show');
       void el.offsetWidth;
       el.classList.add('show');
@@ -765,7 +817,7 @@
 
     function createCard(biasLane) {
       const value = biasLane !== undefined ? biasLane : Math.floor(Math.random() * 3);
-      const roll = Math.random();
+      const roll = Math.random() + (config.tierBoost || 0) * 0.15;
       const tier = roll > 0.82 ? 'S' : roll > 0.48 ? 'A' : 'B';
       const range = TIER_SPEC[tier].power;
       return {
@@ -780,7 +832,10 @@
     function dealHand(n) {
       const cards = [];
       for (let i = 0; i < n; i++) cards.push(createCard());
-      if (difficulty !== 'easy' && Math.random() < 0.55) {
+      if (difficulty === 'easy' && Math.random() < 0.65) {
+        const lane = Math.floor(Math.random() * 3);
+        cards[Math.floor(Math.random() * cards.length)] = createCard(lane);
+      } else if (difficulty !== 'easy' && Math.random() < 0.55) {
         const lane = Math.floor(Math.random() * 3);
         cards[Math.floor(Math.random() * cards.length)] = createCard(lane);
       }
@@ -889,6 +944,8 @@
         wrap.appendChild(el);
         wrap.addEventListener('click', (e) => {
           e.stopPropagation();
+          if (Date.now() - lastHandTap < 100) return;
+          lastHandTap = Date.now();
           selectCard(card.id);
         });
         row.appendChild(wrap);
@@ -957,7 +1014,8 @@
       let playerPow = 0, oppEst = 0;
       [0, 1, 2].forEach((lane) => {
         playerPow += effectivePower(deployment[lane], lane);
-        oppEst += 18 + config.aiSkill * 22;
+        const aiBase = 14 + config.aiSkill * 24 + (config.tierBoost || 0) * 20;
+        oppEst += aiBase + lane * 2;
       });
       const total = playerPow + oppEst || 1;
       const pct = Math.round((playerPow / total) * 100);
@@ -1002,8 +1060,9 @@
 
     function aiDeployCards() {
       oppDeploy = { 0: null, 1: null, 2: null };
-      const pool = dealHand(4);
-      if (config.aiSkill > 0.65 && Math.random() < 0.42) {
+      const pool = dealHand(4 + (config.aiSkill > 0.75 ? 1 : 0));
+      const mealChance = config.aiSkill > 0.7 ? 0.55 : config.aiSkill > 0.5 ? 0.32 : 0.12;
+      if (Math.random() < mealChance && pool.length >= 3) {
         [0, 1, 2].forEach((lane) => {
           const match = pool.find((c) => c.value === lane);
           if (match) {
@@ -1011,15 +1070,28 @@
             pool.splice(pool.indexOf(match), 1);
           }
         });
-      } else if (Math.random() < config.aiSkill) {
+      } else if (config.aiSkill > 0.55) {
+        [0, 1, 2].forEach((lane) => {
+          if (oppDeploy[lane]) return;
+          const match = pool.find((c) => c.value === lane);
+          if (match && Math.random() < config.aiSkill) {
+            oppDeploy[lane] = match;
+            pool.splice(pool.indexOf(match), 1);
+          }
+        });
+      }
+      if (!oppDeploy[0] && !oppDeploy[1] && !oppDeploy[2] && Math.random() < config.aiSkill) {
         const focus = Math.floor(Math.random() * 3);
         const best = [...pool].sort((a, b) => effectivePower(b, focus) - effectivePower(a, focus))[0];
-        oppDeploy[focus] = best;
-        pool.splice(pool.indexOf(best), 1);
+        if (best) {
+          oppDeploy[focus] = best;
+          pool.splice(pool.indexOf(best), 1);
+        }
       }
+      pool.sort((a, b) => b.power - a.power);
       pool.forEach((card) => {
         const empty = [0, 1, 2].find((l) => !oppDeploy[l]);
-        if (empty !== undefined && Math.random() < 0.55 + config.aiSkill * 0.3) {
+        if (empty !== undefined && Math.random() < 0.5 + config.aiSkill * 0.35) {
           oppDeploy[empty] = card;
         }
       });
@@ -1057,6 +1129,7 @@
           losses++;
           let dmg = Math.max(8, Math.floor((r.oPow - r.pPow) * 0.55) + 10);
           if (oppMeal) dmg = Math.floor(dmg * 1.8);
+          dmg = Math.floor(dmg * (config.aiDmg || 1));
           playerDmg += dmg;
         }
       });
@@ -1068,6 +1141,7 @@
         combo++;
         maxCombo = Math.max(maxCombo, combo);
         showCombo(combo);
+        burst(innerWidth / 2, innerHeight * 0.38, combo >= 4 ? '#ffd700' : '#00ffc8', 18 + combo * 4);
       } else {
         combo = 0;
       }
@@ -1079,7 +1153,7 @@
       if (elapsed <= fastS) { rank = 'S'; rankMult = 1.5; rankLabel = '⚡ S 級閃電佈陣'; }
       else if (elapsed <= fastA) { rank = 'A'; rankMult = 1.25; rankLabel = '🔥 A 級戰術佈陣'; }
 
-      const roundScore = Math.floor((wins * 120 + oppDmg * 2 + (playerMeal ? 80 : 0)) * rankMult);
+      const roundScore = Math.floor((wins * 120 + oppDmg * 2 + (playerMeal ? 80 : 0) + combo * 15) * rankMult);
       score += roundScore;
       if (wins >= 2) laneWins += wins;
 
@@ -1219,6 +1293,12 @@
       bestScore = p.bestScore || 0;
       bestCombo = p.bestCombo || 0;
       bestGrade = p.bestGrade || '—';
+      if (p.difficulty && DIFF[p.difficulty]) {
+        difficulty = p.difficulty;
+        document.querySelectorAll('.diff-btn').forEach(function (b) {
+          b.classList.toggle('selected', b.dataset.diff === difficulty);
+        });
+      }
       $('bestScore').textContent = bestScore.toLocaleString();
       $('bestCombo').textContent = bestCombo;
       $('bestGrade').textContent = bestGrade;
@@ -1234,7 +1314,7 @@
       showScreen('leaderboard');
       $('lbLoading').style.display = 'block';
       $('lbList').innerHTML = '';
-      const entries = await PlatformBridge.fetchLeaderboard(8);
+      const entries = await PlatformBridge.fetchLeaderboard(8, difficulty);
       $('lbLoading').style.display = 'none';
       PlatformBridge.renderLeaderboard($('lbList'), entries);
     }
@@ -1288,11 +1368,11 @@
     }
 
     function startGame() {
-      config = DIFF[difficulty];
+      config = DIFF[difficulty] || DIFF.easy;
       round = 0; score = 0; laneWins = 0; combo = 0; maxCombo = 0;
       maxHp = config.maxHp;
       playerHp = maxHp; oppHp = maxHp;
-      paused = false; gameActive = true; locked = false;
+      paused = false; gameActive = true; locked = false; commitLock = false;
       deployment = { 0: null, 1: null, 2: null };
       oppDeploy = { 0: null, 1: null, 2: null };
       $('hudTotal').textContent = config.rounds;
@@ -1319,12 +1399,15 @@
     function nextRound() {
       if (oppHp <= 0 || playerHp <= 0 || round >= config.rounds) return endGame();
       locked = false;
+      commitLock = false;
       deployment = { 0: null, 1: null, 2: null };
       oppDeploy = { 0: null, 1: null, 2: null };
       hand = dealHand(4);
       $('feedback').textContent = '';
       $('feedback').className = 'feedback';
-      $('roundTag').textContent = ROUND_TAGS[round % ROUND_TAGS.length];
+      const tag = ROUND_TAGS[round % ROUND_TAGS.length];
+      $('roundTag').textContent = tag;
+      showRoundBanner('第 ' + (round + 1) + ' 回合', tag + ' · 限時 ' + config.deployTime + ' 秒');
       document.querySelectorAll('.lane-col').forEach((c) => c.classList.remove('win-flash'));
       [0, 1, 2].forEach((lane) => {
         $('oppLane' + lane).innerHTML = '<div class="battle-card hidden-card"><div class="card-val">?</div></div>';
@@ -1354,19 +1437,25 @@
     }
 
     function commitDeploy(auto) {
-      if (locked || paused) return;
+      if (locked || paused || commitLock) return;
+      commitLock = true;
       locked = true;
       stopTimer();
       $('btnCommit').disabled = true;
       $('btnFullMeal').disabled = true;
-      if (!deployment[0] && !deployment[1] && !deployment[2] && hand.length) {
+      const deployed = [0, 1, 2].filter((l) => deployment[l]).length;
+      if (!deployed && hand.length) {
         deployment[0] = hand.shift();
+        setDeployHint(auto ? '時間到 — 已自動部署首牌' : '未佈陣 — 已自動部署首牌至 LINE 0', true);
+      } else if (deployed === 1) {
+        setDeployHint('僅一線有牌 — 確認後開戰', true);
       }
       aiDeployCards();
-      $('roundTag').textContent = 'MATRIX CLASH';
+      $('roundTag').textContent = '矩陣交鋒';
       setTimeout(() => {
         resolveRound();
         setTimeout(() => {
+          commitLock = false;
           if (oppHp <= 0 || playerHp <= 0) endGame();
           else nextRound();
         }, 1400);

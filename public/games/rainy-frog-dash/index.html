@@ -2,93 +2,102 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Rainy Frog Dash · 雨夜青蛙衝刺</title>
-  <script src="/sdk/rnf-game-sdk.js?v=20260723"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Rainy Frog Dash · 雨夜飛天蛙</title>
 </head>
 <body>
+<script src="/sdk/rnf-game-sdk.js?v=20260723b"></script>
 <script>
 RNF.init();
 var shell = RNF.buildShell({
   title: "Rainy Frog Dash",
   creator: "FroggyLab_Games",
-  subtitle: "空白／W／↑ 二段跳 · 長按滑翔 · Z 護盾 · 閘門／橫樑／無人機障礙",
+  subtitle: "二段跳 · 滑翔 · 護盾／火箭 · 雨夜霓虹天際 · 手機觸控就緒",
   width: 960,
   height: 520,
   bgmStyle: "ambient",
-  highlights: ["二段跳", "護盾冷卻", "Combo 金幣", "四段難度"],
+  highlights: ["多段障礙編隊", "護盾火箭道具", "Combo 金幣", "天氣相位", "手機三鍵"],
   help: {
-    about: "雨夜霓虹賽道跑酷。跳躍高度固定；難度越高，場景移動越快、障礙越密集，但不會跳得更高。",
+    about: "雨夜霓虹賽道跑酷。固定跳躍高度，難度越高移速與障礙密度越大。收集金幣維持 Combo，撿護盾與火箭衝刺更遠。",
     features: [
-      "閘門：從缺口穿過",
-      "低橫樑：起跳越過",
-      "懸浮無人機：保持節奏跳躍或滑翔",
-      "難度只影響移速與障礙密度，不影響跳躍高度"
+      "閘門、低橫樑、無人機、懸空雷射、編隊組合等豐富障礙",
+      "護盾可擋一次撞擊（Z 或撿取）；火箭短時加速",
+      "金幣 Combo 倍率；距離越遠場景越密",
+      "雨勢相位：細雨 → 暴雨 → 霓虹狂潮",
+      "桌面鍵鼠與手機虛擬鍵／點擊跳躍皆可"
     ],
     controls: [
-      "空白鍵／W／↑：跳躍（可二段跳）",
+      "空白／W／↑／觸控「跳」：跳躍（可二段跳）",
       "長按跳躍鍵：空中滑翔減速下落",
-      "Z：護盾（冷卻 8 秒）",
-      "滑鼠／觸控：點擊跳躍"
+      "Z／觸控「盾」：啟動護盾（冷卻 7 秒）",
+      "點擊畫面空白處亦可跳躍"
     ],
     tips: [
-      "先點一下遊戲畫面確保鍵盤焦點",
-      "閘門缺口在中段，一段跳通常剛好",
-      "低橫樑貼地，看到就跳；無人機在上方需早跳"
+      "開局有熱身時間，先熟悉節奏",
+      "護盾被破後有短暫無敵幀",
+      "火箭期間分數與移速提升，把握撿取時機"
     ]
   },
   onStop: cleanup,
   onStart: startGame
 });
 
-var GRAVITY = 1080;
-var JUMP_1 = -620;
-var JUMP_2 = -500;
-var W, H, ctx, particles, animId, running, gameEnded, keys;
-var frog, obstacles, pickups, rain, parallax, score, combo, comboTimer;
-var speed, jumps, shieldHits, shieldCd, rocketTimer, groundY, scrollX;
-var spawnTimer, pickupTimer, lastTs, animT, pointerJump, graceTimer;
-var worldMult, diffId, patternIdx, lastSpawnX;
+var W = 960, H = 520;
+var GRAVITY = 1080, JUMP_1 = -620, JUMP_2 = -500;
+var ctx, particles, animId, running, gameEnded, keys = {};
+var frog, obstacles, pickups, rain, splashes, parallax, lightning;
+var score, combo, comboTimer, speed, jumps, shieldHits, shieldCd;
+var rocketTimer, groundY, scrollX, spawnTimer, pickupTimer, lastTs, animT;
+var worldMult, diffId, highQ, graceTimer, patternIdx, lastSpawnX;
+var invulnTimer, phaseT, phaseLabel, cityGlow, neonSigns;
 
 function cleanup() {
   shell.detachKeyboard();
+  shell.detachTouchControls();
   running = false;
   if (animId) cancelAnimationFrame(animId);
   animId = null;
-  pointerJump = false;
-  if (shell && shell.canvas) {
-    shell.canvas.removeEventListener("pointerdown", onPointerDown);
-    shell.canvas.removeEventListener("pointerup", onPointerUp);
-    shell.canvas.removeEventListener("pointerleave", onPointerUp);
-  }
   window.removeEventListener("keydown", onKeyDown);
   window.removeEventListener("keyup", onKeyUp);
 }
 
+function diffTuning() {
+  var map = {
+    easy: { speedBase: 165, speedCap: 250, spawnBase: 1.75, spawnFloor: 0.95, grace: 2.2, gapBonus: 18, shieldCd: 9, coyote: 0.11 },
+    normal: { speedBase: 178, speedCap: 290, spawnBase: 1.5, spawnFloor: 0.78, grace: 1.7, gapBonus: 12, shieldCd: 7.5, coyote: 0.09 },
+    hard: { speedBase: 195, speedCap: 330, spawnBase: 1.25, spawnFloor: 0.62, grace: 1.2, gapBonus: 6, shieldCd: 6.5, coyote: 0.07 },
+    extreme: { speedBase: 215, speedCap: 375, spawnBase: 1.05, spawnFloor: 0.48, grace: 0.85, gapBonus: 0, shieldCd: 5.5, coyote: 0.05 }
+  };
+  return map[diffId] || map.normal;
+}
+
 function jumpPressed() {
   if (!running || !frog) return;
-  if (!frog.onGround && jumps < 2) {
+  if (!frog.onGround && jumps < 2 && frog.coyote <= 0) {
     frog.vy = JUMP_2;
-    jumps++;
+    jumps = 2;
+    frog.legT = 0.25;
     RNF.sfx.confirm();
-    particles.burst(frog.x, frog.y + 14, "#34d399", 10);
+    particles.burst(frog.x, frog.y + 14, "#34d399", highQ ? 12 : 6);
   } else if (frog.onGround || frog.coyote > 0) {
     frog.vy = JUMP_1;
     jumps = frog.onGround ? 1 : 2;
     frog.onGround = false;
     frog.coyote = 0;
+    frog.legT = 0.3;
     RNF.sfx.click();
-    particles.burst(frog.x, frog.y + 18, "#22d3ee", 8);
+    particles.burst(frog.x, frog.y + 18, "#22d3ee", highQ ? 10 : 5);
   }
 }
 
 function tryShield() {
   if (!running || shieldCd > 0 || shieldHits > 0) return;
   shieldHits = 1;
-  shieldCd = 8;
+  var tun = diffTuning();
+  shieldCd = tun.shieldCd;
   RNF.sfx.power();
   shell.triggerShake(4, 0.12);
-  particles.burst(frog.x, frog.y, "#a78bfa", 18);
+  particles.burst(frog.x, frog.y, "#a78bfa", highQ ? 20 : 10);
 }
 
 function onKeyDown(e) {
@@ -106,59 +115,68 @@ function onKeyDown(e) {
 
 function onKeyUp(e) { keys[e.code] = false; }
 
-function onPointerDown(e) {
-  if (!running) return;
-  shell.canvas.setPointerCapture(e.pointerId);
-  pointerJump = true;
-  jumpPressed();
-}
-
-function onPointerUp() { pointerJump = false; }
-
 function initRain() {
+  var count = highQ ? 160 : 70;
   rain = [];
-  for (var i = 0; i < 120; i++) {
+  for (var i = 0; i < count; i++) {
     rain.push({
-      x: Math.random() * W, y: Math.random() * H,
-      len: 5 + Math.random() * 12, sp: 200 + Math.random() * 240,
-      a: 0.12 + Math.random() * 0.28, layer: Math.random() < 0.4 ? 0.55 : 1
+      x: Math.random() * (W + 80) - 40,
+      y: Math.random() * H,
+      len: 6 + Math.random() * 14,
+      sp: 220 + Math.random() * 280,
+      a: 0.1 + Math.random() * 0.3,
+      layer: Math.random() < 0.35 ? 0.5 : 1
     });
   }
+  splashes = [];
 }
 
 function initParallax() {
   parallax = [
-    { color: "rgba(34,211,238,0.07)", spd: 0.16, y: 55, blocks: [] },
-    { color: "rgba(167,139,250,0.09)", spd: 0.34, y: 95, blocks: [] },
-    { color: "rgba(244,114,182,0.1)", spd: 0.55, y: 130, blocks: [] }
+    { color: "rgba(34,211,238,0.06)", spd: 0.12, yOff: 48, blocks: [], winColor: "rgba(251,191,36,0.35)" },
+    { color: "rgba(167,139,250,0.085)", spd: 0.28, yOff: 88, blocks: [], winColor: "rgba(244,114,182,0.4)" },
+    { color: "rgba(56,189,248,0.1)", spd: 0.48, yOff: 125, blocks: [], winColor: "rgba(34,211,238,0.45)" },
+    { color: "rgba(244,114,182,0.12)", spd: 0.72, yOff: 175, blocks: [], winColor: "rgba(167,139,250,0.5)" }
   ];
-  parallax.forEach(function (layer) {
-    for (var i = 0; i < 11; i++) {
+  parallax.forEach(function (layer, li) {
+    for (var i = 0; i < 12; i++) {
       layer.blocks.push({
-        x: i * 105 + Math.random() * 25,
-        w: 26 + Math.random() * 44,
-        h: 36 + Math.random() * 90,
-        win: Math.random() < 0.45
+        x: i * 98 + Math.random() * 30,
+        w: 24 + Math.random() * (38 + li * 6),
+        h: 40 + Math.random() * (80 + li * 18),
+        win: Math.random() < 0.5,
+        flicker: Math.random() * 6.28
       });
     }
   });
+  neonSigns = [];
+  for (var j = 0; j < (highQ ? 8 : 4); j++) {
+    neonSigns.push({
+      x: Math.random() * W, y: 60 + Math.random() * 100,
+      text: ["蛙", "雨", "GO", "RNF"][j % 4],
+      color: ["#22d3ee", "#a78bfa", "#f472b6", "#fbbf24"][j % 4],
+      phase: Math.random() * 6.28
+    });
+  }
 }
 
 function gapSizeForDiff() {
-  if (diffId === "extreme") return 68;
-  if (diffId === "hard") return 78;
-  if (diffId === "normal") return 88;
-  return 98;
+  var tun = diffTuning();
+  if (diffId === "extreme") return 64 + tun.gapBonus * 0.3;
+  if (diffId === "hard") return 74 + tun.gapBonus * 0.5;
+  if (diffId === "normal") return 86 + tun.gapBonus * 0.7;
+  return 96 + tun.gapBonus;
 }
 
 function spawnPatterns() {
   return [
-    { minDist: 0,   list: ["rock"] },
-    { minDist: 80,  list: ["rock", "beam"] },
-    { minDist: 160, list: ["rock", "beam", "drone"] },
-    { minDist: 280, list: ["gate", "beam", "drone"] },
-    { minDist: 420, list: ["gate", "beam", "drone", "rock", "overhead"] },
-    { minDist: 600, list: ["gate", "beam", "drone", "overhead", "double_gate"] }
+    { minDist: 0, list: ["rock"] },
+    { minDist: 70, list: ["rock", "beam"] },
+    { minDist: 150, list: ["rock", "beam", "drone"] },
+    { minDist: 260, list: ["gate", "beam", "drone"] },
+    { minDist: 400, list: ["gate", "beam", "drone", "laser", "overhead"] },
+    { minDist: 580, list: ["gate", "double_gate", "drone_wave", "laser_pair", "combo_pack"] },
+    { minDist: 850, list: ["double_gate", "drone_wave", "laser_pair", "combo_pack", "storm_gate"] }
   ];
 }
 
@@ -166,19 +184,16 @@ function pickPatternType() {
   var patterns = spawnPatterns();
   var list = patterns[0].list;
   for (var i = patterns.length - 1; i >= 0; i--) {
-    if (scrollX >= patterns[i].minDist) {
-      list = patterns[i].list;
-      break;
-    }
+    if (scrollX >= patterns[i].minDist) { list = patterns[i].list; break; }
   }
   patternIdx = (patternIdx + 1) % list.length;
   return list[patternIdx];
 }
 
-function canSpawnNow() {
+function canSpawnNow(minGap) {
   if (graceTimer > 0) return false;
-  var minGap = 220 + speed * 0.55;
-  if (lastSpawnX > 0 && W + 20 - lastSpawnX < minGap) return false;
+  minGap = minGap || 200 + speed * 0.5;
+  if (lastSpawnX > 0 && W + 30 - lastSpawnX < minGap) return false;
   return true;
 }
 
@@ -188,49 +203,81 @@ function pushObstacle(o) {
 }
 
 function spawnRock() {
-  pushObstacle({
-    type: "rock", x: W + 36, y: groundY - 34, w: 40, h: 34, passed: false
-  });
+  pushObstacle({ type: "rock", x: W + 40, y: groundY - 36, w: 42, h: 36, passed: false });
 }
 
 function spawnBeam() {
-  pushObstacle({
-    type: "beam", x: W + 36, y: groundY - 52, w: 48, h: 14, passed: false
-  });
+  pushObstacle({ type: "beam", x: W + 40, y: groundY - 54, w: 52, h: 14, passed: false });
 }
 
 function spawnDrone() {
   pushObstacle({
-    type: "drone", x: W + 36,
-    y: groundY - 118 - Math.random() * 35,
-    w: 44, h: 32, passed: false, phase: Math.random() * 6.28
+    type: "drone", x: W + 40,
+    y: groundY - 125 - Math.random() * 40,
+    w: 46, h: 34, passed: false, phase: Math.random() * 6.28
   });
 }
 
 function spawnGate() {
   var gapH = gapSizeForDiff();
-  var gapTop = groundY - 105 - Math.random() * 45;
-  pushObstacle({
-    type: "gate", x: W + 36, w: 34, gapTop: gapTop, gapH: gapH, passed: false
-  });
+  var gapTop = groundY - 108 - Math.random() * 42;
+  pushObstacle({ type: "gate", x: W + 40, w: 36, gapTop: gapTop, gapH: gapH, passed: false });
 }
 
 function spawnDoubleGate() {
   if (diffId === "easy") { spawnGate(); return; }
-  var gapH = Math.max(62, gapSizeForDiff() - 8);
-  var gapTop = groundY - 98 - Math.random() * 30;
+  spawnGate();
   pushObstacle({
-    type: "gate", x: W + 36, w: 30, gapTop: gapTop, gapH: gapH, passed: false
+    type: "beam", x: W + 40 + 115, y: groundY - 52, w: 44, h: 12, passed: false
   });
+}
+
+function spawnLaser() {
   pushObstacle({
-    type: "beam", x: W + 36 + 110, y: groundY - 50, w: 42, h: 12, passed: false
+    type: "laser", x: W + 40, y: groundY - 145 - Math.random() * 30,
+    w: 38, h: 6, passed: false, pulse: Math.random() * 6.28
+  });
+}
+
+function spawnLaserPair() {
+  spawnLaser();
+  pushObstacle({
+    type: "laser", x: W + 40 + 95, y: groundY - 88,
+    w: 38, h: 6, passed: false, pulse: 1.5
   });
 }
 
 function spawnOverhead() {
   pushObstacle({
-    type: "overhead", x: W + 36, y: 72 + Math.random() * 28, w: 52, h: 18, passed: false
+    type: "overhead", x: W + 40, y: 68 + Math.random() * 32, w: 56, h: 18, passed: false
   });
+}
+
+function spawnDroneWave() {
+  for (var i = 0; i < 3; i++) {
+    pushObstacle({
+      type: "drone", x: W + 40 + i * 72,
+      y: groundY - 100 - i * 18, w: 40, h: 30,
+      passed: false, phase: i * 1.2
+    });
+  }
+}
+
+function spawnComboPack() {
+  spawnBeam();
+  pushObstacle({
+    type: "gate", x: W + 40 + 130, w: 32,
+    gapTop: groundY - 115, gapH: gapSizeForDiff() - 6, passed: false
+  });
+}
+
+function spawnStormGate() {
+  var gapH = Math.max(58, gapSizeForDiff() - 12);
+  pushObstacle({
+    type: "gate", x: W + 40, w: 34,
+    gapTop: groundY - 102, gapH: gapH, passed: false, storm: true
+  });
+  if (diffId !== "easy") spawnDrone();
 }
 
 function spawnObstacle() {
@@ -241,18 +288,28 @@ function spawnObstacle() {
   else if (kind === "drone") spawnDrone();
   else if (kind === "gate") spawnGate();
   else if (kind === "double_gate") spawnDoubleGate();
+  else if (kind === "laser") spawnLaser();
+  else if (kind === "laser_pair") spawnLaserPair();
   else if (kind === "overhead") spawnOverhead();
+  else if (kind === "drone_wave") spawnDroneWave();
+  else if (kind === "combo_pack") spawnComboPack();
+  else if (kind === "storm_gate") spawnStormGate();
 }
 
 function spawnPickup() {
   if (graceTimer > 0) return;
-  if (Math.random() < 0.45) {
-    pickups.push({
-      type: Math.random() < 0.16 ? "rocket" : "coin",
-      x: W + 55, y: groundY - 75 - Math.random() * 130,
-      r: 13, spin: Math.random() * 6.28
-    });
-  }
+  var roll = Math.random();
+  var type = "coin";
+  if (roll < 0.1) type = "shield";
+  else if (roll < 0.2) type = "rocket";
+  else if (roll < 0.55) type = "coin";
+  else return;
+  pickups.push({
+    type: type,
+    x: W + 60,
+    y: groundY - 70 - Math.random() * 140,
+    r: 14, spin: Math.random() * 6.28, bob: Math.random() * 6.28
+  });
 }
 
 function startGame() {
@@ -261,54 +318,60 @@ function startGame() {
   H = shell.height;
   ctx = shell.ctx;
   particles = shell.particles;
+  highQ = shell.isHighQuality();
   var diff = shell.getDifficulty();
   diffId = diff.id || "normal";
-  worldMult = diff.speedMult || 1;
-  groundY = H - 80;
-  frog = { x: 168, y: groundY - 24, vy: 0, r: 21, onGround: true, wingT: 0, blink: 0, coyote: 0 };
-  obstacles = [];
-  pickups = [];
-  score = 0;
-  combo = 0;
-  comboTimer = 0;
-  speed = 175 * worldMult;
-  jumps = 0;
-  shieldHits = 0;
-  shieldCd = 0;
-  rocketTimer = 0;
-  scrollX = 0;
-  animT = 0;
-  graceTimer = 1.8;
-  lastSpawnX = 0;
-  patternIdx = -1;
-  gameEnded = false;
+  worldMult = shell.getSpeedScale();
+  var tun = diffTuning();
+  groundY = H - 78;
+  frog = {
+    x: 172, y: groundY - 24, vy: 0, r: 22,
+    onGround: true, wingT: 0, blink: 0, coyote: 0, legT: 0, tongueT: 0
+  };
+  obstacles = []; pickups = [];
+  score = 0; combo = 0; comboTimer = 0;
+  speed = tun.speedBase * worldMult;
+  jumps = 0; shieldHits = 0; shieldCd = 0;
+  rocketTimer = 0; scrollX = 0; animT = 0;
+  graceTimer = tun.grace; patternIdx = -1; lastSpawnX = 0;
+  invulnTimer = 0; phaseT = 0; phaseLabel = "細雨";
+  cityGlow = 0; lightning = { t: 0, flash: 0 };
   initRain();
   initParallax();
-  spawnTimer = 1.2;
-  pickupTimer = 1;
+  spawnTimer = 1.1;
+  pickupTimer = 0.8;
+  gameEnded = false;
   running = true;
   keys = {};
   shell.attachKeyboard(keys);
-  shell.canvas.style.touchAction = "none";
-  shell.canvas.setAttribute("tabindex", "0");
-  shell.canvas.addEventListener("pointerdown", onPointerDown);
-  shell.canvas.addEventListener("pointerup", onPointerUp);
-  shell.canvas.addEventListener("pointerleave", onPointerUp);
+  shell.attachTouchControls({
+    keys: keys,
+    buttons: [
+      { code: "Space", label: "跳", side: "left", hold: true,
+        onPress: function () { jumpPressed(); } },
+      { code: "KeyZ", label: "盾", side: "right", hold: false, danger: true,
+        onPress: function () { tryShield(); } }
+    ],
+    swipe: {
+      threshold: 38,
+      tap: function () { jumpPressed(); },
+      up: function () { jumpPressed(); }
+    }
+  });
   window.addEventListener("keydown", onKeyDown);
   window.addEventListener("keyup", onKeyUp);
-  try { shell.canvas.focus({ preventScroll: true }); } catch (_e) { shell.canvas.focus(); }
   lastTs = performance.now();
   updateHud();
   animId = requestAnimationFrame(loop);
 }
 
 function die() {
-  if (gameEnded || graceTimer > 0) return;
+  if (gameEnded || graceTimer > 0 || invulnTimer > 0) return;
   gameEnded = true;
   running = false;
   RNF.sfx.die();
   shell.triggerShake(14, 0.45);
-  particles.burst(frog.x, frog.y, "#f472b6", 40);
+  particles.burst(frog.x, frog.y, "#f472b6", highQ ? 42 : 18);
   cleanup();
   shell.gameOver(score, { distance: Math.floor(scrollX), combo: combo });
 }
@@ -319,11 +382,11 @@ function updateHud() {
   var shieldHtml = shieldHits > 0
     ? '<div><span>護盾</span><b style="color:#a78bfa">ON</b></div>'
     : '<div><span>護盾</span><b>' + (shieldCd > 0 ? Math.ceil(shieldCd) + "s" : "就緒") + "</b></div>";
-  var status = graceTimer > 0 ? "熱身" : frog.onGround ? "奔跑" : "跳躍";
+  var status = graceTimer > 0 ? "熱身" : rocketTimer > 0 ? "火箭" : frog.onGround ? "奔跑" : "飛躍";
   shell.setHud(
     '<div><span>分數</span><b>' + score.toLocaleString() + "</b></div>" +
     '<div><span>距離</span><b>' + Math.floor(scrollX) + "m</b></div>" +
-    '<div><span>難度</span><b style="font-size:.78rem;color:#c4b5fd">' + diff.label + "</b></div>" +
+    '<div><span>天氣</span><b style="font-size:.72rem;color:#67e8f9">' + phaseLabel + "</b></div>" +
     '<div><span>狀態</span><b>' + status + "</b></div>" +
     shieldHtml + comboHtml +
     (rocketTimer > 0 ? '<div><span>火箭</span><b style="color:#fbbf24">BOOST</b></div>' : "")
@@ -331,7 +394,7 @@ function updateHud() {
 }
 
 function hitsObstacle(o) {
-  var fx = frog.x, fy = frog.y, r = frog.r - 8;
+  var fx = frog.x, fy = frog.y, r = frog.r - 7;
   if (o.type === "gate") {
     var inX = fx + r > o.x && fx - r < o.x + o.w;
     if (!inX) return false;
@@ -340,135 +403,14 @@ function hitsObstacle(o) {
     if (fy + r > gapBot) return true;
     return false;
   }
+  if (o.type === "laser") {
+    return rectCircle(o.x, o.y - 8, o.w, o.h + 16, fx, fy, r);
+  }
   if (o.type === "overhead") {
     if (fy + r < o.y + o.h) return false;
     return rectCircle(o.x, o.y, o.w, o.h, fx, fy, r);
   }
   return rectCircle(o.x, o.y, o.w, o.h, fx, fy, r);
-}
-
-function loop(ts) {
-  if (!running) return;
-  var dt = Math.min(0.033, (ts - lastTs) / 1000);
-  lastTs = ts;
-  animT += dt;
-
-  var boost = rocketTimer > 0 ? 70 * worldMult : 0;
-  var baseCap = diffId === "easy" ? 240 : diffId === "extreme" ? 340 : 300;
-  speed = Math.min(baseCap * worldMult, 175 * worldMult + scrollX * 0.07 + animT * 1.4);
-  var moveSpeed = speed + boost;
-  scrollX += moveSpeed * dt * 0.12;
-  score += Math.floor(moveSpeed * dt * 0.07);
-
-  graceTimer = Math.max(0, graceTimer - dt);
-
-  var glideKey = keys["Space"] || keys["KeyW"] || keys["ArrowUp"] || pointerJump;
-  frog.vy += GRAVITY * dt;
-  if (glideKey && frog.vy > 50 && !frog.onGround) {
-    frog.vy = Math.max(frog.vy - 720 * dt, 90);
-  }
-  frog.y += frog.vy * dt;
-  frog.wingT += dt * 9;
-  frog.blink = Math.max(0, frog.blink - dt);
-
-  var wasGround = frog.onGround;
-  if (frog.y + frog.r >= groundY) {
-    frog.y = groundY - frog.r;
-    frog.vy = 0;
-    frog.onGround = true;
-    jumps = 0;
-  } else {
-    frog.onGround = false;
-    frog.coyote = wasGround ? 0.08 : Math.max(0, frog.coyote - dt);
-  }
-  if (wasGround && !frog.onGround) frog.coyote = 0.08;
-
-  rocketTimer = Math.max(0, rocketTimer - dt);
-  shieldCd = Math.max(0, shieldCd - dt);
-  comboTimer = Math.max(0, comboTimer - dt);
-  if (comboTimer <= 0 && combo > 0) combo = 0;
-
-  if (shieldHits > 0 && Math.random() < 0.35) {
-    particles.trail(frog.x + (Math.random() - 0.5) * 28, frog.y + (Math.random() - 0.5) * 28, "#c4b5fd");
-  }
-
-  var spawnGap = Math.max(0.85, 1.95 - scrollX * 0.00028 - (worldMult - 0.75) * 0.35);
-  spawnTimer += dt;
-  if (spawnTimer >= spawnGap) {
-    spawnObstacle();
-    spawnTimer = 0;
-  }
-  pickupTimer += dt;
-  if (pickupTimer >= 1.6) { spawnPickup(); pickupTimer = 0; }
-
-  obstacles.forEach(function (o) {
-    o.x -= moveSpeed * dt;
-    if (o.type === "drone") {
-      o.phase = (o.phase || 0) + dt * 4;
-      o.y += Math.sin(o.phase) * 12 * dt;
-    }
-    if (!o.passed && o.x + (o.w || 30) < frog.x - 8) {
-      o.passed = true;
-      score += 5;
-      RNF.sfx.pop();
-    }
-    if (graceTimer <= 0 && hitsObstacle(o)) {
-      if (shieldHits > 0) {
-        shieldHits = 0;
-        o.x = -999;
-        RNF.sfx.hit();
-        shell.triggerShake(5, 0.18);
-        particles.burst(frog.x, frog.y, "#a78bfa", 22);
-      } else {
-        die();
-      }
-    }
-  });
-  obstacles = obstacles.filter(function (o) { return o.x > -100; });
-  if (obstacles.length) lastSpawnX = obstacles[obstacles.length - 1].x;
-
-  pickups.forEach(function (p) {
-    p.x -= moveSpeed * dt;
-    p.spin += dt * 5;
-    if (Math.hypot(p.x - frog.x, p.y - frog.y) < p.r + frog.r - 7) {
-      p.dead = true;
-      if (p.type === "rocket") {
-        rocketTimer = 2.8;
-        RNF.sfx.power();
-        score += 45;
-      } else {
-        combo = Math.min(10, combo + 1);
-        comboTimer = 2;
-        score += Math.floor(22 * (1 + combo * 0.12));
-        RNF.sfx.score();
-        if (combo > 2) RNF.sfx.combo(combo);
-      }
-      particles.burst(p.x, p.y, p.type === "rocket" ? "#fbbf24" : "#22d3ee", 10);
-    }
-  });
-  pickups = pickups.filter(function (p) { return !p.dead && p.x > -30; });
-
-  parallax.forEach(function (layer) {
-    layer.blocks.forEach(function (b) {
-      b.x -= moveSpeed * dt * layer.spd;
-      if (b.x + b.w < -20) {
-        b.x = W + 30 + Math.random() * 70;
-        b.h = 36 + Math.random() * 90;
-      }
-    });
-  });
-
-  rain.forEach(function (r) {
-    r.x -= moveSpeed * dt * 0.05 * r.layer;
-    r.y += r.sp * dt * r.layer;
-    if (r.y > H) { r.y = -10; r.x = Math.random() * W; }
-  });
-
-  particles.trail(frog.x - 10, frog.y + 5, rocketTimer > 0 ? "#fbbf24" : "#34d399");
-  particles.update(dt);
-  draw();
-  updateHud();
-  animId = requestAnimationFrame(loop);
 }
 
 function rectCircle(rx, ry, rw, rh, cx, cy, cr) {
@@ -477,13 +419,176 @@ function rectCircle(rx, ry, rw, rh, cx, cy, cr) {
   return Math.hypot(cx - nx, cy - ny) < cr;
 }
 
+function updatePhase() {
+  if (scrollX < 200) { phaseLabel = "細雨"; phaseT = 0; }
+  else if (scrollX < 550) { phaseLabel = "暴雨"; phaseT = 1; }
+  else { phaseLabel = "霓虹狂潮"; phaseT = 2; }
+}
+
+function loop(ts) {
+  if (!running) return;
+  var dt = Math.min(0.032, (ts - lastTs) / 1000);
+  lastTs = ts;
+  animT += dt;
+  var tun = diffTuning();
+
+  updatePhase();
+  var boost = rocketTimer > 0 ? 85 * worldMult : 0;
+  speed = Math.min(tun.speedCap * worldMult, tun.speedBase * worldMult + scrollX * 0.065 + animT * 1.2);
+  var moveSpeed = speed + boost;
+  scrollX += moveSpeed * dt * 0.12;
+  score += Math.floor(moveSpeed * dt * 0.075 * (rocketTimer > 0 ? 1.4 : 1));
+
+  graceTimer = Math.max(0, graceTimer - dt);
+  invulnTimer = Math.max(0, invulnTimer - dt);
+
+  var glideKey = keys["Space"] || keys["KeyW"] || keys["ArrowUp"];
+  frog.vy += GRAVITY * dt;
+  if (glideKey && frog.vy > 45 && !frog.onGround) {
+    frog.vy = Math.max(frog.vy - 750 * dt, 85);
+    frog.wingT += dt * 12;
+  }
+  frog.y += frog.vy * dt;
+  frog.wingT += dt * 8;
+  frog.blink = Math.max(0, frog.blink - dt);
+  frog.legT = Math.max(0, frog.legT - dt);
+  frog.tongueT = Math.max(0, frog.tongueT - dt);
+
+  var wasGround = frog.onGround;
+  if (frog.y + frog.r >= groundY) {
+    frog.y = groundY - frog.r;
+    frog.vy = 0;
+    frog.onGround = true;
+    jumps = 0;
+    if (!wasGround && highQ) splashes.push({ x: frog.x, t: 0 });
+  } else {
+    frog.onGround = false;
+    frog.coyote = wasGround ? tun.coyote : Math.max(0, frog.coyote - dt);
+  }
+  if (wasGround && !frog.onGround) frog.coyote = tun.coyote;
+
+  rocketTimer = Math.max(0, rocketTimer - dt);
+  shieldCd = Math.max(0, shieldCd - dt);
+  comboTimer = Math.max(0, comboTimer - dt);
+  if (comboTimer <= 0 && combo > 0) { combo = 0; updateHud(); }
+
+  if (shieldHits > 0 && highQ && Math.random() < 0.3) {
+    particles.trail(frog.x + (Math.random() - 0.5) * 30, frog.y + (Math.random() - 0.5) * 26, "#c4b5fd");
+  }
+
+  var rainMult = phaseT === 0 ? 1 : phaseT === 1 ? 1.45 : 1.15;
+  var spawnGap = Math.max(tun.spawnFloor, tun.spawnBase - scrollX * 0.00032 - (worldMult - 0.75) * 0.3 - phaseT * 0.08);
+  spawnTimer += dt;
+  if (spawnTimer >= spawnGap) { spawnObstacle(); spawnTimer = 0; }
+  pickupTimer += dt;
+  if (pickupTimer >= 1.45) { spawnPickup(); pickupTimer = 0; }
+
+  if (phaseT >= 1 && Math.random() < 0.002 * (phaseT + 1)) {
+    lightning.flash = 0.35;
+    lightning.t = 0;
+    cityGlow = 0.6;
+  }
+  lightning.t += dt;
+  lightning.flash = Math.max(0, lightning.flash - dt * 2.5);
+  cityGlow = Math.max(0, cityGlow - dt * 0.8);
+
+  obstacles.forEach(function (o) {
+    o.x -= moveSpeed * dt;
+    if (o.type === "drone") {
+      o.phase = (o.phase || 0) + dt * 4.5;
+      o.y += Math.sin(o.phase) * 14 * dt;
+    }
+    if (o.type === "laser") {
+      o.pulse = (o.pulse || 0) + dt * 8;
+    }
+    if (!o.passed && o.x + (o.w || 30) < frog.x - 10) {
+      o.passed = true;
+      score += 6 + phaseT * 2;
+      RNF.sfx.pop();
+    }
+    if (graceTimer <= 0 && invulnTimer <= 0 && hitsObstacle(o)) {
+      if (shieldHits > 0) {
+        shieldHits = 0;
+        o.x = -999;
+        invulnTimer = 0.55;
+        RNF.sfx.hit();
+        shell.triggerShake(5, 0.18);
+        particles.burst(frog.x, frog.y, "#a78bfa", highQ ? 24 : 12);
+      } else {
+        die();
+      }
+    }
+  });
+  obstacles = obstacles.filter(function (o) { return o.x > -120; });
+  if (obstacles.length) lastSpawnX = obstacles[obstacles.length - 1].x;
+
+  pickups.forEach(function (p) {
+    p.x -= moveSpeed * dt;
+    p.spin += dt * 5;
+    p.bob = (p.bob || 0) + dt * 4;
+    p.y += Math.sin(p.bob) * 0.4;
+    if (Math.hypot(p.x - frog.x, p.y - frog.y) < p.r + frog.r - 6) {
+      p.dead = true;
+      frog.tongueT = 0.18;
+      if (p.type === "rocket") {
+        rocketTimer = 3.2;
+        RNF.sfx.power();
+        score += 55;
+        shell.triggerShake(6, 0.15);
+      } else if (p.type === "shield") {
+        shieldHits = 1;
+        shieldCd = 0;
+        RNF.sfx.power();
+        score += 30;
+      } else {
+        combo = Math.min(12, combo + 1);
+        comboTimer = 2.4;
+        score += Math.floor(24 * (1 + combo * 0.14));
+        RNF.sfx.score();
+        if (combo > 2) RNF.sfx.combo(combo);
+      }
+      particles.burst(p.x, p.y, p.type === "rocket" ? "#fbbf24" : p.type === "shield" ? "#a78bfa" : "#22d3ee", highQ ? 12 : 6);
+    }
+  });
+  pickups = pickups.filter(function (p) { return !p.dead && p.x > -40; });
+
+  parallax.forEach(function (layer) {
+    layer.blocks.forEach(function (b) {
+      b.x -= moveSpeed * dt * layer.spd;
+      b.flicker = (b.flicker || 0) + dt * (2 + phaseT);
+      if (b.x + b.w < -30) {
+        b.x = W + 20 + Math.random() * 80;
+        b.h = 40 + Math.random() * (90 + phaseT * 20);
+        b.win = Math.random() < 0.48;
+      }
+    });
+  });
+
+  var rainSpd = rainMult * (1 + phaseT * 0.2);
+  rain.forEach(function (r) {
+    r.x -= moveSpeed * dt * 0.06 * r.layer;
+    r.y += r.sp * dt * r.layer * rainSpd;
+    if (r.y > H) { r.y = -12; r.x = Math.random() * (W + 80) - 40; }
+  });
+
+  splashes.forEach(function (s) { s.t += dt; });
+  splashes = splashes.filter(function (s) { return s.t < 0.35; });
+
+  if (rocketTimer > 0) particles.trail(frog.x - 14, frog.y + 6, "#fbbf24");
+  else particles.trail(frog.x - 10, frog.y + 8, "#34d399");
+  particles.update(dt);
+  draw(rainMult);
+  updateHud();
+  animId = requestAnimationFrame(loop);
+}
+
 function drawRock(o) {
-  ctx.fillStyle = "rgba(100,116,139,0.85)";
+  ctx.fillStyle = "rgba(71,85,105,0.9)";
   ctx.beginPath();
   ctx.moveTo(o.x, o.y + o.h);
-  ctx.lineTo(o.x + o.w * 0.2, o.y + o.h * 0.35);
-  ctx.lineTo(o.x + o.w * 0.55, o.y);
-  ctx.lineTo(o.x + o.w * 0.9, o.y + o.h * 0.4);
+  ctx.lineTo(o.x + o.w * 0.18, o.y + o.h * 0.32);
+  ctx.lineTo(o.x + o.w * 0.52, o.y);
+  ctx.lineTo(o.x + o.w * 0.88, o.y + o.h * 0.38);
   ctx.lineTo(o.x + o.w, o.y + o.h);
   ctx.closePath();
   ctx.fill();
@@ -493,10 +598,11 @@ function drawRock(o) {
 }
 
 function drawBeam(o) {
-  ctx.fillStyle = "rgba(251,191,36,0.9)";
+  var g = ctx.createLinearGradient(o.x, o.y, o.x, o.y + o.h);
+  g.addColorStop(0, "rgba(251,191,36,0.95)");
+  g.addColorStop(1, "rgba(245,158,11,0.75)");
+  ctx.fillStyle = g;
   ctx.fillRect(o.x, o.y, o.w, o.h);
-  ctx.fillStyle = "rgba(255,255,255,0.35)";
-  ctx.fillRect(o.x + 4, o.y + 2, o.w - 8, 3);
   ctx.strokeStyle = "#fbbf24";
   ctx.strokeRect(o.x, o.y, o.w, o.h);
 }
@@ -506,60 +612,75 @@ function drawDrone(o) {
   ctx.strokeStyle = "#f472b6";
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.ellipse(cx, cy, o.w * 0.48, o.h * 0.4, 0, 0, Math.PI * 2);
+  ctx.ellipse(cx, cy, o.w * 0.48, o.h * 0.38, 0, 0, Math.PI * 2);
   ctx.stroke();
   ctx.fillStyle = "#f472b6";
   ctx.beginPath();
-  ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+  ctx.arc(cx, cy, 7, 0, Math.PI * 2);
   ctx.fill();
-  ctx.strokeStyle = "rgba(244,114,182,0.5)";
+  var spin = animT * 12;
+  ctx.strokeStyle = "rgba(244,114,182,0.55)";
   ctx.beginPath();
-  ctx.moveTo(o.x - 4, cy);
-  ctx.lineTo(o.x + o.w + 4, cy);
+  ctx.moveTo(cx - 16, cy + Math.sin(spin) * 4);
+  ctx.lineTo(cx + 16, cy - Math.sin(spin) * 4);
   ctx.stroke();
 }
 
 function drawGate(o) {
   var x = o.x, w = o.w, gt = o.gapTop, gb = o.gapTop + o.gapH;
-  ctx.fillStyle = "rgba(34,211,238,0.55)";
+  var col = o.storm ? "rgba(244,114,182,0.6)" : "rgba(34,211,238,0.55)";
+  ctx.fillStyle = col;
   ctx.fillRect(x, 0, w, gt);
   ctx.fillRect(x, gb, w, groundY - gb);
-  ctx.strokeStyle = "#22d3ee";
+  ctx.strokeStyle = o.storm ? "#f472b6" : "#22d3ee";
   ctx.lineWidth = 2;
   ctx.strokeRect(x, 0, w, gt);
   ctx.strokeRect(x, gb, w, groundY - gb);
-  ctx.fillStyle = "rgba(167,139,250,0.25)";
+  ctx.fillStyle = "rgba(167,139,250,0.35)";
   ctx.fillRect(x - 2, gt - 3, w + 4, 4);
   ctx.fillRect(x - 2, gb - 1, w + 4, 4);
 }
 
+function drawLaser(o) {
+  var pulse = 0.5 + Math.sin(o.pulse || 0) * 0.35;
+  ctx.fillStyle = "rgba(248,113,113," + pulse + ")";
+  ctx.fillRect(o.x, o.y, o.w, o.h);
+  if (highQ) {
+    ctx.shadowBlur = 12;
+    ctx.shadowColor = "#f87171";
+    ctx.fillRect(o.x, o.y - 4, o.w, o.h + 8);
+    ctx.shadowBlur = 0;
+  }
+}
+
 function drawOverhead(o) {
-  ctx.fillStyle = "rgba(167,139,250,0.75)";
+  ctx.fillStyle = "rgba(167,139,250,0.8)";
   ctx.fillRect(o.x, o.y, o.w, o.h);
   ctx.strokeStyle = "#a78bfa";
-  ctx.lineWidth = 2;
   ctx.strokeRect(o.x, o.y, o.w, o.h);
-  ctx.fillStyle = "rgba(244,114,182,0.5)";
-  for (var i = 0; i < 4; i++) {
-    ctx.fillRect(o.x + 6 + i * 12, o.y + o.h, 2, 14 + i * 3);
-  }
+  ctx.fillStyle = "rgba(244,114,182,0.55)";
+  for (var i = 0; i < 4; i++) ctx.fillRect(o.x + 6 + i * 12, o.y + o.h, 2, 16 + i * 3);
 }
 
 function drawFrog() {
   var fx = frog.x, fy = frog.y, r = frog.r;
   if (shieldHits > 0) {
-    ctx.strokeStyle = "rgba(167,139,250,0.7)";
+    ctx.strokeStyle = "rgba(167,139,250," + (0.55 + Math.sin(frog.wingT * 2) * 0.2) + ")";
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.arc(fx, fy, r + 10 + Math.sin(frog.wingT * 2) * 2, 0, Math.PI * 2);
+    ctx.arc(fx, fy, r + 11 + Math.sin(frog.wingT * 2) * 2, 0, Math.PI * 2);
     ctx.stroke();
+  }
+  if (invulnTimer > 0) {
+    ctx.globalAlpha = 0.55 + Math.sin(animT * 30) * 0.25;
   }
   ctx.save();
   ctx.translate(fx, fy);
-  ctx.scale(1, frog.onGround ? 1 : 0.95);
-  ctx.shadowBlur = 14;
-  ctx.shadowColor = rocketTimer > 0 ? "#fbbf24" : "#34d399";
-  ctx.fillStyle = rocketTimer > 0 ? "#4ade80" : "#34d399";
+  var squash = frog.onGround ? 1 : 0.92;
+  ctx.scale(1, squash);
+  var bodyCol = rocketTimer > 0 ? "#4ade80" : "#34d399";
+  if (highQ) { ctx.shadowBlur = 16; ctx.shadowColor = rocketTimer > 0 ? "#fbbf24" : "#34d399"; }
+  ctx.fillStyle = bodyCol;
   ctx.beginPath();
   ctx.ellipse(0, 0, r, r * 0.82, 0, 0, Math.PI * 2);
   ctx.fill();
@@ -568,46 +689,106 @@ function drawFrog() {
   ctx.ellipse(-r * 0.5, -r * 0.52, r * 0.34, r * 0.28, -0.5, 0, Math.PI * 2);
   ctx.ellipse(r * 0.5, -r * 0.52, r * 0.34, r * 0.28, 0.5, 0, Math.PI * 2);
   ctx.fill();
+  if (frog.legT > 0) {
+    ctx.fillStyle = "#16a34a";
+    var kick = frog.legT * 4;
+    ctx.fillRect(-r * 0.6, r * 0.3, r * 0.35, r * 0.25 + kick * 3);
+    ctx.fillRect(r * 0.25, r * 0.3, r * 0.35, r * 0.25 + kick * 2);
+  }
+  if (frog.tongueT > 0) {
+    ctx.strokeStyle = "#f472b6";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(r * 0.3, 2);
+    ctx.lineTo(r * 0.3 + frog.tongueT * 120, 2);
+    ctx.stroke();
+  }
   ctx.fillStyle = "#fff";
   ctx.beginPath();
   ctx.arc(7, -5, 5.5, 0, Math.PI * 2);
   ctx.arc(17, -5, 5.5, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = "#0f172a";
-  ctx.beginPath();
-  ctx.arc(8, -5, 2.2, 0, Math.PI * 2);
-  ctx.arc(18, -5, 2.2, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.fillStyle = frog.blink > 0 ? bodyCol : "#0f172a";
+  if (frog.blink <= 0) {
+    ctx.beginPath();
+    ctx.arc(8, -5, 2.2, 0, Math.PI * 2);
+    ctx.arc(18, -5, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  if (!frog.onGround && frog.vy < 0) {
+    ctx.strokeStyle = "rgba(34,211,238,0.4)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, r * 0.5, r * 0.7 + Math.sin(frog.wingT) * 3, 0.2, Math.PI - 0.2);
+    ctx.stroke();
+  }
   ctx.restore();
   ctx.shadowBlur = 0;
+  ctx.globalAlpha = 1;
 }
 
-function draw() {
+function draw(rainMult) {
   ctx.save();
   shell.applyShake(ctx);
   var sky = ctx.createLinearGradient(0, 0, 0, H);
-  sky.addColorStop(0, "#070b14");
-  sky.addColorStop(1, "#05080f");
+  sky.addColorStop(0, phaseT >= 2 ? "#0a0618" : "#070b14");
+  sky.addColorStop(0.5, "#060a12");
+  sky.addColorStop(1, "#04060c");
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, W, H);
 
+  if (lightning.flash > 0) {
+    ctx.fillStyle = "rgba(200,220,255," + lightning.flash * 0.25 + ")";
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  if (highQ && cityGlow > 0) {
+    var cg = ctx.createRadialGradient(W * 0.5, groundY - 80, 10, W * 0.5, groundY - 80, 380);
+    cg.addColorStop(0, "rgba(167,139,250," + cityGlow * 0.15 + ")");
+    cg.addColorStop(1, "transparent");
+    ctx.fillStyle = cg;
+    ctx.fillRect(0, 0, W, H);
+  }
+
   parallax.forEach(function (layer) {
     layer.blocks.forEach(function (b) {
+      var by = groundY - b.h - layer.yOff;
       ctx.fillStyle = layer.color;
-      ctx.fillRect(b.x, groundY - b.h - layer.y, b.w, b.h);
+      ctx.fillRect(b.x, by, b.w, b.h);
+      if (b.win && highQ) {
+        var fa = 0.25 + Math.sin(b.flicker) * 0.15 + cityGlow * 0.2;
+        ctx.fillStyle = "rgba(251,191,36," + fa + ")";
+        ctx.fillRect(b.x + 4, by + 8, b.w * 0.35, b.h * 0.22);
+        ctx.fillStyle = "rgba(244,114,182," + fa * 0.85 + ")";
+        ctx.fillRect(b.x + b.w * 0.55, by + b.h * 0.4, b.w * 0.3, b.h * 0.18);
+      }
     });
   });
 
+  if (highQ) {
+    neonSigns.forEach(function (s) {
+      var a = 0.35 + Math.sin(animT * 2 + s.phase) * 0.25;
+      ctx.globalAlpha = a;
+      ctx.fillStyle = s.color;
+      ctx.font = "bold 14px sans-serif";
+      ctx.fillText(s.text, s.x, s.y);
+      ctx.globalAlpha = 1;
+    });
+  }
+
   rain.forEach(function (r) {
-    ctx.strokeStyle = "rgba(34,211,238," + (r.a * r.layer) + ")";
+    ctx.strokeStyle = "rgba(34,211,238," + (r.a * r.layer * rainMult) + ")";
+    ctx.lineWidth = phaseT >= 1 ? 1.5 : 1;
     ctx.beginPath();
     ctx.moveTo(r.x, r.y);
-    ctx.lineTo(r.x - 3, r.y + r.len);
+    ctx.lineTo(r.x - (phaseT >= 1 ? 5 : 3), r.y + r.len);
     ctx.stroke();
   });
 
-  ctx.fillStyle = "rgba(167,139,250,0.2)";
+  ctx.fillStyle = "rgba(167,139,250,0.22)";
   ctx.fillRect(0, groundY, W, H - groundY);
+  ctx.fillStyle = "rgba(34,211,238,0.08)";
+  ctx.fillRect(0, groundY, W, 6);
   ctx.strokeStyle = "#a78bfa";
   ctx.lineWidth = 3;
   ctx.beginPath();
@@ -615,19 +796,28 @@ function draw() {
   ctx.lineTo(W, groundY);
   ctx.stroke();
 
+  splashes.forEach(function (s) {
+    var a = 1 - s.t / 0.35;
+    ctx.strokeStyle = "rgba(34,211,238," + (a * 0.5) + ")";
+    ctx.beginPath();
+    ctx.ellipse(s.x, groundY + 2, 8 + s.t * 30, 2 + s.t * 4, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  });
+
   if (graceTimer > 0) {
-    ctx.fillStyle = "rgba(34,211,238,0.15)";
-    ctx.font = "bold 14px sans-serif";
+    ctx.fillStyle = "rgba(34,211,238,0.18)";
+    ctx.font = "bold 15px 'Microsoft JhengHei',sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("熱身中…", W * 0.5, groundY - 42);
+    ctx.fillText("熱身中…", W * 0.5, groundY - 48);
   }
 
   obstacles.forEach(function (o) {
-    ctx.shadowBlur = 10;
+    if (highQ) ctx.shadowBlur = 10;
     if (o.type === "rock") { ctx.shadowColor = "#94a3b8"; drawRock(o); }
     else if (o.type === "beam") { ctx.shadowColor = "#fbbf24"; drawBeam(o); }
     else if (o.type === "drone") { ctx.shadowColor = "#f472b6"; drawDrone(o); }
     else if (o.type === "gate") { ctx.shadowColor = "#22d3ee"; drawGate(o); }
+    else if (o.type === "laser") { ctx.shadowColor = "#f87171"; drawLaser(o); }
     else if (o.type === "overhead") { ctx.shadowColor = "#a78bfa"; drawOverhead(o); }
   });
   ctx.shadowBlur = 0;
@@ -640,11 +830,24 @@ function draw() {
       ctx.fillStyle = "#fbbf24";
       ctx.beginPath();
       ctx.moveTo(0, -p.r);
-      ctx.lineTo(p.r * 0.6, p.r * 0.4);
-      ctx.lineTo(0, p.r * 0.1);
-      ctx.lineTo(-p.r * 0.6, p.r * 0.4);
+      ctx.lineTo(p.r * 0.65, p.r * 0.45);
+      ctx.lineTo(0, p.r * 0.12);
+      ctx.lineTo(-p.r * 0.65, p.r * 0.45);
       ctx.closePath();
       ctx.fill();
+    } else if (p.type === "shield") {
+      ctx.strokeStyle = "#a78bfa";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, p.r - 1, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = "rgba(167,139,250,0.35)";
+      ctx.fill();
+      ctx.fillStyle = "#c4b5fd";
+      ctx.font = "bold 11px sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("盾", 0, 1);
     } else {
       ctx.strokeStyle = "#22d3ee";
       ctx.lineWidth = 2;

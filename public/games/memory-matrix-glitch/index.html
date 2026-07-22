@@ -2,116 +2,163 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Memory Matrix Glitch · 記憶矩陣故障</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Memory Matrix Glitch · 駭客矩陣記憶翻牌</title>
+  <script src="/sdk/rnf-game-sdk.js?v=20260723b"></script>
 </head>
 <body>
-<script src="/sdk/rnf-game-sdk.js?v=20260723"></script>
 <script>
 RNF.init();
 var shell = RNF.buildShell({
   title: "Memory Matrix Glitch",
   creator: "NeuralMind",
-  subtitle: "滑鼠 / Enter 翻牌配對 · 限時挑戰 · 故障翻轉特效 · 連擊音階遞升",
+  subtitle: "限時配對 · Glitch 翻轉 · 連擊倍率 · 炸彈懲罰 · 觸控翻牌",
   width: 960,
   height: 520,
   bgmStyle: "ambient",
-  highlights: ["Glitch 特效", "Combo 音階", "限時關卡", "四段難度"],
+  highlights: ["Glitch 特效", "連擊音階", "限時關卡", "炸彈卡", "觸控翻牌"],
   help: {
-    about: "駭客風格的記憶翻牌。限時內配對相同圖案，連續配對可累積 Combo。",
+    about: "駭客風格的記憶翻牌。限時內配對相同圖案，連續配對可累積 Combo 與分數倍率。配對錯誤或翻到炸彈會受到懲罰。",
     features: [
-      "四段難度調整配對數與限時",
-      "極限模式 Glitch 故障翻轉",
-      "連續配對觸發音階特效"
+      "四段難度調整卡片數、限時與炸彈機率",
+      "極限模式強化 Glitch 故障翻轉與掃描線",
+      "連續配對觸發音階遞升與連擊加成",
+      "炸彈卡扣時並重置連擊；錯配扣秒（困難以上）",
+      "通關加時並進入下一階段，清空全部配對即過關"
     ],
     controls: [
-      "滑鼠左鍵：翻牌",
-      "Enter：快速翻牌"
+      "滑鼠／觸控：點擊卡片翻開",
+      "Enter：快速翻開第一張未配對卡",
+      "手機可直接點擊卡片，無需虛擬鍵"
     ],
     tips: [
-      "困難以上卡片數量增加",
-      "清空所有配對即過關"
+      "記住已翻開位置，維持連擊可大幅加分",
+      "炸彈卡標有 ⚠，翻到會損失時間",
+      "完美通關（零錯配）有額外獎勵",
+      "越後面的關卡卡片越多、時間越緊"
     ]
   },
   onStop: cleanup,
   onStart: startGame
 });
 
-var ctx, particles, running, loopId, lastT;
-var cards, selected, matched, combo, score, timeLeft, level, flipAnim, speedScale = 1;
-var ICONS = ["◆", "★", "▲", "●", "■", "♦", "✦", "⬡", "◎", "✚", "▼", "◇"];
+var W = 960, H = 520;
+var ctx, particles, running, loopId, lastT, keys = {};
+var cards, selected, matched, combo, maxCombo, score, timeLeft, stage, flipLock;
+var speedScale = 1, diffId = "normal", animT = 0;
+var matrixDrops = [], scanGlitch = 0, perfectStage = true, streakBonus = 0;
+var floaters = [], peekTimer = 0, peekDone = false;
+
+var ICONS = ["◆", "★", "▲", "●", "■", "♦", "✦", "⬡", "◎", "✚", "▼", "◇", "⬢", "✿", "⚡", "◈"];
 var COLORS = ["#22d3ee", "#a78bfa", "#f472b6", "#4ade80", "#fbbf24", "#60a5fa", "#fb923c", "#e879f9"];
+
+var DIFF_CFG = {
+  easy:    { basePairs: 4, timeBonus: 18, bombChance: 0, mismatchPenalty: 0, peek: 2.5, glitchMult: 0.6 },
+  normal:  { basePairs: 5, timeBonus: 14, bombChance: 0.06, mismatchPenalty: 2, peek: 1.8, glitchMult: 1 },
+  hard:    { basePairs: 6, timeBonus: 10, bombChance: 0.1, mismatchPenalty: 4, peek: 1.2, glitchMult: 1.4 },
+  extreme: { basePairs: 7, timeBonus: 8, bombChance: 0.14, mismatchPenalty: 6, peek: 0.6, glitchMult: 2 }
+};
 
 function cleanup() {
   shell.detachKeyboard();
+  shell.detachTouchControls();
   running = false;
   if (loopId) cancelAnimationFrame(loopId);
   loopId = null;
-  shell.canvas.removeEventListener("click", onClick);
+  shell.canvas.removeEventListener("pointerdown", onPointer);
   window.removeEventListener("keydown", onKeyDown);
 }
 
-function startGame() {
-  cleanup();
-  speedScale = shell.getSpeedScale();
-  ctx = shell.ctx;
-  particles = shell.particles;
-  level = 1;
-  score = 0;
-  combo = 0;
-  timeLeft = 90;
-  selected = [];
-  matched = 0;
-  flipAnim = [];
-  buildLevel();
-  updateHud();
-  running = true;
-  shell.attachKeyboard({});
-  lastT = performance.now();
-  shell.canvas.addEventListener("click", onClick);
-  window.addEventListener("keydown", onKeyDown);
-  loopId = requestAnimationFrame(loop);
+function diffCfg() { return DIFF_CFG[diffId] || DIFF_CFG.normal; }
+
+function initMatrixRain() {
+  matrixDrops = [];
+  for (var i = 0; i < (shell.isHighQuality() ? 48 : 20); i++) {
+    matrixDrops.push({
+      x: Math.random() * W, y: Math.random() * H,
+      spd: 40 + Math.random() * 120, len: 4 + Math.random() * 12,
+      ch: String.fromCharCode(0x30A0 + Math.floor(Math.random() * 96))
+    });
+  }
+}
+
+function stagePairs() {
+  var cfg = diffCfg();
+  return Math.min(cfg.basePairs + stage - 1, 10);
 }
 
 function buildLevel() {
-  var pairs = Math.min(6 + level, 10);
+  var cfg = diffCfg();
+  var pairs = stagePairs();
   var items = [];
   for (var i = 0; i < pairs; i++) {
-    var sym = ICONS[i % ICONS.length];
-    var col = COLORS[i % COLORS.length];
-    items.push({ id: i, sym: sym, col: col });
-    items.push({ id: i, sym: sym, col: col });
+    var sym = ICONS[i % ICONS.length], col = COLORS[i % COLORS.length];
+    var entry = { id: i, sym: sym, col: col, bomb: false };
+    if (Math.random() < cfg.bombChance && pairs > 4) {
+      entry.bomb = true; entry.sym = "⚠"; entry.col = "#f87171";
+    }
+    items.push(Object.assign({}, entry));
+    items.push(Object.assign({}, entry));
   }
   for (var j = items.length - 1; j > 0; j--) {
     var k = Math.floor(Math.random() * (j + 1));
     var tmp = items[j]; items[j] = items[k]; items[k] = tmp;
   }
-  var cols = pairs <= 6 ? 4 : pairs <= 8 ? 4 : 5;
+  var cols = pairs <= 5 ? 4 : pairs <= 8 ? 5 : 6;
   var rows = Math.ceil(pairs * 2 / cols);
-  var cw = 80, ch = 100, gap = 12;
+  var cw = Math.min(88, (W - 80) / cols - 10);
+  var ch = Math.min(108, (H - 100) / rows - 10);
+  var gap = 10;
   var totalW = cols * cw + (cols - 1) * gap;
   var totalH = rows * ch + (rows - 1) * gap;
-  var ox = (960 - totalW) / 2, oy = (520 - totalH) / 2 + 10;
+  var ox = (W - totalW) / 2, oy = (H - totalH) / 2 + 16;
   cards = items.map(function (item, idx) {
     var c = idx % cols, r = Math.floor(idx / cols);
     return {
       item: item, x: ox + c * (cw + gap), y: oy + r * (ch + gap), w: cw, h: ch,
-      flipped: false, matched: false, flipT: 0, glitch: 0, idx: idx
+      flipped: false, matched: false, flipT: 0, glitch: 0, shake: 0, idx: idx
     };
   });
-  matched = 0;
-  selected = [];
-  timeLeft += 15;
+  matched = 0; selected = []; flipLock = false; perfectStage = true;
+  peekTimer = cfg.peek; peekDone = false;
+  if (stage === 1) timeLeft = (diffId === "easy" ? 95 : diffId === "normal" ? 80 : diffId === "hard" ? 65 : 50);
+  else timeLeft += cfg.timeBonus;
+}
+
+function startGame() {
+  cleanup();
+  speedScale = shell.getSpeedScale();
+  diffId = (shell.getDifficulty() || {}).id || "normal";
+  ctx = shell.ctx; particles = shell.particles;
+  stage = 1; score = 0; combo = 0; maxCombo = 0; animT = 0; streakBonus = 0;
+  initMatrixRain(); buildLevel(); updateHud();
+  running = true; keys = {};
+  shell.attachKeyboard(keys);
+  shell.canvas.addEventListener("pointerdown", onPointer);
+  window.addEventListener("keydown", onKeyDown);
+  lastT = performance.now();
+  loopId = requestAnimationFrame(loop);
 }
 
 function updateHud() {
+  var cfg = diffCfg();
+  var mult = (1 + combo * 0.35 + streakBonus * 0.1).toFixed(1);
   shell.setHud(
     '<div><span>分數</span><b>' + score.toLocaleString() + '</b></div>' +
-    '<div><span>剩餘時間</span><b>' + Math.ceil(timeLeft) + 's</b></div>' +
-    '<div><span>連擊</span><b>x' + combo + '</b></div>' +
-    '<div><span>關卡</span><b>' + level + '</b></div>' +
+    '<div><span>剩餘</span><b style="color:' + (timeLeft < 10 ? '#f472b6' : '#22d3ee') + '">' + Math.ceil(timeLeft) + 's</b></div>' +
+    '<div><span>連擊</span><b style="color:#fbbf24">x' + combo + '</b></div>' +
+    '<div><span>倍率</span><b>x' + mult + '</b></div>' +
+    '<div><span>關卡</span><b>' + stage + '</b></div>' +
     '<div><span>配對</span><b>' + matched + '/' + (cards.length / 2) + '</b></div>'
   );
+}
+
+function canvasPos(e) {
+  var rect = shell.canvas.getBoundingClientRect();
+  return {
+    x: (e.clientX - rect.left) * (W / rect.width),
+    y: (e.clientY - rect.top) * (H / rect.height)
+  };
 }
 
 function cardAt(mx, my) {
@@ -122,59 +169,97 @@ function cardAt(mx, my) {
   return null;
 }
 
+function addFloater(x, y, text, color) {
+  floaters.push({ x: x, y: y, text: text, color: color || "#fff", life: 0.85, vy: -32 });
+}
+
 function flipCard(c) {
-  if (c.flipped || c.matched || selected.length >= 2) return;
-  c.flipped = true;
-  c.flipT = 0;
-  c.glitch = 0.35;
-  flipAnim.push(c);
+  if (!running || flipLock || c.flipped || c.matched || selected.length >= 2) return;
+  if (!peekDone && peekTimer > 0) return;
+  c.flipped = true; c.flipT = 0;
+  c.glitch = 0.35 * diffCfg().glitchMult;
   selected.push(c);
   RNF.sfx.click();
-  if (selected.length === 2) setTimeout(checkMatch, 500);
+  if (c.item.bomb) {
+    handleBomb(c);
+    return;
+  }
+  if (selected.length === 2) {
+    flipLock = true;
+    setTimeout(checkMatch, 480);
+  }
+}
+
+function handleBomb(c) {
+  var cfg = diffCfg();
+  timeLeft = Math.max(0, timeLeft - (8 + stage * 2));
+  combo = 0; perfectStage = false;
+  c.shake = 0.5; scanGlitch = 0.6;
+  shell.triggerShake(10, 0.25);
+  RNF.sfx.die();
+  particles.burst(c.x + c.w / 2, c.y + c.h / 2, "#f87171", 20);
+  addFloater(c.x + c.w / 2, c.y, "炸彈！-時", "#f87171");
+  setTimeout(function () {
+    if (!running) return;
+    c.flipped = false; c.glitch = 0.3;
+    selected = selected.filter(function (x) { return x !== c; });
+    updateHud();
+  }, 500);
 }
 
 function checkMatch() {
   if (!running) return;
   var a = selected[0], b = selected[1];
-  if (a.item.id === b.item.id) {
+  if (a.item.id === b.item.id && !a.item.bomb) {
     a.matched = b.matched = true;
-    matched++;
-    combo++;
-    var pts = (100 + combo * 25) * level;
+    matched++; combo++; maxCombo = Math.max(maxCombo, combo);
+    if (combo >= 3) streakBonus = Math.min(5, streakBonus + 0.5);
+    var mult = 1 + combo * 0.35 + streakBonus * 0.1;
+    var pts = Math.floor((80 + stage * 25 + combo * 20) * mult);
     score += pts;
-    RNF.sfx.combo(Math.min(combo, 8));
-    shell.triggerShake(3 + combo * 0.5, 0.12);
-    particles.burst((a.x + b.x) / 2 + 40, (a.y + b.y) / 2 + 50, a.item.col, 14);
+    RNF.sfx.combo(Math.min(combo, 10));
+    shell.triggerShake(3 + combo * 0.4, 0.12);
+    scanGlitch = 0.15;
+    var cx = (a.x + b.x) / 2 + a.w / 2, cy = (a.y + b.y) / 2 + a.h / 2;
+    particles.burst(cx, cy, a.item.col, 16);
+    addFloater(cx, cy - 10, "+" + pts, a.item.col);
     if (matched >= cards.length / 2) {
-      level++;
+      var bonus = perfectStage ? Math.floor(200 * stage * mult) : Math.floor(80 * stage);
+      score += bonus;
+      if (perfectStage) addFloater(W / 2, H / 2, "完美 +" + bonus, "#fbbf24");
+      stage++;
       RNF.sfx.score();
-      setTimeout(function () { if (running) buildLevel(); updateHud(); }, 600);
+      setTimeout(function () { if (running) { buildLevel(); updateHud(); } }, 700);
     }
   } else {
-    combo = 0;
+    combo = 0; perfectStage = false;
+    var pen = diffCfg().mismatchPenalty;
+    if (pen > 0) {
+      timeLeft = Math.max(0, timeLeft - pen);
+      addFloater((a.x + b.x) / 2 + a.w / 2, a.y, "-" + pen + "s", "#f472b6");
+    }
     RNF.sfx.hit();
+    a.shake = b.shake = 0.35;
     setTimeout(function () {
       if (!running) return;
       a.flipped = b.flipped = false;
-      a.glitch = b.glitch = 0.25;
-    }, 350);
+      a.glitch = b.glitch = 0.25 * diffCfg().glitchMult;
+    }, 320);
   }
-  selected = [];
+  selected = []; flipLock = false;
   updateHud();
 }
 
-function onClick(e) {
-  if (!running || selected.length >= 2) return;
-  var rect = shell.canvas.getBoundingClientRect();
-  var mx = (e.clientX - rect.left) * (960 / rect.width);
-  var my = (e.clientY - rect.top) * (520 / rect.height);
-  var c = cardAt(mx, my);
+function onPointer(e) {
+  if (!running) return;
+  var p = canvasPos(e);
+  var c = cardAt(p.x, p.y);
   if (c) flipCard(c);
 }
 
 function onKeyDown(e) {
   if (!running) return;
-  if (e.code === "Enter" && cards.length) {
+  if (e.code === "Enter") {
     var pick = cards.find(function (c) { return !c.matched && !c.flipped; });
     if (pick) flipCard(pick);
   }
@@ -183,90 +268,114 @@ function onKeyDown(e) {
 function loop(now) {
   if (!running) return;
   var dt = Math.min(0.05, (now - lastT) / 1000);
-  lastT = now;
+  lastT = now; animT += dt;
   timeLeft -= dt * speedScale;
+  if (peekTimer > 0) {
+    peekTimer -= dt;
+    cards.forEach(function (c) { c.flipped = true; c.flipT = 1; });
+    if (peekTimer <= 0) {
+      peekDone = true;
+      cards.forEach(function (c) {
+        if (!c.matched) { c.flipped = false; c.flipT = 0; c.glitch = 0.2; }
+      });
+    }
+  }
   if (timeLeft <= 0) {
-    shell.gameOver(score, { level: level, combo: combo });
+    cleanup();
+    shell.gameOver(score, { stage: stage, maxCombo: maxCombo, streak: streakBonus });
     return;
   }
-  cards.forEach(function (c) {
-    if (c.flipT < 1) c.flipT = Math.min(1, c.flipT + dt * 4);
-    if (c.glitch > 0) c.glitch -= dt;
+  matrixDrops.forEach(function (d) {
+    d.y += d.spd * dt;
+    if (d.y > H + 20) { d.y = -20; d.x = Math.random() * W; }
   });
-  if (timeLeft < 10 && Math.floor(timeLeft * 4) !== Math.floor((timeLeft + dt) * 4))
-    RNF.sfx.heartbeat();
+  cards.forEach(function (c) {
+    if (c.flipT < 1) c.flipT = Math.min(1, c.flipT + dt * 5);
+    if (c.glitch > 0) c.glitch -= dt;
+    if (c.shake > 0) c.shake -= dt;
+  });
+  floaters.forEach(function (f) { f.life -= dt; f.y += f.vy * dt; });
+  floaters = floaters.filter(function (f) { return f.life > 0; });
+  scanGlitch = Math.max(0, scanGlitch - dt * 1.5);
+  if (timeLeft < 10 && Math.floor(timeLeft * 4) !== Math.floor((timeLeft + dt) * 4)) RNF.sfx.heartbeat();
   particles.update(dt);
-  draw();
-  updateHud();
+  draw(); updateHud();
   loopId = requestAnimationFrame(loop);
 }
 
 function drawCard(c) {
   var showFace = c.flipped || c.matched;
   var scaleX = showFace ? Math.abs(Math.cos(c.flipT * Math.PI)) : Math.abs(Math.cos((1 - c.flipT) * Math.PI));
-  scaleX = Math.max(0.08, scaleX);
+  scaleX = Math.max(0.06, scaleX);
+  var shakeX = c.shake > 0 ? (Math.random() - 0.5) * 10 * c.shake : 0;
   ctx.save();
-  ctx.translate(c.x + c.w / 2, c.y + c.h / 2);
+  ctx.translate(c.x + c.w / 2 + shakeX, c.y + c.h / 2);
   ctx.scale(scaleX, 1);
-  if (c.glitch > 0) {
-    ctx.translate((Math.random() - 0.5) * 12 * c.glitch, (Math.random() - 0.5) * 8 * c.glitch);
-    if (Math.random() < 0.3) ctx.filter = "hue-rotate(" + (Math.random() * 360) + "deg)";
+  if (c.glitch > 0 && shell.isHighQuality()) {
+    ctx.translate((Math.random() - 0.5) * 14 * c.glitch, (Math.random() - 0.5) * 8 * c.glitch);
+    if (Math.random() < 0.25) ctx.filter = "hue-rotate(" + (Math.random() * 360) + "deg)";
   }
   if (showFace) {
-    ctx.fillStyle = "rgba(6,10,18,0.95)";
-    ctx.strokeStyle = c.item.col;
-    ctx.lineWidth = 2;
-    ctx.shadowBlur = 16; ctx.shadowColor = c.item.col;
-    ctx.fillRect(-c.w / 2, -c.h / 2, c.w, c.h);
-    ctx.strokeRect(-c.w / 2, -c.h / 2, c.w, c.h);
-    ctx.fillStyle = c.item.col;
-    ctx.font = "bold 36px sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
+    var col = c.item.bomb ? "#f87171" : c.item.col;
+    ctx.fillStyle = "rgba(6,10,18,0.96)";
+    ctx.strokeStyle = col; ctx.lineWidth = 2;
+    ctx.shadowBlur = 16; ctx.shadowColor = col;
+    ctx.beginPath(); ctx.roundRect(-c.w / 2, -c.h / 2, c.w, c.h, 6); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = col;
+    ctx.font = "bold " + Math.floor(c.h * 0.38) + "px sans-serif";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillText(c.item.sym, 0, 0);
+    if (c.matched) {
+      ctx.strokeStyle = "rgba(74,222,128,0.5)"; ctx.lineWidth = 3;
+      ctx.strokeRect(-c.w / 2 + 2, -c.h / 2 + 2, c.w - 4, c.h - 4);
+    }
   } else {
-    ctx.fillStyle = "rgba(12,18,32,0.95)";
-    ctx.strokeStyle = "rgba(34,211,238,0.5)";
-    ctx.lineWidth = 1;
-    ctx.fillRect(-c.w / 2, -c.h / 2, c.w, c.h);
-    ctx.strokeRect(-c.w / 2, -c.h / 2, c.w, c.h);
-    ctx.fillStyle = "#22d3ee";
-    ctx.font = "10px sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText("NEURAL", 0, -8);
-    ctx.fillText("?", 0, 12);
+    ctx.fillStyle = "rgba(12,18,32,0.96)";
+    ctx.strokeStyle = "rgba(34,211,238,0.45)"; ctx.lineWidth = 1.5;
+    ctx.shadowBlur = 8; ctx.shadowColor = "#22d3ee";
+    ctx.beginPath(); ctx.roundRect(-c.w / 2, -c.h / 2, c.w, c.h, 6); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "#22d3ee"; ctx.font = "9px monospace"; ctx.textAlign = "center";
+    ctx.fillText("NEURAL", 0, -10); ctx.fillText("0x" + (c.idx + 1).toString(16).toUpperCase(), 0, 8);
   }
-  ctx.filter = "none";
-  ctx.shadowBlur = 0;
-  ctx.restore();
+  ctx.filter = "none"; ctx.shadowBlur = 0; ctx.restore();
   if (c.glitch > 0 && shell.isHighQuality()) {
-    ctx.save();
-    ctx.strokeStyle = c.item.col || "#22d3ee";
-    ctx.globalAlpha = c.glitch;
-    ctx.beginPath();
-    ctx.moveTo(c.x, c.y + Math.random() * c.h);
-    ctx.lineTo(c.x + c.w, c.y + Math.random() * c.h);
-    ctx.stroke();
-    ctx.restore();
+    ctx.save(); ctx.strokeStyle = c.item.col || "#22d3ee"; ctx.globalAlpha = c.glitch * 0.7;
+    ctx.beginPath(); ctx.moveTo(c.x, c.y + Math.random() * c.h);
+    ctx.lineTo(c.x + c.w, c.y + Math.random() * c.h); ctx.stroke(); ctx.restore();
   }
 }
 
 function draw() {
-  ctx.save();
-  shell.applyShake(ctx);
-  ctx.fillStyle = "#050810";
-  ctx.fillRect(0, 0, 960, 520);
-  ctx.strokeStyle = "rgba(34,211,238,0.06)";
-  for (var i = 0; i < 960; i += 32) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 520); ctx.stroke(); }
-  ctx.fillStyle = "#64748b";
-  ctx.font = "13px 'Microsoft JhengHei',sans-serif";
-  ctx.textAlign = "center";
-  ctx.fillText("NeuralMind · 記憶矩陣故障 · 配對所有卡片進入下一關", 480, 24);
+  ctx.save(); shell.applyShake(ctx);
+  ctx.fillStyle = "#030508"; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "rgba(34,211,238,0.04)"; ctx.font = "11px monospace";
+  matrixDrops.forEach(function (d) {
+    ctx.globalAlpha = 0.35;
+    ctx.fillText(d.ch, d.x, d.y);
+    ctx.fillText(d.ch, d.x, d.y - d.len * 3);
+  });
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = "rgba(34,211,238,0.06)"; ctx.lineWidth = 1;
+  for (var i = 0; i < W; i += 32) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, H); ctx.stroke(); }
+  if (peekTimer > 0) {
+    ctx.fillStyle = "rgba(251,191,36,0.12)"; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "#fbbf24"; ctx.font = "bold 15px 'Microsoft JhengHei',sans-serif"; ctx.textAlign = "center";
+    ctx.fillText("記憶預覽 " + Math.ceil(peekTimer) + "s", W / 2, 22);
+  }
   if (timeLeft < 10) {
-    ctx.fillStyle = "rgba(244,114,182," + (0.3 + Math.sin(performance.now() * 0.01) * 0.2) + ")";
-    ctx.fillRect(0, 0, 960, 520);
+    ctx.fillStyle = "rgba(244,114,182," + (0.15 + Math.sin(animT * 8) * 0.1) + ")";
+    ctx.fillRect(0, 0, W, H);
+  }
+  if (scanGlitch > 0) {
+    ctx.fillStyle = "rgba(34,211,238," + (scanGlitch * 0.08) + ")";
+    for (var sy = 0; sy < H; sy += 4 + Math.random() * 8) ctx.fillRect(0, sy, W, 2);
   }
   cards.forEach(drawCard);
+  floaters.forEach(function (f) {
+    ctx.save(); ctx.globalAlpha = Math.max(0, f.life);
+    ctx.fillStyle = f.color; ctx.font = "bold 13px 'Microsoft JhengHei',sans-serif";
+    ctx.textAlign = "center"; ctx.fillText(f.text, f.x, f.y); ctx.restore();
+  });
   particles.draw(ctx);
   ctx.restore();
 }

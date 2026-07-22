@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>CoreDefense: Mindustry X</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -14,6 +14,9 @@
       font-family: "Segoe UI", "Microsoft JhengHei", system-ui, sans-serif;
       overflow-x: hidden;
       overflow-y: auto;
+      overscroll-behavior: none;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
     }
     .grid-bg {
       position: fixed; inset: 0; pointer-events: none;
@@ -155,6 +158,7 @@
     canvas {
       display: block;
       cursor: crosshair;
+      touch-action: none;
       width: auto;
       height: 100%;
       max-width: 100%;
@@ -239,10 +243,43 @@
     .overlay-grade { font-size: 3.5rem; font-weight: 900; margin: 0.5rem 0; color: #ffd700; text-shadow: 0 0 30px rgba(255,215,0,0.5); }
     .overlay-stats { display: flex; gap: 1.5rem; justify-content: center; margin: 1rem 0; font-size: 0.78rem; color: #6e7681; }
     .overlay-stats b { display: block; color: #ff8c5a; font-size: 1.1rem; margin-top: 0.15rem; }
+    .streak-popup {
+      position: absolute; left: 50%; top: 38%; z-index: 16;
+      transform: translate(-50%, -50%) scale(0);
+      pointer-events: none; text-align: center;
+      animation: streakPop 1.1s ease forwards;
+    }
+    @keyframes streakPop {
+      0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+      20% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+      70% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+      100% { opacity: 0; transform: translate(-50%, -60%) scale(0.92); }
+    }
+    .streak-popup b {
+      display: block; font-size: 1.35rem; font-weight: 900; color: #fde047;
+      text-shadow: 0 0 24px rgba(253,224,71,0.8);
+      letter-spacing: 0.08em;
+    }
+    .streak-popup span { font-size: 0.72rem; color: #ffb380; letter-spacing: 0.12em; }
+    .core-damage-flash {
+      position: absolute; inset: 0; z-index: 11; pointer-events: none;
+      background: radial-gradient(ellipse at center, transparent 35%, rgba(255,60,60,0.35) 100%);
+      opacity: 0; transition: opacity 0.12s;
+    }
+    .core-damage-flash.show { opacity: 1; }
     @media (max-width: 520px) {
-      .top-bar { grid-template-columns: repeat(3, 1fr); }
-      .toolbar { gap: 0.35rem; }
-      .tool-btn { padding: 0.4rem 0.55rem; font-size: 0.7rem; }
+      .screen.active { padding: 0.5rem; padding-bottom: max(0.5rem, env(safe-area-inset-bottom)); }
+      #gameScreen.active { padding: 0.25rem 0.3rem max(0.35rem, env(safe-area-inset-bottom)); }
+      .top-bar { grid-template-columns: repeat(3, 1fr); font-size: 0.68rem; }
+      .toolbar { gap: 0.3rem; }
+      .tool-btn, .skill-btn {
+        min-height: 44px; min-width: 44px;
+        padding: 0.45rem 0.55rem; font-size: 0.68rem;
+      }
+      .tactical-bar .skill-btn { flex: 1 1 30%; justify-content: center; }
+      .hint { font-size: 0.66rem; line-height: 1.45; }
+      .kill-feed { width: 120px; font-size: 0.58rem; }
+      .wave-banner h2 { font-size: 1.85rem; }
     }
   </style>
   <script src="/demos/platform-bridge.js"></script>
@@ -268,6 +305,7 @@
         <button class="diff-btn selected" data-diff="easy">初級</button>
         <button class="diff-btn" data-diff="normal">中級</button>
         <button class="diff-btn" data-diff="hard">高級</button>
+        <button class="diff-btn" data-diff="extreme">極限</button>
       </div>
       <div class="btn-row">
         <button class="primary" id="btnStart">▶ 開始防禦</button>
@@ -324,8 +362,16 @@
           <li><strong>砲塔超載（150 礦）：</strong> 8 秒內全砲塔射速 ×2</li>
           <li><strong>空投補給：</strong> 每 3 波可獲得 +90 礦石</li>
         </ul>
+        <h3>⚙️ 難度說明</h3>
+        <ul>
+          <li><strong>初級：</strong> 8 波、礦石充裕、敵軍較慢，適合熟悉建造節奏</li>
+          <li><strong>中級：</strong> 12 波、資源緊縮、混合編隊增多</li>
+          <li><strong>高級：</strong> 15 波、高速突襲、BOSS 更頻繁</li>
+          <li><strong>極限：</strong> 18 波、經濟壓力大、編隊密集，需精準控場</li>
+        </ul>
         <h3>⚙️ 操作</h3>
         <ul>
+          <li><strong>點擊／觸控地圖：</strong> 放置所選砲塔（手機可直接點格子）</li>
           <li><strong>開始：</strong> 部署完畢後點擊開始進入戰鬥</li>
           <li><strong>下一波：</strong> 手動開始下一波敵襲</li>
           <li><strong>自動下一波：</strong> 波次清空後自動接續</li>
@@ -339,14 +385,14 @@
     <div class="game-wrap">
       <div class="top-bar">
         <div class="top-stat">
-          <span class="label">CORE HP</span>
+          <span class="label">核心 HP</span>
           <b id="hudCore">100</b>
           <div class="core-hp-bar"><div class="core-hp-fill" id="coreHpFill" style="width:100%"></div></div>
         </div>
-        <div class="top-stat"><span class="label">ORE</span><b id="hudOre">250</b></div>
-        <div class="top-stat"><span class="label">WAVE</span><b id="hudWave">0</b>/<span id="hudMaxWave">8</span></div>
-        <div class="top-stat"><span class="label">KILLS</span><b id="hudKills">0</b></div>
-        <div class="top-stat"><span class="label">MULTI</span><b id="hudMulti">×1</b></div>
+        <div class="top-stat"><span class="label">礦石</span><b id="hudOre">250</b></div>
+        <div class="top-stat"><span class="label">波次</span><b id="hudWave">0</b>/<span id="hudMaxWave">8</span></div>
+        <div class="top-stat"><span class="label">擊殺</span><b id="hudKills">0</b></div>
+        <div class="top-stat"><span class="label">倍率</span><b id="hudMulti">×1</b></div>
       </div>
       <div class="toolbar tower-bar">
         <button class="tool-btn active" data-tower="gun" title="機槍塔">🔫50</button>
@@ -374,10 +420,11 @@
       </div>
       <div class="canvas-wrap">
         <div class="phase-banner deploy" id="phaseBanner">部署砲塔後，點上方「▶ 開始」進入戰鬥</div>
+        <div class="core-damage-flash" id="coreFlash"></div>
         <div class="kill-feed" id="killFeed"></div>
         <canvas id="canvas" width="640" height="480"></canvas>
       </div>
-      <p class="hint">部署砲塔 → 點「開始」立即開打 → 或開啟「自動下一波」</p>
+      <p class="hint" id="gameHint">部署砲塔 → 點「開始」開打 → 連續擊殺可提升礦石倍率</p>
     </div>
   </div>
 
@@ -424,23 +471,38 @@
     };
 
     const DIFF = {
-      easy:   { waves: 8,  coreHp: 100, startOre: 280, enemyHp: 1, enemySpeed: 1, reward: 16 },
-      normal: { waves: 12, coreHp: 80,  startOre: 220, enemyHp: 1.4, enemySpeed: 1.2, reward: 13 },
-      hard:   { waves: 15, coreHp: 60,  startOre: 170, enemyHp: 1.8, enemySpeed: 1.45, reward: 11 },
+      easy:    { waves: 8,  coreHp: 110, startOre: 320, enemyHp: 0.85, enemySpeed: 0.88, reward: 18, spawnInterval: 1.15, waveCount: 0.88, waveBonus: 1.15 },
+      normal:  { waves: 12, coreHp: 85,  startOre: 240, enemyHp: 1.35, enemySpeed: 1.15, reward: 14, spawnInterval: 1.0,  waveCount: 1.0,  waveBonus: 1.0 },
+      hard:    { waves: 15, coreHp: 65,  startOre: 185, enemyHp: 1.75, enemySpeed: 1.42, reward: 11, spawnInterval: 0.82, waveCount: 1.12, waveBonus: 0.88 },
+      extreme: { waves: 18, coreHp: 50,  startOre: 145, enemyHp: 2.15, enemySpeed: 1.65, reward: 9,  spawnInterval: 0.68, waveCount: 1.28, waveBonus: 0.72 },
+    };
+
+    const WAVE_SUBTITLES = {
+      titan: '⚠ 泰坦級單位出現',
+      elite: '⚠ 精英編隊突襲',
+      mixed: '⚠ 混合編隊來襲',
+      default: '敵軍編隊接近中',
+    };
+
+    const ENEMY_NAMES = {
+      scout: '斥候', swarm: '虫群', phantom: '幻影', heavy: '重甲',
+      shield: '護盾', brood: '母巢', elite: '精英', titan: '泰坦',
     };
 
     let difficulty = 'easy', config = DIFF.easy;
-    let canvas, ctx, towers = [], enemies = [], bullets = [], particles = [], floatTexts = [];
+    let canvas, ctx, canvasInfo = null, gameLoopCtrl = null;
+    let towers = [], enemies = [], bullets = [], particles = [], floatTexts = [];
     let beams = [], explosions = [], orePopups = [];
     let ore = 250, kills = 0, wave = 0, waveActive = false, paused = false;
     let gameStarted = false, autoWave = false, autoWaveTimer = 0;
-    let coreHp = 100, selectedTower = 'gun', killStreak = 0, multi = 1;
-    let animId = null, lastTime = 0, spawnQueue = [], spawnTimer = 0;
-    let mouseX = 0, mouseY = 0, hoverCell = null, shake = 0, corePulse = 0;
+    let coreHp = 100, selectedTower = 'gun', killStreak = 0, multi = 1, lastMultiShown = 1;
+    let spawnQueue = [], spawnTimer = 0;
+    let mouseX = 0, mouseY = 0, hoverCell = null, shake = 0, corePulse = 0, coreFlashTimer = 0;
     let bestWave = 0, bestKills = 0, bestGrade = '—';
-    let helpFromGame = false;
+    let helpFromGame = false, tutorialStep = 0;
     let killFeed = [], conveyorPhase = 0, overdriveTimer = 0;
     let skillCd = { fission: 0, overdrive: 0 }, airdropWave = 0, spawnBurst = null;
+    let lastTowerTap = 0, actionBusy = false;
 
     const $ = (id) => document.getElementById(id);
     const screens = { menu: $('menu'), help: $('help'), game: $('gameScreen'), leaderboard: $('leaderboard') };
@@ -461,11 +523,82 @@
 
     document.querySelectorAll('.tool-btn[data-tower]').forEach(btn => {
       btn.addEventListener('click', () => {
+        if (Date.now() - lastTowerTap < 120) return;
+        lastTowerTap = Date.now();
         document.querySelectorAll('.tool-btn[data-tower]').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         selectedTower = btn.dataset.tower;
       });
     });
+
+    function resizeGameCanvas() {
+      if (!canvas) return;
+      canvasInfo = DemoEnhance.resizeCanvas(canvas, COLS * CELL, ROWS * CELL);
+      ctx = canvasInfo.ctx;
+    }
+    addEventListener('resize', resizeGameCanvas);
+
+    function canvasPointFromEvent(e) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.clientX != null ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+      const clientY = e.clientY != null ? e.clientY : (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      return {
+        x: (clientX - rect.left) * scaleX,
+        y: (clientY - rect.top) * scaleY,
+      };
+    }
+
+    function updatePointerFromEvent(e) {
+      const pt = canvasPointFromEvent(e);
+      mouseX = pt.x;
+      mouseY = pt.y;
+      const c = Math.floor(mouseX / CELL), r = Math.floor(mouseY / CELL);
+      hoverCell = (c >= 0 && c < COLS && r >= 0 && r < ROWS) ? { c, r } : null;
+    }
+
+    function bindCanvasInput() {
+      if (!canvas || canvas._inputBound) return;
+      canvas._inputBound = true;
+      canvas.addEventListener('pointermove', updatePointerFromEvent);
+      canvas.addEventListener('pointerleave', () => { hoverCell = null; });
+      canvas.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        if (canvas.setPointerCapture) canvas.setPointerCapture(e.pointerId);
+        updatePointerFromEvent(e);
+        onCanvasClick(e);
+      });
+    }
+
+    function showStreakPopup(text, sub) {
+      const wrap = document.querySelector('.canvas-wrap');
+      if (!wrap) return;
+      const div = document.createElement('div');
+      div.className = 'streak-popup';
+      div.innerHTML = '<b>' + text + '</b>' + (sub ? '<span>' + sub + '</span>' : '');
+      wrap.appendChild(div);
+      setTimeout(() => div.remove(), 1100);
+    }
+
+    function flashCoreDamage() {
+      coreFlashTimer = 180;
+      const el = $('coreFlash');
+      if (el) {
+        el.classList.add('show');
+        setTimeout(() => el.classList.remove('show'), 140);
+      }
+    }
+
+    function showDamageNumber(x, y, dmg, crit) {
+      floatTexts.push({
+        x, y: y - 6,
+        text: '-' + Math.max(1, Math.round(dmg)),
+        color: crit ? '#fde047' : '#ffb380',
+        life: crit ? 900 : 650,
+        size: crit ? 16 : 13,
+      });
+    }
 
     function closeHelp() {
       if (helpFromGame) {
@@ -497,7 +630,7 @@
       showScreen('help');
     };
     $('btnQuit').onclick = () => {
-      if (animId) cancelAnimationFrame(animId);
+      if (gameLoopCtrl) gameLoopCtrl.stop();
       gameStarted = false;
       waveActive = false;
       PlatformBridge.setGameSessionActive(false);
@@ -507,7 +640,7 @@
       getActive: function () { return $('gameScreen').classList.contains('active'); },
       button: $('btnLeaveGame'),
       stopGame: function () {
-        if (animId) cancelAnimationFrame(animId);
+        if (gameLoopCtrl) gameLoopCtrl.stop();
         gameStarted = false;
         waveActive = false;
         PlatformBridge.setGameSessionActive(false);
@@ -531,6 +664,12 @@
       bestWave = p.bestWave || 0;
       bestKills = p.bestKills || 0;
       bestGrade = p.bestGrade || '—';
+      if (p.difficulty && DIFF[p.difficulty]) {
+        difficulty = p.difficulty;
+        document.querySelectorAll('.diff-btn').forEach(function (b) {
+          b.classList.toggle('selected', b.dataset.diff === difficulty);
+        });
+      }
       $('bestWave').textContent = bestWave || '—';
       $('bestKills').textContent = bestKills;
       $('bestGrade').textContent = bestGrade;
@@ -546,7 +685,7 @@
       showScreen('leaderboard');
       $('lbLoading').style.display = 'block';
       $('lbList').innerHTML = '';
-      const entries = await PlatformBridge.fetchLeaderboard(15);
+      const entries = await PlatformBridge.fetchLeaderboard(15, difficulty);
       $('lbLoading').style.display = 'none';
       PlatformBridge.renderLeaderboard($('lbList'), entries);
     }
@@ -575,33 +714,35 @@
     });
 
     function startGame() {
-      config = DIFF[difficulty];
+      config = DIFF[difficulty] || DIFF.easy;
       canvas = $('canvas');
-      ctx = canvas.getContext('2d');
+      resizeGameCanvas();
+      bindCanvasInput();
       towers = []; enemies = []; bullets = []; particles = []; beams = [];
       explosions = []; floatTexts = []; orePopups = [];
       ore = config.startOre; kills = 0; wave = 0; waveActive = false; paused = false;
       gameStarted = false; autoWave = false; autoWaveTimer = 0;
       coreHp = config.coreHp; CORE.hp = coreHp; CORE.maxHp = config.coreHp;
-      killStreak = 0; multi = 1; spawnQueue = []; spawnTimer = 0; shake = 0;
-      killFeed = []; conveyorPhase = 0; overdriveTimer = 0;
+      killStreak = 0; multi = 1; lastMultiShown = 1; spawnQueue = []; spawnTimer = 0; shake = 0;
+      killFeed = []; conveyorPhase = 0; overdriveTimer = 0; tutorialStep = 0; coreFlashTimer = 0;
       skillCd = { fission: 0, overdrive: 0 }; airdropWave = 0; spawnBurst = null;
       $('killFeed').innerHTML = '';
       $('hudMaxWave').textContent = config.waves;
+      $('gameHint').textContent = '① 點選砲塔種類 → ② 點地圖格子建造 → ③ 按「開始」迎敵';
       updateWaveButtons();
       updateHud();
       showScreen('game');
       PlatformBridge.setGameSessionActive(true);
-      canvas.onmousemove = onMouseMove;
-      canvas.onmouseleave = () => { hoverCell = null; };
-      canvas.onclick = onCanvasClick;
-      lastTime = performance.now();
-      if (animId) cancelAnimationFrame(animId);
-      gameLoop(lastTime);
+      if (gameLoopCtrl) gameLoopCtrl.stop();
+      gameLoopCtrl = DemoEnhance.createGameLoop(function (dt) {
+        if (!paused) update(dt);
+        draw();
+      });
+      gameLoopCtrl.start();
     }
 
     function quitGame() {
-      if (animId) cancelAnimationFrame(animId);
+      if (gameLoopCtrl) gameLoopCtrl.stop();
       PlatformBridge.setGameSessionActive(false);
       showScreen('menu');
     }
@@ -630,7 +771,7 @@
       } else if (wave === 0 && !waveActive) {
         updatePhaseBanner('準備完成 — 點「▶ 開始敵襲」或「下一波」', autoWave ? '自動下一波已開啟，稍後自動開打' : null, autoWave ? 'auto' : 'ready');
       } else if (waveActive) {
-        updatePhaseBanner('WAVE ' + wave + ' 激戰中', null, 'ready');
+        updatePhaseBanner('第 ' + wave + ' 波激戰中', enemies.length ? '場上敵軍 ' + enemies.length + ' 單位' : '殲滅殘敵中', 'ready');
       } else if (wave > 0 && wave < config.waves) {
         updatePhaseBanner('第 ' + wave + ' 波已清空', autoWave ? '自動下一波倒數中…' : '點「下一波」繼續', autoWave ? 'auto' : 'ready');
       } else {
@@ -693,10 +834,14 @@
     }
 
     function beginBattle() {
+      if (actionBusy) return;
+      actionBusy = true;
+      setTimeout(() => { actionBusy = false; }, 350);
       if (!gameStarted) {
         gameStarted = true;
         pushFeed('⚔ 防線啟動 — 編隊模式', '#86efac');
-        floatTexts.push({ x: canvas.width / 2, y: 48, text: '⚔ 戰鬥開始！', color: '#86efac', life: 1200 });
+        floatTexts.push({ x: canvas.width / 2, y: 48, text: '⚔ 戰鬥開始！', color: '#86efac', life: 1200, size: 16 });
+        $('gameHint').textContent = '擊殺敵人賺礦石 · 可開「自動下一波」連續迎敵';
       }
       if (waveActive || wave >= config.waves) {
         updateWaveButtons();
@@ -734,13 +879,13 @@
       if (!wrap) return;
       const div = document.createElement('div');
       div.className = 'wave-banner';
-      div.innerHTML = `<h2>WAVE ${w}</h2><p>${subtitle || 'ENEMY ASSAULT DETECTED'}</p>`;
+      div.innerHTML = '<h2>第 ' + w + ' 波</h2><p>' + (subtitle || WAVE_SUBTITLES.default) + '</p>';
       wrap.appendChild(div);
       setTimeout(() => div.remove(), 2000);
     }
 
     function pickWaveComposition(w) {
-      const count = 4 + wave * 2;
+      const count = Math.floor((4 + wave * 2) * (config.waveCount || 1));
       const types = [];
       for (let i = 0; i < count; i++) types.push('scout');
       if (w >= 2) for (let i = 0; i < Math.floor(count * 0.25); i++) types[i * 2] = 'swarm';
@@ -755,10 +900,10 @@
     }
 
     function waveSubtitle(w) {
-      if (w % 4 === 0) return '⚠ TITAN CLASS DETECTED';
-      if (w % 3 === 0) return '⚠ ELITE SQUAD INCOMING';
-      if (w >= 5) return '⚠ MIXED ASSAULT WAVE';
-      return 'ENEMY ASSAULT DETECTED';
+      if (w % 4 === 0) return WAVE_SUBTITLES.titan;
+      if (w % 3 === 0) return WAVE_SUBTITLES.elite;
+      if (w >= 5) return WAVE_SUBTITLES.mixed;
+      return WAVE_SUBTITLES.default;
     }
 
     function isCoreCell(c, r) {
@@ -767,22 +912,18 @@
 
     function getTowerAt(c, r) { return towers.find(t => t.c === c && t.r === r); }
 
-    function onMouseMove(e) {
-      const rect = canvas.getBoundingClientRect();
-      const scaleX = canvas.width / rect.width, scaleY = canvas.height / rect.height;
-      mouseX = (e.clientX - rect.left) * scaleX;
-      mouseY = (e.clientY - rect.top) * scaleY;
-      const c = Math.floor(mouseX / CELL), r = Math.floor(mouseY / CELL);
-      hoverCell = (c >= 0 && c < COLS && r >= 0 && r < ROWS) ? { c, r } : null;
-    }
-
     function onCanvasClick(e) {
-      if (paused || !hoverCell) return;
+      if (paused || !hoverCell || actionBusy) return;
       const { c, r } = hoverCell;
-      if (isCoreCell(c, r) || getTowerAt(c, r)) return;
+      if (isCoreCell(c, r)) {
+        floatTexts.push({ x: c * CELL + CELL/2, y: r * CELL + CELL/2, text: '核心禁建!', color: '#ff6644', life: 700, size: 13 });
+        return;
+      }
+      if (getTowerAt(c, r)) return;
       const spec = TOWERS[selectedTower];
       if (ore < spec.cost) {
-        floatTexts.push({ x: c * CELL + CELL/2, y: r * CELL + CELL/2, text: '礦石不足!', color: '#ff4444', life: 800 });
+        floatTexts.push({ x: c * CELL + CELL/2, y: r * CELL + CELL/2, text: '礦石不足!', color: '#ff4444', life: 800, size: 13 });
+        shake = 4;
         return;
       }
       ore -= spec.cost;
@@ -791,6 +932,11 @@
         ...spec, lastShot: 0, angle: 0, recoil: 0, idle: Math.random() * Math.PI * 2,
       });
       addParticles(c * CELL + CELL/2, r * CELL + CELL/2, spec.color, 8);
+      if (tutorialStep === 0) {
+        tutorialStep = 1;
+        $('gameHint').textContent = '防線就緒！按上方「▶ 開始」或「下一波」迎敵';
+        pushFeed('✓ 首座砲塔部署完成', '#86efac');
+      }
       updateHud();
     }
 
@@ -814,11 +960,17 @@
         });
       });
       spawnTimer = 0;
-      spawnBurst = { remaining: types.length, burstSize: Math.min(6, 2 + Math.floor(wave / 2)), interval: 280 };
+      const baseInterval = Math.max(180, 320 - wave * 8);
+      const interval = Math.floor(baseInterval * (config.spawnInterval || 1));
+      spawnBurst = {
+        remaining: types.length,
+        burstSize: Math.min(7, 2 + Math.floor(wave / 2) + (difficulty === 'extreme' ? 1 : 0)),
+        interval: interval,
+      };
       updateWaveButtons();
       updateThreat();
       updateHud();
-      pushFeed('WAVE ' + wave + ' — ' + waveSubtitle(wave), '#6eb5ff');
+      pushFeed('第 ' + wave + ' 波 — ' + waveSubtitle(wave), '#6eb5ff');
     }
 
     function spawnEnemy(offset) {
@@ -837,14 +989,6 @@
 
     function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
 
-    function gameLoop(now) {
-      animId = requestAnimationFrame(gameLoop);
-      const dt = Math.min(now - lastTime, 50);
-      lastTime = now;
-      if (!paused) update(dt);
-      draw(now);
-    }
-
     function update(dt) {
       corePulse += dt * 0.003;
       conveyorPhase += dt * 0.004;
@@ -854,6 +998,8 @@
       if (overdriveTimer > 0) overdriveTimer = Math.max(0, overdriveTimer - dt);
       killFeed.forEach(f => f.life -= dt);
       killFeed = killFeed.filter(f => f.life > 0);
+      if (coreFlashTimer > 0) coreFlashTimer = Math.max(0, coreFlashTimer - dt);
+
       updateSkillsHud();
 
       if (waveActive && spawnQueue.length) {
@@ -885,12 +1031,19 @@
         e.x += (dx / len) * e.speed * slowFactor * (dt / 16);
         e.y += (dy / len) * e.speed * slowFactor * (dt / 16);
         if (e.hitFlash > 0) e.hitFlash -= dt;
-        if (dist(e, { x: coreX, y: coreY }) < 30) {
+        const hitRadius = 22 + (e.radius || 10) * 0.55;
+        if (dist(e, { x: coreX, y: coreY }) < hitRadius) {
           e.dead = true;
           coreHp -= e.coreDmg || 6;
+          killStreak = 0;
+          multi = 1;
+          lastMultiShown = 1;
           shake = e.type === 'titan' ? 18 : 12;
+          flashCoreDamage();
+          floatTexts.push({ x: coreX, y: coreY - 28, text: '-' + (e.coreDmg || 6), color: '#ff6644', life: 900, size: 15 });
           updateHud();
           addExplosion(coreX, coreY, '#ff4444', 30);
+          pushFeed('⚠ ' + (ENEMY_NAMES[e.type] || '敵軍') + ' 撞擊核心', '#ff6644');
           if (coreHp <= 0) endGame(false);
         }
       });
@@ -960,8 +1113,9 @@
       });
       bullets = bullets.filter(b => !b.hit);
 
-      particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.life -= dt; p.vy += 0.04; });
+      particles.forEach(p => { p.x += p.vx * (dt / 16); p.y += p.vy * (dt / 16); p.life -= dt; p.vy += 0.04 * (dt / 16); });
       particles = particles.filter(p => p.life > 0);
+      DemoEnhance.capParticles(particles);
 
       explosions.forEach(ex => { ex.r += ex.speed * (dt / 16); ex.life -= dt; ex.alpha = ex.life / ex.maxLife; });
       explosions = explosions.filter(ex => ex.life > 0);
@@ -974,9 +1128,9 @@
 
       if (waveActive && !spawnQueue.length && !enemies.length) {
         waveActive = false;
-        const bonus = 35 + wave * 12;
+        const bonus = Math.floor((35 + wave * 12) * (config.waveBonus || 1));
         ore += bonus;
-        floatTexts.push({ x: canvas.width/2, y: canvas.height/2 - 30, text: `+${bonus} 礦石`, color: '#ffd700', life: 1200 });
+        floatTexts.push({ x: canvas.width/2, y: canvas.height/2 - 30, text: '+' + bonus + ' 礦石', color: '#ffd700', life: 1200, size: 14 });
         updateHud();
         updateWaveButtons();
         if (wave >= config.waves) {
@@ -1028,18 +1182,30 @@
     function damageEnemy(e, dmg, pulseOnly) {
       const reduced = dmg * (1 - (e.armor || 0));
       e.hp -= reduced;
-      e.hitFlash = 100;
+      e.hitFlash = 120;
+      if (!pulseOnly && reduced > 0) {
+        showDamageNumber(e.x, e.y - e.radius, reduced, reduced >= e.maxHp * 0.25);
+      }
       if (e.hp <= 0 && !e.dead) {
         e.dead = true;
         if (e.split > 0) spawnMiniScouts(e.x, e.y, e.split);
         if (!pulseOnly) {
           kills++;
           killStreak++;
-          if (killStreak >= 5) multi = Math.min(2.5, 1 + killStreak * 0.05);
+          const prevMulti = multi;
+          if (killStreak >= 5) multi = Math.min(2.8, 1 + killStreak * 0.055);
+          if (multi > prevMulti && Math.floor(multi * 10) > Math.floor(prevMulti * 10)) {
+            showStreakPopup('×' + multi.toFixed(1) + ' 倍率', '連續擊殺 ' + killStreak);
+            pushFeed('🔥 礦石倍率 ×' + multi.toFixed(1), '#fde047');
+          } else if (killStreak === 5 || killStreak === 10 || killStreak === 20) {
+            showStreakPopup(killStreak + ' 連殺', '礦石獎勵提升中');
+          }
           const reward = Math.floor(e.reward * multi);
           ore += reward;
-          orePopups.push({ x: e.x, y: e.y, text: `+${reward}`, life: 700 });
-          if (e.type === 'titan' || e.type === 'elite') pushFeed('💥 擊毀 ' + e.type.toUpperCase(), e.color);
+          orePopups.push({ x: e.x, y: e.y, text: '+' + reward, life: 700 });
+          if (e.type === 'titan' || e.type === 'elite') {
+            pushFeed('💥 擊毀 ' + (ENEMY_NAMES[e.type] || e.type), e.color);
+          }
         }
         addExplosion(e.x, e.y, e.color, e.radius * 2);
         updateHud();
@@ -1051,6 +1217,7 @@
         const a = Math.random() * Math.PI * 2, s = 1.5 + Math.random() * 4;
         particles.push({ x, y, vx: Math.cos(a)*s, vy: Math.sin(a)*s, life: 350 + Math.random()*250, color, size: 2 + Math.random()*2 });
       }
+      DemoEnhance.capParticles(particles);
     }
 
     function addExplosion(x, y, color, radius) {
@@ -1340,7 +1507,7 @@
       floatTexts.forEach(ft => {
         ctx.globalAlpha = Math.max(0, ft.life / 800);
         ctx.fillStyle = ft.color;
-        ctx.font = 'bold 14px sans-serif';
+        ctx.font = 'bold ' + (ft.size || 14) + 'px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(ft.text, ft.x, ft.y);
         ctx.globalAlpha = 1;
@@ -1361,7 +1528,10 @@
         ctx.fillStyle = '#fff';
         ctx.font = 'bold 22px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('⏸ PAUSED', canvas.width/2, canvas.height * 0.22);
+        ctx.fillText('⏸ 已暫停', canvas.width/2, canvas.height * 0.22);
+        ctx.font = '12px sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.65)';
+        ctx.fillText('點上方「繼續」恢復戰鬥', canvas.width/2, canvas.height * 0.22 + 24);
       }
 
       ctx.restore();

@@ -2,47 +2,64 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Galactic Invader 2026 · 銀河侵略者</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Galactic Invader 2026 · 星際侵略者 2026</title>
+  <script src="/sdk/rnf-game-sdk.js?v=20260723b"></script>
 </head>
 <body>
-<script src="/sdk/rnf-game-sdk.js?v=20260723"></script>
 <script>
 RNF.init();
 var shell = RNF.buildShell({
   title: "Galactic Invader 2026",
   creator: "NebulaCraft",
-  subtitle: "←→ 移動 · 空白 射擊 · 升級武器 · 護盾吸收 · 擊敗 BOSS 觸發震屏",
+  subtitle: "四段武器升級 · 護盾 · Boss 彈幕與血條 · 觸控移動＋射擊",
   width: 960,
   height: 520,
   bgmStyle: "ambient",
-  highlights: ["BOSS 波", "武器升級", "護盾道具", "四段難度"],
+  highlights: ["BOSS 波", "武器升級", "護盾道具", "彈幕模式", "觸控就緒"],
   help: {
-    about: "復古射擊的星際強化版。操控戰機射擊，消滅入侵者與 BOSS。",
+    about: "復古射擊的星際強化版。操控戰機射擊，消滅入侵者與 BOSS，保衛 2026 地球防線。",
     features: [
-      "多波敵人後出現 BOSS",
-      "擊破敵人掉落武器升級或護盾",
-      "四段難度調整敵速"
+      "四段難度：敵人移動、射擊頻率與 HP 同步提升",
+      "武器 Lv1～4：單發、雙發、三向、穿透雷射",
+      "護盾可吸收多次敵彈，擊破敵人掉落升級",
+      "每 5 波巨型 BOSS，多段彈幕模式與血條震屏",
+      "桌面鍵盤＋手機虛擬方向鍵／連射鍵"
     ],
     controls: [
       "← → 或 A D：移動戰機",
-      "空白鍵：連續射擊"
+      "空白鍵／觸控「射」：連續射擊",
+      "手機：左側方向鍵、右側射擊鍵"
     ],
     tips: [
-      "護盾可吸收一次敵彈",
-      "每數波會出現 BOSS"
+      "護盾可吸收敵彈，被擊中會降級武器",
+      "每 5 波出現 BOSS，注意散彈與追蹤彈",
+      "穿透雷射可一次命中多個目標"
     ]
   },
   onStop: cleanup,
   onStart: startGame
 });
 
+var W = 960, H = 520;
 var ctx, particles, running, loopId, lastT, keys = {};
 var player, bullets, enemies, enemyBullets, powerUps, boss, wave, score, lives, shield;
-var weaponLevel, shootCd, enemyDir, moveTimer, bossActive, speedScale = 1;
+var weaponLevel, shootCd, enemyDir, moveTimer, bossActive, speedScale, diffId, diffTun, highQ;
+var stars, invulnT, killFlash;
+
+function diffTuning() {
+  var map = {
+    easy: { moveSpd: 0.82, fireRate: 0.75, hpMult: 0.85, bossHp: 0.85, bulletSpd: 0.88 },
+    normal: { moveSpd: 1, fireRate: 1, hpMult: 1, bossHp: 1, bulletSpd: 1 },
+    hard: { moveSpd: 1.18, fireRate: 1.25, hpMult: 1.2, bossHp: 1.15, bulletSpd: 1.12 },
+    extreme: { moveSpd: 1.35, fireRate: 1.45, hpMult: 1.45, bossHp: 1.35, bulletSpd: 1.22 }
+  };
+  return map[diffId] || map.normal;
+}
 
 function cleanup() {
   shell.detachKeyboard();
+  shell.detachTouchControls();
   running = false;
   if (loopId) cancelAnimationFrame(loopId);
   loopId = null;
@@ -53,17 +70,33 @@ function cleanup() {
 function startGame() {
   cleanup();
   speedScale = shell.getSpeedScale();
+  diffId = (shell.getDifficulty() || {}).id || "normal";
+  diffTun = diffTuning();
   ctx = shell.ctx;
   particles = shell.particles;
+  highQ = shell.isHighQuality();
   score = 0; lives = 3; wave = 1; weaponLevel = 1; shield = 0;
-  player = { x: 480, y: 460, w: 36, h: 28, speed: 220 * speedScale };
+  invulnT = 0; killFlash = 0;
+  player = { x: 480, y: 460, w: 36, h: 28, speed: 240 * speedScale };
   bullets = []; enemies = []; enemyBullets = []; powerUps = [];
   boss = null; bossActive = false; shootCd = 0; enemyDir = 1; moveTimer = 0;
+  stars = [];
+  for (var i = 0; i < (highQ ? 100 : 45); i++) {
+    stars.push({ x: Math.random() * W, y: Math.random() * H, s: Math.random() * 2 + 0.5, sp: 0.2 + Math.random() * 1.2 });
+  }
   spawnWave();
   updateHud();
   running = true;
   keys = {};
   shell.attachKeyboard(keys);
+  shell.attachTouchControls({
+    keys: keys,
+    buttons: [
+      { code: "ArrowLeft", label: "◀", side: "left", hold: true },
+      { code: "ArrowRight", label: "▶", side: "left", hold: true },
+      { code: "Space", label: "射", side: "right", hold: true, danger: true, wide: true }
+    ]
+  });
   lastT = performance.now();
   window.addEventListener("keydown", onKeyDown);
   window.addEventListener("keyup", onKeyUp);
@@ -76,17 +109,29 @@ function spawnWave() {
   boss = null;
   if (wave % 5 === 0) {
     bossActive = true;
-    boss = { x: 480, y: 80, w: 120, h: 60, hp: 80 + wave * 15, maxHp: 80 + wave * 15, phase: 0, cd: 0 };
+    var hp = Math.floor((90 + wave * 18) * diffTun.bossHp * diffTun.hpMult);
+    boss = {
+      x: 480, y: 90, w: 130, h: 64,
+      hp: hp, maxHp: hp,
+      phase: 0, cd: 0, pattern: 0, rage: false
+    };
+    shell.triggerShake(6, 0.2);
+    RNF.sfx.power();
     return;
   }
-  var rows = Math.min(4, 2 + Math.floor(wave / 3));
-  var cols = 8;
-  for (var r = 0; r < rows; r++)
-    for (var c = 0; c < cols; c++)
+  var rows = Math.min(5, 2 + Math.floor(wave / 2));
+  var cols = 9;
+  for (var r = 0; r < rows; r++) {
+    for (var c = 0; c < cols; c++) {
       enemies.push({
-        x: 180 + c * 72, y: 60 + r * 48, w: 40, h: 32,
-        hp: 1 + Math.floor(wave / 4), pts: 10 + wave * 2
+        x: 120 + c * 78, y: 50 + r * 46, w: 38, h: 30,
+        hp: Math.max(1, Math.round((1 + Math.floor(wave / 3)) * diffTun.hpMult)),
+        maxHp: Math.max(1, Math.round((1 + Math.floor(wave / 3)) * diffTun.hpMult)),
+        pts: 12 + wave * 3,
+        shootCd: 0.5 + Math.random() * 1.2
       });
+    }
+  }
 }
 
 function onKeyDown(e) {
@@ -94,55 +139,99 @@ function onKeyDown(e) {
   keys[e.code] = true;
   if (e.code === "Space") e.preventDefault();
 }
-
 function onKeyUp(e) { keys[e.code] = false; }
 
 function shoot() {
   if (shootCd > 0) return;
-  shootCd = Math.max(0.08, 0.22 - weaponLevel * 0.03);
+  shootCd = Math.max(0.06, (0.24 - weaponLevel * 0.035) / diffTun.fireRate);
   RNF.sfx.laser();
-  var spreads = weaponLevel >= 3 ? [-18, 0, 18] : weaponLevel >= 2 ? [-10, 10] : [0];
-  spreads.forEach(function (off) {
-    bullets.push({ x: player.x + off, y: player.y - 16, vx: off * 0.5, vy: -520, dmg: 1 + Math.floor(weaponLevel / 2) });
-  });
-  particles.burst(player.x, player.y - 10, "#22d3ee", 4);
+  var baseDmg = 1 + Math.floor(weaponLevel / 2);
+  var vy = -560 * speedScale * diffTun.bulletSpd;
+  if (weaponLevel === 1) {
+    bullets.push({ x: player.x, y: player.y - 16, vx: 0, vy: vy, dmg: baseDmg, pierce: false, w: 4, h: 14 });
+  } else if (weaponLevel === 2) {
+    bullets.push({ x: player.x - 10, y: player.y - 14, vx: -20, vy: vy, dmg: baseDmg, pierce: false, w: 4, h: 12 });
+    bullets.push({ x: player.x + 10, y: player.y - 14, vx: 20, vy: vy, dmg: baseDmg, pierce: false, w: 4, h: 12 });
+  } else if (weaponLevel === 3) {
+    [-22, 0, 22].forEach(function (off) {
+      bullets.push({ x: player.x + off, y: player.y - 16, vx: off * 0.6, vy: vy, dmg: baseDmg, pierce: false, w: 4, h: 12 });
+    });
+  } else {
+    bullets.push({ x: player.x, y: player.y - 18, vx: 0, vy: vy * 1.08, dmg: baseDmg + 1, pierce: true, w: 6, h: 18 });
+    particles.burst(player.x, player.y - 12, "#67e8f9", highQ ? 8 : 4);
+  }
+  particles.burst(player.x, player.y - 8, "#22d3ee", highQ ? 5 : 2);
+}
+
+function bossFire() {
+  if (!boss) return;
+  var bx = boss.x, by = boss.y + boss.h / 2;
+  boss.pattern = (boss.pattern + 1) % 4;
+  if (boss.pattern === 0) {
+    for (var i = -2; i <= 2; i++) {
+      enemyBullets.push({ x: bx + i * 28, y: by, vx: i * 45 * diffTun.bulletSpd, vy: 190 * speedScale * diffTun.bulletSpd, r: 5, kind: "normal" });
+    }
+  } else if (boss.pattern === 1) {
+    for (var a = 0; a < 8; a++) {
+      var ang = (a / 8) * Math.PI * 2 + boss.phase;
+      enemyBullets.push({ x: bx, y: by, vx: Math.cos(ang) * 120, vy: Math.sin(ang) * 120 + 80, r: 4, kind: "ring" });
+    }
+  } else if (boss.pattern === 2) {
+    enemyBullets.push({ x: bx, y: by, vx: (player.x - bx) * 0.35, vy: 220 * speedScale, r: 6, kind: "homing", homing: 1.2 });
+    enemyBullets.push({ x: bx - 40, y: by, vx: -30, vy: 200 * speedScale, r: 4, kind: "normal" });
+    enemyBullets.push({ x: bx + 40, y: by, vx: 30, vy: 200 * speedScale, r: 4, kind: "normal" });
+  } else {
+    for (var s = -3; s <= 3; s++) {
+      enemyBullets.push({ x: bx + s * 18, y: by + s * 6, vx: s * 25, vy: 240 * speedScale, r: 4, kind: "spray" });
+    }
+  }
+  RNF.sfx.laser();
 }
 
 function updateHud() {
-  var wpn = ["單發", "雙發", "三向"][Math.min(weaponLevel - 1, 2)];
+  var wpn = ["單發", "雙發", "三向", "穿透"][Math.min(weaponLevel - 1, 3)];
   shell.setHud(
     '<div><span>分數</span><b>' + score.toLocaleString() + '</b></div>' +
     '<div><span>波次</span><b>' + wave + '</b></div>' +
     '<div><span>生命</span><b>' + lives + '</b></div>' +
-    '<div><span>武器</span><b>' + wpn + '</b></div>' +
+    '<div><span>武器</span><b>Lv' + weaponLevel + ' ' + wpn + '</b></div>' +
     '<div><span>護盾</span><b>' + (shield > 0 ? shield : "—") + '</b></div>'
   );
 }
 
 function hitPlayer() {
+  if (invulnT > 0) return;
   if (shield > 0) {
     shield--;
+    invulnT = 0.35;
     RNF.sfx.hit();
     shell.triggerShake(5, 0.15);
-    particles.burst(player.x, player.y, "#a78bfa", 12);
+    particles.burst(player.x, player.y, "#a78bfa", highQ ? 14 : 7);
     updateHud();
     return;
   }
   lives--;
+  invulnT = 1.2;
   RNF.sfx.die();
   shell.triggerShake(10, 0.35);
-  particles.burst(player.x, player.y, "#f472b6", 20);
-  player.x = 480;
+  particles.burst(player.x, player.y, "#f472b6", highQ ? 22 : 10);
   weaponLevel = Math.max(1, weaponLevel - 1);
+  player.x = 480;
   updateHud();
-  if (lives <= 0) shell.gameOver(score, { wave: wave, weapon: weaponLevel });
+  if (lives <= 0) {
+    running = false;
+    cleanup();
+    shell.gameOver(score, { wave: wave, weapon: weaponLevel });
+  }
 }
 
 function killEnemy(e, idx) {
-  score += e.pts || 10;
-  particles.burst(e.x, e.y, "#4ade80", 10);
-  if (Math.random() < 0.12)
-    powerUps.push({ x: e.x, y: e.y, vy: 80, type: Math.random() < 0.5 ? "weapon" : "shield" });
+  score += e.pts || 12;
+  particles.burst(e.x, e.y, "#4ade80", highQ ? 12 : 6);
+  killFlash = 0.08;
+  if (Math.random() < 0.14) {
+    powerUps.push({ x: e.x, y: e.y, vy: 90 * speedScale, type: Math.random() < 0.55 ? "weapon" : "shield", spin: 0 });
+  }
   if (idx >= 0) enemies.splice(idx, 1);
   RNF.sfx.pop();
   updateHud();
@@ -153,34 +242,40 @@ function loop(now) {
   var dt = Math.min(0.033, (now - lastT) / 1000);
   lastT = now;
   shootCd = Math.max(0, shootCd - dt);
+  invulnT = Math.max(0, invulnT - dt);
+  killFlash = Math.max(0, killFlash - dt);
 
-  if (keys["ArrowLeft"]) player.x -= player.speed * dt;
-  if (keys["ArrowRight"]) player.x += player.speed * dt;
-  player.x = Math.max(30, Math.min(930, player.x));
+  if (keys["ArrowLeft"] || keys["KeyA"]) player.x -= player.speed * dt;
+  if (keys["ArrowRight"] || keys["KeyD"]) player.x += player.speed * dt;
+  player.x = Math.max(28, Math.min(W - 28, player.x));
   if (keys["Space"]) shoot();
 
   bullets.forEach(function (b) { b.x += b.vx * dt; b.y += b.vy * dt; });
-  bullets = bullets.filter(function (b) { return b.y > -20; });
+  bullets = bullets.filter(function (b) { return b.y > -24 && !b.dead; });
 
   if (bossActive && boss) {
     boss.phase += dt;
-    boss.x = 480 + Math.sin(boss.phase * 1.2) * 280;
+    boss.rage = boss.hp < boss.maxHp * 0.35;
+    boss.x = 480 + Math.sin(boss.phase * (boss.rage ? 1.8 : 1.1)) * (boss.rage ? 300 : 240);
+    boss.y = 90 + Math.sin(boss.phase * 0.7) * 12;
     boss.cd -= dt;
+    var cdBase = boss.rage ? 0.45 : 0.72;
     if (boss.cd <= 0) {
-      boss.cd = 0.7;
-      for (var i = -1; i <= 1; i++)
-        enemyBullets.push({ x: boss.x + i * 30, y: boss.y + 30, vx: i * 60, vy: 200, r: 5 });
+      boss.cd = cdBase / diffTun.fireRate;
+      bossFire();
+      if (boss.rage && Math.random() < 0.4) bossFire();
     }
-    bullets.forEach(function (b, bi) {
-      if (Math.abs(b.x - boss.x) < boss.w / 2 && Math.abs(b.y - boss.y) < boss.h / 2) {
+    for (var bi = bullets.length - 1; bi >= 0; bi--) {
+      var b = bullets[bi];
+      if (Math.abs(b.x - boss.x) < boss.w / 2 + 4 && Math.abs(b.y - boss.y) < boss.h / 2 + 8) {
         boss.hp -= b.dmg;
-        bullets.splice(bi, 1);
-        particles.burst(b.x, b.y, "#fb923c", 6);
+        if (!b.pierce) { b.dead = true; bullets.splice(bi, 1); }
+        particles.burst(b.x, b.y, "#fb923c", 4);
         RNF.sfx.hit();
         if (boss.hp <= 0) {
-          score += 500 + wave * 50;
-          shell.triggerShake(14, 0.4);
-          particles.burst(boss.x, boss.y, "#fbbf24", 30);
+          score += 600 + wave * 60;
+          shell.triggerShake(16, 0.45);
+          particles.burst(boss.x, boss.y, "#fbbf24", highQ ? 40 : 18);
           RNF.sfx.power();
           boss = null; bossActive = false;
           wave++;
@@ -188,52 +283,95 @@ function loop(now) {
           updateHud();
         }
       }
-    });
+    }
   } else {
     moveTimer += dt;
-    if (moveTimer > 0.72 / speedScale) {
+    var stepInterval = 0.68 / (speedScale * diffTun.moveSpd);
+    if (moveTimer > stepInterval) {
       moveTimer = 0;
       var edge = false;
       enemies.forEach(function (e) {
-        e.x += enemyDir * 14 * speedScale;
-        if (e.x < 50 || e.x > 910) edge = true;
+        e.x += enemyDir * 16 * speedScale * diffTun.moveSpd;
+        if (e.x < 44 || e.x > W - 44) edge = true;
       });
       if (edge) {
         enemyDir *= -1;
-        enemies.forEach(function (e) { e.y += 20 * speedScale; if (e.y > 420) hitPlayer(); });
+        enemies.forEach(function (e) {
+          e.y += 22 * speedScale * diffTun.moveSpd;
+          if (e.y > 400) hitPlayer();
+        });
       }
-      if (Math.random() < 0.02 + wave * 0.003 && enemies.length)
-        enemyBullets.push({ x: enemies[Math.floor(Math.random() * enemies.length)].x, y: enemies[0].y + 20, vx: 0, vy: 180 * speedScale, r: 4 });
-    }
-    enemies.forEach(function (e, ei) {
-      bullets.forEach(function (b, bi) {
-        if (Math.abs(b.x - e.x) < e.w / 2 && Math.abs(b.y - e.y) < e.h / 2) {
-          e.hp -= b.dmg;
-          bullets.splice(bi, 1);
-          if (e.hp <= 0) killEnemy(e, ei);
+      enemies.forEach(function (e) {
+        e.shootCd -= stepInterval;
+        if (e.shootCd <= 0 && Math.random() < (0.015 + wave * 0.004) * diffTun.fireRate) {
+          e.shootCd = 0.8 + Math.random();
+          enemyBullets.push({
+            x: e.x, y: e.y + 18, vx: (Math.random() - 0.5) * 40, vy: 170 * speedScale * diffTun.bulletSpd, r: 4, kind: "normal"
+          });
         }
       });
-    });
-    if (enemies.length === 0) { wave++; spawnWave(); RNF.sfx.score(); updateHud(); }
+    }
+    for (var ei = enemies.length - 1; ei >= 0; ei--) {
+      var e = enemies[ei];
+      for (var bj = bullets.length - 1; bj >= 0; bj--) {
+        var bl = bullets[bj];
+        if (Math.abs(bl.x - e.x) < e.w / 2 + 2 && Math.abs(bl.y - e.y) < e.h / 2 + 4) {
+          e.hp -= bl.dmg;
+          if (!bl.pierce) { bl.dead = true; bullets.splice(bj, 1); }
+          if (e.hp <= 0) { killEnemy(e, ei); break; }
+          else RNF.sfx.hit();
+        }
+      }
+    }
+    if (enemies.length === 0 && !bossActive) {
+      wave++;
+      RNF.sfx.score();
+      spawnWave();
+      updateHud();
+    }
   }
 
-  enemyBullets.forEach(function (b) { b.x += b.vx * dt; b.y += b.vy * dt; });
-  enemyBullets = enemyBullets.filter(function (b) {
-    if (Math.abs(b.x - player.x) < 20 && Math.abs(b.y - player.y) < 16) { hitPlayer(); return false; }
-    return b.y < 540;
+  enemyBullets.forEach(function (b) {
+    if (b.homing) {
+      b.vx += (player.x - b.x) * b.homing * dt * 0.08;
+      b.vy += 40 * dt;
+    }
+    b.x += b.vx * dt;
+    b.y += b.vy * dt;
   });
+  for (var ei2 = enemyBullets.length - 1; ei2 >= 0; ei2--) {
+    var eb = enemyBullets[ei2];
+    if (Math.abs(eb.x - player.x) < 18 && Math.abs(eb.y - player.y) < 16) {
+      hitPlayer();
+      enemyBullets.splice(ei2, 1);
+    } else if (eb.y > H + 20 || eb.x < -20 || eb.x > W + 20) {
+      enemyBullets.splice(ei2, 1);
+    }
+  }
 
   powerUps.forEach(function (p) {
+    p.spin += dt * 3;
     p.y += p.vy * dt;
-    if (Math.abs(p.x - player.x) < 28 && Math.abs(p.y - player.y) < 24) {
-      if (p.type === "weapon") { weaponLevel = Math.min(3, weaponLevel + 1); RNF.sfx.power(); }
-      else { shield = Math.min(3, shield + 1); RNF.sfx.confirm(); }
+    if (Math.abs(p.x - player.x) < 26 && Math.abs(p.y - player.y) < 22) {
+      if (p.type === "weapon") {
+        weaponLevel = Math.min(4, weaponLevel + 1);
+        RNF.sfx.power();
+        shell.triggerShake(4, 0.1);
+      } else {
+        shield = Math.min(3, shield + 1);
+        RNF.sfx.confirm();
+      }
       particles.burst(p.x, p.y, "#22d3ee", 8);
       p.dead = true;
       updateHud();
     }
   });
-  powerUps = powerUps.filter(function (p) { return !p.dead && p.y < 540; });
+  powerUps = powerUps.filter(function (p) { return !p.dead && p.y < H + 10; });
+
+  stars.forEach(function (s) {
+    s.y += s.sp * 55 * dt;
+    if (s.y > H) { s.y = 0; s.x = Math.random() * W; }
+  });
 
   particles.update(dt);
   draw(dt);
@@ -244,75 +382,109 @@ function draw(dt) {
   ctx.save();
   shell.applyShake(ctx);
   ctx.fillStyle = "#030508";
-  ctx.fillRect(0, 0, 960, 520);
-  for (var i = 0; i < 80; i++) {
-    ctx.fillStyle = "rgba(255,255,255," + (0.2 + Math.sin(i * 1.7) * 0.15) + ")";
-    ctx.fillRect((i * 137) % 960, (i * 89 + performance.now() * 0.02 * (i % 3 + 1)) % 520, 2, 2);
+  ctx.fillRect(0, 0, W, H);
+
+  stars.forEach(function (s) {
+    ctx.globalAlpha = 0.25 + s.sp * 0.25;
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(s.x, s.y, s.s, s.s);
+  });
+  ctx.globalAlpha = 1;
+
+  ctx.strokeStyle = "rgba(167,139,250,0.06)";
+  for (var g = 0; g < W; g += 48) {
+    ctx.beginPath(); ctx.moveTo(g, 0); ctx.lineTo(g, H); ctx.stroke();
   }
-  ctx.strokeStyle = "rgba(167,139,250,0.08)";
-  for (var g = 0; g < 960; g += 48) { ctx.beginPath(); ctx.moveTo(g, 0); ctx.lineTo(g, 520); ctx.stroke(); }
 
   enemies.forEach(function (e) {
     ctx.fillStyle = "#a78bfa";
-    ctx.shadowBlur = 12; ctx.shadowColor = "#a78bfa";
+    ctx.shadowBlur = highQ ? 12 : 4; ctx.shadowColor = "#a78bfa";
     ctx.beginPath();
     ctx.moveTo(e.x, e.y + e.h / 2);
     ctx.lineTo(e.x - e.w / 2, e.y - e.h / 2);
     ctx.lineTo(e.x + e.w / 2, e.y - e.h / 2);
     ctx.closePath(); ctx.fill();
+    if (e.maxHp > 1) {
+      ctx.fillStyle = "#f472b6";
+      ctx.fillRect(e.x - e.w / 2, e.y - e.h / 2 - 6, e.w * (e.hp / e.maxHp), 3);
+    }
     ctx.shadowBlur = 0;
   });
 
   if (boss) {
-    ctx.fillStyle = "#f472b6";
-    ctx.shadowBlur = 20; ctx.shadowColor = "#f472b6";
-    ctx.fillRect(boss.x - boss.w / 2, boss.y - boss.h / 2, boss.w, boss.h);
+    var pulse = 0.85 + Math.sin(performance.now() * 0.006) * 0.15;
+    ctx.fillStyle = boss.rage ? "#ef4444" : "#f472b6";
+    ctx.shadowBlur = highQ ? 24 : 10; ctx.shadowColor = ctx.fillStyle;
+    ctx.fillRect(boss.x - boss.w / 2 * pulse, boss.y - boss.h / 2, boss.w * pulse, boss.h);
     ctx.shadowBlur = 0;
-    var barW = 200, bx = 480 - barW / 2, by = 16;
-    ctx.fillStyle = "rgba(0,0,0,0.6)";
-    ctx.fillRect(bx, by, barW, 14);
-    ctx.fillStyle = "#f472b6";
-    ctx.fillRect(bx, by, barW * (boss.hp / boss.maxHp), 14);
-    ctx.strokeStyle = "#22d3ee";
-    ctx.strokeRect(bx, by, barW, 14);
     ctx.fillStyle = "#22d3ee";
-    ctx.font = "bold 11px sans-serif";
+    ctx.font = "bold 10px sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("BOSS · 剩餘 HP " + Math.ceil(boss.hp), 480, by + 11);
+    ctx.fillText("VOID CORE", boss.x, boss.y + 4);
+
+    var barW = 240, bx = W / 2 - barW / 2, by = 14;
+    ctx.fillStyle = "rgba(0,0,0,0.65)";
+    ctx.fillRect(bx, by, barW, 16);
+    ctx.fillStyle = boss.rage ? "#ef4444" : "#f472b6";
+    ctx.fillRect(bx, by, barW * Math.max(0, boss.hp / boss.maxHp), 16);
+    ctx.strokeStyle = "#22d3ee";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(bx + 0.5, by + 0.5, barW - 1, 15);
+    ctx.fillStyle = "#67e8f9";
+    ctx.font = "bold 11px sans-serif";
+    ctx.fillText("BOSS · HP " + Math.ceil(boss.hp) + " / " + boss.maxHp, W / 2, by + 12);
   }
 
   bullets.forEach(function (b) {
-    ctx.fillStyle = "#22d3ee";
-    ctx.shadowBlur = 8; ctx.shadowColor = "#22d3ee";
-    ctx.fillRect(b.x - 2, b.y - 10, 4, 14);
+    ctx.fillStyle = b.pierce ? "#67e8f9" : "#22d3ee";
+    ctx.shadowBlur = b.pierce ? 12 : 6; ctx.shadowColor = ctx.fillStyle;
+    ctx.fillRect(b.x - b.w / 2, b.y - b.h, b.w, b.h);
   });
+  ctx.shadowBlur = 0;
+
   enemyBullets.forEach(function (b) {
-    ctx.fillStyle = "#fb923c";
+    ctx.fillStyle = b.kind === "homing" ? "#f472b6" : b.kind === "ring" ? "#a78bfa" : "#fb923c";
+    ctx.shadowBlur = 6; ctx.shadowColor = ctx.fillStyle;
     ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.fill();
   });
-  powerUps.forEach(function (p) {
-    ctx.fillStyle = p.type === "weapon" ? "#4ade80" : "#60a5fa";
-    ctx.shadowBlur = 10; ctx.shadowColor = ctx.fillStyle;
-    ctx.fillRect(p.x - 10, p.y - 10, 20, 20);
-  });
+  ctx.shadowBlur = 0;
 
-  ctx.fillStyle = shield > 0 ? "rgba(167,139,250,0.35)" : "transparent";
-  ctx.beginPath(); ctx.arc(player.x, player.y, 28, 0, Math.PI * 2); ctx.fill();
+  powerUps.forEach(function (p) {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.spin);
+    ctx.fillStyle = p.type === "weapon" ? "#4ade80" : "#60a5fa";
+    ctx.shadowBlur = 8; ctx.shadowColor = ctx.fillStyle;
+    ctx.fillRect(-10, -10, 20, 20);
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 10px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(p.type === "weapon" ? "W" : "S", 0, 4);
+    ctx.restore();
+  });
+  ctx.shadowBlur = 0;
+
+  if (invulnT > 0 && Math.floor(performance.now() / 80) % 2 === 0) ctx.globalAlpha = 0.45;
+  if (shield > 0) {
+    ctx.strokeStyle = "rgba(167,139,250,0.55)";
+    ctx.lineWidth = 2;
+    for (var s = 0; s < shield; s++) {
+      ctx.beginPath(); ctx.arc(player.x, player.y, 24 + s * 7, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
   ctx.fillStyle = "#22d3ee";
-  ctx.shadowBlur = 14; ctx.shadowColor = "#22d3ee";
+  ctx.shadowBlur = highQ ? 16 : 6; ctx.shadowColor = "#22d3ee";
   ctx.beginPath();
   ctx.moveTo(player.x, player.y - 18);
   ctx.lineTo(player.x - 18, player.y + 14);
   ctx.lineTo(player.x + 18, player.y + 14);
   ctx.closePath(); ctx.fill();
   ctx.shadowBlur = 0;
+  ctx.globalAlpha = 1;
 
-  if (shield > 0) {
-    ctx.strokeStyle = "#a78bfa";
-    ctx.lineWidth = 2;
-    for (var s = 0; s < shield; s++) {
-      ctx.beginPath(); ctx.arc(player.x, player.y, 22 + s * 6, 0, Math.PI * 2); ctx.stroke();
-    }
+  if (killFlash > 0) {
+    ctx.fillStyle = "rgba(34,211,238," + killFlash * 2 + ")";
+    ctx.fillRect(0, 0, W, H);
   }
 
   particles.draw(ctx);

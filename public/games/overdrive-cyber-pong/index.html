@@ -2,296 +2,331 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Overdrive Cyber Pong · 超頻電競乒乓</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Overdrive Cyber Pong · 超光速霓虹乒乓</title>
+  <script src="/sdk/rnf-game-sdk.js?v=20260723b"></script>
 </head>
 <body>
-<script src="/sdk/rnf-game-sdk.js?v=20260723"></script>
 <script>
 RNF.init();
 var shell = RNF.buildShell({
   title: "Overdrive Cyber Pong",
   creator: "HyperPong_Studio",
-  subtitle: "1=簡單AI · 2=困難AI · 3=雙人(W/S vs ↑↓) · 曲球軌跡 · 重力場 · 光束拖尾",
+  subtitle: "曲球軌跡 · 重力井 · AI 難度 · 雙人對戰 · 觸控拖曳擋板",
   width: 960,
   height: 520,
   bgmStyle: "pulse",
   difficulties: [
-    { id: "easy", label: "簡單 AI", speedMult: 1, scoreMult: 1, ai: 0.85, desc: "單人對戰簡單 AI" },
-    { id: "hard", label: "困難 AI", speedMult: 1, scoreMult: 1.35, ai: 1.2, desc: "單人對戰困難 AI" },
-    { id: "versus", label: "雙人對戰", speedMult: 1, scoreMult: 1.15, ai: 1, desc: "本地雙人同螢幕" },
+    { id: "easy", label: "簡單 AI", speedMult: 0.9, scoreMult: 1, ai: 0.75, desc: "單人對戰簡單 AI，先 5 分勝" },
+    { id: "normal", label: "標準 AI", speedMult: 1, scoreMult: 1.25, ai: 1, desc: "預測軌跡 AI，先 7 分勝" },
+    { id: "hard", label: "困難 AI", speedMult: 1.08, scoreMult: 1.6, ai: 1.35, desc: "高速曲球 AI，先 9 分勝" },
+    { id: "versus", label: "雙人對戰", speedMult: 1, scoreMult: 1.15, ai: 1, desc: "本地雙人同螢幕，先 7 分勝" }
   ],
-  highlights: ["曲球軌跡", "重力場", "可點選模式", "雙人對戰"],
+  highlights: ["曲球軌跡", "重力井", "觸控拖曳", "粒子拖尾", "雙人對戰"],
   help: {
-    about: "霓虹風格的乒乓球對戰。先達到目標分數者獲勝。",
+    about: "霓虹風格的乒乓球對戰。曲球 spin 受擋板擊球點影響，重力井會偏轉軌跡。先達目標分數者獲勝。",
     features: [
-      "開始後可點選畫面按鈕或按 1/2/3 選模式",
-      "曲球 spin 與重力場",
-      "四段難度調整 AI 與勝利分數"
+      "主選單難度決定 AI 強度與勝利分數",
+      "曲球 spin 與動態重力場",
+      "擊球角度取決於碰板位置與擋板移動速度",
+      "手機可拖曳左側擋板，右側虛擬鍵控制（雙人模式）"
     ],
     controls: [
-      "開始後點選畫面上的模式按鈕，或按 1 / 2 / 3",
-      "1：簡單 AI · 2：困難 AI · 3：本地雙人",
-      "單人對 AI：W / S 控制左側擋板",
-      "雙人：左 W/S · 右 ↑/↓"
+      "W / S 或 ↑ / ↓：移動擋板",
+      "觸控：在左半場拖曳控制左擋板",
+      "雙人模式：左 W/S · 右 ↑/↓ 或右側觸控鍵",
+      "主選單選「雙人對戰」進入本地雙人"
     ],
     tips: [
-      "擊球角度取決於碰板位置",
-      "目標分數依難度：5～11 分"
+      "利用重力井製造意外反角",
+      "移動中擊球可施加更強曲球",
+      "困難 AI 會預測落點並提前站位"
     ]
   },
   onStop: cleanup,
   onStart: startGame
 });
 
-var ctx, particles, running, loopId, lastT, keys = {}, speedScale = 1;
-var mode, modePick, left, right, ball, scoreL, scoreR, gravityZones, serveDir, pickTimer;
-
-var MODE_BUTTONS = [
-  { id: "easy", label: "1 · 單人簡單 AI", x: 280, y: 228, w: 400, h: 44 },
-  { id: "hard", label: "2 · 單人困難 AI", x: 280, y: 278, w: 400, h: 44 },
-  { id: "2p", label: "3 · 本地雙人", x: 280, y: 328, w: 400, h: 44 }
-];
+var W = 960, H = 520;
+var ctx, particles, running, loopId, lastT, keys = {};
+var left, right, ball, scoreL, scoreR, gravityZones, animT = 0;
+var speedScale = 1, diffId = "normal", winScore = 7, aiMult = 1;
+var pointerY = null, rallyCount = 0, speedBurst = 0;
+var isVersus = false;
 
 function cleanup() {
   shell.detachKeyboard();
+  shell.detachTouchControls();
   running = false;
   if (loopId) cancelAnimationFrame(loopId);
   loopId = null;
-  if (shell && shell.canvas) shell.canvas.removeEventListener("click", onCanvasClick);
+  shell.canvas.removeEventListener("pointerdown", onPtrDown);
+  shell.canvas.removeEventListener("pointermove", onPtrMove);
+  shell.canvas.removeEventListener("pointerup", onPtrUp);
+  shell.canvas.removeEventListener("pointercancel", onPtrUp);
   window.removeEventListener("keydown", onKeyDown);
   window.removeEventListener("keyup", onKeyUp);
+}
+
+function applyDifficulty() {
+  var d = shell.getDifficulty() || {};
+  diffId = d.id || "normal";
+  aiMult = d.ai || 1;
+  isVersus = diffId === "versus";
+  winScore = diffId === "easy" ? 5 : diffId === "hard" ? 9 : 7;
+}
+
+function resetBall(dir) {
+  var base = (240 + rallyCount * 8) * speedScale;
+  ball = {
+    x: W / 2, y: H / 2,
+    vx: dir * Math.min(base, 420), vy: (Math.random() - 0.5) * 140 * speedScale,
+    r: 9, spin: 0, trail: [], glow: "#fff"
+  };
+  rallyCount = 0;
 }
 
 function startGame() {
   cleanup();
   speedScale = shell.getSpeedScale();
-  ctx = shell.ctx;
-  particles = shell.particles;
-  mode = null;
-  modePick = true;
-  pickTimer = 0;
-  scoreL = 0; scoreR = 0;
-  left = { x: 24, y: 210, w: 14, h: 100, vy: 0 };
-  right = { x: 922, y: 210, w: 14, h: 100, vy: 0 };
+  applyDifficulty();
+  ctx = shell.ctx; particles = shell.particles;
+  scoreL = 0; scoreR = 0; animT = 0; pointerY = null; speedBurst = 0;
+  left = { x: 24, y: 210, w: 14, h: 100, vy: 0, prevY: 210 };
+  right = { x: W - 38, y: 210, w: 14, h: 100, vy: 0, prevY: 210 };
   gravityZones = [
-    { x: 380, y: 160, r: 70, str: 180 },
-    { x: 580, y: 320, r: 65, str: -160 }
+    { x: 320, y: 150, r: 72, str: 200, pulse: 0 },
+    { x: 640, y: 340, r: 68, str: -175, pulse: 1.2 },
+    { x: 480, y: 260, r: 50, str: 90, pulse: 2.4 }
   ];
-  resetBall(1);
-  updateHud();
-  running = true;
-  keys = {};
+  resetBall(Math.random() < 0.5 ? 1 : -1);
+  updateHud(); running = true; keys = {};
   shell.attachKeyboard(keys);
-  lastT = performance.now();
-  shell.canvas.setAttribute("tabindex", "0");
-  shell.canvas.focus();
-  shell.canvas.addEventListener("click", onCanvasClick);
+  if (!isVersus) {
+    shell.attachTouchControls({
+      keys: keys,
+      buttons: [
+        { code: "KeyW", label: "W", side: "left", hold: true },
+        { code: "KeyS", label: "S", side: "left", hold: true }
+      ],
+      swipe: { threshold: 30, up: "KeyW", down: "KeyS" }
+    });
+  } else {
+    shell.attachTouchControls({
+      keys: keys,
+      buttons: [
+        { code: "KeyW", label: "W", side: "left", hold: true },
+        { code: "KeyS", label: "S", side: "left", hold: true },
+        { code: "ArrowUp", label: "↑", side: "right", hold: true },
+        { code: "ArrowDown", label: "↓", side: "right", hold: true }
+      ]
+    });
+  }
+  shell.canvas.addEventListener("pointerdown", onPtrDown);
+  shell.canvas.addEventListener("pointermove", onPtrMove);
+  shell.canvas.addEventListener("pointerup", onPtrUp);
+  shell.canvas.addEventListener("pointercancel", onPtrUp);
   window.addEventListener("keydown", onKeyDown);
   window.addEventListener("keyup", onKeyUp);
+  lastT = performance.now();
   loopId = requestAnimationFrame(loop);
 }
 
-function pickMode(nextMode) {
-  if (!modePick) return;
-  mode = nextMode;
-  modePick = false;
-  RNF.sfx.confirm();
-  updateHud();
-}
-
-function onCanvasClick(e) {
-  if (!running || !modePick) return;
+function canvasY(e) {
   var rect = shell.canvas.getBoundingClientRect();
-  if (!rect.width || !rect.height) return;
-  var x = (e.clientX - rect.left) * (960 / rect.width);
-  var y = (e.clientY - rect.top) * (520 / rect.height);
-  MODE_BUTTONS.forEach(function (btn) {
-    if (x >= btn.x && x <= btn.x + btn.w && y >= btn.y && y <= btn.y + btn.h) pickMode(btn.id);
-  });
+  return (e.clientY - rect.top) * (H / rect.height);
 }
 
-function resetBall(dir) {
-  ball = {
-    x: 480, y: 260, vx: dir * 260 * speedScale, vy: (Math.random() - 0.5) * 160 * speedScale,
-    r: 9, spin: 0, trail: []
-  };
-  serveDir = dir;
+var ptrActive = false;
+function onPtrDown(e) {
+  var x = (e.clientX - shell.canvas.getBoundingClientRect().left) * (W / shell.canvas.getBoundingClientRect().width);
+  if (x < W * 0.55) { ptrActive = true; pointerY = canvasY(e); }
 }
+function onPtrMove(e) { if (ptrActive) pointerY = canvasY(e); }
+function onPtrUp() { ptrActive = false; }
 
-function onKeyDown(e) {
-  if (!running) return;
-  keys[e.code] = true;
-  if (modePick) {
-    if (e.code === "Digit1" || e.code === "Numpad1" || e.key === "1") pickMode("easy");
-    else if (e.code === "Digit2" || e.code === "Numpad2" || e.key === "2") pickMode("hard");
-    else if (e.code === "Digit3" || e.code === "Numpad3" || e.key === "3") pickMode("2p");
-  }
-}
-
+function onKeyDown(e) { keys[e.code] = true; }
 function onKeyUp(e) { keys[e.code] = false; }
 
 function updateHud() {
-  var modeTxt = modePick ? "選模式" : mode === "easy" ? "簡單 AI" : mode === "hard" ? "困難 AI" : "雙人";
+  var modeTxt = isVersus ? "雙人" : (shell.getDifficulty() || {}).label || "AI";
   shell.setHud(
-    '<div><span>左方</span><b>' + scoreL + '</b></div>' +
-    '<div><span>右方</span><b>' + scoreR + '</b></div>' +
-    '<div><span>模式</span><b>' + modeTxt + '</b></div>' +
-    '<div><span>曲球</span><b>' + Math.abs(ball.spin).toFixed(1) + '</b></div>'
+    '<div><span>左方</span><b style="color:#22d3ee">' + scoreL + '</b></div>' +
+    '<div><span>右方</span><b style="color:#f472b6">' + scoreR + '</b></div>' +
+    '<div><span>目標</span><b>' + winScore + '</b></div>' +
+    '<div><span>模式</span><b style="font-size:.72rem">' + modeTxt + '</b></div>' +
+    '<div><span>曲球</span><b>' + Math.abs(ball.spin).toFixed(1) + '</b></div>' +
+    '<div><span>Rally</span><b>' + rallyCount + '</b></div>'
   );
 }
 
-function aiMove(paddle, diff) {
-  var target = ball.y - paddle.h / 2;
-  var spd = (diff === "hard" ? 300 : 190) * speedScale;
-  if (paddle.y + paddle.h / 2 < ball.y - 20) paddle.y += spd * 0.016;
-  else if (paddle.y + paddle.h / 2 > ball.y + 20) paddle.y -= spd * 0.016;
-  paddle.y = Math.max(20, Math.min(400, paddle.y));
+function movePaddle(p, up, down, dt) {
+  var spd = 340 * speedScale;
+  p.prevY = p.y;
+  if (up) p.y -= spd * dt;
+  if (down) p.y += spd * dt;
+  p.vy = (p.y - p.prevY) / Math.max(dt, 0.001);
+  p.y = Math.max(16, Math.min(H - p.h - 16, p.y));
+}
+
+function aiMove(paddle, dt) {
+  var predictY = ball.y;
+  if (ball.vx > 0) {
+    var tHit = (paddle.x - ball.x) / (ball.vx || 1);
+    if (tHit > 0 && tHit < 3) {
+      predictY = ball.y + ball.vy * tHit + ball.spin * tHit * tHit * 18;
+      predictY += Math.sin(animT * 2) * (8 / aiMult);
+    }
+  }
+  var target = predictY - paddle.h / 2;
+  var react = (diffId === "easy" ? 180 : diffId === "hard" ? 420 : 280) * aiMult * speedScale;
+  var err = (diffId === "easy" ? 28 : diffId === "hard" ? 6 : 14) / aiMult;
+  target += (Math.random() - 0.5) * err;
+  paddle.prevY = paddle.y;
+  if (paddle.y + paddle.h / 2 < target - 8) paddle.y += react * dt;
+  else if (paddle.y + paddle.h / 2 > target + 8) paddle.y -= react * dt;
+  paddle.vy = (paddle.y - paddle.prevY) / Math.max(dt, 0.001);
+  paddle.y = Math.max(16, Math.min(H - paddle.h - 16, paddle.y));
+}
+
+function hitPaddle(p, side) {
+  if (ball.x + ball.r <= p.x || ball.x - ball.r >= p.x + p.w) return false;
+  if (ball.y + ball.r < p.y || ball.y - ball.r > p.y + p.h) return false;
+  ball.vx = side * Math.abs(ball.vx) * 1.045;
+  var rel = (ball.y - (p.y + p.h / 2)) / (p.h / 2);
+  ball.vy += rel * 240 + p.vy * 0.35;
+  ball.spin += rel * 4 + p.vy * 0.02;
+  ball.x = side > 0 ? p.x + p.w + ball.r : p.x - ball.r;
+  rallyCount++;
+  speedBurst = 0.2;
+  RNF.sfx.combo(Math.min(rallyCount, 8));
+  shell.triggerShake(4 + rallyCount * 0.3, 0.1);
+  particles.burst(ball.x, ball.y, side > 0 ? "#22d3ee" : "#f472b6", 10);
+  return true;
 }
 
 function loop(now) {
   if (!running) return;
   var dt = Math.min(0.033, (now - lastT) / 1000);
-  lastT = now;
-  if (modePick) {
-    pickTimer += dt;
-    draw(dt);
-    updateHud();
-    loopId = requestAnimationFrame(loop);
-    return;
+  lastT = now; animT += dt;
+  speedBurst = Math.max(0, speedBurst - dt);
+
+  if (pointerY != null && ptrActive) {
+    left.y += (pointerY - left.h / 2 - left.y) * Math.min(1, dt * 14);
+    left.y = Math.max(16, Math.min(H - left.h - 16, left.y));
+  } else {
+    movePaddle(left, keys["KeyW"], keys["KeyS"], dt);
   }
 
-  if (mode === "2p") {
-    if (keys["KeyW"]) left.y -= 320 * speedScale * dt;
-    if (keys["KeyS"]) left.y += 320 * speedScale * dt;
-    if (keys["ArrowUp"]) right.y -= 320 * speedScale * dt;
-    if (keys["ArrowDown"]) right.y += 320 * speedScale * dt;
-  } else {
-    if (keys["KeyW"]) left.y -= 320 * speedScale * dt;
-    if (keys["KeyS"]) left.y += 320 * speedScale * dt;
-    aiMove(right, mode);
-  }
-  left.y = Math.max(20, Math.min(400, left.y));
-  right.y = Math.max(20, Math.min(400, right.y));
+  if (isVersus) movePaddle(right, keys["ArrowUp"], keys["ArrowDown"], dt);
+  else aiMove(right, dt);
 
   gravityZones.forEach(function (z) {
-    var dx = ball.x - z.x, dy = ball.y - z.y;
-    var d = Math.sqrt(dx * dx + dy * dy);
+    z.pulse += dt;
+    var dx = ball.x - z.x, dy = ball.y - z.y, d = Math.sqrt(dx * dx + dy * dy);
     if (d < z.r) {
       var f = (1 - d / z.r) * z.str * dt;
-      ball.vy += (dy / (d || 1)) * f * 0.02;
-      ball.vx += (dx / (d || 1)) * f * 0.01;
+      ball.vy += (dy / (d || 1)) * f * 0.025;
+      ball.vx += (dx / (d || 1)) * f * 0.012;
+      if (shell.isHighQuality()) particles.trail(ball.x, ball.y, z.str > 0 ? "#22d3ee" : "#a78bfa");
     }
   });
 
-  ball.vy += ball.spin * dt * 40;
+  ball.vy += ball.spin * dt * 48;
+  ball.vx *= 1 + dt * 0.02 * Math.min(rallyCount, 12);
   ball.x += ball.vx * dt;
   ball.y += ball.vy * dt;
 
-  if (ball.y - ball.r < 10) { ball.y = 10 + ball.r; ball.vy = Math.abs(ball.vy); RNF.sfx.hit(); }
-  if (ball.y + ball.r > 510) { ball.y = 510 - ball.r; ball.vy = -Math.abs(ball.vy); RNF.sfx.hit(); }
+  if (ball.y - ball.r < 12) { ball.y = 12 + ball.r; ball.vy = Math.abs(ball.vy); RNF.sfx.hit(); }
+  if (ball.y + ball.r > H - 12) { ball.y = H - 12 - ball.r; ball.vy = -Math.abs(ball.vy); RNF.sfx.hit(); }
 
-  function hitPaddle(p, side) {
-    if (ball.x + ball.r > p.x && ball.x - ball.r < p.x + p.w &&
-        ball.y > p.y && ball.y < p.y + p.h) {
-      ball.vx = side * Math.abs(ball.vx) * 1.04;
-      var rel = (ball.y - (p.y + p.h / 2)) / (p.h / 2);
-      ball.vy += rel * 220;
-      ball.spin += rel * 3;
-      ball.x = side > 0 ? p.x + p.w + ball.r : p.x - ball.r;
-      RNF.sfx.combo(2);
-      shell.triggerShake(4, 0.1);
-      particles.burst(ball.x, ball.y, "#22d3ee", 8);
-      return true;
-    }
-    return false;
-  }
   hitPaddle(left, 1);
   hitPaddle(right, -1);
 
-  ball.trail.push({ x: ball.x, y: ball.y });
-  if (ball.trail.length > 18) ball.trail.shift();
+  ball.trail.push({ x: ball.x, y: ball.y, spin: ball.spin });
+  if (ball.trail.length > 22) ball.trail.shift();
   if (shell.isHighQuality()) particles.trail(ball.x, ball.y, "#a78bfa");
 
-  if (ball.x < -20) {
-    scoreR++;
-    RNF.sfx.score();
-    if (scoreR >= 7) shell.gameOver(scoreL * 100 + scoreR * 50, { winner: "right", mode: mode, difficulty: mode === "2p" ? "versus" : mode });
-    else resetBall(1);
+  if (ball.x < -30) {
+    scoreR++; RNF.sfx.score();
+    if (scoreR >= winScore) {
+      cleanup();
+      shell.gameOver(scoreL * 120 + rallyCount * 5, { winner: "right", difficulty: diffId, mode: isVersus ? "versus" : "ai" });
+      return;
+    }
+    resetBall(1);
   }
-  if (ball.x > 980) {
-    scoreL++;
-    RNF.sfx.score();
-    if (scoreL >= 7) shell.gameOver(scoreL * 100 + scoreR * 50, { winner: "left", mode: mode, difficulty: mode === "2p" ? "versus" : mode });
-    else resetBall(-1);
+  if (ball.x > W + 30) {
+    scoreL++; RNF.sfx.score();
+    if (scoreL >= winScore) {
+      cleanup();
+      shell.gameOver(scoreL * 120 + scoreR * 40 + rallyCount * 5, { winner: "left", difficulty: diffId, mode: isVersus ? "versus" : "ai" });
+      return;
+    }
+    resetBall(-1);
   }
 
   particles.update(dt);
-  draw(dt);
-  updateHud();
+  draw(dt); updateHud();
   loopId = requestAnimationFrame(loop);
 }
 
+function drawCurveHint() {
+  if (!shell.isHighQuality() || Math.abs(ball.spin) < 0.5) return;
+  ctx.save(); ctx.strokeStyle = "rgba(251,191,36,0.25)"; ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 6]); ctx.beginPath(); ctx.moveTo(ball.x, ball.y);
+  for (var t = 0; t < 1; t += 0.08) {
+    var px = ball.x + ball.vx * t * 0.15;
+    var py = ball.y + ball.vy * t * 0.15 + ball.spin * t * t * 80;
+    ctx.lineTo(px, py);
+  }
+  ctx.stroke(); ctx.setLineDash([]); ctx.restore();
+}
+
 function draw(dt) {
-  ctx.save();
-  shell.applyShake(ctx);
-  ctx.fillStyle = "#060810";
-  ctx.fillRect(0, 0, 960, 520);
-  ctx.strokeStyle = "rgba(34,211,238,0.15)";
-  ctx.setLineDash([8, 12]);
-  ctx.beginPath(); ctx.moveTo(480, 0); ctx.lineTo(480, 520); ctx.stroke();
+  ctx.save(); shell.applyShake(ctx);
+  var bg = ctx.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0, "#060810"); bg.addColorStop(1, "#0a0e18");
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+  ctx.strokeStyle = "rgba(34,211,238,0.12)"; ctx.setLineDash([8, 14]);
+  ctx.beginPath(); ctx.moveTo(W / 2, 0); ctx.lineTo(W / 2, H); ctx.stroke();
   ctx.setLineDash([]);
 
   gravityZones.forEach(function (z) {
+    var pulse = 0.7 + Math.sin(z.pulse * 2) * 0.3;
     var g = ctx.createRadialGradient(z.x, z.y, 0, z.x, z.y, z.r);
-    g.addColorStop(0, z.str > 0 ? "rgba(34,211,238,0.2)" : "rgba(167,139,250,0.2)");
+    g.addColorStop(0, z.str > 0 ? "rgba(34,211,238," + (0.22 * pulse) + ")" : "rgba(167,139,250," + (0.22 * pulse) + ")");
     g.addColorStop(1, "transparent");
     ctx.fillStyle = g;
-    ctx.beginPath(); ctx.arc(z.x, z.y, z.r, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = z.str > 0 ? "rgba(34,211,238,0.4)" : "rgba(167,139,250,0.4)";
+    ctx.beginPath(); ctx.arc(z.x, z.y, z.r * pulse, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = z.str > 0 ? "rgba(34,211,238,0.35)" : "rgba(167,139,250,0.35)";
     ctx.stroke();
+    ctx.fillStyle = "#94a3b8"; ctx.font = "10px sans-serif"; ctx.textAlign = "center";
+    ctx.fillText(z.str > 0 ? "↑ 引" : "↓ 斥", z.x, z.y + 4);
   });
+
+  drawCurveHint();
 
   ball.trail.forEach(function (t, i) {
     var a = (i + 1) / ball.trail.length;
-    ctx.fillStyle = "rgba(34,211,238," + a * 0.5 + ")";
-    ctx.shadowBlur = 12; ctx.shadowColor = "#22d3ee";
-    ctx.beginPath(); ctx.arc(t.x, t.y, ball.r * a * 0.8, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "rgba(34,211,238," + a * 0.45 + ")";
+    ctx.shadowBlur = 10; ctx.shadowColor = "#22d3ee";
+    ctx.beginPath(); ctx.arc(t.x, t.y, ball.r * a * 0.75, 0, Math.PI * 2); ctx.fill();
   });
   ctx.shadowBlur = 0;
 
-  ctx.fillStyle = "#22d3ee";
-  ctx.shadowBlur = 14; ctx.shadowColor = "#22d3ee";
-  ctx.fillRect(left.x, left.y, left.w, left.h);
-  ctx.fillStyle = "#f472b6";
-  ctx.shadowColor = "#f472b6";
-  ctx.fillRect(right.x, right.y, right.w, right.h);
-  ctx.fillStyle = "#fff";
-  ctx.shadowColor = "#fff";
-  ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#22d3ee"; ctx.shadowBlur = 16; ctx.shadowColor = "#22d3ee";
+  ctx.beginPath(); ctx.roundRect(left.x, left.y, left.w, left.h, 4); ctx.fill();
+  ctx.fillStyle = "#f472b6"; ctx.shadowColor = "#f472b6";
+  ctx.beginPath(); ctx.roundRect(right.x, right.y, right.w, right.h, 4); ctx.fill();
+
+  ctx.fillStyle = "#fff"; ctx.shadowBlur = 18; ctx.shadowColor = "#fff";
+  ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r + (speedBurst > 0 ? 2 : 0), 0, Math.PI * 2); ctx.fill();
   ctx.shadowBlur = 0;
 
-  if (modePick) {
-    ctx.fillStyle = "rgba(0,0,0,0.72)";
-    ctx.fillRect(0, 0, 960, 520);
-    ctx.textAlign = "center";
-    ctx.fillStyle = "#22d3ee";
-    ctx.font = "bold 24px 'Microsoft JhengHei',sans-serif";
-    ctx.fillText("選擇對戰模式", 480, 190);
-    ctx.font = "14px sans-serif";
-    ctx.fillStyle = "#64748b";
-    ctx.fillText("點擊按鈕，或按鍵盤 1 / 2 / 3", 480, 218);
-    MODE_BUTTONS.forEach(function (btn, i) {
-      var pulse = 0.85 + Math.sin(pickTimer * 4 + i) * 0.15;
-      ctx.fillStyle = "rgba(34,211,238," + (0.12 * pulse) + ")";
-      ctx.strokeStyle = "rgba(34,211,238," + (0.55 * pulse) + ")";
-      ctx.lineWidth = 2;
-      ctx.fillRect(btn.x, btn.y, btn.w, btn.h);
-      ctx.strokeRect(btn.x + 1, btn.y + 1, btn.w - 2, btn.h - 2);
-      ctx.fillStyle = "#e2e8f0";
-      ctx.font = "bold 17px 'Microsoft JhengHei',sans-serif";
-      ctx.fillText(btn.label, btn.x + btn.w / 2, btn.y + btn.h / 2 + 6);
-    });
+  if (speedBurst > 0) {
+    ctx.fillStyle = "rgba(251,191,36,0.15)"; ctx.fillRect(0, 0, W, H);
   }
 
   particles.draw(ctx);
