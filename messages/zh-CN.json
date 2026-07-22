@@ -1771,7 +1771,6 @@
     "paymentsLiveNotice": "Payments are enabled. Test keys use Stripe sandbox; live keys create real charges."
   },
   "accountSettings": {
-    "navGroupAccount": "帐户",
     "navProfile": "个人资料",
     "navGeneral": "一般设定",
     "navSecurity": "安全",
@@ -1874,7 +1873,7 @@
     "payoutTitle": "收款设定",
     "payoutDesc": "连结 Stripe Connect 以接收打赏收入（Marketplace 模式）",
     "payoutPreviewBanner": "收款功能预览中",
-    "payoutPreviewDesc": "Set STRIPE_SECRET_KEY and STRIPE_PAYMENTS_LIVE=true to enable real Stripe Connect onboarding. Balance is display-only for now.",
+    "payoutPreviewDesc": "真实收款尚未启用。预览模式可模拟提现以测试流程；正式上线后即可连结 Stripe 并提现至银行账户。",
     "payoutBalanceSection": "创作者余额",
     "payoutBalanceLabel": "待提领余额（USD）",
     "payoutThresholdNote": "Batch payout when balance reaches ${amount} USD (rules announced at launch)",

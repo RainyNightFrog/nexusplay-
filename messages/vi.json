@@ -1723,7 +1723,6 @@
     "paymentsLiveNotice": "Payments are enabled. Test keys use Stripe sandbox; live keys create real charges."
   },
   "accountSettings": {
-    "navGroupAccount": "Tài khoản",
     "navProfile": "Hồ sơ",
     "navGeneral": "chung",
     "navSecurity": "Bảo mật",
@@ -1796,7 +1795,7 @@
     "payoutTitle": "Cài đặt thanh toán",
     "payoutDesc": "Kết nối Stripe để nhận doanh thu tiền boa (mô hình thị trường)",
     "payoutPreviewBanner": "Xem trước khoản thanh toán",
-    "payoutPreviewDesc": "Set STRIPE_SECRET_KEY and STRIPE_PAYMENTS_LIVE=true to enable real Stripe Connect onboarding. Balance is display-only for now.",
+    "payoutPreviewDesc": "Live payouts are not enabled yet. Preview mode can simulate withdrawals; once live, you can connect Stripe and withdraw to your bank.",
     "payoutBalanceSection": "Số dư của người sáng tạo",
     "payoutBalanceLabel": "Số dư chờ xử lý (USD)",
     "payoutThresholdNote": "Batch payout when balance reaches ${amount} USD (rules announced at launch)",

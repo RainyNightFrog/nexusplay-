@@ -1723,7 +1723,6 @@
     "paymentsLiveNotice": "Payments are enabled. Test keys use Stripe sandbox; live keys create real charges."
   },
   "accountSettings": {
-    "navGroupAccount": "계정",
     "navProfile": "프로필",
     "navGeneral": "일반",
     "navSecurity": "보안",
@@ -1796,7 +1795,7 @@
     "payoutTitle": "지급 설정",
     "payoutDesc": "Stripe을 연결하여 팁 수익 받기(마켓플레이스 모델)",
     "payoutPreviewBanner": "지급 미리보기",
-    "payoutPreviewDesc": "Set STRIPE_SECRET_KEY and STRIPE_PAYMENTS_LIVE=true to enable real Stripe Connect onboarding. Balance is display-only for now.",
+    "payoutPreviewDesc": "Live payouts are not enabled yet. Preview mode can simulate withdrawals; once live, you can connect Stripe and withdraw to your bank.",
     "payoutBalanceSection": "크리에이터 잔액",
     "payoutBalanceLabel": "보류 잔액(USD)",
     "payoutThresholdNote": "Batch payout when balance reaches ${amount} USD (rules announced at launch)",

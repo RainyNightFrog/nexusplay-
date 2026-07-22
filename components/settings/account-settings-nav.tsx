@@ -18,7 +18,6 @@ import {
 import { Link, usePathname } from "@/i18n/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import {
-  accountNavGroupLabelClassName,
   accountNavLinkClassName,
 } from "@/components/settings/account-shell";
 import { cn } from "@/lib/utils";
@@ -82,8 +81,6 @@ export function AccountSettingsNav() {
         <UserRound className="size-4 shrink-0" />
         {t("navProfile")}
       </Link>
-
-      <p className={accountNavGroupLabelClassName}>{t("navGroupAccount")}</p>
 
       {items.map(({ href, labelKey, icon: Icon, exact }) => {
         const active = exact ? pathname === href : pathname.startsWith(href);

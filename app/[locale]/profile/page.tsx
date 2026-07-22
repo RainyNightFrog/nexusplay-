@@ -30,8 +30,8 @@ import { formatPlayerIdLabel } from "@/lib/player-id";
 import { getInitials } from "@/lib/auth";
 import { useAuth } from "@/hooks/use-auth";
 import { useApiError } from "@/hooks/use-api-error";
+import { AccountSettingsPageHeader } from "@/components/settings/account-settings-layout";
 import {
-  AccountShell,
   accountCardClassName,
   accountFieldClassName,
   accountInputClassName,
@@ -214,7 +214,7 @@ export default function ProfilePage() {
 
   if (loading || !profile) {
     return (
-      <div className="dark flex min-h-full items-center justify-center">
+      <div className="flex min-h-[40vh] items-center justify-center">
         <Loader2 className="size-8 animate-spin text-cyan-400" />
       </div>
     );
@@ -226,7 +226,11 @@ export default function ProfilePage() {
     : t("regionUnknown");
 
   return (
-    <AccountShell title={t("title")} description={t("description")}>
+    <>
+      <AccountSettingsPageHeader
+        title={t("title")}
+        description={t("description")}
+      />
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -582,6 +586,6 @@ export default function ProfilePage() {
           if (!open) void refreshProfile();
         }}
       />
-    </AccountShell>
+    </>
   );
 }

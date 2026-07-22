@@ -1166,7 +1166,6 @@
     "paymentDesc": "Manage saved cards for tips."
   },
   "accountSettings": {
-    "navGroupAccount": "Account",
     "navProfile": "Profile",
     "navGeneral": "General",
     "navSecurity": "Security",
@@ -1313,7 +1312,7 @@
     "payoutTitle": "Payout settings",
     "payoutDesc": "Connect Stripe to receive tip revenue (marketplace model)",
     "payoutPreviewBanner": "Payout preview",
-    "payoutPreviewDesc": "Set STRIPE_SECRET_KEY and STRIPE_PAYMENTS_LIVE=true for live Stripe. Preview mode supports simulated withdrawals.",
+    "payoutPreviewDesc": "Live payouts are not enabled yet. Preview mode can simulate withdrawals; once live, you can connect Stripe and withdraw to your bank.",
     "payoutBalanceSection": "Creator balance",
     "payoutBalanceLabel": "Pending balance (USD)",
     "payoutThresholdNote": "Withdraw when balance reaches ${amount} USD",

@@ -1723,7 +1723,6 @@
     "paymentsLiveNotice": "Payments are enabled. Test keys use Stripe sandbox; live keys create real charges."
   },
   "accountSettings": {
-    "navGroupAccount": "Conta",
     "navProfile": "Perfil",
     "navGeneral": "Geral",
     "navSecurity": "Segurança",
@@ -1796,7 +1795,7 @@
     "payoutTitle": "Configurações de pagamento",
     "payoutDesc": "Conecte o Stripe para receber receita de gorjetas (modelo de mercado)",
     "payoutPreviewBanner": "Pré-visualização do pagamento",
-    "payoutPreviewDesc": "Set STRIPE_SECRET_KEY and STRIPE_PAYMENTS_LIVE=true to enable real Stripe Connect onboarding. Balance is display-only for now.",
+    "payoutPreviewDesc": "Live payouts are not enabled yet. Preview mode can simulate withdrawals; once live, you can connect Stripe and withdraw to your bank.",
     "payoutBalanceSection": "Equilíbrio do criador",
     "payoutBalanceLabel": "Saldo pendente (USD)",
     "payoutThresholdNote": "Batch payout when balance reaches ${amount} USD (rules announced at launch)",

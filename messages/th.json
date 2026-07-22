@@ -1723,7 +1723,6 @@
     "paymentsLiveNotice": "Payments are enabled. Test keys use Stripe sandbox; live keys create real charges."
   },
   "accountSettings": {
-    "navGroupAccount": "บัญชี",
     "navProfile": "โปรไฟล์",
     "navGeneral": "ทั่วไป",
     "navSecurity": "ความปลอดภัย",
@@ -1796,7 +1795,7 @@
     "payoutTitle": "การตั้งค่าการจ่ายเงิน",
     "payoutDesc": "เชื่อมต่อ Stripe เพื่อรับรายได้ทิป (โมเดลตลาด)",
     "payoutPreviewBanner": "ดูตัวอย่างการจ่ายเงิน",
-    "payoutPreviewDesc": "Set STRIPE_SECRET_KEY and STRIPE_PAYMENTS_LIVE=true to enable real Stripe Connect onboarding. Balance is display-only for now.",
+    "payoutPreviewDesc": "Live payouts are not enabled yet. Preview mode can simulate withdrawals; once live, you can connect Stripe and withdraw to your bank.",
     "payoutBalanceSection": "ความสมดุลของผู้สร้าง",
     "payoutBalanceLabel": "ยอดคงเหลือที่รอดำเนินการ (USD)",
     "payoutThresholdNote": "Batch payout when balance reaches ${amount} USD (rules announced at launch)",

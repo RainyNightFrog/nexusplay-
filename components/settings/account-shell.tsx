@@ -90,10 +90,6 @@ export const accountNavLinkClassName = cn(
   "flex items-center justify-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-colors"
 );
 
-export const accountNavGroupLabelClassName = cn(
-  "px-3 pb-1 pt-2 text-center text-[10px] font-semibold uppercase tracking-wider text-zinc-600"
-);
-
 export const accountSelectTriggerClassName = cn(
   "relative mx-auto h-11 w-full max-w-xs border-white/10 bg-white/5 text-zinc-100",
   "hover:bg-white/8 focus-visible:border-cyan-400/40 focus-visible:ring-cyan-500/20"

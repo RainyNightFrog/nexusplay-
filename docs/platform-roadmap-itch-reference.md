@@ -31,11 +31,11 @@ PAYMENT_PROCESSOR_FEE_FIXED_USD = 0.3
 
 ## itch.io 帳戶設定對照表
 
-### Phase A — 現階段必做（已實作或進行中）
+### Phase A — 現階段必做（已實作）
 
 | 功能 | itch.io | RainyNightFrog |
 |------|---------|-----------|
-| 帳戶設定 sidebar 分組 | ✓ | `/settings/*` |
+| 帳戶設定 sidebar 分組 | ✓ | `/settings/*`、`/profile` |
 | 改密碼 | ✓ | `/settings/security` |
 | 支援信箱（創作者） | ✓ | `/settings/creator` → `profiles.support_email` |
 | 顯示鎖定平台費 | — | 編輯遊戲頁 badge |
@@ -43,19 +43,19 @@ PAYMENT_PROCESSOR_FEE_FIXED_USD = 0.3
 | 刪除帳戶 | ✓ | `/settings/data` |
 | 隱私基本設定 | ✓ | `/settings/privacy` |
 
-### Phase B — 金流上線前必做（骨架已實作）
+### Phase B — 金流上線前必做（已實作）
 
 | 功能 | 狀態 | 路徑／備註 |
 |------|------|-----------|
-| Stripe Connect Express | 骨架 ✓ | `/settings/payout`；需 `STRIPE_SECRET_KEY` |
-| 玩家儲存付款方式 | 骨架 ✓ | `/settings/payment`；需 `STRIPE_PAYMENTS_LIVE=true` |
+| Stripe Connect Express | ✓ | `/settings/payout`；需 `STRIPE_SECRET_KEY` + live |
+| 玩家儲存付款方式 | ✓ | `/settings/payment`；需 `STRIPE_PAYMENTS_LIVE=true` |
 | 稅務／KYC | 交給 Stripe | Connect onboarding 內建 |
-| 創作者餘額 + 提領門檻 | 骨架 ✓ | `profiles.creator_balance_usd`，門檻 $25 |
+| 創作者餘額 + 提領門檻 | ✓ | `profiles.creator_balance_usd`，門檻 $25 |
 | 2FA | ✓ | `/settings/security` TOTP（Supabase MFA） |
 
 Migration: `npm run db:creator-payout`
 
-### Phase B — Checkout（已實作骨架）
+### Phase B — Checkout（已實作）
 
 | 功能 | 狀態 | 路徑／備註 |
 |------|------|-----------|

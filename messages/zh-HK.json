@@ -1166,7 +1166,6 @@
     "paymentDesc": "管理打賞時使用的信用卡。"
   },
   "accountSettings": {
-    "navGroupAccount": "帳戶",
     "navProfile": "個人資料",
     "navGeneral": "一般設定",
     "navSecurity": "安全",
@@ -1337,7 +1336,7 @@
     "payoutTitle": "收款設定",
     "payoutDesc": "連結 Stripe Connect 以接收打賞收入（Marketplace 模式）",
     "payoutPreviewBanner": "收款功能預覽中",
-    "payoutPreviewDesc": "設定 STRIPE_SECRET_KEY 與 STRIPE_PAYMENTS_LIVE=true 啟用真實 Stripe。預覽模式可模擬提領以測試流程。",
+    "payoutPreviewDesc": "真實收款尚未啟用。預覽模式可模擬提領以測試流程；正式上線後即可連結 Stripe 並提領至銀行帳戶。",
     "payoutBalanceSection": "創作者餘額",
     "payoutBalanceLabel": "待提領餘額（USD）",
     "payoutThresholdNote": "滿 ${amount} USD 可申請提領",
