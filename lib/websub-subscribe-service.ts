@@ -10,7 +10,7 @@ export type WebSubSubscriptionRecord = {
   callbackUrl: string;
   leaseExpiresAt: string | null;
   lastVerifiedAt: string | null;
-  status: "pending" | "active" | "expired" | "failed";
+  status: "pending" | "active" | "expired" | "failed" | "unsubscribed";
   lastError: string | null;
   createdAt: string;
   updatedAt: string;
@@ -59,7 +59,7 @@ export async function markWebSubSubscriptionUnsubscribed(topicUrl: string) {
   const { error } = await supabase
     .from("websub_subscriptions")
     .update({
-      status: "expired",
+      status: "unsubscribed",
       updated_at: new Date().toISOString(),
     })
     .eq("topic_url", topicUrl);
