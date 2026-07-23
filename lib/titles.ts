@@ -1,4 +1,9 @@
-export type RarityTier = "common" | "rare" | "epic" | "legendary";
+export type RarityTier =
+  | "common"
+  | "rare"
+  | "epic"
+  | "legendary"
+  | "mythic";
 
 export type EquippedTitle = {
   id: string;
@@ -29,6 +34,7 @@ export const RARITY_LABELS: Record<RarityTier, string> = {
   rare: "稀有",
   epic: "史詩",
   legendary: "傳奇",
+  mythic: "神話",
 };
 
 export const RARITY_BORDER_CLASS: Record<RarityTier, string> = {
@@ -37,6 +43,8 @@ export const RARITY_BORDER_CLASS: Record<RarityTier, string> = {
   epic: "border-violet-400/35 shadow-[0_0_16px_rgba(139,92,246,0.2)]",
   legendary:
     "border-amber-400/40 shadow-[0_0_20px_rgba(251,191,36,0.25)] animate-pulse",
+  mythic:
+    "border-fuchsia-400/50 shadow-[0_0_24px_rgba(232,121,249,0.35)] animate-pulse",
 };
 
 export type TitleDisplayOptions = {

@@ -83,6 +83,7 @@ const RARITY_GLOW: Record<string, string> = {
   rare: "from-cyan-500/20 to-cyan-600/10",
   epic: "from-violet-500/25 to-fuchsia-500/15",
   legendary: "from-amber-400/25 via-fuchsia-500/20 to-cyan-400/20",
+  mythic: "from-fuchsia-400/30 via-rose-500/20 to-cyan-300/25",
 };
 
 const CATEGORY_LABEL_KEYS: Record<
@@ -103,6 +104,7 @@ const RARITY_LABEL_KEYS = {
   rare: "rarityRare",
   epic: "rarityEpic",
   legendary: "rarityLegendary",
+  mythic: "rarityMythic",
 } as const;
 
 function formatUnlockPercent(value: number) {
