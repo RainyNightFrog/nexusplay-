@@ -344,7 +344,8 @@
     "emptyTags": "没有符合所选标签的游戏",
     "emptyHintTags": "试试减少标签或清除筛选。",
     "viewAllTags": "清除标签筛选",
-    "hotPickBadge": "Hot Pick"
+    "hotPickBadge": "Hot Pick",
+    "upcomingBadge": "🚀 Coming Soon"
   },
   "game": {
     "communityForum": "社区讨论区",
@@ -442,7 +443,9 @@
     "checkoutPlatformTipInvalid": "平台小費須為 0 至 ${max} USD 之間",
     "purchaseRequiredTitle": "購買後即可遊玩",
     "purchaseRequiredDesc": "此為付費遊戲，完成結帳後即可在此直接遊玩與下載。",
-    "purchaseOwnedTitle": "已擁有此遊戲"
+    "purchaseOwnedTitle": "已擁有此遊戲",
+    "devlogTab": "📖 Devlogs",
+    "noDevlogs": "No devlogs yet — stay tuned for creator updates!"
   },
   "dashboard": {
     "uploadGame": "上传游戏",
@@ -806,7 +809,16 @@
     "emojiCategoryCommon": "常用",
     "emojiCategoryGaming": "游戏",
     "emojiCategorySymbols": "符号",
-    "emojiCategoryMood": "氛围"
+    "emojiCategoryMood": "氛围",
+    "upcomingDevlogSection": "Upcoming & Devlog",
+    "upcomingDevlogHint": "Mark as upcoming so players can wishlist. Publishing a standalone devlog notifies wishlist players.",
+    "upcomingEnabled": "Marked as upcoming",
+    "upcomingDisabled": "Upcoming flag removed",
+    "upcomingUpdateFailed": "Failed to update upcoming status",
+    "publishDevlogStandalone": "Publish a Devlog",
+    "publishDevlogButton": "Publish Devlog",
+    "devlogPublishSuccess": "Devlog published — wishlist players will be notified",
+    "devlogPublishFailed": "Failed to publish devlog"
   },
   "auth": {
     "callbackFailed": "登录验证失败，请再试一次",
@@ -2047,7 +2059,8 @@
     "newGameBadge": "未读追踪新作",
     "filterAll": "全部",
     "emptyFiltered": "此分类暂无通知",
-    "markFilterRead": "此分类全部已读"
+    "markFilterRead": "此分类全部已读",
+    "kindWishlistDevlog": "Wishlist update"
   },
   "search": {
     "title": "搜寻",
@@ -2529,5 +2542,71 @@
     "devlogMilestoneTitle": "里程碑",
     "devlogMilestoneBody": "🏆 達成里程碑！\n\n感謝各位玩家的支持，我們達成了新的里程碑。\n\n未來會帶來更多內容與活動，敬請期待！",
     "toolsNavLink": "創作者工具"
+  },
+  "quests": {
+    "title": "Daily Quests",
+    "subtitle": "Complete quests and keep your streak for AP rewards",
+    "navLabel": "Daily Quests",
+    "loginRequired": "Sign in to view daily quests",
+    "loadError": "Failed to load quests. Please try again.",
+    "refresh": "Refresh",
+    "streakTitle": "Login Streak",
+    "streakDays": "{count}-day streak",
+    "streakCalendarHint": "Last 7 days of your streak (today is day 7)",
+    "claimStreak": "Claim streak +{ap} AP",
+    "streakClaimed": "Claimed today",
+    "todayQuests": "Today's Quests",
+    "claimAll": "Claim all AP",
+    "claim": "Claim AP",
+    "claimed": "Claimed",
+    "inProgress": "In progress",
+    "claimFailed": "Failed to claim. Please try again.",
+    "progress": "{current} / {target}",
+    "tabDaily": "Daily",
+    "tabWeekly": "Weekly",
+    "resetHint": "Resets daily at 00:00 (UTC+8) / weekly on Monday",
+    "dailyResetIn": "Daily reset in {time}",
+    "weeklyResetIn": "Weekly reset in {time}"
+  },
+  "wishlist": {
+    "add": "⭐ Add to Wishlist",
+    "remove": "On Wishlist",
+    "added": "Added to wishlist",
+    "removed": "Removed from wishlist",
+    "toggleFailed": "Failed to update wishlist",
+    "upcomingBadge": "Coming Soon",
+    "comingSoonTitle": "Coming Soon",
+    "comingSoonDesc": "This game is still in development. Wishlist it to get notified about new devlogs.",
+    "upcomingOn": "🚀 Upcoming (enabled)",
+    "upcomingOff": "Mark as Upcoming"
+  },
+  "apStore": {
+    "title": "AP Store",
+    "subtitle": "用 AP 兑换外观与称号",
+    "navLabel": "AP Store",
+    "loginRequired": "Sign in to open the AP Store",
+    "loadError": "Failed to load the store. Please try again.",
+    "refresh": "Refresh",
+    "balanceLabel": "Current AP balance",
+    "tabTitle": "Titles",
+    "tabNameColor": "Name Colors",
+    "tabFrame": "Avatar Frames",
+    "tabBadge": "Badge Effects",
+    "livePreview": "Live Preview",
+    "previewHint": "Preview: {name}",
+    "buy": "Buy",
+    "equip": "Equip",
+    "unequip": "Unequip",
+    "buyFailed": "Purchase failed",
+    "equipFailed": "Equip failed",
+    "limited": "Limited · {remaining} left",
+    "confirmTitle": "Confirm purchase",
+    "confirmDesc": "Buy \"{name}\" for {cost} AP. Balance after purchase: ~{remain} AP.",
+    "confirmBuy": "Confirm",
+    "cancel": "Cancel",
+    "rarityCommon": "Common",
+    "rarityRare": "Rare",
+    "rarityEpic": "Epic",
+    "rarityLegendary": "Legendary"
   }
 }

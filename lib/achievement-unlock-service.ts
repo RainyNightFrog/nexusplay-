@@ -43,6 +43,26 @@ export async function grantAchievement(
     throw new Error(`授予成就失敗：${error.message}`);
   }
 
+  if (data === true) {
+    void (async () => {
+      try {
+        await supabase.rpc("credit_achievement_ap_bonus", {
+          p_user_id: userId,
+          p_achievement_code: code,
+        });
+      } catch {
+        /* bonus is best-effort */
+      }
+
+      try {
+        const { trackQuestEvent } = await import("@/lib/quests-service");
+        await trackQuestEvent(userId, "unlock_achievements", { supabase });
+      } catch {
+        /* quest progress is best-effort */
+      }
+    })();
+  }
+
   return data === true;
 }
 

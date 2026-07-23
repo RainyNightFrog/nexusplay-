@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { resolveStoreCosmeticCssByKeys } from "@/lib/ap-store-service";
 
-/** 已裝備外觀（profiles 欄位）；商店已移除，僅保留顯示解析 */
+/** 已裝備外觀（profiles 欄位） */
 export type EquippedCosmetics = {
   avatar_frame: string | null;
   name_color: string | null;
@@ -13,17 +14,26 @@ export const EMPTY_COSMETICS: EquippedCosmetics = {
   chat_bubble: null,
 };
 
-/** 舊 AP 商店商品 code → CSS class（靜態對照，不再查 ap_shop_items） */
+/** 靜態後援（舊商品／離線） */
 const COSMETIC_CSS_BY_CODE: Record<string, string> = {
   frame_cyan_ring: "ap-frame-cyan",
   frame_violet_glow: "ap-frame-violet",
   frame_gold_crown: "ap-frame-gold",
+  frame_void_orbit: "ap-frame-void-orbit",
   name_cyan: "ap-name-cyan",
+  name_cyan_pulse: "ap-name-cyan",
   name_rose: "ap-name-rose",
+  name_rose_flare: "ap-name-rose",
   name_aurora: "ap-name-aurora",
+  name_aurora_flow: "ap-name-aurora",
+  name_gold_legend: "ap-name-gold-legend",
   bubble_mint: "ap-bubble-mint",
+  badge_mint_spark: "ap-bubble-mint",
   bubble_sunset: "ap-bubble-sunset",
+  badge_sunset_wave: "ap-bubble-sunset",
   bubble_void: "ap-bubble-void",
+  badge_void_pulse: "ap-bubble-void",
+  badge_rain_storm: "ap-badge-rain-storm",
 };
 
 function isMissingCosmeticColumn(
@@ -113,16 +123,29 @@ export async function resolveEquippedCosmeticsMap(
   return result;
 }
 
-/** supabase 參數保留以相容既有呼叫端；改為靜態 map，不再查商店表 */
+/** 優先查 AP 商店 asset_config，再回退靜態 map */
 export async function resolveCosmeticCssByCodes(
-  _supabase: SupabaseClient,
+  supabase: SupabaseClient,
   codes: string[]
 ): Promise<Map<string, string>> {
   const unique = [...new Set(codes.filter(Boolean))];
   const map = new Map<string, string>();
-  for (const code of unique) {
-    const css = COSMETIC_CSS_BY_CODE[code];
-    if (css) map.set(code, css);
+  if (unique.length === 0) return map;
+
+  try {
+    const fromStore = await resolveStoreCosmeticCssByKeys(supabase, unique);
+    for (const [key, css] of fromStore) {
+      map.set(key, css);
+    }
+  } catch {
+    /* store table may not exist yet */
   }
+
+  for (const code of unique) {
+    if (!map.has(code) && COSMETIC_CSS_BY_CODE[code]) {
+      map.set(code, COSMETIC_CSS_BY_CODE[code]);
+    }
+  }
+
   return map;
 }

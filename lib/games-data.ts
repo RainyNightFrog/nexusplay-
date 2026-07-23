@@ -75,6 +75,7 @@ export function mapRecordToGame(record: GameRecord): Game {
     currency: enriched.currency ?? "USD",
     minPrice: enriched.min_price ?? 0,
     onSale: enriched.on_sale ?? false,
+    isUpcoming: enriched.is_upcoming === true,
   };
 }
 

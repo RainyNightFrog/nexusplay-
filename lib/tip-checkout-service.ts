@@ -498,6 +498,14 @@ export async function finalizeTipPayment(
     } catch (error) {
       console.error("[achievements] big_tipper check failed:", error);
     }
+
+    void import("@/lib/quests-service")
+      .then(({ trackQuestEvent }) =>
+        trackQuestEvent(tip.payer_id as string, "tip_creator", { supabase })
+      )
+      .catch((error) => {
+        console.error("[quests] tip progress failed:", error);
+      });
   }
 
   return {

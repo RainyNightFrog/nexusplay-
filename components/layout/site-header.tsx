@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import { UserNav } from "@/components/auth/user-nav";
+import { ApStoreNavButton } from "@/components/ap-store/ApStoreNavButton";
+import { DailyQuestsNavButton } from "@/components/quests/DailyQuestsNavButton";
 import { SiteBrand } from "@/components/layout/site-brand";
 import { cn } from "@/lib/utils";
 
@@ -45,7 +47,9 @@ export function SiteHeader({
         <div className="flex min-w-0 flex-1 items-center gap-2 md:gap-4">
           {children}
         </div>
-        <div className="flex shrink-0 items-center pl-1 md:pl-3">
+        <div className="flex shrink-0 items-center gap-1.5 pl-1 md:gap-2 md:pl-3">
+          <ApStoreNavButton />
+          <DailyQuestsNavButton />
           <UserNav />
         </div>
       </div>

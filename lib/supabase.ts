@@ -53,4 +53,5 @@ export type GameRecord = {
   is_featured?: boolean;
   featured_badge?: string | null;
   featured_sort?: number;
+  is_upcoming?: boolean;
 };

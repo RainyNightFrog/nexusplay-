@@ -6,7 +6,8 @@ import { sendWebPushToUser } from "@/lib/web-push-service";
 export type UserNotificationKind =
   | "tip_received"
   | "forum_reply"
-  | "followed_new_game";
+  | "followed_new_game"
+  | "wishlist_devlog";
 
 export type UserNotification = {
   id: string;
@@ -118,6 +119,7 @@ export async function readUserUnreadNotificationCountsByKind(userId: string) {
     tip_received: 0,
     forum_reply: 0,
     followed_new_game: 0,
+    wishlist_devlog: 0,
   };
 
   for (const row of data ?? []) {

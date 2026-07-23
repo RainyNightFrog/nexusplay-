@@ -4,15 +4,23 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { useLocale, useTranslations } from "next-intl";
 import { motion } from "framer-motion";
-import { Calendar, Loader2, MessageSquare, Send } from "lucide-react";
+import { BookOpen, Calendar, Loader2, MessageSquare, Send } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { GameComment, GameDevlogEntry } from "@/lib/game-page-content";
 import { isSupabaseImage } from "@/lib/games";
 import { useApiError } from "@/hooks/use-api-error";
 import { UserBadge } from "@/components/UserBadge";
 import { sanitizeRichHtmlForRender } from "@/lib/sanitize-rich-html";
 import { cn } from "@/lib/utils";
+
+type ApiDevlog = {
+  id: string;
+  title: string;
+  contentHtml: string;
+  publishedAt: string;
+};
 
 type GameDetailSectionsProps = {
   gameId: number;
@@ -44,7 +52,7 @@ function SectionCard({
   children,
   className,
 }: {
-  title: string;
+  title?: string;
   children: React.ReactNode;
   className?: string;
 }) {
@@ -56,7 +64,9 @@ function SectionCard({
         className
       )}
     >
-      <h3 className="text-center text-lg font-semibold text-white">{title}</h3>
+      {title ? (
+        <h3 className="text-center text-lg font-semibold text-white">{title}</h3>
+      ) : null}
       {children}
     </div>
   );
@@ -83,6 +93,8 @@ export function GameDetailSections({
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [commentError, setCommentError] = useState<string | null>(null);
   const [activeGalleryIndex, setActiveGalleryIndex] = useState(0);
+  const [tableDevlogs, setTableDevlogs] = useState<ApiDevlog[]>([]);
+  const [devlogsLoading, setDevlogsLoading] = useState(true);
 
   const gallery = useMemo(
     () => galleryUrls.filter(Boolean),
@@ -118,6 +130,32 @@ export function GameDetailSections({
     };
   }, [gameId, locale]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadDevlogs() {
+      setDevlogsLoading(true);
+      try {
+        const response = await fetch(`/api/games/${gameId}/devlogs`);
+        const data = (await response.json()) as {
+          devlogs?: ApiDevlog[];
+        };
+        if (!cancelled) {
+          setTableDevlogs(data.devlogs ?? []);
+        }
+      } catch {
+        if (!cancelled) setTableDevlogs([]);
+      } finally {
+        if (!cancelled) setDevlogsLoading(false);
+      }
+    }
+
+    loadDevlogs();
+    return () => {
+      cancelled = true;
+    };
+  }, [gameId]);
+
   const submitComment = useCallback(async () => {
     const trimmed = commentDraft.trim();
     if (!trimmed || commentSubmitting) return;
@@ -151,65 +189,21 @@ export function GameDetailSections({
     }
   }, [commentDraft, commentSubmitting, gameId, tg, translateApiError]);
 
+  const mergedLegacyDevlogs = useMemo(() => {
+    const tableIds = new Set(tableDevlogs.map((item) => item.id));
+    return (devlogs ?? []).filter((entry) => !tableIds.has(entry.id));
+  }, [devlogs, tableDevlogs]);
+
+  const hasAnyDevlog =
+    tableDevlogs.length > 0 || mergedLegacyDevlogs.length > 0;
+
   return (
     <div className="mt-10 space-y-8 pb-10">
-      <motion.section
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45, delay: 0.15 }}
-      >
-        <SectionCard title={tc("aboutGame")}>
-          <p className="mx-auto mt-4 max-w-3xl text-center text-sm leading-relaxed text-zinc-400">
-            {description}
-          </p>
-
-          {detailsHtml && detailsHtml.replace(/<[^>]*>/g, "").trim() && (
-            <div
-              className={cn(
-                "game-details-content prose prose-invert prose-sm mx-auto mt-6 max-w-3xl",
-                "rounded-2xl border border-white/8 bg-zinc-950/50 p-6",
-                "[&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-white",
-                "[&_p]:text-zinc-400 [&_a]:text-cyan-400 [&_li]:text-zinc-400"
-              )}
-              dangerouslySetInnerHTML={{
-                __html: sanitizeRichHtmlForRender(detailsHtml),
-              }}
-            />
-          )}
-
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="rounded-xl border border-white/8 bg-zinc-950/40 p-4 text-center">
-              <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-                {tc("creator")}
-              </p>
-              <p className="mt-1 text-sm text-zinc-200">{creator}</p>
-            </div>
-            <div className="rounded-xl border border-white/8 bg-zinc-950/40 p-4 text-center">
-              <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-                {tc("playCount")}
-              </p>
-              <p className="mt-1 text-sm text-zinc-200">{playersLabel}</p>
-            </div>
-            <div className="rounded-xl border border-white/8 bg-zinc-950/40 p-4 text-center sm:col-span-2 lg:col-span-1">
-              <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-                {tg("communityForum")}
-              </p>
-              <Link
-                href={`/game/${gameId}/forum`}
-                className="mt-1 inline-block text-sm text-violet-300 transition-colors hover:text-violet-200"
-              >
-                {tc("threads", { count: forumPostCount })}
-              </Link>
-            </div>
-          </div>
-        </SectionCard>
-      </motion.section>
-
       {gallery.length > 0 && (
         <motion.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45, delay: 0.2 }}
+          transition={{ duration: 0.45, delay: 0.15 }}
         >
           <SectionCard title={tg("screenshots")}>
             <div className="mx-auto mt-6 max-w-4xl">
@@ -252,142 +246,238 @@ export function GameDetailSections({
         </motion.section>
       )}
 
-      {devlogs.length > 0 && (
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45, delay: 0.25 }}
-        >
-          <SectionCard title={tg("devlog")}>
-            <div className="mx-auto mt-6 max-w-3xl space-y-6">
-              {devlogs.map((entry) => (
-                <article
-                  key={entry.id}
-                  className="rounded-xl border border-white/8 bg-zinc-950/40 p-5"
-                >
-                  <div className="flex flex-wrap items-center justify-center gap-2 text-center">
-                    <h4 className="text-base font-semibold text-zinc-100">
-                      {entry.title}
-                    </h4>
-                    <span className="inline-flex items-center gap-1 text-xs text-zinc-500">
-                      <Calendar className="size-3.5" />
-                      {formatRelativeTime(entry.createdAt, tc)}
-                    </span>
-                  </div>
-                  {entry.content && (
-                    <p className="mt-3 whitespace-pre-wrap text-center text-sm leading-relaxed text-zinc-400">
-                      {entry.content}
-                    </p>
-                  )}
-                  {entry.imageUrls.length > 0 && (
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                      {entry.imageUrls.map((url, index) => (
-                        <div
-                          key={`${entry.id}-img-${index}`}
-                          className="relative aspect-video overflow-hidden rounded-lg border border-white/10"
-                        >
-                          <Image
-                            src={url}
-                            alt={entry.title}
-                            fill
-                            className="object-cover"
-                            unoptimized={!isSupabaseImage(url)}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </article>
-              ))}
-            </div>
-          </SectionCard>
-        </motion.section>
-      )}
-
       <motion.section
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45, delay: 0.3 }}
+        transition={{ duration: 0.45, delay: 0.2 }}
       >
-        <SectionCard title={tg("comments")}>
-          <div className="mx-auto mt-6 max-w-3xl">
-            <div className="rounded-xl border border-white/10 bg-zinc-950/50 p-4">
-              <textarea
-                value={commentDraft}
-                onChange={(event) => setCommentDraft(event.target.value)}
-                placeholder={tg("commentPlaceholder")}
-                rows={3}
-                maxLength={1000}
-                className={cn(
-                  "w-full resize-none rounded-lg border border-white/10 bg-white/5 px-4 py-3",
-                  "text-sm text-zinc-100 placeholder:text-zinc-500 outline-none",
-                  "focus:border-violet-400/40 focus:ring-2 focus:ring-violet-500/20"
-                )}
-              />
-              {commentError && (
-                <p className="mt-2 text-center text-xs text-rose-400">
-                  {commentError}
-                </p>
-              )}
-              <div className="mt-3 flex justify-center">
-                <Button
-                  type="button"
-                  onClick={submitComment}
-                  disabled={commentSubmitting || !commentDraft.trim()}
-                  className="gap-2 bg-violet-600 hover:bg-violet-500"
-                >
-                  {commentSubmitting ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <Send className="size-4" />
+        <SectionCard>
+          <Tabs defaultValue="about" className="w-full">
+            <TabsList className="mx-auto mb-6 flex h-auto w-full max-w-xl flex-wrap justify-center gap-1 rounded-xl border border-white/10 bg-zinc-950/60 p-1">
+              <TabsTrigger value="about" className="flex-1 rounded-lg px-3 py-2">
+                {tc("aboutGame")}
+              </TabsTrigger>
+              <TabsTrigger
+                value="devlogs"
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2"
+              >
+                <BookOpen className="size-3.5" />
+                {tg("devlogTab")}
+              </TabsTrigger>
+              <TabsTrigger value="comments" className="flex-1 rounded-lg px-3 py-2">
+                {tg("comments")}
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="about" className="mt-0 space-y-6">
+              <p className="mx-auto max-w-3xl text-center text-sm leading-relaxed text-zinc-400">
+                {description}
+              </p>
+
+              {detailsHtml && detailsHtml.replace(/<[^>]*>/g, "").trim() && (
+                <div
+                  className={cn(
+                    "game-details-content prose prose-invert prose-sm mx-auto max-w-3xl",
+                    "rounded-2xl border border-white/8 bg-zinc-950/50 p-6",
+                    "[&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-white",
+                    "[&_p]:text-zinc-400 [&_a]:text-cyan-400 [&_li]:text-zinc-400"
                   )}
-                  {tg("postComment")}
-                </Button>
-              </div>
-            </div>
-
-            <div className="mt-6 space-y-4">
-              {commentsLoading ? (
-                <div className="flex justify-center py-8">
-                  <Loader2 className="size-6 animate-spin text-zinc-500" />
-                </div>
-              ) : comments.length === 0 ? (
-                <p className="text-center text-sm text-zinc-500">
-                  {tg("noComments")}
-                </p>
-              ) : (
-                comments.map((comment) => (
-                  <div
-                    key={comment.id}
-                    className="rounded-xl border border-white/8 bg-zinc-950/30 px-4 py-3"
-                  >
-                    <div className="flex flex-wrap items-center justify-center gap-2 text-center">
-                      <UserBadge
-                        username={comment.author_name}
-                        title={comment.author_equipped_title}
-                        isSupporter={comment.author_is_supporter}
-                        supporterBadge={comment.author_supporter_badge}
-                        animateTitle={false}
-                        usernameClassName="text-sm text-zinc-200"
-                        titleClassName="text-[10px]"
-                      />
-                      <span className="text-xs text-zinc-500">
-                        {formatRelativeTime(comment.created_at, tc)}
-                      </span>
-                    </div>
-                    <p className="mt-2 whitespace-pre-wrap text-center text-sm text-zinc-400">
-                      {comment.content}
-                    </p>
-                  </div>
-                ))
+                  dangerouslySetInnerHTML={{
+                    __html: sanitizeRichHtmlForRender(detailsHtml),
+                  }}
+                />
               )}
-            </div>
 
-            <p className="mt-4 text-center text-xs text-zinc-600">
-              <MessageSquare className="mr-1 inline size-3.5" />
-              {tg("forumHint")}
-            </p>
-          </div>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="rounded-xl border border-white/8 bg-zinc-950/40 p-4 text-center">
+                  <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+                    {tc("creator")}
+                  </p>
+                  <p className="mt-1 text-sm text-zinc-200">{creator}</p>
+                </div>
+                <div className="rounded-xl border border-white/8 bg-zinc-950/40 p-4 text-center">
+                  <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+                    {tc("playCount")}
+                  </p>
+                  <p className="mt-1 text-sm text-zinc-200">{playersLabel}</p>
+                </div>
+                <div className="rounded-xl border border-white/8 bg-zinc-950/40 p-4 text-center sm:col-span-2 lg:col-span-1">
+                  <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+                    {tg("communityForum")}
+                  </p>
+                  <Link
+                    href={`/game/${gameId}/forum`}
+                    className="mt-1 inline-block text-sm text-violet-300 transition-colors hover:text-violet-200"
+                  >
+                    {tc("threads", { count: forumPostCount })}
+                  </Link>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="devlogs" className="mt-0">
+              <div className="mx-auto max-w-3xl space-y-6">
+                {devlogsLoading ? (
+                  <div className="flex justify-center py-10">
+                    <Loader2 className="size-6 animate-spin text-zinc-500" />
+                  </div>
+                ) : !hasAnyDevlog ? (
+                  <p className="text-center text-sm text-zinc-500">
+                    {tg("noDevlogs")}
+                  </p>
+                ) : (
+                  <>
+                    {tableDevlogs.map((entry) => (
+                      <article
+                        key={entry.id}
+                        className="rounded-xl border border-cyan-400/15 bg-zinc-950/40 p-5"
+                      >
+                        <div className="flex flex-wrap items-center justify-center gap-2 text-center">
+                          <h4 className="text-base font-semibold text-zinc-100">
+                            {entry.title}
+                          </h4>
+                          <span className="inline-flex items-center gap-1 text-xs text-zinc-500">
+                            <Calendar className="size-3.5" />
+                            {formatRelativeTime(entry.publishedAt, tc)}
+                          </span>
+                        </div>
+                        <div
+                          className={cn(
+                            "prose prose-invert prose-sm mx-auto mt-3 max-w-none",
+                            "[&_p]:text-zinc-400 [&_a]:text-cyan-400 [&_li]:text-zinc-400"
+                          )}
+                          dangerouslySetInnerHTML={{
+                            __html: sanitizeRichHtmlForRender(entry.contentHtml),
+                          }}
+                        />
+                      </article>
+                    ))}
+
+                    {mergedLegacyDevlogs.map((entry) => (
+                      <article
+                        key={entry.id}
+                        className="rounded-xl border border-white/8 bg-zinc-950/40 p-5"
+                      >
+                        <div className="flex flex-wrap items-center justify-center gap-2 text-center">
+                          <h4 className="text-base font-semibold text-zinc-100">
+                            {entry.title}
+                          </h4>
+                          <span className="inline-flex items-center gap-1 text-xs text-zinc-500">
+                            <Calendar className="size-3.5" />
+                            {formatRelativeTime(entry.createdAt, tc)}
+                          </span>
+                        </div>
+                        {entry.content && (
+                          <p className="mt-3 whitespace-pre-wrap text-center text-sm leading-relaxed text-zinc-400">
+                            {entry.content}
+                          </p>
+                        )}
+                        {entry.imageUrls.length > 0 && (
+                          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                            {entry.imageUrls.map((url, index) => (
+                              <div
+                                key={`${entry.id}-img-${index}`}
+                                className="relative aspect-video overflow-hidden rounded-lg border border-white/10"
+                              >
+                                <Image
+                                  src={url}
+                                  alt={entry.title}
+                                  fill
+                                  className="object-cover"
+                                  unoptimized={!isSupabaseImage(url)}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </article>
+                    ))}
+                  </>
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="comments" className="mt-0">
+              <div className="mx-auto max-w-3xl">
+                <div className="rounded-xl border border-white/10 bg-zinc-950/50 p-4">
+                  <textarea
+                    value={commentDraft}
+                    onChange={(event) => setCommentDraft(event.target.value)}
+                    placeholder={tg("commentPlaceholder")}
+                    rows={3}
+                    maxLength={1000}
+                    className={cn(
+                      "w-full resize-none rounded-lg border border-white/10 bg-white/5 px-4 py-3",
+                      "text-sm text-zinc-100 placeholder:text-zinc-500 outline-none",
+                      "focus:border-violet-400/40 focus:ring-2 focus:ring-violet-500/20"
+                    )}
+                  />
+                  {commentError && (
+                    <p className="mt-2 text-center text-xs text-rose-400">
+                      {commentError}
+                    </p>
+                  )}
+                  <div className="mt-3 flex justify-center">
+                    <Button
+                      type="button"
+                      onClick={submitComment}
+                      disabled={commentSubmitting || !commentDraft.trim()}
+                      className="gap-2 bg-violet-600 hover:bg-violet-500"
+                    >
+                      {commentSubmitting ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Send className="size-4" />
+                      )}
+                      {tg("postComment")}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="mt-6 space-y-4">
+                  {commentsLoading ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="size-6 animate-spin text-zinc-500" />
+                    </div>
+                  ) : comments.length === 0 ? (
+                    <p className="text-center text-sm text-zinc-500">
+                      {tg("noComments")}
+                    </p>
+                  ) : (
+                    comments.map((comment) => (
+                      <div
+                        key={comment.id}
+                        className="rounded-xl border border-white/8 bg-zinc-950/30 px-4 py-3"
+                      >
+                        <div className="flex flex-wrap items-center justify-center gap-2 text-center">
+                          <UserBadge
+                            username={comment.author_name}
+                            title={comment.author_equipped_title}
+                            isSupporter={comment.author_is_supporter}
+                            supporterBadge={comment.author_supporter_badge}
+                            animateTitle={false}
+                            usernameClassName="text-sm text-zinc-200"
+                            titleClassName="text-[10px]"
+                          />
+                          <span className="text-xs text-zinc-500">
+                            {formatRelativeTime(comment.created_at, tc)}
+                          </span>
+                        </div>
+                        <p className="mt-2 whitespace-pre-wrap text-center text-sm text-zinc-400">
+                          {comment.content}
+                        </p>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <p className="mt-4 text-center text-xs text-zinc-600">
+                  <MessageSquare className="mr-1 inline size-3.5" />
+                  {tg("forumHint")}
+                </p>
+              </div>
+            </TabsContent>
+          </Tabs>
         </SectionCard>
       </motion.section>
     </div>

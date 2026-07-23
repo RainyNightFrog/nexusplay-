@@ -19,6 +19,7 @@ import {
   Pencil,
   Coins,
   Share2,
+  Star,
   ThumbsUp,
   Upload,
   User,
@@ -96,6 +97,7 @@ export default function GamePage() {
 
 function GamePageContent() {
   const t = useTranslations("game");
+  const tw = useTranslations("wishlist");
   const tChat = useTranslations("chat");
   const td = useTranslations("dashboard");
   const tc = useTranslations("common");
@@ -126,6 +128,8 @@ function GamePageContent() {
   const [favorited, setFavorited] = useState(false);
   const [favoriteSubmitting, setFavoriteSubmitting] = useState(false);
   const [favoriteCount, setFavoriteCount] = useState(0);
+  const [wishlisted, setWishlisted] = useState(false);
+  const [wishlistSubmitting, setWishlistSubmitting] = useState(false);
   const [showEmbed, setShowEmbed] = useState(false);
   const [showFullscreen, setShowFullscreen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -270,7 +274,45 @@ function GamePageContent() {
         if (data) setFavorited(data.favorited === true);
       })
       .catch(() => undefined);
+
+    fetch(`/api/games/${game.id}/wishlist`)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data: { wishlisted?: boolean } | null) => {
+        if (data) setWishlisted(data.wishlisted === true);
+      })
+      .catch(() => undefined);
   }, [profile, game?.id]);
+
+  async function toggleWishlist() {
+    if (!game) return;
+
+    if (!profile) {
+      router.push(`/auth?redirect=${encodeURIComponent(`/game/${game.id}`)}`);
+      return;
+    }
+
+    setWishlistSubmitting(true);
+    try {
+      const response = await fetch(`/api/games/${game.id}/wishlist`, {
+        method: "POST",
+        credentials: "same-origin",
+      });
+      const data = (await response.json()) as {
+        wishlisted?: boolean;
+        error?: string;
+      };
+      if (!response.ok) {
+        showToast(translateApiError(data.error) ?? tw("toggleFailed"));
+        return;
+      }
+      setWishlisted(data.wishlisted === true);
+      showToast(data.wishlisted ? tw("added") : tw("removed"));
+    } catch {
+      showToast(tw("toggleFailed"));
+    } finally {
+      setWishlistSubmitting(false);
+    }
+  }
 
   async function toggleFavorite() {
     if (!game) return;
@@ -362,7 +404,9 @@ function GamePageContent() {
     }
   }, [gameId, router]);
 
-  const playable = game ? canPlay && isDirectlyPlayable(game.embedUrl) : false;
+  const isUpcoming = game?.isUpcoming === true;
+  const playable =
+    game && !isUpcoming ? canPlay && isDirectlyPlayable(game.embedUrl) : false;
   const trustedEmbedUrl =
     game && playable && isSafeEmbedUrl(game.embedUrl) ? game.embedUrl : null;
 
@@ -739,7 +783,49 @@ function GamePageContent() {
                       : undefined
                 }
               >
-                {showPurchaseGate ? (
+                {isUpcoming ? (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 bg-zinc-950/90 px-6 py-10 text-center">
+                    <div
+                      className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-25"
+                      style={{ backgroundImage: `url(${game.image})` }}
+                      aria-hidden
+                    />
+                    <div className="relative z-10 max-w-md space-y-3">
+                      <p className="inline-flex items-center gap-2 rounded-full border border-fuchsia-400/40 bg-fuchsia-500/20 px-3 py-1 text-xs font-semibold text-fuchsia-100 shadow-[0_0_20px_rgba(232,121,249,0.4)]">
+                        🚀 {tw("upcomingBadge")}
+                      </p>
+                      <h3 className="text-lg font-semibold text-white">
+                        {tw("comingSoonTitle")}
+                      </h3>
+                      <p className="text-sm leading-relaxed text-zinc-400">
+                        {tw("comingSoonDesc")}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      disabled={wishlistSubmitting}
+                      onClick={() => void toggleWishlist()}
+                      className={cn(
+                        "relative z-10 gap-2 border border-fuchsia-400/50 px-6 py-5 text-base font-semibold",
+                        "bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white",
+                        "shadow-[0_0_28px_rgba(232,121,249,0.55)] hover:from-fuchsia-500 hover:to-violet-500",
+                        wishlisted && "from-emerald-600 to-cyan-600 shadow-[0_0_28px_rgba(16,185,129,0.45)]"
+                      )}
+                    >
+                      {wishlistSubmitting ? (
+                        <Loader2 className="size-5 animate-spin" />
+                      ) : (
+                        <Star
+                          className={cn(
+                            "size-5",
+                            wishlisted && "fill-amber-300 text-amber-300"
+                          )}
+                        />
+                      )}
+                      {wishlisted ? tw("remove") : tw("add")}
+                    </Button>
+                  </div>
+                ) : showPurchaseGate ? (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 bg-zinc-950/90 px-6 py-10 text-center">
                     <div
                       className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-20"
@@ -833,13 +919,39 @@ function GamePageContent() {
               {!showFullscreen && (
                 <div className="flex flex-col gap-3 border-t border-white/5 px-3 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-4">
                   <p className="text-xs text-zinc-500">
-                    {showPurchaseGate
-                      ? t("purchaseRequiredDesc")
-                      : playable
-                        ? t("startPlayHint")
-                        : t("reuploadHint")}
+                    {isUpcoming
+                      ? tw("comingSoonDesc")
+                      : showPurchaseGate
+                        ? t("purchaseRequiredDesc")
+                        : playable
+                          ? t("startPlayHint")
+                          : t("reuploadHint")}
                   </p>
                   <div className="flex flex-wrap gap-2">
+                    {isUpcoming && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={wishlistSubmitting}
+                        onClick={() => void toggleWishlist()}
+                        className={cn(
+                          "gap-1.5 border border-fuchsia-400/40 bg-fuchsia-500/15 text-fuchsia-100",
+                          "shadow-[0_0_16px_rgba(232,121,249,0.35)] hover:bg-fuchsia-500/25"
+                        )}
+                      >
+                        {wishlistSubmitting ? (
+                          <Loader2 className="size-3.5 animate-spin" />
+                        ) : (
+                          <Star
+                            className={cn(
+                              "size-3.5",
+                              wishlisted && "fill-amber-300 text-amber-300"
+                            )}
+                          />
+                        )}
+                        {wishlisted ? tw("remove") : tw("add")}
+                      </Button>
+                    )}
                     {isGameOwner && (
                       <Link
                         href={editGameHref}

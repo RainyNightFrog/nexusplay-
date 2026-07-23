@@ -16,7 +16,7 @@ const VALID_SORTS: SortOption[] = ["latest", "views", "rating"];
 
 /** 首頁列表不需 gallery / devlog / details_html，避免每次刷新拉大量 JSON */
 const GAME_LIST_SELECT =
-  "id, title, slug, description, category, cover_url, game_url, creator_id, created_at, plays_count, rating_avg, publish_status, tips_enabled, suggested_tip_amount, status, tags, viewport_width, viewport_height, fullscreen_button, ai_disclosed, ai_content_types, price, currency, pricing_type, min_price, on_sale, is_featured, featured_badge, featured_sort";
+  "id, title, slug, description, category, cover_url, game_url, creator_id, created_at, plays_count, rating_avg, publish_status, tips_enabled, suggested_tip_amount, status, tags, viewport_width, viewport_height, fullscreen_button, ai_disclosed, ai_content_types, price, currency, pricing_type, min_price, on_sale, is_featured, featured_badge, featured_sort, is_upcoming";
 
 export function parseSortOption(value: string | null): SortOption {
   if (value && VALID_SORTS.includes(value as SortOption)) {

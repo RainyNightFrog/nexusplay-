@@ -1,0 +1,23 @@
+import { NextResponse } from "next/server";
+import { getApStoreDashboard } from "@/lib/ap-store-service";
+import { createAuthServerClient } from "@/lib/supabase/server-auth";
+import { createServerSupabase } from "@/lib/supabase-server";
+
+export async function GET() {
+  try {
+    const authClient = await createAuthServerClient();
+    const {
+      data: { user },
+    } = await authClient.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "請先登入" }, { status: 401 });
+    }
+
+    const dashboard = await getApStoreDashboard(user.id, createServerSupabase());
+    return NextResponse.json(dashboard);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "讀取 AP 商店失敗";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}

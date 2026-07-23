@@ -84,6 +84,24 @@ export async function POST(
       authClient
     );
 
+    // 防刷：每名玩家每小時最多計入 8 次評論任務進度
+    const questLimit = checkRateLimit(
+      `quest:comment:${user.id}`,
+      8,
+      60 * 60_000
+    );
+    if (questLimit.allowed) {
+      const { trackQuestEvent } = await import("@/lib/quests-service");
+      const { createServerSupabase } = await import("@/lib/supabase-server");
+      void trackQuestEvent(user.id, "post_comment", {
+        gameId,
+        commentLength: content.length,
+        supabase: createServerSupabase(),
+      }).catch((error) => {
+        console.error("[quests] comment progress failed:", error);
+      });
+    }
+
     return NextResponse.json({ comment }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "發表評論失敗";

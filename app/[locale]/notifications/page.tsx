@@ -41,6 +41,7 @@ export default function NotificationsPage() {
       tip: t("kindTip"),
       forum: t("kindForum"),
       newGame: t("kindNewGame"),
+      wishlistDevlog: t("kindWishlistDevlog"),
     }),
     [t]
   );
@@ -115,6 +116,7 @@ export default function NotificationsPage() {
   function kindLabel(kind: UserNotificationKind) {
     if (kind === "tip_received") return t("kindTip");
     if (kind === "forum_reply") return t("kindForum");
+    if (kind === "wishlist_devlog") return t("kindWishlistDevlog");
     return t("kindNewGame");
   }
 

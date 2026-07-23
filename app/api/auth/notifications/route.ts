@@ -14,6 +14,7 @@ const VALID_KINDS = new Set<UserNotificationKind>([
   "tip_received",
   "forum_reply",
   "followed_new_game",
+  "wishlist_devlog",
 ]);
 
 export async function GET(request: Request) {

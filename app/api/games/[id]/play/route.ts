@@ -24,18 +24,38 @@ export async function POST(
     const cookieStore = await cookies();
     const sessionId = cookieStore.get(ANALYTICS_SESSION_COOKIE)?.value?.trim();
 
-    if (sessionId) {
-      let userId: string | null = null;
-      try {
-        const supabase = await createAuthServerClient();
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        userId = user?.id ?? null;
-      } catch {
-        userId = null;
-      }
+    let userId: string | null = null;
+    try {
+      const authClient = await createAuthServerClient();
+      const {
+        data: { user },
+      } = await authClient.auth.getUser();
+      userId = user?.id ?? null;
+    } catch {
+      userId = null;
+    }
 
+    if (userId) {
+      const { checkRateLimit } = await import("@/lib/rate-limit");
+      // 防刷：每名玩家每小時最多計入 12 次遊玩任務進度
+      const questLimit = checkRateLimit(
+        `quest:play:${userId}`,
+        12,
+        60 * 60_000
+      );
+      if (questLimit.allowed) {
+        const { trackQuestEvent } = await import("@/lib/quests-service");
+        const { createServerSupabase } = await import("@/lib/supabase-server");
+        void trackQuestEvent(userId, "play_games", {
+          gameId: numericId,
+          supabase: createServerSupabase(),
+        }).catch((error) => {
+          console.error("[quests] play progress failed:", error);
+        });
+      }
+    }
+
+    if (sessionId) {
       const locale = new URL(request.url).searchParams.get("locale");
 
       await trackAnalyticsEvent({

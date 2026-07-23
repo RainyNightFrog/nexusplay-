@@ -64,6 +64,7 @@ export type ManageGameRecord = UpdateGameResult["game"] & {
   slug?: string | null;
   isOrphan?: boolean;
   platform_fee_percent?: number | null;
+  is_upcoming?: boolean;
 };
 
 function appendMonetizationFields(

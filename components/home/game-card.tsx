@@ -81,6 +81,17 @@ export function GameCard({
               {t("hotPickBadge")}
             </div>
           )}
+          {game.isUpcoming && (
+            <div
+              className={cn(
+                "absolute right-3 top-3 rounded-full border border-fuchsia-400/40",
+                "bg-fuchsia-500/20 px-2.5 py-0.5 text-[10px] font-semibold tracking-wider text-fuchsia-100",
+                "shadow-[0_0_18px_rgba(232,121,249,0.45)] backdrop-blur-sm"
+              )}
+            >
+              {t("upcomingBadge")}
+            </div>
+          )}
         </div>
 
         <div className="relative space-y-3 p-4 text-center">

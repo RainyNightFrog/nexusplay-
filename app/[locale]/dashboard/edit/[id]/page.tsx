@@ -45,6 +45,7 @@ import {
   DevlogPublishFields,
   GalleryUploadFields,
 } from "@/components/dashboard/game-page-content-fields";
+import { CreatorUpcomingDevlogPanel } from "@/components/dashboard/creator-upcoming-devlog-panel";
 import {
   GamePublishMetadataFields,
   DEFAULT_GAME_PUBLISH_METADATA,
@@ -327,6 +328,7 @@ export default function EditGamePage() {
   >({});
   const [validationMessages, setValidationMessages] = useState<string[]>([]);
   const [draftReady, setDraftReady] = useState(false);
+  const [isUpcoming, setIsUpcoming] = useState(false);
 
   const showToast = (
     type: "success" | "error",
@@ -370,6 +372,7 @@ export default function EditGamePage() {
               : "",
         });
         setPricing(pricingValuesFromRecord(game));
+        setIsUpcoming(game.is_upcoming === true);
         setLockedPlatformFeePercent(
           typeof game.platform_fee_percent === "number"
             ? game.platform_fee_percent
@@ -967,6 +970,13 @@ export default function EditGamePage() {
               disabled={isSubmitting}
               lockedPlatformFeePercent={lockedPlatformFeePercent}
             />
+
+            {!Number.isNaN(gameId) && (
+              <CreatorUpcomingDevlogPanel
+                gameId={gameId}
+                initialIsUpcoming={isUpcoming}
+              />
+            )}
 
             {validationMessages.length > 0 && (
               <div className="rounded-xl border border-rose-400/25 bg-rose-500/10 px-4 py-3 text-center text-xs text-rose-200">

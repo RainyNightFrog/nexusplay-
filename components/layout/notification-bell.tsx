@@ -33,6 +33,7 @@ export function NotificationBell() {
     tip: t("kindTip"),
     forum: t("kindForum"),
     newGame: t("kindNewGame"),
+    wishlistDevlog: t("kindWishlistDevlog"),
   };
 
   const loadNotifications = useCallback(async () => {

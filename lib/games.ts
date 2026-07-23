@@ -34,6 +34,7 @@ export type Game = {
   currency?: string;
   minPrice?: number;
   onSale?: boolean;
+  isUpcoming?: boolean;
 };
 
 export const FILTER_CATEGORIES = ["全部", ...GAME_GENRES] as const;

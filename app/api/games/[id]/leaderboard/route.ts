@@ -171,6 +171,22 @@ export async function POST(
       console.error("[achievements] leaderboard achievement check failed:", error);
     });
 
+    const { checkRateLimit } = await import("@/lib/rate-limit");
+    const questLimit = checkRateLimit(
+      `quest:leaderboard:${user.id}`,
+      20,
+      60 * 60_000
+    );
+    if (questLimit.allowed) {
+      const { trackQuestEvent } = await import("@/lib/quests-service");
+      void trackQuestEvent(user.id, "leaderboard", {
+        gameId,
+        supabase: createServerSupabase(),
+      }).catch((error) => {
+        console.error("[quests] leaderboard progress failed:", error);
+      });
+    }
+
     return NextResponse.json({
       ok: true,
       entry: {

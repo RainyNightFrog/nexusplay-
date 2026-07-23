@@ -790,6 +790,10 @@ export function AchievementsModal({ open, onOpenChange }: AchievementsModalProps
     "AP 先驅",
     "霓虹旅人",
     "點數帝王",
+    "霓虹新星",
+    "賽博浪客",
+    "虛空領主",
+    "雨夜帝王",
   ]);
   const allTitles = (titlesData?.titles ?? []).filter(
     (title) => title.unlocked || !AP_SHOP_ONLY_TITLE_NAMES.has(title.name)
