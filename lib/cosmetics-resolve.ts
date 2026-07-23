@@ -20,6 +20,10 @@ const COSMETIC_CSS_BY_CODE: Record<string, string> = {
   frame_violet_glow: "ap-frame-violet",
   frame_gold_crown: "ap-frame-gold",
   frame_void_orbit: "ap-frame-void-orbit",
+  frame_mint_hex: "ap-frame-mint-hex",
+  frame_ember_ring: "ap-frame-ember",
+  frame_crystal_prism: "ap-frame-crystal",
+  frame_eternal_rain: "ap-frame-eternal-rain",
   name_cyan: "ap-name-cyan",
   name_cyan_pulse: "ap-name-cyan",
   name_rose: "ap-name-rose",
@@ -27,6 +31,10 @@ const COSMETIC_CSS_BY_CODE: Record<string, string> = {
   name_aurora: "ap-name-aurora",
   name_aurora_flow: "ap-name-aurora",
   name_gold_legend: "ap-name-gold-legend",
+  name_lime_static: "ap-name-lime",
+  name_ice_shard: "ap-name-ice",
+  name_crimson_nova: "ap-name-crimson",
+  name_prism_myth: "ap-name-prism-myth",
   bubble_mint: "ap-bubble-mint",
   badge_mint_spark: "ap-bubble-mint",
   bubble_sunset: "ap-bubble-sunset",
@@ -34,6 +42,10 @@ const COSMETIC_CSS_BY_CODE: Record<string, string> = {
   bubble_void: "ap-bubble-void",
   badge_void_pulse: "ap-bubble-void",
   badge_rain_storm: "ap-badge-rain-storm",
+  badge_sky_ripple: "ap-bubble-sky",
+  badge_plasma_arc: "ap-bubble-plasma",
+  badge_obsidian_flare: "ap-bubble-obsidian",
+  badge_frog_aurora: "ap-badge-frog-aurora",
 };
 
 function isMissingCosmeticColumn(

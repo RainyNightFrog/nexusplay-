@@ -2617,6 +2617,7 @@
     "rarityCommon": "Common",
     "rarityRare": "Rare",
     "rarityEpic": "Epic",
-    "rarityLegendary": "Legendary"
+    "rarityLegendary": "Legendary",
+    "rarityMythic": "Mythic"
   }
 }

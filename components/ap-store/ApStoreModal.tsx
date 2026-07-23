@@ -47,6 +47,8 @@ const RARITY_CLASS: Record<string, string> = {
   rare: "border-cyan-400/50 text-cyan-200",
   epic: "border-violet-400/50 text-violet-200",
   legendary: "border-amber-400/60 text-amber-200 shadow-[0_0_16px_rgba(251,191,36,0.35)]",
+  mythic:
+    "border-fuchsia-400/70 text-fuchsia-100 shadow-[0_0_20px_rgba(232,121,249,0.45)]",
 };
 
 export function ApStoreModal({ open, onOpenChange }: ApStoreModalProps) {
@@ -273,7 +275,9 @@ export function ApStoreModal({ open, onOpenChange }: ApStoreModalProps) {
                                         ? t("rarityRare")
                                         : item.rarity === "epic"
                                           ? t("rarityEpic")
-                                          : t("rarityLegendary")}
+                                          : item.rarity === "mythic"
+                                            ? t("rarityMythic")
+                                            : t("rarityLegendary")}
                                   </span>
                                   <p className="mt-1 text-sm font-bold text-amber-200">
                                     {item.costAp} AP

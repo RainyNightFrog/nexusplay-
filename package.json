@@ -50,6 +50,7 @@
     "db:daily-quests": "node scripts/run-daily-quests.mjs",
     "db:devlog-wishlist": "node scripts/run-devlog-wishlist.mjs",
     "db:new-ap-system": "node scripts/run-new-ap-system.mjs",
+    "db:ap-store-expand": "node scripts/run-ap-store-expand.mjs",
     "db:phase-n-platform": "node scripts/run-phase-n-platform.mjs",
     "db:phase-v-platform": "node scripts/run-phase-v-platform.mjs",
     "db:phase-w-platform": "node scripts/run-phase-w-platform.mjs",

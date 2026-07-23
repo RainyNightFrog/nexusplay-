@@ -37,7 +37,7 @@
   },
   "quests": {
     "title": "Daily / Weekly Quests",
-    "subtitle": "Strict AP economy: ~30 AP/day, ~120 AP/week. Claim once — no farming exploits.",
+    "subtitle": "",
     "navLabel": "Daily Quests",
     "loginRequired": "Sign in to view quests",
     "loadError": "Failed to load quests. Please try again.",
@@ -87,7 +87,8 @@
     "rarityCommon": "Common",
     "rarityRare": "Rare",
     "rarityEpic": "Epic",
-    "rarityLegendary": "Legendary"
+    "rarityLegendary": "Legendary",
+    "rarityMythic": "Mythic"
   },
   "wishlist": {
     "add": "⭐ Add to Wishlist",

@@ -7,7 +7,7 @@ export type ApStoreCategory =
   | "avatar_frame"
   | "badge_effect";
 
-export type ApStoreRarity = "common" | "rare" | "epic" | "legendary";
+export type ApStoreRarity = "common" | "rare" | "epic" | "legendary" | "mythic";
 
 export type ApStoreItem = {
   id: string;

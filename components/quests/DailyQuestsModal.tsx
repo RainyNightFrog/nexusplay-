@@ -190,9 +190,13 @@ export function DailyQuestsModal({ open, onOpenChange }: DailyQuestsModalProps) 
             <Target className="size-5 text-cyan-400" />
             {t("title")}
           </DialogTitle>
-          <DialogDescription className="text-zinc-400">
-            {t("subtitle")}
-          </DialogDescription>
+          {t("subtitle") ? (
+            <DialogDescription className="text-zinc-400">
+              {t("subtitle")}
+            </DialogDescription>
+          ) : (
+            <DialogDescription className="sr-only">{t("title")}</DialogDescription>
+          )}
         </DialogHeader>
 
         {!profile ? (

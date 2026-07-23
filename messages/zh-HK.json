@@ -37,7 +37,7 @@
   },
   "quests": {
     "title": "每日／每周任務",
-    "subtitle": "嚴格 AP 經濟：每日約 30 AP、每周約 120 AP。完成後領取，無法重複刷分。",
+    "subtitle": "",
     "navLabel": "每日任務",
     "loginRequired": "請先登入以查看任務",
     "loadError": "載入任務失敗，請稍後再試",
@@ -87,7 +87,8 @@
     "rarityCommon": "普通",
     "rarityRare": "稀有",
     "rarityEpic": "史詩",
-    "rarityLegendary": "傳說"
+    "rarityLegendary": "傳說",
+    "rarityMythic": "神話"
   },
   "wishlist": {
     "add": "⭐ 加入願望單",

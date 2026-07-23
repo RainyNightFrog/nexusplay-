@@ -794,6 +794,10 @@ export function AchievementsModal({ open, onOpenChange }: AchievementsModalProps
     "賽博浪客",
     "虛空領主",
     "雨夜帝王",
+    "像素旅人",
+    "霓虹先知",
+    "深淵傳令",
+    "永夜蛙神",
   ]);
   const allTitles = (titlesData?.titles ?? []).filter(
     (title) => title.unlocked || !AP_SHOP_ONLY_TITLE_NAMES.has(title.name)
