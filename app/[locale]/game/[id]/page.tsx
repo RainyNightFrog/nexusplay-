@@ -369,8 +369,8 @@ function GamePageContent() {
   const iframeSrc = useMemo(() => {
     if (!trustedEmbedUrl || !game) return null;
     const sep = trustedEmbedUrl.includes("?") ? "&" : "?";
-    return `${trustedEmbedUrl}${sep}gid=${game.id}`;
-  }, [trustedEmbedUrl, game]);
+    return `${trustedEmbedUrl}${sep}gid=${game.id}&locale=${encodeURIComponent(locale)}`;
+  }, [trustedEmbedUrl, game, locale]);
 
   const embedCode = useMemo(() => {
     if (!iframeSrc) return "";

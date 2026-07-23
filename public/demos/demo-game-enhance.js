@@ -3,6 +3,14 @@
  */
 (function (global) {
   "use strict";
+  function demoEnhanceT(key, fallback) {
+    try {
+      var pack = window.RNF_DEMO_I18N && RNF_DEMO_I18N.getBridge && RNF_DEMO_I18N.getBridge();
+      if (pack && pack[key] != null) return pack[key];
+    } catch (_e) {}
+    return fallback;
+  }
+
 
   var MAX_DPR = 2;
   var MAX_DELTA = 32;
@@ -95,7 +103,7 @@
       if (fromScreen) options._return = fromScreen;
       showScreen(options.leaderboardScreen || "leaderboard");
       if (loadingEl) {
-        loadingEl.textContent = "載入排行榜中…";
+        loadingEl.textContent = demoEnhanceT("lbLoading", "載入排行榜中…");
         loadingEl.style.display = "";
       }
       if (listEl) listEl.innerHTML = "";
@@ -104,7 +112,7 @@
         if (loadingEl) loadingEl.style.display = "none";
         global.PlatformBridge.renderLeaderboard(listEl, entries);
       } catch (_e) {
-        if (loadingEl) loadingEl.textContent = "無法載入排行榜";
+        if (loadingEl) loadingEl.textContent = demoEnhanceT("lbFail", "無法載入排行榜");
       }
     }
 

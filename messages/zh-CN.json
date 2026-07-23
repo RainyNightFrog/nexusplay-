@@ -69,9 +69,9 @@
     "publishing": "发布中…",
     "optional": "（选填）",
     "share": "分享",
-    "backToGameMenu": "回到游戏主菜单",
-    "backToGameMenuDone": "已返回游戏主菜单，可重新选择难度",
-    "backToGameMenuFailed": "无法连接至游戏，请刷新页面后再试",
+    "backToGameMenu": "返回游戏主菜单",
+    "backToGameMenuDone": "已返回游戏主菜单 — 可重新选择难度",
+    "backToGameMenuFailed": "无法连接到游戏。请刷新页面后再试",
     "embed": "嵌入",
     "view": "查看",
     "creator": "创作者",
@@ -1157,6 +1157,46 @@
     "cyber-fortune": {
       "badge": "赛博博弈旗舰",
       "description": "这是一场融合了未来大数据统计与博弈策略的头脑风暴。在霓虹交织的赛博夜城中，利用独创的 012 矩阵与全餐对战策略，精准推算对手的下一步。在概率的世界里，你就是唯一的王。"
+    },
+    "neon-snake-extreme": {
+      "badge": "虚拟电竞",
+      "description": "五种食物、移动障碍、氮气加速与子弹时间慢动作；连击倍率、触控 D-pad／滑动转向。四段难度刷新极限纪录！"
+    },
+    "cyber-bubble-pop": {
+      "badge": "虚拟电竞",
+      "description": "弹道预览、顶部下压、闪电／黑洞／炸弹特殊球与连锁 Combo 限时倍率。经典泡泡龙的赛博电竞重制版，手机触控就绪。"
+    },
+    "quantum-tic-tac-toe": {
+      "badge": "虚拟电竞",
+      "description": "5×5 连五对决、量子纠缠双格落子与回合限时；四段 AI 难度、连胜统计与触控落子，在量子棋盘上超越对手！"
+    },
+    "void-brick-breaker": {
+      "badge": "虚拟电竞",
+      "description": "多球／激光／磁力／黏球道具、爆炸与钢铁特殊砖、Combo 连破倍率与星尘粒子。四段难度虚空打砖块，支持拖曳与虚拟键。"
+    },
+    "rainy-frog-dash": {
+      "badge": "虚拟电竞",
+      "description": "雨夜霓虹跑酷：二段跳、滑翔、护盾与火箭道具、金币 Combo、多段障碍编队与天气相位。手机触控就绪！"
+    },
+    "neon-tetromino-rush": {
+      "badge": "虚拟电竞",
+      "description": "幽灵预览、保留、五格预览、霓虹狂热与连消 Combo。难度越高掉落越快，极限还会推入垃圾行。"
+    },
+    "galactic-invader-2026": {
+      "badge": "虚拟电竞",
+      "description": "四段武器、护盾、Boss 弹幕与血条。用键盘或触控移动＋射击保卫 2026 地球。"
+    },
+    "memory-matrix-glitch": {
+      "badge": "虚拟电竞",
+      "description": "限时记忆配对，含 Glitch 翻转、连击倍率与炸弹惩罚。在时间耗尽前清空关卡。"
+    },
+    "overdrive-cyber-pong": {
+      "badge": "虚拟电竞",
+      "description": "曲球、重力井、AI 难度与本地双人。触控拖曳挡板，霓虹街机对打。"
+    },
+    "cyber-neon-runner": {
+      "badge": "虚拟电竞",
+      "description": "在 Night City 跳跃、滑行与激光破障。护盾、磁铁、加速与里程碑事件——无尽霓虹跑酷，触控就绪。"
     }
   },
   "errors": {

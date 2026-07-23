@@ -772,11 +772,38 @@
 
   <div class="card-preview" id="cardPreview"></div>
 
+  <script src="/sdk/rnf-demo-packs.js?v=20260723h"></script>
+  <script src="/sdk/rnf-demo-i18n.js?v=20260723h"></script>
   <script src="/demos/platform-bridge.js"></script>
   <script src="/demos/demo-game-enhance.js"></script>
   <script>
   (function () {
     'use strict';
+
+    var __demoPack = window.RNF_DEMO_I18N && RNF_DEMO_I18N.apply("void-relay");
+    function tPath(key, fb) {
+      if (__demoPack) {
+        var parts = key.split('.');
+        var o = __demoPack;
+        for (var i = 0; i < parts.length; i++) {
+          if (o == null) return fb != null ? fb : key;
+          o = o[parts[i]];
+        }
+        if (typeof o === 'string' && o !== '') return o;
+      }
+      return fb != null ? fb : key;
+    }
+    function __demoT(key, fb) {
+      if (__demoPack && __demoPack[key] != null && __demoPack[key] !== '') return __demoPack[key];
+      return tPath(key, fb);
+    }
+    function __fmt(key, fb, vars) {
+      var s = __demoT(key, fb);
+      if (vars) Object.keys(vars).forEach(function (k) {
+        s = s.split('{' + k + '}').join(String(vars[k]));
+      });
+      return s;
+    }
 
     const $ = id => document.getElementById(id);
     const MAX_FLOOR = 15;
@@ -839,11 +866,11 @@
       execution:    { id:'execution',    name:'處決', type:'attack', cost:2, icon:'💀', desc:'8 傷；敵<30%HP+14', rarity:'rare',
         play(s,e,st){ let d=8; if(e.hp/e.maxHp<0.3) d+=14; dealDmg(e,d,true,'attack'); } },
       rupture:      { id:'rupture',      name:'護盾崩裂', type:'attack', cost:2, icon:'💥', desc:'破盾；每點盾4傷', rarity:'uncommon',
-        play(s,e,st){ const b=e.block; e.block=0; dealDmg(e,4+b*4,true,'attack'); logMsg('崩裂 ' + b + ' 護盾'); } },
+        play(s,e,st){ const b=e.block; e.block=0; dealDmg(e,4+b*4,true,'attack'); logMsg(__fmt('logRupture', '崩裂 ' + b + ' 護盾', { n: b })); } },
       mirror_wall:  { id:'mirror_wall',  name:'鏡面壁壘', type:'skill', cost:2, icon:'🪞', desc:'10 盾 + 鏡盾8', rarity:'rare',
         play(s,e,st){ addBlock(10); applyStatus(player,'mirror',8); } },
       overclock:    { id:'overclock',    name:'超頻超載', type:'skill', cost:0, icon:'⚡', desc:'+2 能量；自傷3', rarity:'uncommon',
-        play(s,e,st){ player.energy=Math.min(MAX_ENERGY+3,player.energy+2); playerHpDmg(3); logMsg('超頻 +2 能量'); } },
+        play(s,e,st){ player.energy=Math.min(MAX_ENERGY+3,player.energy+2); playerHpDmg(3); logMsg(__demoT('logOverclock', '超頻 +2 能量')); } },
       chain_relay:  { id:'chain_relay',  name:'連鎖脈衝', type:'attack', cost:1, icon:'🔗', desc:'6 傷；接力滿+10', rarity:'rare',
         play(s,e,st){ let d=6; if(st.relayBonus) d+=10; dealDmg(e,d,false,'attack'); } },
       void_lance:   { id:'void_lance',   name:'虛空長槍', type:'attack', cost:2, icon:'🔱', desc:'12 傷；易傷+50%', rarity:'uncommon',
@@ -953,10 +980,32 @@
     const easeOut = t => DemoEnhance.easeOutCubic(t);
 
     const RELAY_SURGE = {
-      attack: { dmg: 12, draw: 0, label: '虛空斬擊！' },
-      skill:  { dmg: 0, draw: 2, label: '虛空湧流！' },
-      power:  { dmg: 6, draw: 1, label: '虛空共鳴！' },
+      attack: { dmg: 12, draw: 0, labelKey: 'relaySurgeAttack', label: '虛空斬擊！' },
+      skill:  { dmg: 0, draw: 2, labelKey: 'relaySurgeSkill', label: '虛空湧流！' },
+      power:  { dmg: 6, draw: 1, labelKey: 'relaySurgePower', label: '虛空共鳴！' },
     };
+
+    function localizeCardDef(def) {
+      if (!def) return def;
+      return Object.assign({}, def, {
+        name: tPath('cards.' + def.id + '.name', def.name),
+        desc: tPath('cards.' + def.id + '.desc', def.desc),
+      });
+    }
+
+    function getLocalizedEnemyType(typeKey) {
+      const et = ENEMY_TYPES[typeKey];
+      const patterns = et.patterns.map(function (p, i) {
+        return Object.assign({}, p, {
+          text: tPath('enemies.' + typeKey + '.intents.' + i, p.text),
+        });
+      });
+      return Object.assign({}, et, {
+        name: tPath('enemies.' + typeKey + '.name', et.name),
+        trait: tPath('enemies.' + typeKey + '.trait', et.trait),
+        patterns: patterns,
+      });
+    }
 
     function initFxCanvas() {
       fxCanvas = $('fxCanvas');
@@ -1064,12 +1113,13 @@
     function triggerRelaySurge(type) {
       const surge = RELAY_SURGE[type];
       if (!surge) return;
+      const surgeLabel = __demoT(surge.labelKey, surge.label);
       const arena = $('battleArena');
       arena.classList.remove('combo-flash');
       void arena.offsetWidth;
       arena.classList.add('combo-flash');
       const el = $('relaySurge');
-      el.textContent = surge.label;
+      el.textContent = surgeLabel;
       el.classList.remove('show');
       void el.offsetWidth;
       el.classList.add('show');
@@ -1080,15 +1130,15 @@
         popupDmg(fighterCenter(false).x, fighterCenter(false).y - 30, 'VOID +' + surge.dmg, 'combo');
       }
       if (surge.draw > 0) drawCards(surge.draw);
-      logMsg('虛空接力：' + surge.label);
+      logMsg(__fmt('logRelay', '虛空接力：' + surgeLabel, { label: surgeLabel }));
     }
 
     function showCardPreview(card, anchor) {
       const pv = $('cardPreview');
-      const typeLabel = { attack:'攻擊牌', skill:'技能牌', power:'能力牌' }[card.type] || '';
-      const rarityLabel = { common:'普通', uncommon:'稀有', rare:'傳說' }[card.rarity] || '';
+      const typeLabel = { attack: __demoT('typeAttackCard', '攻擊牌'), skill: __demoT('typeSkillCard', '技能牌'), power: __demoT('typePowerCard', '能力牌') }[card.type] || '';
+      const rarityLabel = { common: __demoT('rarityCommon', '普通'), uncommon: __demoT('rarityUncommon', '稀有'), rare: __demoT('rarityRare', '傳說') }[card.rarity] || '';
       pv.innerHTML = '<h4>' + card.icon + ' ' + card.name + '</h4>' +
-        '<div class="pv-type">' + typeLabel + ' · ' + rarityLabel + ' · 費用 ' + card.cost + '</div>' +
+        '<div class="pv-type">' + typeLabel + ' · ' + rarityLabel + ' · ' + __demoT('costLabel', '費用') + ' ' + card.cost + '</div>' +
         '<div>' + card.desc + '</div>';
       const r = anchor.getBoundingClientRect();
       const pvW = 168;
@@ -1178,7 +1228,7 @@
     }
 
     function makeCard(id) {
-      const def = CARD_POOL[id];
+      const def = localizeCardDef(CARD_POOL[id]);
       return { ...def, uid: id + '_' + Math.random().toString(36).slice(2,8) };
     }
 
@@ -1232,20 +1282,20 @@
     function renderNextIntent() {
       const el = $('enemyNextIntent');
       if (!el) return;
-      el.textContent = '下回合：' + getNextPatternPreview();
+      el.textContent = __demoT('nextTurn', '下回合：') + getNextPatternPreview();
     }
 
     function spawnEnemy(f) {
       const typeKey = floorEnemyType(f);
-      const et = ENEMY_TYPES[typeKey];
+      const et = getLocalizedEnemyType(typeKey);
       const scale = 1 + (f - 1) * 0.08;
       const elite = !et.boss && f % 4 === 0;
       const hp = Math.floor(et.hpBase * scale * config.hpMul * (elite ? 1.42 : 1));
       enemy = {
-        typeKey, name: (elite ? '精英·' : '') + et.name, icon: et.icon, boss: !!et.boss,
+        typeKey, name: (elite ? __demoT('elitePrefix', '精英·') : '') + et.name, icon: et.icon, boss: !!et.boss,
         elite: elite,
         level: enemyLevelValue(f, et) + (elite ? 2 : 0),
-        trait: et.trait || '無特殊能力',
+        trait: et.trait || __demoT('noTrait', '無特殊能力'),
         hp, maxHp: hp, block: 0, strength: elite ? 1 : 0, enraged: false,
         status: {}, patterns: et.patterns.slice(), patternIdx: 0,
         intent: null,
@@ -1295,21 +1345,21 @@
       const s = target.status;
       if (s.poison > 0) {
         const dmg = s.poison;
-        if (isPlayer) { playerHpDmg(dmg); logMsg('中毒 -' + dmg); }
-        else { enemyHpDmg(dmg); logMsg('敵人中毒 -' + dmg); }
+        if (isPlayer) { playerHpDmg(dmg); logMsg(__fmt('logPoison', '中毒 -' + dmg, { n: dmg })); }
+        else { enemyHpDmg(dmg); logMsg(__fmt('logEnemyPoison', '敵人中毒 -' + dmg, { n: dmg })); }
         s.poison = Math.max(0, s.poison - 1);
       }
       if (s.burn > 0) {
         const dmg = s.burn;
-        if (isPlayer) { playerHpDmg(dmg); logMsg('燃燒 -' + dmg); }
-        else { enemyHpDmg(dmg); logMsg('敵人燃燒 -' + dmg); }
+        if (isPlayer) { playerHpDmg(dmg); logMsg(__fmt('logBurn', '燃燒 -' + dmg, { n: dmg })); }
+        else { enemyHpDmg(dmg); logMsg(__fmt('logEnemyBurn', '敵人燃燒 -' + dmg, { n: dmg })); }
         s.burn = Math.max(0, s.burn - 1);
       }
       if (s.regen > 0 && isPlayer) {
         const amt = s.regen;
         healPlayer(amt);
         s.regen--;
-        logMsg('再生 +' + amt);
+        logMsg(__fmt('logRegen', '再生 +' + amt, { n: amt }));
       }
       if (s.weak > 0) s.weak--;
       if (s.vulnerable > 0) s.vulnerable--;
@@ -1319,17 +1369,33 @@
       if (s.mirror > 0 && isPlayer) s.mirror--;
     }
 
+    function statusLabel(key, val) {
+      const labels = {
+        weak: __demoT('statusWeak', '虛弱'),
+        vulnerable: __demoT('statusVuln', '易傷'),
+        poison: __demoT('statusPoison', '中毒'),
+        burn: __demoT('statusBurn', '燃燒'),
+        regen: __demoT('statusRegen', '再生'),
+        thorns: __demoT('statusThorns', '荊棘'),
+        mirror: __demoT('statusMirror', '鏡盾'),
+        amplify: __demoT('statusAmplify', '增幅'),
+        echo: __demoT('statusEcho', '迴響'),
+      };
+      const base = labels[key] || key;
+      return val != null && val !== true ? base + ' ' + val : base;
+    }
+
     function statusHtml(status) {
       const pills = [];
-      if (status.weak > 0) pills.push('<span class="status-pill weak">虛弱 ' + status.weak + '</span>');
-      if (status.vulnerable > 0) pills.push('<span class="status-pill vuln">易傷 ' + status.vulnerable + '</span>');
-      if (status.poison > 0) pills.push('<span class="status-pill poison">中毒 ' + status.poison + '</span>');
-      if (status.burn > 0) pills.push('<span class="status-pill burn">燃燒 ' + status.burn + '</span>');
-      if (status.regen > 0) pills.push('<span class="status-pill">再生 ' + status.regen + '</span>');
-      if (status.thorns > 0) pills.push('<span class="status-pill">荊棘 ' + status.thorns + '</span>');
-      if (status.mirror > 0) pills.push('<span class="status-pill mirror">鏡盾 ' + status.mirror + '</span>');
-      if (status.amplify > 0) pills.push('<span class="status-pill">增幅</span>');
-      if (status.echo > 0) pills.push('<span class="status-pill">迴響</span>');
+      if (status.weak > 0) pills.push('<span class="status-pill weak">' + statusLabel('weak', status.weak) + '</span>');
+      if (status.vulnerable > 0) pills.push('<span class="status-pill vuln">' + statusLabel('vulnerable', status.vulnerable) + '</span>');
+      if (status.poison > 0) pills.push('<span class="status-pill poison">' + statusLabel('poison', status.poison) + '</span>');
+      if (status.burn > 0) pills.push('<span class="status-pill burn">' + statusLabel('burn', status.burn) + '</span>');
+      if (status.regen > 0) pills.push('<span class="status-pill">' + statusLabel('regen', status.regen) + '</span>');
+      if (status.thorns > 0) pills.push('<span class="status-pill">' + statusLabel('thorns', status.thorns) + '</span>');
+      if (status.mirror > 0) pills.push('<span class="status-pill mirror">' + statusLabel('mirror', status.mirror) + '</span>');
+      if (status.amplify > 0) pills.push('<span class="status-pill">' + statusLabel('amplify') + '</span>');
+      if (status.echo > 0) pills.push('<span class="status-pill">' + statusLabel('echo') + '</span>');
       return pills.join('');
     }
 
@@ -1396,7 +1462,7 @@
         flashFighter(false);
         if (actual >= 12 || crit) shakeArena(actual >= 16);
         else if (actual >= 6) shakeArena(false);
-        logMsg((crit ? '暴擊 ' : '') + '造成 ' + actual + ' 傷害');
+        logMsg(crit ? __fmt('logCritDeal', '暴擊 造成 ' + actual + ' 傷害', { n: actual }) : __fmt('logDeal', '造成 ' + actual + ' 傷害', { n: actual }));
         checkBossEnrage();
       }
       updateHud();
@@ -1420,7 +1486,7 @@
           const reflect = Math.min(player.status.mirror, actual);
           player.status.mirror -= reflect;
           enemyHpDmg(reflect, true);
-          logMsg('鏡盾反彈 ' + reflect);
+          logMsg(__fmt('logMirror', '鏡盾反彈 ' + reflect, { n: reflect }));
           spawnFxBurst(fighterCenter(true).x, fighterCenter(true).y, '#c4b5fd', 12);
         }
         player.hp = Math.max(0, player.hp - actual);
@@ -1429,10 +1495,10 @@
         flashFighter(true);
         spawnSlashFx(false);
         if (actual >= 10) shakeArena(false);
-        logMsg('受到 ' + actual + ' 傷害');
+        logMsg(__fmt('logTaken', '受到 ' + actual + ' 傷害', { n: actual }));
         if (player.status.thorns > 0) {
           enemyHpDmg(player.status.thorns);
-          logMsg('荊棘反彈 ' + player.status.thorns);
+          logMsg(__fmt('logThorns', '荊棘反彈 ' + player.status.thorns, { n: player.status.thorns }));
         }
       }
       updateHud();
@@ -1447,7 +1513,7 @@
         $('enemyFighter').classList.add('enraged');
         spawnFxBurst(fighterCenter(false).x, fighterCenter(false).y, '#ef4444', 24);
         shakeArena(true);
-        logMsg('首領狂暴！攻擊 +2');
+        logMsg(__demoT('logBossEnrage', '首領狂暴！攻擊 +2'));
         renderFighters();
       }
     }
@@ -1459,7 +1525,7 @@
       if (healed > 0) {
         const c = fighterCenter(true);
         popupDmg(c.x, c.y, '+' + healed, 'heal');
-        logMsg('回復 ' + healed + ' HP');
+        logMsg(__fmt('logHeal', '回復 ' + healed + ' HP', { n: healed }));
       }
       updateHud();
     }
@@ -1468,7 +1534,7 @@
       player.block += amt;
       const c = fighterCenter(true);
       popupDmg(c.x, c.y - 15, '+' + amt, 'block');
-      logMsg('獲得 ' + amt + ' 護盾');
+      logMsg(__fmt('logBlock', '獲得 ' + amt + ' 護盾', { n: amt }));
       updateHud();
     }
 
@@ -1497,13 +1563,13 @@
     }
 
     function cardTypeLabel(type) {
-      return { attack: '攻擊', skill: '技能', power: '能力' }[type] || '';
+      return { attack: __demoT('typeAttack', '攻擊'), skill: __demoT('typeSkill', '技能'), power: __demoT('typePower', '能力') }[type] || '';
     }
 
     function cardHtml(def) {
       const typeLabel = cardTypeLabel(def.type);
-      const rarityMark = def.rarity === 'rare' ? '<span class="card-rarity">★ 傳說</span>' :
-        def.rarity === 'uncommon' ? '<span class="card-rarity">◆ 稀有</span>' : '';
+      const rarityMark = def.rarity === 'rare' ? '<span class="card-rarity">' + __demoT('rarityMarkRare', '★ 傳說') + '</span>' :
+        def.rarity === 'uncommon' ? '<span class="card-rarity">' + __demoT('rarityMarkUncommon', '◆ 稀有') + '</span>' : '';
       return '<div class="card-header">' +
         '<span class="card-type-badge ' + def.type + '">' + typeLabel + '</span>' +
         '<span class="card-cost">' + def.cost + '</span></div>' +
@@ -1572,7 +1638,7 @@
       updateHud();
       renderFighters();
       renderHand();
-      logMsg('— 你的回合 —');
+      logMsg(__demoT('logYourTurn', '— 你的回合 —'));
     }
 
     function endPlayerTurn() {
@@ -1611,7 +1677,7 @@
         if (it.suicide) { enemy.hp = 0; onEnemyDefeated(); return; }
         if (it.heal) {
           enemy.hp = Math.min(enemy.maxHp, enemy.hp + it.heal);
-          logMsg('敵人回復 ' + it.heal);
+          logMsg(__fmt('logEnemyHeal', '敵人回復 ' + it.heal, { n: it.heal }));
         }
         enemy.block = 0;
         if (player.status.regen) { /* already ticked */ }
@@ -1641,19 +1707,19 @@
       }
       if (it.type === 'defend') {
         enemy.block += it.block;
-        logMsg('敵人防禦 +' + it.block);
+        logMsg(__fmt('logEnemyDefend', '敵人防禦 +' + it.block, { n: it.block }));
         finish();
         return;
       }
       if (it.type === 'buff') {
         if (it.effect === 'strength') enemy.strength += it.val;
-        logMsg('敵人強化 +' + it.val);
+        logMsg(__fmt('logEnemyBuff', '敵人強化 +' + it.val, { n: it.val }));
         finish();
         return;
       }
       if (it.type === 'debuff') {
         applyStatus(player, it.effect, it.val);
-        logMsg('敵人施加 ' + it.effect);
+        logMsg(__fmt('logEnemyDebuff', '敵人施加 ' + it.effect, { effect: statusLabel(it.effect) }));
         finish();
         return;
       }
@@ -1666,12 +1732,12 @@
       $('enemyHpFill').style.width = (enemy.hp / enemy.maxHp * 100) + '%';
       $('enemyHpText').textContent = enemy.hp + ' / ' + enemy.maxHp;
       $('playerStatus').innerHTML = statusHtml(player.status) +
-        (player.block > 0 ? '<span class="status-pill block">護盾 ' + player.block + '</span>' : '');
+        (player.block > 0 ? '<span class="status-pill block">' + __demoT('statusBlock', '護盾') + ' ' + player.block + '</span>' : '');
       $('enemyStatus').innerHTML = statusHtml(enemy.status) +
-        (enemy.block > 0 ? '<span class="status-pill block">護盾 ' + enemy.block + '</span>' : '') +
-        (enemy.strength > 0 ? '<span class="status-pill">力量 ' + enemy.strength + '</span>' : '') +
-        (enemy.enraged ? '<span class="status-pill weak">狂暴</span>' : '') +
-        (enemy.elite ? '<span class="status-pill vuln">精英</span>' : '');
+        (enemy.block > 0 ? '<span class="status-pill block">' + __demoT('statusBlock', '護盾') + ' ' + enemy.block + '</span>' : '') +
+        (enemy.strength > 0 ? '<span class="status-pill">' + __demoT('statusStrength', '力量') + ' ' + enemy.strength + '</span>' : '') +
+        (enemy.enraged ? '<span class="status-pill weak">' + __demoT('statusEnraged', '狂暴') + '</span>' : '') +
+        (enemy.elite ? '<span class="status-pill vuln">' + __demoT('statusElite', '精英') + '</span>' : '');
       const nameEl = $('enemyName');
       nameEl.textContent = enemy.icon + ' ' + enemy.name;
       nameEl.className = 'fighter-name' + (enemy.boss ? ' boss' : '');
@@ -1679,12 +1745,14 @@
       $('enemyStrength').textContent = enemyEnergyDisplay();
       $('enemyBlockStat').textContent = enemy.block || 0;
       $('enemyTrait').textContent = enemy.trait || '—';
-      $('playerStrength').textContent = (turnState.attacksPlayed || 0) + (player.status.amplify > 0 ? ' +增' : '');
+      $('playerStrength').textContent = (turnState.attacksPlayed || 0) + (player.status.amplify > 0 ? __demoT('strengthAmp', ' +增') : '');
       $('playerBlockStat').textContent = player.block || 0;
       $('playerHandStat').textContent = hand.length;
       const tb = $('turnBanner');
       if (tb) {
-        tb.textContent = playerTurn ? '你的回合 · 第 ' + turnCount + ' 回合' : '敵方回合';
+        tb.textContent = playerTurn
+          ? __fmt('turnPlayerN', '你的回合 · 第 ' + turnCount + ' 回合', { n: turnCount })
+          : __demoT('turnEnemy', '敵方回合');
         tb.className = 'turn-banner' + (playerTurn ? '' : ' enemy-turn');
       }
       $('enemyFighter').classList.toggle('enraged', !!enemy.enraged);
@@ -1700,19 +1768,23 @@
       $('hudScore').textContent = runScore;
       $('hudTurn').textContent = turnCount;
       const banner = $('floorBanner');
-      banner.textContent = enemy.boss ? '⚠ BOSS · FLOOR ' + floor : 'FLOOR ' + floor;
+      banner.textContent = enemy.boss
+        ? __fmt('floorBoss', '⚠ BOSS · FLOOR ' + floor, { n: floor })
+        : __fmt('floorBanner', 'FLOOR ' + floor, { n: floor });
       banner.className = 'floor-banner' + (enemy.boss ? ' boss' : '');
     }
 
     function updateDeckInfo() {
-      $('deckInfo').textContent = '牌組 ' + deckSize() + ' · 棄牌 ' + discard.length + ' · 手牌 ' + hand.length;
+      $('deckInfo').textContent = __fmt('deckInfo', '牌組 ' + deckSize() + ' · 棄牌 ' + discard.length + ' · 手牌 ' + hand.length, {
+        deck: deckSize(), discard: discard.length, hand: hand.length,
+      });
     }
 
     function onEnemyDefeated() {
       turnState.locked = true;
       const bonus = Math.floor(20 + floor * 8 + (enemy.boss ? 50 : 0));
       runScore += bonus;
-      logMsg('擊敗敵人！+' + bonus + ' 分');
+      logMsg(__fmt('logDefeat', '擊敗敵人！+' + bonus + ' 分', { n: bonus }));
       updateHud();
       if (floor >= MAX_FLOOR) {
         setTimeout(() => endRun(true), 600);
@@ -1733,15 +1805,15 @@
 
     function upgradeRandomCard() {
       const pool = deck.concat(discard).filter(c => c.rarity !== 'rare');
-      if (!pool.length) { logMsg('牌組無可升級卡牌'); return; }
+      if (!pool.length) { logMsg(__demoT('logNoUpgrade', '牌組無可升級卡牌')); return; }
       const pick = pool[Math.floor(Math.random() * pool.length)];
-      const upgraded = { ...pick, desc: pick.desc + '（精煉+2）', _bonus: 2 };
+      const upgraded = { ...pick, desc: pick.desc + __demoT('upgradeSuffix', '（精煉+2）'), _bonus: 2 };
       const replaceIn = (arr) => {
         const i = arr.findIndex(c => c.uid === pick.uid);
         if (i >= 0) arr[i] = upgraded;
       };
       replaceIn(deck); replaceIn(discard); replaceIn(hand);
-      logMsg('精煉卡牌：' + pick.name);
+      logMsg(__fmt('logUpgrade', '精煉卡牌：' + pick.name, { name: pick.name }));
     }
 
     function showDraft() {
@@ -1749,7 +1821,7 @@
       const container = $('draftCards');
       container.innerHTML = '';
       options.forEach((id, idx) => {
-        const def = CARD_POOL[id];
+        const def = localizeCardDef(CARD_POOL[id]);
         const el = document.createElement('div');
         el.className = 'battle-card ' + def.type;
         el.innerHTML = cardHtml(def);
@@ -1844,12 +1916,12 @@
       playerTurn = false;
       const grade = calcGrade(win);
       const lbScore = calcLeaderboardScore(win);
-      $('resultTitle').textContent = win ? '🏆 深淵征服！' : '💀 深淵吞噬了你';
+      $('resultTitle').textContent = win ? __demoT('resultWin', '🏆 深淵征服！') : __demoT('resultLose', '💀 深淵吞噬了你');
       $('resultGrade').textContent = grade;
       $('resultGrade').style.color = win ? '' : '#888';
       $('resultMsg').textContent = win
-        ? '你抵達第 ' + MAX_FLOOR + ' 層並擊敗最終首領！虛空為你讓路。'
-        : '在第 ' + floor + ' 層倒下。深淵記住了你的名字。';
+        ? __fmt('resultMsgWin', '你抵達第 ' + MAX_FLOOR + ' 層並擊敗最終首領！虛空為你讓路。', { n: MAX_FLOOR })
+        : __fmt('resultMsgLose', '在第 ' + floor + ' 層倒下。深淵記住了你的名字。', { n: floor });
       $('resFloor').textContent = win ? MAX_FLOOR : floor;
       $('resScore').textContent = lbScore.toLocaleString();
       $('resDeck').textContent = deckSize();
@@ -1909,13 +1981,13 @@
       onPause: function (v) {
         if (!gameActive) return;
         paused = v;
-        $('btnPause').textContent = paused ? '▶ 繼續' : '⏸ 暫停';
+        $('btnPause').textContent = paused ? __demoT('resume', '▶ 繼續') : __demoT('pause', '⏸ 暫停');
         renderHand();
       },
       onResume: function () {
         if (gameActive && paused && $('gameScreen').classList.contains('active')) {
           paused = false;
-          $('btnPause').textContent = '⏸ 暫停';
+          $('btnPause').textContent = __demoT('pause', '⏸ 暫停');
           renderHand();
         }
       },
@@ -1933,7 +2005,7 @@
       if (helpFromGame && gameActive) {
         helpFromGame = false;
         paused = false;
-        $('btnPause').textContent = '⏸ 暫停';
+        $('btnPause').textContent = __demoT('pause', '⏸ 暫停');
         showScreen('game');
         return;
       }
@@ -1957,7 +2029,7 @@
     $('restMaxHp').onclick = () => {
       player.maxHp += 8;
       player.hp += 8;
-      logMsg('最大 HP +8');
+      logMsg(__demoT('logMaxHp', '最大 HP +8'));
       updateHud();
       renderFighters();
       finishRest();
@@ -1967,18 +2039,18 @@
     $('btnPause').onclick = () => {
       if (!gameActive) return;
       paused = !paused;
-      $('btnPause').textContent = paused ? '▶ 繼續' : '⏸ 暫停';
+      $('btnPause').textContent = paused ? __demoT('resume', '▶ 繼續') : __demoT('pause', '⏸ 暫停');
       renderHand();
     };
     $('btnGameHelp').onclick = () => {
       helpFromGame = true;
       paused = true;
-      $('btnPause').textContent = '▶ 繼續';
+      $('btnPause').textContent = __demoT('resume', '▶ 繼續');
       showScreen('help');
     };
     $('btnQuit').onclick = () => {
       if (!gameActive) return;
-      PlatformBridge.confirmLeave('確定放棄本局？進度可能尚未保存。').then(function (ok) {
+      PlatformBridge.confirmLeave(__demoT('confirmQuit', '確定放棄本局？進度可能尚未保存。')).then(function (ok) {
         if (!ok) return;
         endRun(false);
       });

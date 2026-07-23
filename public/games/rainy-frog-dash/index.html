@@ -1,41 +1,44 @@
-<!DOCTYPE html>
+ï»¿<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Rainy Frog Dash ¡P «B©]­¸¤Ñµì</title>
+  <title>Rainy Frog Dash Â· é›¨å¤œé£›å¤©è›™</title>
+
+  <script src="/sdk/rnf-i18n.js?v=20260723h"></script>
+  <script src="/sdk/rnf-game-packs.js?v=20260723h"></script>
+  <script src="/sdk/rnf-game-sdk.js?v=20260723h"></script>
 </head>
 <body>
-<script src="/sdk/rnf-game-sdk.js?v=20260723c"></script>
 <script>
 RNF.init();
 var shell = RNF.buildShell({
   title: "Rainy Frog Dash",
   creator: "FroggyLab_Games",
-  subtitle: "¤G¬q¸õ ¡P ·Æµ¾ ¡P Å@¬Ş¡ş¤õ½b ¡P «B©]ÀO­i¤Ñ»Ú ¡P ¤â¾÷Ä²±±´Nºü",
+  subtitle: "äºŒæ®µè·³ Â· æ»‘ç¿” Â· è­·ç›¾ï¼ç«ç®­ Â· é›¨å¤œéœ“è™¹å¤©éš› Â· æ‰‹æ©Ÿè§¸æ§å°±ç·’",
   width: 960,
   height: 520,
   bgmStyle: "ambient",
-  highlights: ["¦h¬q»ÙÃª½s¶¤", "Å@¬Ş¤õ½b¹D¨ã", "Combo ª÷¹ô", "¤Ñ®ğ¬Û¦ì", "¤â¾÷¤TÁä"],
+  highlights: ["å¤šæ®µéšœç¤™ç·¨éšŠ", "è­·ç›¾ç«ç®­é“å…·", "Combo é‡‘å¹£", "å¤©æ°£ç›¸ä½", "æ‰‹æ©Ÿä¸‰éµ"],
   help: {
-    about: "«B©]ÀO­iÁÉ¹D¶]»Å¡C©T©w¸õÅD°ª«×¡AÃø«×¶V°ª²¾³t»P»ÙÃª±K«×¶V¤j¡C¦¬¶°ª÷¹ôºû«ù Combo¡A¾ßÅ@¬Ş»P¤õ½b½Ä¨ë§ó»·¡C",
+    about: "é›¨å¤œéœ“è™¹è³½é“è·‘é…·ã€‚å›ºå®šè·³èºé«˜åº¦ï¼Œé›£åº¦è¶Šé«˜ç§»é€Ÿèˆ‡éšœç¤™å¯†åº¦è¶Šå¤§ã€‚æ”¶é›†é‡‘å¹£ç¶­æŒ Comboï¼Œæ’¿è­·ç›¾èˆ‡ç«ç®­è¡åˆºæ›´é ã€‚",
     features: [
-      "¹hªù¡B§C¾î¼Ù¡BµL¤H¾÷¡BÄaªÅ¹p®g¡B½s¶¤²Õ¦Xµ¥Â×´I»ÙÃª",
-      "Å@¬Ş¥i¾×¤@¦¸¼²À»¡]Z ©Î¾ß¨ú¡^¡F¤õ½bµu®É¥[³t",
-      "ª÷¹ô Combo ­¿²v¡F¶ZÂ÷¶V»·³õ´º¶V±K",
-      "«B¶Õ¬Û¦ì¡G²Ó«B ¡÷ ¼É«B ¡÷ ÀO­i¨g¼é",
-      "®à­±Áä¹«»P¤â¾÷µêÀÀÁä¡şÂIÀ»¸õÅD¬Ò¥i"
+      "é–˜é–€ã€ä½æ©«æ¨‘ã€ç„¡äººæ©Ÿã€æ‡¸ç©ºé›·å°„ã€ç·¨éšŠçµ„åˆç­‰è±å¯Œéšœç¤™",
+      "è­·ç›¾å¯æ“‹ä¸€æ¬¡æ’æ“Šï¼ˆZ æˆ–æ’¿å–ï¼‰ï¼›ç«ç®­çŸ­æ™‚åŠ é€Ÿ",
+      "é‡‘å¹£ Combo å€ç‡ï¼›è·é›¢è¶Šé å ´æ™¯è¶Šå¯†",
+      "é›¨å‹¢ç›¸ä½ï¼šç´°é›¨ â†’ æš´é›¨ â†’ éœ“è™¹ç‹‚æ½®",
+      "æ¡Œé¢éµé¼ èˆ‡æ‰‹æ©Ÿè™›æ“¬éµï¼é»æ“Šè·³èºçš†å¯"
     ],
     controls: [
-      "ªÅ¥Õ¡şW¡ş¡ô¡şÄ²±±¡u¸õ¡v¡G¸õÅD¡]¥i¤G¬q¸õ¡^",
-      "ªø«ö¸õÅDÁä¡GªÅ¤¤·Æµ¾´î³t¤U¸¨",
-      "Z¡şÄ²±±¡u¬Ş¡v¡G±Ò°ÊÅ@¬Ş¡]§N«o 7 ¬í¡^",
-      "ÂIÀ»µe­±ªÅ¥Õ³B¥ç¥i¸õÅD"
+      "ç©ºç™½ï¼Wï¼â†‘ï¼è§¸æ§ã€Œè·³ã€ï¼šè·³èºï¼ˆå¯äºŒæ®µè·³ï¼‰",
+      "é•·æŒ‰è·³èºéµï¼šç©ºä¸­æ»‘ç¿”æ¸›é€Ÿä¸‹è½",
+      "Zï¼è§¸æ§ã€Œç›¾ã€ï¼šå•Ÿå‹•è­·ç›¾ï¼ˆå†·å» 7 ç§’ï¼‰",
+      "é»æ“Šç•«é¢ç©ºç™½è™•äº¦å¯è·³èº"
     ],
     tips: [
-      "¶}§½¦³¼ö¨­®É¶¡¡A¥ı¼ô±x¸`«µ",
-      "Å@¬Ş³Q¯}«á¦³µu¼ÈµL¼Ä´V",
-      "¤õ½b´Á¶¡¤À¼Æ»P²¾³t´£¤É¡A§â´¤¾ß¨ú®É¾÷"
+      "é–‹å±€æœ‰ç†±èº«æ™‚é–“ï¼Œå…ˆç†Ÿæ‚‰ç¯€å¥",
+      "è­·ç›¾è¢«ç ´å¾Œæœ‰çŸ­æš«ç„¡æ•µå¹€",
+      "ç«ç®­æœŸé–“åˆ†æ•¸èˆ‡ç§»é€Ÿæå‡ï¼ŒæŠŠæ¡æ’¿å–æ™‚æ©Ÿ"
     ]
   },
   onStop: cleanup,
@@ -153,7 +156,7 @@ function initParallax() {
   for (var j = 0; j < (highQ ? 8 : 4); j++) {
     neonSigns.push({
       x: Math.random() * W, y: 60 + Math.random() * 100,
-      text: ["µì", "«B", "GO", "RNF"][j % 4],
+      text: [RNF.t("sign.frog"), RNF.t("sign.rain"), "GO", "RNF"][j % 4],
       color: ["#22d3ee", "#a78bfa", "#f472b6", "#fbbf24"][j % 4],
       phase: Math.random() * 6.28
     });
@@ -334,7 +337,7 @@ function startGame() {
   jumps = 0; shieldHits = 0; shieldCd = 0;
   rocketTimer = 0; scrollX = 0; animT = 0;
   graceTimer = tun.grace; patternIdx = -1; lastSpawnX = 0;
-  invulnTimer = 0; phaseT = 0; phaseLabel = "²Ó«B";
+  invulnTimer = 0; phaseT = 0; phaseLabel = RNF.t("weather.drizzle");
   cityGlow = 0; lightning = { t: 0, flash: 0 };
   initRain();
   initParallax();
@@ -347,9 +350,9 @@ function startGame() {
   shell.attachTouchControls({
     keys: keys,
     buttons: [
-      { code: "Space", label: "¸õ", side: "left", hold: true,
+      { code: "Space", label: RNF.t("touch.jump"), side: "left", hold: true,
         onPress: function () { jumpPressed(); } },
-      { code: "KeyZ", label: "¬Ş", side: "right", hold: false, danger: true,
+      { code: "KeyZ", label: RNF.t("touch.shield"), side: "right", hold: false, danger: true,
         onPress: function () { tryShield(); } }
     ],
     swipe: {
@@ -380,16 +383,16 @@ function updateHud() {
   var diff = shell.getDifficulty();
   var comboHtml = combo > 1 ? '<div><span>Combo</span><b style="color:#fbbf24">x' + combo + "</b></div>" : "";
   var shieldHtml = shieldHits > 0
-    ? '<div><span>Å@¬Ş</span><b style="color:#a78bfa">ON</b></div>'
-    : '<div><span>Å@¬Ş</span><b>' + (shieldCd > 0 ? Math.ceil(shieldCd) + "s" : "´Nºü") + "</b></div>";
-  var status = graceTimer > 0 ? "¼ö¨­" : rocketTimer > 0 ? "¤õ½b" : frog.onGround ? "©b¶]" : "­¸ÅD";
+    ? '<div><span>' + RNF.t("hud.shield") + '</span><b style="color:#a78bfa">ON</b></div>'
+    : '<div><span>' + RNF.t("hud.shield") + '</span><b>' + (shieldCd > 0 ? Math.ceil(shieldCd) + "s" : RNF.t("hud.ready")) + "</b></div>";
+  var status = graceTimer > 0 ? RNF.t("status.warmup") : rocketTimer > 0 ? RNF.t("status.rocket") : frog.onGround ? RNF.t("status.run") : RNF.t("status.fly");
   shell.setHud(
-    '<div><span>¤À¼Æ</span><b>' + score.toLocaleString() + "</b></div>" +
-    '<div><span>¶ZÂ÷</span><b>' + Math.floor(scrollX) + "m</b></div>" +
-    '<div><span>¤Ñ®ğ</span><b style="font-size:.72rem;color:#67e8f9">' + phaseLabel + "</b></div>" +
-    '<div><span>ª¬ºA</span><b>' + status + "</b></div>" +
+    '<div><span>' + RNF.t("hud.score") + '</span><b>' + score.toLocaleString() + "</b></div>" +
+    '<div><span>' + RNF.t("hud.distance") + '</span><b>' + Math.floor(scrollX) + "m</b></div>" +
+    '<div><span>' + RNF.t("hud.weather") + '</span><b style="font-size:.72rem;color:#67e8f9">' + phaseLabel + "</b></div>" +
+    '<div><span>' + RNF.t("hud.status") + '</span><b>' + status + "</b></div>" +
     shieldHtml + comboHtml +
-    (rocketTimer > 0 ? '<div><span>¤õ½b</span><b style="color:#fbbf24">BOOST</b></div>' : "")
+    (rocketTimer > 0 ? '<div><span>' + RNF.t("hud.rocket") + '</span><b style="color:#fbbf24">BOOST</b></div>' : "")
   );
 }
 
@@ -420,9 +423,9 @@ function rectCircle(rx, ry, rw, rh, cx, cy, cr) {
 }
 
 function updatePhase() {
-  if (scrollX < 200) { phaseLabel = "²Ó«B"; phaseT = 0; }
-  else if (scrollX < 550) { phaseLabel = "¼É«B"; phaseT = 1; }
-  else { phaseLabel = "ÀO­i¨g¼é"; phaseT = 2; }
+  if (scrollX < 200) { phaseLabel = RNF.t("weather.drizzle"); phaseT = 0; }
+  else if (scrollX < 550) { phaseLabel = RNF.t("weather.storm"); phaseT = 1; }
+  else { phaseLabel = RNF.t("weather.neon"); phaseT = 2; }
 }
 
 function loop(ts) {
@@ -808,7 +811,7 @@ function draw(rainMult) {
     ctx.fillStyle = "rgba(34,211,238,0.18)";
     ctx.font = "bold 15px 'Microsoft JhengHei',sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("¼ö¨­¤¤¡K", W * 0.5, groundY - 48);
+    ctx.fillText(RNF.t("label.warmupBanner"), W * 0.5, groundY - 48);
   }
 
   obstacles.forEach(function (o) {
@@ -847,7 +850,7 @@ function draw(rainMult) {
       ctx.font = "bold 11px sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText("¬Ş", 0, 1);
+      ctx.fillText(RNF.t("label.shieldShort"), 0, 1);
     } else {
       ctx.strokeStyle = "#22d3ee";
       ctx.lineWidth = 2;

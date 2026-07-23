@@ -1,0 +1,35 @@
+---
+description: 平台虛擬遊戲清單；改多語系／SDK 時不可漏 demos
+alwaysApply: true
+---
+
+# 虛擬遊戲清單（不可漏改）
+
+本平台目錄內虛擬遊戲分為 **街機 10 款** + **demos 預覽／旗艦**。改多語系、SDK、亂碼、嵌入、選單／HUD 時，用下方清單自查。
+
+## A. HTML5 街機（10 款）— `game-platform/public/games/{slug}/index.html`
+
+`neon-snake-extreme`、`cyber-bubble-pop`、`quantum-tic-tac-toe`、`void-brick-breaker`、`rainy-frog-dash`、`neon-tetromino-rush`、`galactic-invader-2026`、`memory-matrix-glitch`、`overdrive-cyber-pong`、`cyber-neon-runner`
+
+多語系：`rnf-i18n.js` + `rnf-game-packs.js`（含 zh-HK／zh-CN／en／es）+ `rnf-game-sdk.js`
+
+## B. Demo 預覽／旗艦 — `game-platform/public/demos/*-preview.html`
+
+| 顯示名稱 | slug | 檔案 |
+|----------|------|------|
+| CoreDefense: Mindustry X | `core-defense` | `core-defense-preview.html` |
+| CyberFortune 012 | `cyber-fortune` | `cyber-fortune-preview.html` |
+| Pulse Protocol: Neon Beat | `pulse-protocol` | `pulse-protocol-preview.html` |
+| Neon Abyss: Void Runner | `neon-abyss-runner` | `neon-abyss-runner-preview.html` |
+| Signal Breach: ICE Protocol | `signal-breach` | `signal-breach-preview.html` |
+| Void Relay: Card Descent | `void-relay` | `void-relay-preview.html` |
+| 軌道回收：環形防線 | `orbital-salvage` | `orbital-salvage-preview.html` |
+| VOID GACHA | `void-gacha` | `void-gacha-preview.html` |
+
+多語系：`rnf-demo-packs.js` + `rnf-demo-i18n.js`（en／es／zh-CN；zh-HK 用 HTML 繁中原文）
+
+## 強制自查
+
+1. 改虛擬遊戲時：**街機 10 + demos 全部**處理，或說明為何某款不適用
+2. 不要只改 `public/games/`——**一定要檢查 demos/**
+3. 文件／腳本勿再寫成「只有 10 款虛擬遊戲」

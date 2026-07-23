@@ -282,6 +282,8 @@
       .wave-banner h2 { font-size: 1.85rem; }
     }
   </style>
+  <script src="/sdk/rnf-demo-packs.js?v=20260723h"></script>
+  <script src="/sdk/rnf-demo-i18n.js?v=20260723f"></script>
   <script src="/demos/platform-bridge.js"></script>
   <script src="/demos/demo-game-enhance.js"></script>
 </head>
@@ -446,6 +448,9 @@
   </div>
 
   <script>
+    var __demoT = (window.RNF_DEMO_I18N && RNF_DEMO_I18N.t("core-defense")) || function (k, fb) { return fb != null ? fb : k; };
+    var __demoPack = window.RNF_DEMO_I18N && RNF_DEMO_I18N.apply("core-defense");
+
     const COLS = 16, ROWS = 12, CELL = 40;
     const CORE = { c: 8, r: 6, hp: 100, maxHp: 100 };
 
@@ -478,15 +483,15 @@
     };
 
     const WAVE_SUBTITLES = {
-      titan: '⚠ 泰坦級單位出現',
-      elite: '⚠ 精英編隊突襲',
-      mixed: '⚠ 混合編隊來襲',
-      default: '敵軍編隊接近中',
+      titan: __demoT("waveSubTitan", "⚠ 泰坦級單位出現"),
+      elite: __demoT("waveSubElite", "⚠ 精英編隊突襲"),
+      mixed: __demoT("waveSubMixed", "⚠ 混合編隊來襲"),
+      default: __demoT("waveSubDefault", "敵軍編隊接近中"),
     };
 
     const ENEMY_NAMES = {
-      scout: '斥候', swarm: '虫群', phantom: '幻影', heavy: '重甲',
-      shield: '護盾', brood: '母巢', elite: '精英', titan: '泰坦',
+      scout: __demoT("enemyScout", "斥候"), swarm: __demoT("enemySwarm", "虫群"), phantom: __demoT("enemyPhantom", "幻影"), heavy: __demoT("enemyHeavy", "重甲"),
+      shield: __demoT("enemyShield", "護盾"), brood: __demoT("enemyBrood", "母巢"), elite: __demoT("enemyElite", "精英"), titan: __demoT("enemyTitan", "泰坦"),
     };
 
     let difficulty = 'easy', config = DIFF.easy;
@@ -605,7 +610,7 @@
       if (helpFromGame) {
         helpFromGame = false;
         paused = false;
-        $('btnPause').textContent = '⏸ 暫停';
+        $('btnPause').textContent = __demoT("pause", "⏸ 暫停");
         showScreen('game');
         return;
       }
@@ -626,7 +631,7 @@
       helpFromGame = true;
       if (!paused) {
         paused = true;
-        $('btnPause').textContent = '▶ 繼續';
+        $('btnPause').textContent = __demoT("resume", "▶ 繼續");
       }
       showScreen('help');
     };
@@ -739,7 +744,7 @@
       skillCd = { fission: 0, overdrive: 0 }; airdropWave = 0; spawnBurst = null;
       $('killFeed').innerHTML = '';
       $('hudMaxWave').textContent = config.waves;
-      $('gameHint').textContent = '① 點選砲塔種類 → ② 點地圖格子建造 → ③ 按「開始」迎敵';
+      $('gameHint').textContent = __demoT("hintTutorial", "① 點選砲塔種類 → ② 點地圖格子建造 → ③ 按「開始」迎敵");
       updateWaveButtons();
       updateHud();
       showScreen('game');
@@ -772,19 +777,19 @@
     function updateWaveButtons() {
       $('btnStartBattle').disabled = false;
       $('btnStartBattle').textContent = gameStarted
-        ? (wave === 0 && !waveActive ? '▶ 開始敵襲' : '✓ 已開始')
-        : '▶ 開始';
+        ? (wave === 0 && !waveActive ? __demoT("startRaid", "▶ 開始敵襲") : __demoT("battleStarted", "✓ 已開始"))
+        : __demoT("startBattle", "▶ 開始");
       $('btnNextWave').disabled = !gameStarted || waveActive || wave >= config.waves;
-      $('btnAutoWave').textContent = autoWave ? '🔄 自動 ON' : '🔄 自動 OFF';
+      $('btnAutoWave').textContent = autoWave ? __demoT("autoOn", "🔄 自動 ON") : __demoT("autoOff", "🔄 自動 OFF");
       $('btnAutoWave').classList.toggle('on', autoWave);
       if (!gameStarted) {
-        updatePhaseBanner('部署砲塔後，點上方「▶ 開始」進入戰鬥', '可先建造防線，再開始敵襲', 'deploy');
+        updatePhaseBanner(__demoT("phaseBanner", "部署砲塔後，點上方「▶ 開始」進入戰鬥"), __demoT("phaseDeploySub", "可先建造防線，再開始敵襲"), 'deploy');
       } else if (wave === 0 && !waveActive) {
-        updatePhaseBanner('準備完成 — 點「▶ 開始敵襲」或「下一波」', autoWave ? '自動下一波已開啟，稍後自動開打' : null, autoWave ? 'auto' : 'ready');
+        updatePhaseBanner(__demoT("phaseReady", "準備完成 — 點「▶ 開始敵襲」或「下一波」"), autoWave ? __demoT("phaseReadyAuto", "自動下一波已開啟，稍後自動開打") : null, autoWave ? 'auto' : 'ready');
       } else if (waveActive) {
-        updatePhaseBanner('第 ' + wave + ' 波激戰中', enemies.length ? '場上敵軍 ' + enemies.length + ' 單位' : '殲滅殘敵中', 'ready');
+        updatePhaseBanner(__demoT("phaseFighting", "第 {n} 波激戰中").replace("{n}", wave), enemies.length ? __demoT("phaseEnemiesOnField", "場上敵軍 {n} 單位").replace("{n}", enemies.length) : __demoT("phaseClearing", "殲滅殘敵中"), 'ready');
       } else if (wave > 0 && wave < config.waves) {
-        updatePhaseBanner('第 ' + wave + ' 波已清空', autoWave ? '自動下一波倒數中…' : '點「下一波」繼續', autoWave ? 'auto' : 'ready');
+        updatePhaseBanner(__demoT("phaseCleared", "第 {n} 波已清空").replace("{n}", wave), autoWave ? __demoT("phaseAutoCountdown", "自動下一波倒數中…") : __demoT("phaseClickNext", "點「下一波」繼續"), autoWave ? 'auto' : 'ready');
       } else {
         updatePhaseBanner(null);
       }
@@ -811,7 +816,7 @@
       enemies.forEach(e => damageEnemy(e, e.maxHp * 0.4, true));
       shake = 22;
       addExplosion(coreX, coreY, '#ff6b2b', 90);
-      pushFeed('☢ 核心裂變脈衝', '#ff8c5a');
+      pushFeed(__demoT("feedFission", "☢ 核心裂變脈衝"), '#ff8c5a');
       floatTexts.push({ x: coreX, y: coreY - 40, text: 'FISSION!', color: '#ffd700', life: 1000 });
       updateHud();
     }
@@ -819,7 +824,7 @@
     function useSkillOverdrive() {
       if (!gameStarted || ore < 150 || skillCd.overdrive > 0 || overdriveTimer > 0) return;
       ore -= 150; skillCd.overdrive = 12000; overdriveTimer = 8000;
-      pushFeed('⚡ 砲塔超載啟動', '#6eb5ff');
+      pushFeed(__demoT("feedOverdrive", "⚡ 砲塔超載啟動"), '#6eb5ff');
       floatTexts.push({ x: canvas.width/2, y: 50, text: 'OVERDRIVE ×2', color: '#fde047', life: 1200 });
       updateHud();
     }
@@ -828,7 +833,7 @@
       if (!gameStarted || wave - airdropWave < 3) return;
       airdropWave = wave;
       ore += 90;
-      pushFeed('📦 空投 +90 礦', '#ffd700');
+      pushFeed(__demoT("feedAirdrop", "📦 空投 +90 礦"), '#ffd700');
       addParticles(CORE.c * CELL + CELL/2, CORE.r * CELL, '#ffd700', 12);
       updateHud();
     }
@@ -850,9 +855,9 @@
       setTimeout(() => { actionBusy = false; }, 350);
       if (!gameStarted) {
         gameStarted = true;
-        pushFeed('⚔ 防線啟動 — 編隊模式', '#86efac');
-        floatTexts.push({ x: canvas.width / 2, y: 48, text: '⚔ 戰鬥開始！', color: '#86efac', life: 1200, size: 16 });
-        $('gameHint').textContent = '擊殺敵人賺礦石 · 可開「自動下一波」連續迎敵';
+        pushFeed(__demoT("feedDefenseStart", "⚔ 防線啟動 — 編隊模式"), '#86efac');
+        floatTexts.push({ x: canvas.width / 2, y: 48, text: __demoT("battleStartFloat", "⚔ 戰鬥開始！"), color: '#86efac', life: 1200, size: 16 });
+        $('gameHint').textContent = __demoT("hintOreFarm", "擊殺敵人賺礦石 · 可開「自動下一波」連續迎敵");
       }
       if (waveActive || wave >= config.waves) {
         updateWaveButtons();
@@ -873,7 +878,7 @@
 
     function togglePause() {
       paused = !paused;
-      $('btnPause').textContent = paused ? '▶ 繼續' : '⏸ 暫停';
+      $('btnPause').textContent = paused ? __demoT("resume", "▶ 繼續") : __demoT("pause", "⏸ 暫停");
     }
 
     function updateHud() {
@@ -890,7 +895,7 @@
       if (!wrap) return;
       const div = document.createElement('div');
       div.className = 'wave-banner';
-      div.innerHTML = '<h2>第 ' + w + ' 波</h2><p>' + (subtitle || WAVE_SUBTITLES.default) + '</p>';
+      div.innerHTML = '<h2>' + __demoT("waveTitle", "第 {n} 波").replace("{n}", w) + '</h2><p>' + (subtitle || WAVE_SUBTITLES.default) + '</p>';
       wrap.appendChild(div);
       setTimeout(() => div.remove(), 2000);
     }
@@ -927,13 +932,13 @@
       if (paused || !hoverCell || actionBusy) return;
       const { c, r } = hoverCell;
       if (isCoreCell(c, r)) {
-        floatTexts.push({ x: c * CELL + CELL/2, y: r * CELL + CELL/2, text: '核心禁建!', color: '#ff6644', life: 700, size: 13 });
+        floatTexts.push({ x: c * CELL + CELL/2, y: r * CELL + CELL/2, text: __demoT("coreBlocked", "核心禁建!"), color: '#ff6644', life: 700, size: 13 });
         return;
       }
       if (getTowerAt(c, r)) return;
       const spec = TOWERS[selectedTower];
       if (ore < spec.cost) {
-        floatTexts.push({ x: c * CELL + CELL/2, y: r * CELL + CELL/2, text: '礦石不足!', color: '#ff4444', life: 800, size: 13 });
+        floatTexts.push({ x: c * CELL + CELL/2, y: r * CELL + CELL/2, text: __demoT("oreInsufficient", "礦石不足!"), color: '#ff4444', life: 800, size: 13 });
         shake = 4;
         return;
       }
@@ -945,8 +950,8 @@
       addParticles(c * CELL + CELL/2, r * CELL + CELL/2, spec.color, 8);
       if (tutorialStep === 0) {
         tutorialStep = 1;
-        $('gameHint').textContent = '防線就緒！按上方「▶ 開始」或「下一波」迎敵';
-        pushFeed('✓ 首座砲塔部署完成', '#86efac');
+        $('gameHint').textContent = __demoT("hintDefenseReady", "防線就緒！按上方「▶ 開始」或「下一波」迎敵");
+        pushFeed(__demoT("feedFirstTower", "✓ 首座砲塔部署完成"), '#86efac');
       }
       updateHud();
     }
@@ -981,7 +986,7 @@
       updateWaveButtons();
       updateThreat();
       updateHud();
-      pushFeed('第 ' + wave + ' 波 — ' + waveSubtitle(wave), '#6eb5ff');
+      pushFeed(__demoT("waveFeed", "第 {n} 波 — {sub}").replace("{n}", wave).replace("{sub}", waveSubtitle(wave)), '#6eb5ff');
     }
 
     function spawnEnemy(offset) {
@@ -1054,7 +1059,7 @@
           floatTexts.push({ x: coreX, y: coreY - 28, text: '-' + (e.coreDmg || 6), color: '#ff6644', life: 900, size: 15 });
           updateHud();
           addExplosion(coreX, coreY, '#ff4444', 30);
-          pushFeed('⚠ ' + (ENEMY_NAMES[e.type] || '敵軍') + ' 撞擊核心', '#ff6644');
+          pushFeed(__demoT("feedCoreHit", "⚠ {name} 撞擊核心").replace("{name}", ENEMY_NAMES[e.type] || __demoT("enemyGeneric", "敵軍")), '#ff6644');
           if (coreHp <= 0) endGame(false);
         }
       });
@@ -1141,7 +1146,7 @@
         waveActive = false;
         const bonus = Math.floor((35 + wave * 12) * (config.waveBonus || 1));
         ore += bonus;
-        floatTexts.push({ x: canvas.width/2, y: canvas.height/2 - 30, text: '+' + bonus + ' 礦石', color: '#ffd700', life: 1200, size: 14 });
+        floatTexts.push({ x: canvas.width/2, y: canvas.height/2 - 30, text: __demoT("oreBonusFloat", "+{n} 礦石").replace("{n}", bonus), color: '#ffd700', life: 1200, size: 14 });
         updateHud();
         updateWaveButtons();
         if (wave >= config.waves) {
@@ -1206,16 +1211,16 @@
           const prevMulti = multi;
           if (killStreak >= 5) multi = Math.min(2.8, 1 + killStreak * 0.055);
           if (multi > prevMulti && Math.floor(multi * 10) > Math.floor(prevMulti * 10)) {
-            showStreakPopup('×' + multi.toFixed(1) + ' 倍率', '連續擊殺 ' + killStreak);
-            pushFeed('🔥 礦石倍率 ×' + multi.toFixed(1), '#fde047');
+            showStreakPopup(__demoT("streakMult", "×{n} 倍率").replace("{n}", multi.toFixed(1)), __demoT("streakKills", "連續擊殺 {n}").replace("{n}", killStreak));
+            pushFeed(__demoT("feedOreMult", "🔥 礦石倍率 ×{n}").replace("{n}", multi.toFixed(1)), '#fde047');
           } else if (killStreak === 5 || killStreak === 10 || killStreak === 20) {
-            showStreakPopup(killStreak + ' 連殺', '礦石獎勵提升中');
+            showStreakPopup(__demoT("streakPopup", "{n} 連殺").replace("{n}", killStreak), __demoT("streakOreRising", "礦石獎勵提升中"));
           }
           const reward = Math.floor(e.reward * multi);
           ore += reward;
           orePopups.push({ x: e.x, y: e.y, text: '+' + reward, life: 700 });
           if (e.type === 'titan' || e.type === 'elite') {
-            pushFeed('💥 擊毀 ' + (ENEMY_NAMES[e.type] || e.type), e.color);
+            pushFeed(__demoT("feedDestroy", "💥 擊毀 {name}").replace("{name}", ENEMY_NAMES[e.type] || e.type), e.color);
           }
         }
         addExplosion(e.x, e.y, e.color, e.radius * 2);
@@ -1248,15 +1253,15 @@
     function endGame(win) {
       paused = true;
       const grade = getGrade(win);
-      $('overlayTitle').textContent = win ? '🏆 防線堅守成功' : '💥 核心裂變失控';
+      $('overlayTitle').textContent = win ? __demoT("victory", "🏆 防線堅守成功") : __demoT("defeat", "💥 核心裂變失控");
       $('overlayGrade').textContent = grade;
       $('overlayGrade').style.color = win ? '#ffd700' : '#888';
       $('ovWave').textContent = wave;
       $('ovKills').textContent = kills;
       $('ovHp').textContent = Math.ceil(coreHp);
       $('overlayMsg').textContent = win
-        ? `成功抵禦 ${config.waves} 波攻勢！最高 MULTI ×${multi.toFixed(1)}`
-        : `核心被摧毀。堅守 ${wave} 波，擊殺 ${kills} 個敵人。`;
+        ? __demoT("winMsg", "成功抵禦 {n} 波攻勢！最高 MULTI ×{m}").replace("{n}", config.waves).replace("{m}", multi.toFixed(1))
+        : __demoT("loseMsg", "核心被摧毀。堅守 {w} 波，擊殺 {k} 個敵人。").replace("{w}", wave).replace("{k}", kills);
       refreshMenuStats();
       $('overlay').classList.add('show');
       persistRunResult(win, grade, calcLeaderboardScore(win));
@@ -1539,10 +1544,10 @@
         ctx.fillStyle = '#fff';
         ctx.font = 'bold 22px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('⏸ 已暫停', canvas.width/2, canvas.height * 0.22);
+        ctx.fillText(__demoT("pausedCanvas", "⏸ 已暫停"), canvas.width/2, canvas.height * 0.22);
         ctx.font = '12px sans-serif';
         ctx.fillStyle = 'rgba(255,255,255,0.65)';
-        ctx.fillText('點上方「繼續」恢復戰鬥', canvas.width/2, canvas.height * 0.22 + 24);
+        ctx.fillText(__demoT("pausedHint", "點上方「繼續」恢復戰鬥"), canvas.width/2, canvas.height * 0.22 + 24);
       }
 
       ctx.restore();

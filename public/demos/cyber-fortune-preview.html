@@ -503,6 +503,8 @@
       box-shadow: 0 0 12px rgba(0,255,200,0.25)!important;
     }
   </style>
+  <script src="/sdk/rnf-demo-packs.js?v=20260723h"></script>
+  <script src="/sdk/rnf-demo-i18n.js?v=20260723h"></script>
   <script src="/demos/platform-bridge.js"></script>
   <script src="/demos/demo-game-enhance.js"></script>
 </head>
@@ -692,13 +694,21 @@
   </div>
 
   <script>
+    var __demoT = (window.RNF_DEMO_I18N && RNF_DEMO_I18N.t("cyber-fortune")) || function (k, fb) { return fb != null ? fb : k; };
+    var __demoPack = window.RNF_DEMO_I18N && RNF_DEMO_I18N.apply("cyber-fortune");
+    function demoFmt(key, fb, vars) {
+      var s = __demoT(key, fb);
+      if (vars) Object.keys(vars).forEach(function (k) { s = s.split("{" + k + "}").join(String(vars[k])); });
+      return s;
+    }
+
     const DIFF = {
       easy:    { rounds: 6,  deployTime: 28, aiSkill: 0.32, maxHp: 100, aiDmg: 0.82, tierBoost: 0 },
       normal:  { rounds: 8,  deployTime: 20, aiSkill: 0.58, maxHp: 115, aiDmg: 1.0,  tierBoost: 0.05 },
       hard:    { rounds: 10, deployTime: 15, aiSkill: 0.78, maxHp: 130, aiDmg: 1.18, tierBoost: 0.12 },
       extreme: { rounds: 12, deployTime: 12, aiSkill: 0.9,  maxHp: 145, aiDmg: 1.35, tierBoost: 0.18 },
     };
-    const ROUND_TAGS = ['佈陣階段', '矩陣交鋒', '全餐對決', '神經戰', '量子風暴'];
+    const ROUND_TAGS = __demoPack && __demoPack.roundTags ? __demoPack.roundTags.slice() : ['佈陣階段', '矩陣交鋒', '全餐對決', '神經戰', '量子風暴'];
     const SUITS = ['♠', '♥', '♦', '♣'];
     const TIER_SPEC = {
       S: { power: [28, 36], color: '#ffd700' },
@@ -794,8 +804,11 @@
     function showCombo(n) {
       if (n < 2) return;
       const el = $('comboPopup');
-      const labels = { 2: '雙線制霸', 3: '三線連勝', 4: '矩陣暴走', 5: '傳說連擊' };
-      el.textContent = (labels[n] || n + ' 連擊') + '!';
+      const labels = (__demoPack && __demoPack.comboLabels) || {
+        "2": "雙線制霸", "3": "三線連勝", "4": "矩陣暴走", "5": "傳說連擊"
+      };
+      const label = labels[String(n)] || demoFmt("comboGeneric", "{n} 連擊", { n: n });
+      el.textContent = label + '!';
       el.classList.remove('show');
       void el.offsetWidth;
       el.classList.add('show');
@@ -865,7 +878,7 @@
         el.innerHTML =
           '<span class="card-tier">' + card.tier + '</span>' +
           '<div class="card-val">' + card.value + card.suit + '</div>' +
-          '<div class="card-pwr">PWR ' + card.power + '</div>';
+          '<div class="card-pwr">' + __demoT("powerLabel", "PWR") + ' ' + card.power + '</div>';
       }
       return el;
     }
@@ -894,7 +907,7 @@
     function placeCardOnLane(lane, cardId) {
       const idx = hand.findIndex((c) => c.id === cardId);
       if (idx === -1) {
-        setDeployHint('這張牌已在戰線上，請點選其他手牌', true);
+        setDeployHint(__demoT("hintCardOnLane", "這張牌已在戰線上，請點選其他手牌"), true);
         return;
       }
       if (deployment[lane]) hand.push(deployment[lane]);
@@ -902,8 +915,8 @@
       selectedCardId = null;
       selectedLane = null;
       const pwr = effectivePower(deployment[lane], lane);
-      const bonus = deployment[lane].value === lane ? '（線路共鳴 +45%）' : '';
-      setDeployHint('已部署至 LINE ' + lane + '，戰力 ' + pwr + bonus + ' — 可繼續或點「確認佈陣」');
+      const bonus = deployment[lane].value === lane ? __demoT("laneResonance", "（線路共鳴 +45%）") : '';
+      setDeployHint(demoFmt("hintDeployed", "已部署至 LINE {lane}，戰力 {pwr}{bonus} — 可繼續或點「確認佈陣」", { lane: lane, pwr: pwr, bonus: bonus }));
       renderHand();
     }
 
@@ -918,8 +931,8 @@
           '<div class="lane-label">LINE ' + lane + '</div>' +
           '<div class="lane-slot opp-slot" id="oppLane' + lane + '"><div class="battle-card hidden-card"><div class="card-val">?</div></div></div>' +
           '<div class="lane-vs">VS</div>' +
-          '<div class="lane-slot player-slot" id="playerLane' + lane + '" data-lane="' + lane + '"><span class="deploy-label">點此部署</span></div>' +
-          '<div class="lane-power" id="lanePow' + lane + '">戰力 <b>—</b></div>';
+          '<div class="lane-slot player-slot" id="playerLane' + lane + '" data-lane="' + lane + '"><span class="deploy-label">' + __demoT("deployHere", "點此部署") + '</span></div>' +
+          '<div class="lane-power" id="lanePow' + lane + '">' + __demoT("powerDash", "戰力 <b>—</b>") + '</div>';
         const slot = col.querySelector('.player-slot');
         slot.addEventListener('click', (e) => {
           e.stopPropagation();
@@ -933,13 +946,13 @@
       const row = $('handRow');
       row.innerHTML = '';
       if (!hand.length) {
-        row.innerHTML = '<span style="font-size:0.75rem;color:#6a6458;">手牌已全數部署</span>';
+        row.innerHTML = '<span style="font-size:0.75rem;color:#6a6458;">' + __demoT("handFull", "手牌已全數部署") + '</span>';
       }
       hand.forEach((card) => {
         const wrap = document.createElement('button');
         wrap.type = 'button';
         wrap.className = 'hand-wrap' + (selectedCardId === card.id ? ' selected' : '');
-        wrap.setAttribute('aria-label', '卡牌 ' + card.value + ' 戰力' + card.power);
+        wrap.setAttribute('aria-label', demoFmt("cardAriaLabel", "卡牌 {card} 戰力{power}", { card: card.value + card.suit, power: card.power }));
         const el = renderCardEl(card, false);
         wrap.appendChild(el);
         wrap.addEventListener('click', (e) => {
@@ -959,7 +972,7 @@
       if (locked || paused) return;
       if (selectedCardId === id) {
         selectedCardId = null;
-        setDeployHint('已取消選牌 — 請點選手牌或先點戰線');
+        setDeployHint(__demoT("hintCancelPick", "已取消選牌 — 請點選手牌或先點戰線"));
         renderHand();
         return;
       }
@@ -969,7 +982,7 @@
         placeCardOnLane(selectedLane, id);
         return;
       }
-      setDeployHint('已選「' + card.value + card.suit + '」PWR ' + card.power + ' — 請點 LINE 0／1／2 部署');
+      setDeployHint(demoFmt("hintCardSelected", "已選「{card}」PWR {pwr} — 請點 LINE 0／1／2 部署", { card: card.value + card.suit, pwr: card.power }));
       renderHand();
     }
 
@@ -980,7 +993,7 @@
         deployment[lane] = null;
         selectedCardId = null;
         selectedLane = null;
-        setDeployHint('已收回 LINE ' + lane + ' 的卡牌');
+        setDeployHint(demoFmt("hintRecalled", "已收回 LINE {lane} 的卡牌", { lane: lane }));
         renderHand();
         return;
       }
@@ -989,7 +1002,7 @@
         return;
       }
       selectedLane = lane;
-      setDeployHint('已選 LINE ' + lane + ' — 請點下方手牌部署', true);
+      setDeployHint(demoFmt("hintLaneSelected", "已選 LINE {lane} — 請點下方手牌部署", { lane: lane }), true);
       renderHand();
     }
 
@@ -1002,10 +1015,10 @@
         slot.classList.toggle('has-card', !!card);
         if (card) {
           slot.appendChild(renderCardEl(card, false));
-          $('lanePow' + lane).innerHTML = '戰力 <b>' + effectivePower(card, lane) + '</b>';
+          $('lanePow' + lane).innerHTML = demoFmt("powerVal", "戰力 <b>{val}</b>", { val: effectivePower(card, lane) });
         } else {
-          slot.innerHTML = '<span class="deploy-label">點此部署</span>';
-          $('lanePow' + lane).innerHTML = '戰力 <b>—</b>';
+          slot.innerHTML = '<span class="deploy-label">' + __demoT("deployHere", "點此部署") + '</span>';
+          $('lanePow' + lane).innerHTML = __demoT("powerDash", "戰力 <b>—</b>");
         }
       });
     }
@@ -1031,7 +1044,7 @@
       });
       selectedCardId = null;
       selectedLane = null;
-      setDeployHint('已清空佈陣 — 請重新部署');
+      setDeployHint(__demoT("hintCleared", "已清空佈陣 — 請重新部署"));
       renderHand();
     }
 
@@ -1055,7 +1068,7 @@
       selectedCardId = null;
       selectedCardId = null;
       renderHand();
-      setDeployHint('🍱 全餐開陣完成 — 三線已佈局，點「確認佈陣」開戰');
+      setDeployHint(__demoT("hintFullMealDone", "🍱 全餐開陣完成 — 三線已佈局，點「確認佈陣」開戰"));
     }
 
     function aiDeployCards() {
@@ -1117,7 +1130,7 @@
         const slot = $('oppLane' + r.lane);
         slot.innerHTML = '';
         if (r.o) slot.appendChild(renderCardEl(r.o, false));
-        else slot.innerHTML = '<span style="font-size:0.6rem;color:#5a5448;">空線</span>';
+        else slot.innerHTML = '<span style="font-size:0.6rem;color:#5a5448;">' + __demoT("emptyLane", "空線") + '</span>';
 
         if (r.winner === 'player') {
           wins++;
@@ -1149,9 +1162,9 @@
       const elapsed = totalTime - timeLeft;
       const fastS = Math.max(5, Math.floor(totalTime * 0.2));
       const fastA = Math.max(9, Math.floor(totalTime * 0.38));
-      let rank = 'B', rankMult = 1, rankLabel = '戰線推進';
-      if (elapsed <= fastS) { rank = 'S'; rankMult = 1.5; rankLabel = '⚡ S 級閃電佈陣'; }
-      else if (elapsed <= fastA) { rank = 'A'; rankMult = 1.25; rankLabel = '🔥 A 級戰術佈陣'; }
+      let rank = 'B', rankMult = 1, rankLabel = __demoT("rankAdvance", "戰線推進");
+      if (elapsed <= fastS) { rank = 'S'; rankMult = 1.5; rankLabel = __demoT("rankS", "⚡ S 級閃電佈陣"); }
+      else if (elapsed <= fastA) { rank = 'A'; rankMult = 1.25; rankLabel = __demoT("rankAS", "🔥 A 級戰術佈陣"); }
 
       const roundScore = Math.floor((wins * 120 + oppDmg * 2 + (playerMeal ? 80 : 0) + combo * 15) * rankMult);
       score += roundScore;
@@ -1159,8 +1172,8 @@
 
       const fb = $('feedback');
       fb.className = 'feedback' + (rank === 'S' ? ' rank-s' : '');
-      fb.textContent = rankLabel + ' · 本回合 +' + roundScore + '（贏 ' + wins + ' 線 / 造成 ' + oppDmg + ' 傷）';
-      if (playerMeal) fb.textContent += ' · 全餐 ×1.8';
+      fb.textContent = demoFmt("roundFeedback", "{rank} · 本回合 +{score}（贏 {wins} 線 / 造成 {dmg} 傷）", { rank: rankLabel, score: roundScore, wins: wins, dmg: oppDmg });
+      if (playerMeal) fb.textContent += __demoT("fullMealMult", " · 全餐 ×1.8");
       if (oppDmg > 0) flash('green');
       if (playerDmg > 0) flash('red');
       burst(innerWidth / 2, innerHeight * 0.45, rank === 'S' ? '#ffd700' : '#00ffc8', 25);
@@ -1183,7 +1196,7 @@
         showScreen('game');
         paused = false;
         $('pauseOverlay').classList.remove('show');
-        $('btnPause').textContent = '⏸ 暫停';
+        $('btnPause').textContent = __demoT("pause", "⏸ 暫停");
         if (!locked) resumeTimer();
         return;
       }
@@ -1208,7 +1221,7 @@
       helpFromGame = true;
       if (!paused) { paused = true; stopTimer(); }
       $('pauseOverlay').classList.remove('show');
-      $('btnPause').textContent = '▶ 繼續';
+      $('btnPause').textContent = __demoT("resume", "▶ 繼續");
       showScreen('help');
     };
     $('btnQuitGame').onclick = () => quitToMenu(false);
@@ -1230,7 +1243,7 @@
         if (!paused) return;
         paused = false;
         $('pauseOverlay').classList.remove('show');
-        $('btnPause').textContent = '⏸ 暫停';
+        $('btnPause').textContent = __demoT("pause", "⏸ 暫停");
         if (timeLeft > 0 && !locked) resumeTimer();
         return;
       }
@@ -1238,7 +1251,7 @@
       paused = true;
       stopTimer();
       $('pauseOverlay').classList.add('show');
-      $('btnPause').textContent = '▶ 繼續';
+      $('btnPause').textContent = __demoT("resume", "▶ 繼續");
     }
 
     function resumeTimer() {
@@ -1263,14 +1276,14 @@
       PlatformBridge.setGameSessionActive(false);
       locked = true;
       $('pauseOverlay').classList.remove('show');
-      $('btnPause').textContent = '⏸ 暫停';
+      $('btnPause').textContent = __demoT("pause", "⏸ 暫停");
       $('countdown').classList.remove('show');
     }
 
     function quitToMenu(confirmFirst) {
       if (!gameActive) { showScreen('menu'); return; }
       if (confirmFirst) {
-        PlatformBridge.confirmLeave('確定要返回主選單？目前進度可能尚未保存。').then(function (ok) {
+        PlatformBridge.confirmLeave(__demoT("leaveConfirmGame", "確定要返回主選單？目前進度可能尚未保存。")).then(function (ok) {
           if (!ok) return;
           resetSession();
           showScreen('menu');
@@ -1407,7 +1420,10 @@
       $('feedback').className = 'feedback';
       const tag = ROUND_TAGS[round % ROUND_TAGS.length];
       $('roundTag').textContent = tag;
-      showRoundBanner('第 ' + (round + 1) + ' 回合', tag + ' · 限時 ' + config.deployTime + ' 秒');
+      showRoundBanner(
+        demoFmt("roundBanner", "第 {n} 回合", { n: round + 1 }),
+        demoFmt("roundBannerSub", "{tag} · 限時 {sec} 秒", { tag: tag, sec: config.deployTime })
+      );
       document.querySelectorAll('.lane-col').forEach((c) => c.classList.remove('win-flash'));
       [0, 1, 2].forEach((lane) => {
         $('oppLane' + lane).innerHTML = '<div class="battle-card hidden-card"><div class="card-val">?</div></div>';
@@ -1416,7 +1432,7 @@
       $('btnFullMeal').disabled = false;
       selectedCardId = null;
       selectedLane = null;
-      setDeployHint('① 點選手牌 → ② 點戰線部署 → ③ 確認佈陣');
+      setDeployHint(__demoT("deployHint", "① 點選手牌 → ② 點戰線部署 → ③ 確認佈陣"));
       renderHand();
       updateHud();
       startTimer();
@@ -1446,12 +1462,12 @@
       const deployed = [0, 1, 2].filter((l) => deployment[l]).length;
       if (!deployed && hand.length) {
         deployment[0] = hand.shift();
-        setDeployHint(auto ? '時間到 — 已自動部署首牌' : '未佈陣 — 已自動部署首牌至 LINE 0', true);
+        setDeployHint(auto ? __demoT("hintTimeoutAuto", "時間到 — 已自動部署首牌") : __demoT("hintNoDeployAuto", "未佈陣 — 已自動部署首牌至 LINE 0"), true);
       } else if (deployed === 1) {
-        setDeployHint('僅一線有牌 — 確認後開戰', true);
+        setDeployHint(__demoT("hintOneLane", "僅一線有牌 — 確認後開戰"), true);
       }
       aiDeployCards();
-      $('roundTag').textContent = '矩陣交鋒';
+      $('roundTag').textContent = __demoT("hintRoundTagClash", "矩陣交鋒");
       setTimeout(() => {
         resolveRound();
         setTimeout(() => {
@@ -1470,7 +1486,7 @@
       $('pauseOverlay').classList.remove('show');
       const win = oppHp <= 0 || (round >= config.rounds && playerHp > oppHp);
       const grade = getGrade(win);
-      $('resultTitle').textContent = win ? '🎉 矩陣對戰勝利' : '💀 協議強制中斷';
+      $('resultTitle').textContent = win ? __demoT("resultWin", "🎉 矩陣對戰勝利") : __demoT("resultLose", "💀 協議強制中斷");
       $('resultGrade').textContent = grade;
       $('resultGrade').style.background = win
         ? 'linear-gradient(180deg, #fff, #d4af37)' : 'linear-gradient(180deg, #888, #444)';
@@ -1480,8 +1496,8 @@
       $('resCombo').textContent = maxCombo;
       $('resAcc').textContent = Math.round((playerHp / maxHp) * 100) + '% HP';
       $('resultMsg').textContent = win
-        ? '擊敗 AI 對手！剩餘 HP ' + playerHp + '，最高連擊 ×' + maxCombo
-        : '對戰落敗。造成 ' + (maxHp - oppHp) + ' 點傷害，最高連擊 ×' + maxCombo;
+        ? demoFmt("resultWinMsg", "擊敗 AI 對手！剩餘 HP {hp}，最高連擊 ×{combo}", { hp: playerHp, combo: maxCombo })
+        : demoFmt("resultLoseMsg", "對戰落敗。造成 {dmg} 點傷害，最高連擊 ×{combo}", { dmg: maxHp - oppHp, combo: maxCombo });
       if (win) burst(innerWidth / 2, innerHeight / 2, '#d4af37', 50);
       showScreen('result');
       persistRunResult(win, grade);

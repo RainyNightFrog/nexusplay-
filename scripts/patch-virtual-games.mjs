@@ -2,8 +2,13 @@ import fs from "node:fs";
 import path from "node:path";
 
 const ROOT = path.resolve("public/games");
-const SDK = "/sdk/rnf-game-sdk.js?v=20260723c";
-const SDK_SRC_RE = /\/sdk\/rnf-game-sdk\.js(\?v=[A-Za-z0-9]+)?/g;
+const SDK_VERSION = "20260723e";
+const SDK_TAGS = [
+  `<script src="/sdk/rnf-i18n.js?v=${SDK_VERSION}"></script>`,
+  `<script src="/sdk/rnf-game-packs.js?v=${SDK_VERSION}"></script>`,
+  `<script src="/sdk/rnf-game-sdk.js?v=${SDK_VERSION}"></script>`,
+].join("\n  ");
+const SDK_SRC_RE = /\s*<script src="\/sdk\/rnf-[^"]+"><\/script>/g;
 
 const PATCHES = {
   "neon-snake-extreme": {
@@ -154,20 +159,26 @@ function fmtHelp(help) {
   },`;
 }
 
+function ensureSdkScripts(html) {
+  html = html.replace(SDK_SRC_RE, "");
+  if (html.includes("</head>")) {
+    return html.replace("</head>", `\n  ${SDK_TAGS}\n</head>`);
+  }
+  return `${SDK_TAGS}\n${html}`;
+}
+
 function patchFile(slug, data) {
   const file = path.join(ROOT, slug, "index.html");
   let html = fs.readFileSync(file, "utf8");
-  html = html.replace(SDK_SRC_RE, SDK);
+  html = ensureSdkScripts(html);
 
   if (html.includes("help:")) {
     if (data.pong && !html.includes("MODE_BUTTONS")) {
       html = applyPongFix(html);
-      fs.writeFileSync(file, html, "utf8");
       console.log(`${slug}: pong fix applied`);
     } else {
-      console.log(`${slug}: already has help`);
+      console.log(`${slug}: already has help (sdk scripts refreshed)`);
     }
-    html = html.replace(SDK_SRC_RE, SDK);
     fs.writeFileSync(file, html, "utf8");
     return;
   }

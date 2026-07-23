@@ -293,12 +293,35 @@
   var sessionLoggedInCache = null;
   var gameId = detectGameId();
 
-  var DEFAULT_DIFFICULTIES = [
-    { id: "easy", label: "簡單", speedMult: 0.75, scoreMult: 1, ai: 0.7, desc: "較慢節奏，適合暖身" },
-    { id: "normal", label: "標準", speedMult: 0.88, scoreMult: 1.35, ai: 1, desc: "平衡體驗" },
-    { id: "hard", label: "困難", speedMult: 1.08, scoreMult: 1.85, ai: 1.35, desc: "更快節奏與更多威脅" },
-    { id: "extreme", label: "極限", speedMult: 1.32, scoreMult: 2.5, ai: 1.65, desc: "電競級挑戰" },
-  ];
+
+  function rnfI18n() {
+    return global.RNF_I18N || null;
+  }
+
+  function rnfT(key) {
+    var i18n = rnfI18n();
+    if (i18n && typeof i18n.t === "function") return i18n.t(key);
+    return key;
+  }
+
+  function rnfLocale() {
+    var i18n = rnfI18n();
+    return (i18n && i18n.getLocale && i18n.getLocale()) || "zh-HK";
+  }
+
+  function getDefaultDifficulties() {
+    var i18n = rnfI18n();
+    if (i18n && typeof i18n.getDefaultDifficulties === "function") {
+      return i18n.getDefaultDifficulties();
+    }
+    return [
+      { id: "easy", label: rnfT("diff.easy"), speedMult: 0.75, scoreMult: 1, ai: 0.7, desc: rnfT("diff.easyDesc") },
+      { id: "normal", label: rnfT("diff.normal"), speedMult: 0.88, scoreMult: 1.35, ai: 1, desc: rnfT("diff.normalDesc") },
+      { id: "hard", label: rnfT("diff.hard"), speedMult: 1.08, scoreMult: 1.85, ai: 1.35, desc: rnfT("diff.hardDesc") },
+      { id: "extreme", label: rnfT("diff.extreme"), speedMult: 1.32, scoreMult: 2.5, ai: 1.65, desc: rnfT("diff.extremeDesc") },
+    ];
+  }
+
 
   function rnfStorageKey(suffix) {
     return "rnf:" + slug + ":" + suffix;
@@ -639,7 +662,7 @@
         difficulty: difficulty,
       };
       if (!gameId) {
-        bundle.cloudError = "未連結平台遊戲";
+        bundle.cloudError = rnfT("err.noLink");
         bundle.merged = mergeDifficultyLeaderboard([], bundle.local, difficulty);
         return Promise.resolve(finalizeLeaderboardBundle(bundle));
       }
@@ -655,13 +678,13 @@
           });
           bundle.cloud = filterEntriesByDifficulty(cloud, difficulty);
           if (!res.ok) {
-            bundle.cloudError = (res.data && res.data.error) || res.error || "讀取失敗";
+            bundle.cloudError = (res.data && res.data.error) || res.error || rnfT("err.readFail");
           }
           bundle.merged = mergeDifficultyLeaderboard(bundle.cloud, bundle.local, difficulty);
           return finalizeLeaderboardBundle(bundle);
         })
         .catch(function (err) {
-          bundle.cloudError = err && err.message ? err.message : "無法連線平台";
+          bundle.cloudError = err && err.message ? err.message : rnfT("err.noConnect");
           bundle.merged = mergeDifficultyLeaderboard([], bundle.local, difficulty);
           return finalizeLeaderboardBundle(bundle);
         });
@@ -692,7 +715,7 @@
     var difficulty = resolveEntryDifficulty({ meta: meta }, "normal");
     var store = readLocalLeaderboardByDiff();
     var list = store[difficulty] || [];
-    var name = (authUser && authUser.displayName) || "本地玩家";
+    var name = (authUser && authUser.displayName) || rnfT("player.local");
     var entry = {
       playerName: name,
       score: score,
@@ -723,18 +746,18 @@
     if (!diff) return "";
     if (labelMap && labelMap[diff]) return labelMap[diff];
     var map = {
-      easy: "簡單",
-      normal: "標準",
-      hard: "困難",
-      extreme: "極限",
-      versus: "雙人對戰",
+      easy: rnfT("diff.easy"),
+      normal: rnfT("diff.normal"),
+      hard: rnfT("diff.hard"),
+      extreme: rnfT("diff.extreme"),
+      versus: rnfT("diff.versus"),
     };
     return map[diff] || String(diff);
   }
 
   function renderLeaderboardHtml(entries, loading, error, options) {
     options = options || {};
-    if (loading) return '<p class="rnf-lb-empty">載入排行榜中…</p>';
+    if (loading) return '<p class="rnf-lb-empty">' + rnfT("lb.loading") + "</p>";
     if (error) return '<p class="rnf-lb-empty">' + error + "</p>";
     if (!entries || !entries.length) return "";
     var showSourceTag = !!options.showSourceTag;
@@ -743,19 +766,19 @@
       var rank = e.rank || i + 1;
       var diffLabel = showDiffMeta ? formatDifficultyMeta(e.meta) : "";
       var tag = "";
-      if (e.isMe) tag += '<span class="rnf-lb-tag me">你</span>';
+      if (e.isMe) tag += '<span class="rnf-lb-tag me">' + rnfT("lb.you") + "</span>";
       if (showSourceTag) {
         tag +=
           e.source === "cloud"
-            ? '<span class="rnf-lb-tag cloud">全站</span>'
+            ? '<span class="rnf-lb-tag cloud">' + rnfT("lb.cloud") + '</span>'
             : e.local || e.source === "local"
-              ? '<span class="rnf-lb-tag local">本機</span>'
+              ? '<span class="rnf-lb-tag local">' + rnfT("lb.local") + '</span>'
               : "";
       }
       var timeLabel = "";
       if (e.updatedAt) {
         try {
-          timeLabel = new Date(e.updatedAt).toLocaleDateString("zh-TW");
+          timeLabel = new Date(e.updatedAt).toLocaleDateString(rnfLocale() === "zh-HK" ? "zh-TW" : rnfLocale());
         } catch (_e) {}
       }
       var metaBits = [];
@@ -764,7 +787,7 @@
       return (
         '<div class="rnf-lb-row' + (e.isMe ? " me" : "") + '">' +
         '<span class="rnf-lb-rank' + (rank <= 3 ? " top" : "") + '">' + rank + "</span>" +
-        '<div class="rnf-lb-player"><div class="rnf-lb-name">' + (e.playerName || "匿名") + tag + "</div>" +
+        '<div class="rnf-lb-player"><div class="rnf-lb-name">' + (e.playerName || rnfT("lb.anonymous")) + tag + "</div>" +
         (metaBits.length ? '<div class="rnf-lb-meta">' + metaBits.join(" · ") + "</div>" : "") +
         "</div>" +
         '<span class="rnf-lb-score">' + Number(e.score || 0).toLocaleString() + "</span></div>"
@@ -773,9 +796,9 @@
   }
 
   function formatCloudError(msg) {
-    if (!msg) return "無法連線平台";
+    if (!msg) return rnfT("err.noConnect");
     if (msg.indexOf("game_leaderboard") >= 0 || msg.indexOf("relation") >= 0 && msg.indexOf("does not exist") >= 0) {
-      return "平台排行榜資料表尚未建立。管理員請在 Supabase SQL Editor 執行 supabase/game-leaderboard.sql 與 game-leaderboard-by-difficulty.sql，或在本機執行 npm run db:leaderboard";
+      return rnfT("err.tableMissing");
     }
     return msg;
   }
@@ -787,21 +810,21 @@
 
     if (isLocal) {
       html +=
-        '<p class="rnf-lb-note">僅此電腦看得到，其他玩家看不到這份名單。</p>';
+        '<p class="rnf-lb-note">' + rnfT("lb.noteLocal") + "</p>";
       var localEntries = (bundle.local || []).map(function (e, i) {
         return Object.assign({}, e, { rank: i + 1, source: "local", local: true });
       });
       if (localEntries.length) {
         html += renderLeaderboardHtml(localEntries, false, null, { showSourceTag: false, showDiffMeta: false });
       } else {
-        html += '<p class="rnf-lb-empty">此難度尚無本機紀錄，先玩一局吧！</p>';
+        html += '<p class="rnf-lb-empty">' + rnfT("lb.emptyLocal") + "</p>";
       }
       return html;
     }
 
     if (!bundle.loggedIn) {
       html +=
-        '<p class="rnf-lb-note warn">未登入：分數只會留在「僅此電腦」。登入後再玩，才會出現在全站榜。</p>';
+        '<p class="rnf-lb-note warn">' + rnfT("lb.noteGuest") + "</p>";
     }
 
     if (bundle.cloudOk && bundle.cloud.length) {
@@ -810,12 +833,12 @@
       html +=
         '<p class="rnf-lb-empty">' +
         (bundle.loggedIn
-          ? "此難度尚無玩家上榜，完成一局即可成為第一位！"
-          : "此難度尚無全站紀錄。登入後完成一局即可上榜。") +
+          ? rnfT("lb.emptyCloud")
+          : rnfT("lb.emptyCloudGuest")) +
         "</p>";
     } else {
       html +=
-        '<p class="rnf-lb-empty">無法載入全站榜' +
+        '<p class="rnf-lb-empty">' + rnfT("lb.cloudFail") +
         (bundle.cloudError ? "：" + formatCloudError(bundle.cloudError) : "") +
         "</p>";
     }
@@ -1267,6 +1290,21 @@
   function buildShell(options) {
     injectStyles();
     options = options || {};
+    var i18nApi = rnfI18n();
+    if (i18nApi && typeof i18nApi.applyGameContent === "function") {
+      options = i18nApi.applyGameContent(slug, options);
+    }
+    /* rnf-title-i18n */
+    try {
+      if (options && options.title && i18nApi && typeof i18nApi.getLocale === "function") {
+        var _loc = i18nApi.getLocale();
+        if (_loc && _loc.indexOf("zh") !== 0) {
+          document.title = options.title;
+        } else if (_loc === "zh-CN" && options.titleZhCN) {
+          document.title = options.title + " · " + options.titleZhCN;
+        }
+      }
+    } catch (_titleErr) {}
     var root = document.createElement("div");
     root.className = "rnf-root";
     root.innerHTML =
@@ -1275,7 +1313,7 @@
       '<div id="rnf-settings" class="rnf-screen"><div class="rnf-panel rnf-scroll"></div></div>' +
       '<div id="rnf-help" class="rnf-screen"><div class="rnf-panel rnf-scroll"></div></div>' +
       '<div id="rnf-leaderboard" class="rnf-screen"><div class="rnf-panel rnf-scroll"></div></div>' +
-      '<div id="rnf-game" class="rnf-screen"><div class="rnf-game-wrap"><button type="button" class="rnf-game-home" id="rnf-game-home">主選單</button><div class="rnf-hud" id="rnf-hud"></div><div class="rnf-canvas-wrap"><canvas id="rnf-canvas"></canvas></div></div></div>' +
+      '<div id="rnf-game" class="rnf-screen"><div class="rnf-game-wrap"><button type="button" class="rnf-game-home" id="rnf-game-home">' + rnfT("menu.home") + '</button><div class="rnf-hud" id="rnf-hud"></div><div class="rnf-canvas-wrap"><canvas id="rnf-canvas"></canvas></div></div></div>' +
       '<div id="rnf-over" class="rnf-screen"><div class="rnf-panel rnf-scroll"></div></div>';
     document.body.appendChild(root);
 
@@ -1295,7 +1333,7 @@
     var keyGuard = createKeyGuard(canvas);
     var touchControls = createTouchControls(root.querySelector(".rnf-game-wrap") || root, canvas);
     var localSave = loadLocalSave() || {};
-    var difficulties = options.difficulties || DEFAULT_DIFFICULTIES;
+    var difficulties = options.difficulties || getDefaultDifficulties();
     var selectedDifficulty = localSave.difficulty || difficulties[1]?.id || difficulties[0].id;
     var lbDifficulty = selectedDifficulty;
     var lbSource = null;
@@ -1372,7 +1410,7 @@
     function renderHelpFeatures(items) {
       if (!items || !items.length) return "";
       return (
-        '<div class="rnf-help-section"><h2>新增功能</h2><div class="rnf-help-features">' +
+        '<div class="rnf-help-section"><h2>' + rnfT("help.features") + '</h2><div class="rnf-help-features">' +
         items.map(function (item) {
           return '<div class="rnf-help-feature"><span class="rnf-help-feature-dot">✦</span><span>' + item + "</span></div>";
         }).join("") +
@@ -1395,20 +1433,20 @@
       var h = options.help || {};
       helpPanel.innerHTML =
         '<div class="rnf-badge">HOW TO PLAY</div>' +
-        '<h1 class="rnf-title" style="font-size:1.45rem">遊戲說明</h1>' +
+        '<h1 class="rnf-title" style="font-size:1.45rem">' + rnfT("help.title") + '</h1>' +
         '<div class="rnf-help-body rnf-scroll">' +
         (h.about
-          ? '<div class="rnf-help-section"><h2>玩法簡介</h2><p>' + h.about + "</p></div>"
+          ? '<div class="rnf-help-section"><h2>' + rnfT("help.about") + '</h2><p>' + h.about + "</p></div>"
           : "") +
         renderHelpFeatures(h.features) +
         (h.controls && h.controls.length
-          ? '<div class="rnf-help-section"><h2>按鍵操作</h2>' + renderHelpList(h.controls) + "</div>"
+          ? '<div class="rnf-help-section"><h2>' + rnfT("help.controls") + '</h2>' + renderHelpList(h.controls) + "</div>"
           : "") +
         (h.tips && h.tips.length
-          ? '<div class="rnf-help-section"><h2>小提示</h2>' + renderHelpList(h.tips) + "</div>"
+          ? '<div class="rnf-help-section"><h2>' + rnfT("help.tips") + '</h2>' + renderHelpList(h.tips) + "</div>"
           : "") +
         "</div>" +
-        '<div class="rnf-btn-row"><button class="rnf-btn primary" id="rnf-help-back">返回</button></div>';
+        '<div class="rnf-btn-row"><button class="rnf-btn primary" id="rnf-help-back">' + rnfT("help.back") + "</button></div>";
       show("rnf-help");
       helpPanel.querySelector("#rnf-help-back").onclick = function () {
         SFX.click();
@@ -1425,18 +1463,18 @@
       }).join("");
       var sourceTabs =
         '<div class="rnf-lb-tabs">' +
-        '<button type="button" class="rnf-lb-tab' + (lbSource === "cloud" ? " active" : "") + '" data-lb-source="cloud">全站榜</button>' +
-        '<button type="button" class="rnf-lb-tab' + (lbSource === "local" ? " active" : "") + '" data-lb-source="local">僅此電腦</button>' +
+        '<button type="button" class="rnf-lb-tab' + (lbSource === "cloud" ? " active" : "") + '" data-lb-source="cloud">' + rnfT("lb.global") + '</button>' +
+        '<button type="button" class="rnf-lb-tab' + (lbSource === "local" ? " active" : "") + '" data-lb-source="local">' + rnfT("lb.thisDevice") + '</button>' +
         "</div>";
       leaderboardPanel.innerHTML =
         '<div class="rnf-badge">LEADERBOARD</div>' +
-        '<h1 class="rnf-title" style="font-size:1.45rem">排行榜</h1>' +
-        '<p class="rnf-sub">每種難度獨立計分；全站榜才是其他玩家看得到的</p>' +
-        '<p class="rnf-diff-label">難度</p>' +
+        '<h1 class="rnf-title" style="font-size:1.45rem">' + rnfT("lb.title") + '</h1>' +
+        '<p class="rnf-sub">' + rnfT("lb.sub") + '</p>' +
+        '<p class="rnf-diff-label">' + rnfT("lb.diffLabel") + '</p>' +
         '<div class="rnf-btn-row" id="rnf-lb-diff-row">' + tabButtons + "</div>" +
         sourceTabs +
-        '<div class="rnf-lb-list rnf-scroll" id="rnf-lb-list"><p class="rnf-lb-empty">載入中…</p></div>' +
-        '<div class="rnf-btn-row"><button class="rnf-btn primary" id="rnf-lb-back">返回</button></div>';
+        '<div class="rnf-lb-list rnf-scroll" id="rnf-lb-list"><p class="rnf-lb-empty">' + rnfT("lb.loadingShort") + '</p></div>' +
+        '<div class="rnf-btn-row"><button class="rnf-btn primary" id="rnf-lb-back">' + rnfT("help.back") + "</button></div>";
       show("rnf-leaderboard");
       var listEl = leaderboardPanel.querySelector("#rnf-lb-list");
       fetchLeaderboardBundle(15, lbDifficulty).then(function (bundle) {
@@ -1471,19 +1509,19 @@
       menuPanel.innerHTML =
         '<div class="rnf-badge">' + (options.creator || "RainyNightFrog") + "</div>" +
         '<h1 class="rnf-title">' + (options.title || "RNF Game") + "</h1>" +
-        '<p class="rnf-sub">' + (options.subtitle || "賽博 Synthwave 電競重製") + "</p>" +
+        '<p class="rnf-sub">' + (options.subtitle || rnfT("menu.defaultSubtitle")) + "</p>" +
         renderHighlights(options.highlights || []) +
-        '<div class="rnf-stats"><div class="rnf-stat">最佳分數<span>RECORD</span><b id="rnf-best">' + bestScore.toLocaleString() + "</b></div>" +
-        '<div class="rnf-stat">難度<span>DIFF</span><b style="font-size:.85rem;color:#c4b5fd">' + diffCfg.label + "</b></div>" +
-        '<div class="rnf-stat">分數加成<span>BOOST</span><b style="font-size:.85rem;color:#fbbf24">x' + diffCfg.scoreMult.toFixed(2) + "</b></div></div>" +
-        '<p class="rnf-diff-label">選擇難度</p>' +
+        '<div class="rnf-stats"><div class="rnf-stat">' + rnfT("menu.bestScore") + '<span>RECORD</span><b id="rnf-best">' + bestScore.toLocaleString() + "</b></div>" +
+        '<div class="rnf-stat">' + rnfT("menu.difficulty") + '<span>DIFF</span><b style="font-size:.85rem;color:#c4b5fd">' + diffCfg.label + "</b></div>" +
+        '<div class="rnf-stat">' + rnfT("menu.scoreBoost") + '<span>BOOST</span><b style="font-size:.85rem;color:#fbbf24">x' + diffCfg.scoreMult.toFixed(2) + "</b></div></div>" +
+        '<p class="rnf-diff-label">' + rnfT("menu.pickDiff") + '</p>' +
         '<div class="rnf-btn-row" id="rnf-diff-row">' + diffButtons + "</div>" +
         '<p class="rnf-hint" style="margin-bottom:.5rem">' + diffCfg.desc + "</p>" +
-        '<div class="rnf-btn-row"><button class="rnf-btn primary" id="rnf-play">開始遊戲</button>' +
-        (options.help ? '<button class="rnf-btn" id="rnf-open-help">遊戲說明</button>' : "") +
-        (enableLeaderboard ? '<button class="rnf-btn" id="rnf-open-lb">排行榜</button>' : "") +
-        '<button class="rnf-btn" id="rnf-open-settings">設定</button></div>' +
-        '<p class="rnf-hint">方向鍵 / WASD · 空白鍵確認 · ESC 返回</p>';
+        '<div class="rnf-btn-row"><button class="rnf-btn primary" id="rnf-play">' + rnfT("menu.play") + '</button>' +
+        (options.help ? '<button class="rnf-btn" id="rnf-open-help">' + rnfT("menu.help") + '</button>' : "") +
+        (enableLeaderboard ? '<button class="rnf-btn" id="rnf-open-lb">' + rnfT("menu.leaderboard") + '</button>' : "") +
+        '<button class="rnf-btn" id="rnf-open-settings">' + rnfT("menu.settings") + '</button></div>' +
+        '<p class="rnf-hint">' + rnfT("menu.hint") + '</p>';
       menuPanel.querySelectorAll("[data-diff]").forEach(function (btn) {
         btn.onclick = function () {
           SFX.click();
@@ -1556,27 +1594,27 @@
       if (showTuning) {
         if (tuningFlags.sensitivity !== false) {
           tuningHtml +=
-            '<div class="rnf-setting-row"><span>操作靈敏度</span><input type="range" id="rnf-sens" min="50" max="150" value="' +
+            '<div class="rnf-setting-row"><span>' + rnfT("settings.sensitivity") + '</span><input type="range" id="rnf-sens" min="50" max="150" value="' +
             Math.round((settings.sensitivity || 1) * 100) +
             '"><b id="rnf-sens-v">' + Math.round((settings.sensitivity || 1) * 100) + "%</b></div>";
         }
         if (tuningFlags.gameSpeed !== false) {
           tuningHtml +=
-            '<div class="rnf-setting-row"><span>遊戲速度</span><input type="range" id="rnf-speed" min="70" max="130" value="' +
+            '<div class="rnf-setting-row"><span>' + rnfT("settings.gameSpeed") + '</span><input type="range" id="rnf-speed" min="70" max="130" value="' +
             Math.round((settings.gameSpeed || 1) * 100) +
             '"><b id="rnf-speed-v">' + Math.round((settings.gameSpeed || 1) * 100) + "%</b></div>";
         }
       }
       settingsPanel.innerHTML =
-        '<h1 class="rnf-title" style="font-size:1.4rem">設定</h1>' +
+        '<h1 class="rnf-title" style="font-size:1.4rem">' + rnfT("settings.title") + '</h1>' +
         '<div class="rnf-settings">' +
         tuningHtml +
-        '<div class="rnf-setting-row"><span>音效 SFX</span><input type="range" id="rnf-sfx" min="0" max="100" value="' + Math.round(settings.sfxVolume * 100) + '"><b id="rnf-sfx-v">' + Math.round(settings.sfxVolume * 100) + "%</b></div>" +
-        '<div class="rnf-setting-row"><span>背景音樂 BGM</span><input type="range" id="rnf-bgm" min="0" max="100" value="' + Math.round(settings.bgmVolume * 100) + '"><b id="rnf-bgm-v">' + Math.round(settings.bgmVolume * 100) + "%</b></div>" +
-        '<div class="rnf-setting-row"><span>螢幕震動</span><button class="rnf-toggle ' + (settings.screenShake ? "on" : "") + '" id="rnf-shake">' + (settings.screenShake ? "開啟" : "關閉") + "</button></div>" +
-        '<div class="rnf-setting-row"><span>畫質</span><div class="rnf-btn-row" style="margin:0"><button class="rnf-btn ' + (settings.quality === "high" ? "selected" : "") + '" id="rnf-q-h">High</button><button class="rnf-btn ' + (settings.quality === "low" ? "selected" : "") + '" id="rnf-q-l">Low</button></div></div>' +
+        '<div class="rnf-setting-row"><span>' + rnfT("settings.sfx") + '</span><input type="range" id="rnf-sfx" min="0" max="100" value="' + Math.round(settings.sfxVolume * 100) + '"><b id="rnf-sfx-v">' + Math.round(settings.sfxVolume * 100) + "%</b></div>" +
+        '<div class="rnf-setting-row"><span>' + rnfT("settings.bgm") + '</span><input type="range" id="rnf-bgm" min="0" max="100" value="' + Math.round(settings.bgmVolume * 100) + '"><b id="rnf-bgm-v">' + Math.round(settings.bgmVolume * 100) + "%</b></div>" +
+        '<div class="rnf-setting-row"><span>' + rnfT("settings.shake") + '</span><button class="rnf-toggle ' + (settings.screenShake ? "on" : "") + '" id="rnf-shake">' + (settings.screenShake ? rnfT("settings.on") : rnfT("settings.off")) + "</button></div>" +
+        '<div class="rnf-setting-row"><span>' + rnfT("settings.quality") + '</span><div class="rnf-btn-row" style="margin:0"><button class="rnf-btn ' + (settings.quality === "high" ? "selected" : "") + '" id="rnf-q-h">High</button><button class="rnf-btn ' + (settings.quality === "low" ? "selected" : "") + '" id="rnf-q-l">Low</button></div></div>' +
         "</div>" +
-        '<div class="rnf-btn-row"><button class="rnf-btn primary" id="rnf-settings-back">返回</button></div>';
+        '<div class="rnf-btn-row"><button class="rnf-btn primary" id="rnf-settings-back">' + rnfT("settings.back") + "</button></div>";
       var sensR = settingsPanel.querySelector("#rnf-sens");
       if (sensR) {
         sensR.oninput = function () {
@@ -1631,19 +1669,19 @@
       pushLocalScore(finalScore, meta);
       submitScore(finalScore, meta);
       var uploadHint = isUserLoggedIn()
-        ? "已上傳至全站榜"
-        : "已存僅此電腦；登入後再玩才會上全站榜";
+        ? rnfT("over.uploaded")
+        : rnfT("over.localOnly");
       overPanel.innerHTML =
-        '<div class="rnf-badge">GAME OVER</div><h1 class="rnf-title" style="font-size:1.6rem">任務結束</h1>' +
+        '<div class="rnf-badge">GAME OVER</div><h1 class="rnf-title" style="font-size:1.6rem">' + rnfT("over.title") + '</h1>' +
         '<div class="rnf-score-big">' + finalScore.toLocaleString() + "</div>" +
-        '<p class="rnf-sub">難度 ' + recordDiff.label + ' · 加成 x' + recordDiff.scoreMult.toFixed(2) +
-        (rawScore !== finalScore ? " · 原始 " + rawScore.toLocaleString() : "") + "</p>" +
+        '<p class="rnf-sub">' + rnfT("over.diff") + " " + recordDiff.label + " · " + rnfT("over.boost") + " x" + recordDiff.scoreMult.toFixed(2) +
+        (rawScore !== finalScore ? " · " + rnfT("over.raw") + " " + rawScore.toLocaleString() : "") + "</p>" +
         '<p class="rnf-sub">' + uploadHint + "</p>" +
-        '<div class="rnf-stats"><div class="rnf-stat">最佳<span>BEST</span><b>' + bestScore.toLocaleString() + "</b></div>" +
-        '<div class="rnf-stat">難度<span>DIFF</span><b style="font-size:.85rem;color:#c4b5fd">' + recordDiff.label + "</b></div></div>" +
-        '<div class="rnf-btn-row"><button class="rnf-btn primary" id="rnf-retry">再玩一次</button>' +
-        (enableLeaderboard ? '<button class="rnf-btn" id="rnf-over-lb">排行榜</button>' : "") +
-        '<button class="rnf-btn" id="rnf-menu-back">主選單</button></div>';
+        '<div class="rnf-stats"><div class="rnf-stat">' + rnfT("over.best") + '<span>BEST</span><b>' + bestScore.toLocaleString() + "</b></div>" +
+        '<div class="rnf-stat">' + rnfT("over.diff") + '<span>DIFF</span><b style="font-size:.85rem;color:#c4b5fd">' + recordDiff.label + "</b></div></div>" +
+        '<div class="rnf-btn-row"><button class="rnf-btn primary" id="rnf-retry">' + rnfT("over.retry") + '</button>' +
+        (enableLeaderboard ? '<button class="rnf-btn" id="rnf-over-lb">' + rnfT("over.leaderboard") + '</button>' : "") +
+        '<button class="rnf-btn" id="rnf-menu-back">' + rnfT("over.menu") + '</button></div>';
       overPanel.querySelector("#rnf-retry").onclick = function () {
         SFX.confirm();
         show("rnf-game");
@@ -1737,6 +1775,8 @@
     getGameId: function () { return gameId; },
     showMainMenu: invokeReturnToMenu,
     isHighQuality: isHighQuality,
+    t: rnfT,
+    getLocale: rnfLocale,
   };
 
   global.RNF = RNF;

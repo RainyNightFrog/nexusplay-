@@ -125,9 +125,9 @@
     "favoriteFailed": "การกระทำที่ชื่นชอบล้มเหลว",
     "durationHoursMinutes": "{hours} ชม {minutes} นาที",
     "durationHoursOnly": "{hours} ชม",
-    "backToGameMenu": "Back to game menu",
-    "backToGameMenuDone": "Returned to the game menu — you can pick difficulty again",
-    "backToGameMenuFailed": "Could not reach the game. Refresh the page and try again",
+    "backToGameMenu": "กลับเมนูเกม",
+    "backToGameMenuDone": "กลับเมนูเกมแล้ว — เลือกความยากได้อีกครั้ง",
+    "backToGameMenuFailed": "เชื่อมต่อเกมไม่ได้ รีเฟรชหน้าแล้วลองใหม่",
     "copySubdomainUrl": "Copy URL"
   },
   "home": {
@@ -1166,6 +1166,46 @@
     "cyber-fortune": {
       "badge": "เรือธงไซเบอร์การพนัน",
       "description": "เกมใจที่ผสมสถิติ big data อนาคตและกลยุทธ์การพนัน ในเมืองไซเบอร์นีออนยามค่ำคืน ใช้เมทริกซ์ 012 เฉพาะและกลยุทธ์การดuel แบบเต็มรูปแบบเพื่อทำนายการเดินหน้าถัดไปของคู่ต่อสู้ ในโลกแห่งความน่าจะเป็น คุณคือราชาคนเดียว"
+    },
+    "neon-snake-extreme": {
+      "badge": "Virtual arcade",
+      "description": "Five food types, moving hazards, nitro boost and bullet-time slow-mo; combo multipliers plus touch D-pad / swipe steering. Four difficulties — chase a new record!"
+    },
+    "cyber-bubble-pop": {
+      "badge": "Virtual arcade",
+      "description": "Aim preview, ceiling push, lightning / black-hole / bomb specials and timed chain combos. A cyber-esports remake of Bubble Shooter — touch ready."
+    },
+    "quantum-tic-tac-toe": {
+      "badge": "Virtual arcade",
+      "description": "5×5 five-in-a-row with quantum entanglement dual placement and timed turns; four AI tiers, win-streak stats and touch placement."
+    },
+    "void-brick-breaker": {
+      "badge": "Virtual arcade",
+      "description": "Multi-ball / laser / magnet / sticky power-ups, explosive and steel bricks, break combos and stardust particles. Four-difficulty void breaker with drag + virtual pad."
+    },
+    "rainy-frog-dash": {
+      "badge": "Virtual arcade",
+      "description": "Rainy neon parkour: double jump, glide, shield and rocket pickups, coin combos, formation hazards and weather phases. Touch ready!"
+    },
+    "neon-tetromino-rush": {
+      "badge": "Virtual arcade",
+      "description": "Ghost preview, hold, five-piece next queue, neon fever and line combos. Harder difficulties drop faster — Extreme pushes garbage rows."
+    },
+    "galactic-invader-2026": {
+      "badge": "Virtual arcade",
+      "description": "Four weapon tiers, shields, boss barrages and HP bars. Defend Earth 2026 with keyboard or touch move + fire."
+    },
+    "memory-matrix-glitch": {
+      "badge": "Virtual arcade",
+      "description": "Timed memory matching with glitch flips, combo multipliers and bomb penalties. Clear stages before the clock runs out."
+    },
+    "overdrive-cyber-pong": {
+      "badge": "Virtual arcade",
+      "description": "Curveball spin, gravity wells, AI tiers and local versus. Touch-drag paddles for neon arcade rallies."
+    },
+    "cyber-neon-runner": {
+      "badge": "Virtual arcade",
+      "description": "Jump, slide and laser through Night City. Shields, magnets, boosts and milestone events — endless neon runner, touch ready."
     }
   },
   "errors": {

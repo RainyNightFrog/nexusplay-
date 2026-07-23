@@ -366,11 +366,16 @@
     </div>
   </div>
 
+  <script src="/sdk/rnf-demo-packs.js?v=20260723h"></script>
+  <script src="/sdk/rnf-demo-i18n.js?v=20260723h"></script>
   <script src="/demos/platform-bridge.js"></script>
   <script src="/demos/demo-game-enhance.js"></script>
   <script>
 (function () {
   'use strict';
+
+  var __demoT = (window.RNF_DEMO_I18N && RNF_DEMO_I18N.t("neon-abyss-runner")) || function (k, fb) { return fb != null ? fb : k; };
+  var __demoPack = window.RNF_DEMO_I18N && RNF_DEMO_I18N.apply("neon-abyss-runner");
 
   const W = 960, H = 600;
   const LANES = [W * 0.25, W * 0.5, W * 0.75];
@@ -378,24 +383,32 @@
   const SETTINGS_STORAGE_KEY = 'nexusplay:neon-abyss-runner:settings:v3';
 
   const MOVE_RANGE_PRESETS = {
-    small:  { debounce: 680, requireSettled: true,  settleAt: 1,    label: '小' },
-    medium: { debounce: 420, requireSettled: true,  settleAt: 0.98, label: '中' },
-    large:  { debounce: 280, requireSettled: true,  settleAt: 0.92, label: '大' },
+    small:  { debounce: 680, requireSettled: true,  settleAt: 1,    label: __demoT('moveRangeSmall', '小') },
+    medium: { debounce: 420, requireSettled: true,  settleAt: 0.98, label: __demoT('moveRangeMedium', '中') },
+    large:  { debounce: 280, requireSettled: true,  settleAt: 0.92, label: __demoT('moveRangeLarge', '大') },
   };
 
   const LANE_SMOOTH_PRESETS = {
-    slow:   { switchMs: 460, label: '慢' },
-    medium: { switchMs: 300, label: '標準' },
-    fast:   { switchMs: 210, label: '快' },
+    slow:   { switchMs: 460, label: __demoT('laneSmoothSlow', '慢') },
+    medium: { switchMs: 300, label: __demoT('laneSmoothMedium', '標準') },
+    fast:   { switchMs: 210, label: __demoT('laneSmoothFast', '快') },
   };
 
-  const MOVE_RANGE_LABELS = { small: '小', medium: '中', large: '大' };
-  const LANE_SMOOTH_LABELS = { slow: '慢', medium: '標準', fast: '快' };
+  const MOVE_RANGE_LABELS = {
+    small: __demoT('moveRangeSmall', '小'),
+    medium: __demoT('moveRangeMedium', '中'),
+    large: __demoT('moveRangeLarge', '大'),
+  };
+  const LANE_SMOOTH_LABELS = {
+    slow: __demoT('laneSmoothSlow', '慢'),
+    medium: __demoT('laneSmoothMedium', '標準'),
+    fast: __demoT('laneSmoothFast', '快'),
+  };
 
   const DIFF = {
-    easy:   { scroll: 220, spawn: 1.35, orbRate: 0.55, comboDecay: 0.00018, scoreMul: 1.0,  label: '休閒' },
-    normal: { scroll: 300, spawn: 1.0,  orbRate: 0.42, comboDecay: 0.00028, scoreMul: 1.25, label: '標準' },
-    hard:   { scroll: 390, spawn: 0.72, orbRate: 0.32, comboDecay: 0.00038, scoreMul: 1.6,  label: '深淵' },
+    easy:   { scroll: 220, spawn: 1.35, orbRate: 0.55, comboDecay: 0.00018, scoreMul: 1.0,  label: __demoT('diffEasy', '休閒') },
+    normal: { scroll: 300, spawn: 1.0,  orbRate: 0.42, comboDecay: 0.00028, scoreMul: 1.25, label: __demoT('diffNormal', '標準') },
+    hard:   { scroll: 390, spawn: 0.72, orbRate: 0.32, comboDecay: 0.00038, scoreMul: 1.6,  label: __demoT('diffHard', '深淵') },
   };
 
   const GRADE_THRESH = [
@@ -459,8 +472,8 @@
     laneSwitchMs = smooth.switchMs;
     const moveLabel = $('moveRangeLabel');
     const smoothLabel = $('laneSmoothLabel');
-    if (moveLabel) moveLabel.textContent = MOVE_RANGE_LABELS[settings.moveRange] || '小';
-    if (smoothLabel) smoothLabel.textContent = LANE_SMOOTH_LABELS[settings.laneSmooth] || '標準';
+    if (moveLabel) moveLabel.textContent = MOVE_RANGE_LABELS[settings.moveRange] || __demoT('moveRangeSmall', '小');
+    if (smoothLabel) smoothLabel.textContent = LANE_SMOOTH_LABELS[settings.laneSmooth] || __demoT('laneSmoothMedium', '標準');
     document.querySelectorAll('[data-move-range]').forEach((btn) => {
       btn.classList.toggle('selected', btn.dataset.moveRange === settings.moveRange);
     });
@@ -525,7 +538,7 @@
       html += '<span class="' + cls + '"></span>';
     }
     el.innerHTML = html;
-    $('hudShield').textContent = shield ? 'ON' : '—';
+    $('hudShield').textContent = shield ? __demoT('hudShieldOn', 'ON') : '—';
   }
 
   function updateHud() {
@@ -536,13 +549,13 @@
     updateHpDots();
     const dashEl = $('dashCd');
     if (dashActive) {
-      dashEl.textContent = '衝刺中…';
+      dashEl.textContent = __demoT('dashActive', '衝刺中…');
       dashEl.className = 'dash-cd ready';
     } else if (dashCd > 0) {
-      dashEl.textContent = '冷卻 ' + (dashCd / 1000).toFixed(1) + 's';
+      dashEl.textContent = __demoT('dashCooldown', '冷卻 {s}s').replace('{s}', (dashCd / 1000).toFixed(1));
       dashEl.className = 'dash-cd';
     } else {
-      dashEl.textContent = '衝刺就緒 · SPACE';
+      dashEl.textContent = __demoT('dashReady', '衝刺就緒 · SPACE');
       dashEl.className = 'dash-cd ready';
     }
   }
@@ -553,11 +566,11 @@
     if (old) old.remove();
     const div = document.createElement('div');
     div.className = 'wave-banner' + (isBoss ? ' boss' : '');
-    const bossNames = ['', '', '', '', '三重雷射掃射', '深淵障壁長城', '深淵風暴'];
+    const bossNames = ['', '', '', '', __demoT('bossTripleLaser', '三重雷射掃射'), __demoT('bossBarrierWall', '深淵障壁長城'), __demoT('bossAbyssStorm', '深淵風暴')];
     const bossIdx = Math.min(wave, bossNames.length - 1, Math.floor(wave / 5) * 5);
     div.innerHTML = isBoss
-      ? '<h2>BOSS WAVE ' + wave + '</h2><p>' + (bossNames[bossIdx] || '深淵風暴') + '</p>'
-      : '<h2>WAVE ' + wave + '</h2><p>VOID CORRIDOR</p>';
+      ? '<h2>BOSS WAVE ' + wave + '</h2><p>' + (bossNames[bossIdx] || __demoT('bossAbyssStorm', '深淵風暴')) + '</p>'
+      : '<h2>WAVE ' + wave + '</h2><p>' + __demoT('waveCorridor', 'VOID CORRIDOR') + '</p>';
     wrap.appendChild(div);
     setTimeout(() => div.remove(), 2200);
   }
@@ -576,7 +589,7 @@
     paused = false; running = true;
     lastLaneInputAt = 0;
     PlatformBridge.setGameSessionActive(true);
-    $('btnPause').textContent = '⏸ 暫停';
+    $('btnPause').textContent = __demoT('pause', '⏸ 暫停');
     setupWave();
     updateHud();
   }
@@ -730,7 +743,7 @@
       invuln = 1200;
       shake = 14;
       addParticles(player.x, player.y, '#a78bfa', 20, 150);
-      addFloat(player.x, player.y - 20, '護盾破碎', '#c4b5fd');
+      addFloat(player.x, player.y - 20, __demoT('shieldBreak', '護盾破碎'), '#c4b5fd');
       combo = Math.max(1, combo - 0.5);
       return;
     }
@@ -1102,10 +1115,10 @@
       ctx.fillStyle = '#22d3ee';
       ctx.font = 'bold 28px "Microsoft JhengHei", sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('⏸ 暫停', W / 2, H * 0.45);
+      ctx.fillText(__demoT('pauseCanvas', '⏸ 暫停'), W / 2, H * 0.45);
       ctx.fillStyle = '#94a3b8';
       ctx.font = '14px sans-serif';
-      ctx.fillText('按 P 或空白鍵繼續', W / 2, H * 0.45 + 36);
+      ctx.fillText(__demoT('pauseHint', '按 P 或空白鍵繼續'), W / 2, H * 0.45 + 36);
     }
   }
 
@@ -1130,12 +1143,14 @@
     $('goWave').textContent = wave;
     $('goCombo').textContent = '×' + (maxCombo % 1 === 0 ? maxCombo : maxCombo.toFixed(1));
     $('goDist').textContent = Math.floor(distance).toLocaleString() + 'm';
-    $('goMsg').textContent = '你在 ' + cfg.label + ' 難度下穿越了 ' + wave + ' 波深淵航道。' +
-      (grade === 'S' ? ' 傳說級虛空駕駛員！' : grade === 'A' ? ' 出色的疾馳表現！' : ' 再試一次，突破極限！');
+    $('goMsg').textContent = __demoT('goMsgBase', '你在 {diff} 難度下穿越了 {wave} 波深淵航道。')
+      .replace('{diff}', cfg.label)
+      .replace('{wave}', wave) +
+      (grade === 'S' ? __demoT('goMsgS', ' 傳說級虛空駕駛員！') : grade === 'A' ? __demoT('goMsgA', ' 出色的疾馳表現！') : __demoT('goMsgOther', ' 再試一次，突破極限！'));
     $('goLbLoading').style.display = 'block';
-    $('goLbLoading').textContent = '載入排行榜…';
+    $('goLbLoading').textContent = __demoT('lbLoadingGo', '載入排行榜…');
     $('goLbList').innerHTML = '';
-    $('goSaveHint').textContent = '正在儲存紀錄…';
+    $('goSaveHint').textContent = __demoT('savingRecord', '正在儲存紀錄…');
     showScreen('gameover');
 
     if (finalScore > bestScore) bestScore = finalScore;
@@ -1154,7 +1169,7 @@
       PlatformBridge.setSaveHint($('goSaveHint'), result.synced, !!PlatformBridge.getUser());
       PlatformBridge.setSaveHint($('saveHint'), result.synced, !!PlatformBridge.getUser());
     } catch (_e) {
-      $('goSaveHint').textContent = '紀錄已存本機';
+      $('goSaveHint').textContent = __demoT('savedLocal', '紀錄已存本機');
     }
 
     try {
@@ -1173,7 +1188,7 @@
       $('goLbLoading').style.display = 'none';
       PlatformBridge.renderLeaderboard($('goLbList'), entries);
     } catch (_e) {
-      $('goLbLoading').textContent = '無法載入排行榜';
+      $('goLbLoading').textContent = __demoT('lbFail', '無法載入排行榜');
     }
   }
 
@@ -1196,7 +1211,7 @@
   function togglePause() {
     if (!running) return;
     paused = !paused;
-    $('btnPause').textContent = paused ? '▶ 繼續' : '⏸ 暫停';
+    $('btnPause').textContent = paused ? __demoT('resume', '▶ 繼續') : __demoT('pause', '⏸ 暫停');
     if (paused) {
       gameLoopCtrl.stop();
       render();
@@ -1209,7 +1224,7 @@
     if (helpFromGame) {
       helpFromGame = false;
       paused = false;
-      $('btnPause').textContent = '⏸ 暫停';
+      $('btnPause').textContent = __demoT('pause', '⏸ 暫停');
       showScreen('game');
       if (running) gameLoopCtrl.start();
       return;
@@ -1241,7 +1256,7 @@
     if (settingsFromGame) {
       settingsFromGame = false;
       paused = false;
-      $('btnPause').textContent = '⏸ 暫停';
+      $('btnPause').textContent = __demoT('pause', '⏸ 暫停');
       showScreen('game');
       if (running) gameLoopCtrl.start();
       return;
@@ -1312,13 +1327,13 @@
     leaderboardScreen: 'leaderboard',
     onPause: function () {
       paused = true;
-      $('btnPause').textContent = '▶ 繼續';
+      $('btnPause').textContent = __demoT('resume', '▶ 繼續');
       gameLoopCtrl.stop();
     },
     onResume: function () {
       if (running) {
         paused = false;
-        $('btnPause').textContent = '⏸ 暫停';
+        $('btnPause').textContent = __demoT('pause', '⏸ 暫停');
         gameLoopCtrl.start();
       }
     },

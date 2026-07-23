@@ -3,6 +3,19 @@
  * 供 /demos/*.html 嵌入使用
  */
 (function () {
+  function demoBridgeT(key, fallback) {
+    try {
+      var pack =
+        typeof window !== "undefined" &&
+        window.RNF_DEMO_I18N &&
+        typeof window.RNF_DEMO_I18N.getBridge === "function"
+          ? window.RNF_DEMO_I18N.getBridge()
+          : null;
+      if (pack && pack[key] != null) return pack[key];
+    } catch (_e) {}
+    return fallback;
+  }
+
   var AUTH_TYPES = ["rainynightfrog:auth", "nexusplay:auth"];
   var LEAVE_TYPES = ["rainynightfrog:leave", "nexusplay:leave"];
   var LEAVE_CONFIRM_REQUEST_TYPES = [
@@ -73,8 +86,7 @@
   var authWaiters = [];
   var gameSessionActive = false;
   var pendingLeaveConfirm = null;
-  var LEAVE_CONFIRM_MESSAGE =
-    "\u904a\u6232\u9032\u884c\u4e2d\uff0c\u78ba\u5b9a\u8981\u96e2\u958b\u55ce\uff1f\u76ee\u524d\u9032\u5ea6\u53ef\u80fd\u5c1a\u672a\u4fdd\u5b58\u3002";
+  var LEAVE_CONFIRM_MESSAGE = demoBridgeT("leaveDefaultMsg", "遊戲進行中，確定要離開嗎？目前進度可能尚未保存。");
 
   function includesType(list, type) {
     return list.indexOf(type) !== -1;
@@ -173,13 +185,13 @@
         '<div class="np-leave-dialog" role="alertdialog" aria-modal="true">' +
         '<div class="np-leave-header">' +
         '<div class="np-leave-icon" aria-hidden="true">!</div>' +
-        '<div><p class="np-leave-title">\u78ba\u5b9a\u8981\u96e2\u958b\u904a\u6232\uff1f</p>' +
+        '<div><p class="np-leave-title">' + demoBridgeT("leaveTitle", "確定要離開遊戲？") + '</p>' +
         '<p class="np-leave-message">' +
         escapeHtml(message) +
         "</p></div></div>" +
         '<div class="np-leave-actions">' +
-        '<button type="button" class="np-leave-btn np-leave-btn-stay">\u7e7c\u7e8c\u904a\u73a9</button>' +
-        '<button type="button" class="np-leave-btn np-leave-btn-leave">\u96e2\u958b\u904a\u6232</button>' +
+        '<button type="button" class="np-leave-btn np-leave-btn-stay">' + demoBridgeT("leaveStay", "繼續遊玩") + '</button>' +
+        '<button type="button" class="np-leave-btn np-leave-btn-leave">' + demoBridgeT("leaveGo", "離開遊戲") + '</button>' +
         "</div></div>";
 
       function cleanup(result) {
@@ -440,7 +452,7 @@
   function getGuestName() {
     var stored = readLocal("guest-name");
     if (stored) return stored;
-    var names = [
+    var names = demoBridgeT("guestNames", null) || [
       "Shout~listenme",
       "Tonightゝ",
       "ObiWanKenobi",
@@ -655,7 +667,7 @@
       injectStyles();
       if (!container) return;
       if (!entries || !entries.length) {
-        container.innerHTML = '<div class="np-lb-empty">尚無排行紀錄，完成一場對局即可上榜！</div>';
+        container.innerHTML = '<div class="np-lb-empty">' + demoBridgeT("lbEmpty", "尚無排行紀錄，完成一場對局即可上榜！") + '</div>';
         return;
       }
       container.innerHTML = entries
@@ -730,16 +742,16 @@
     setSaveHint: function (el, synced, userLoggedIn) {
       if (!el) return;
       if (synced) {
-        el.textContent = "\u2601 進度已同步至雲端";
+        el.textContent = demoBridgeT("saveCloud", "☁ 進度已同步至雲端");
         el.className = "np-save-hint synced";
       } else if (userLoggedIn && !gameId) {
-        el.textContent = "\u25A1 本地已保存（無法連線雲端）";
+        el.textContent = demoBridgeT("saveLocalNoCloud", "□ 本地已保存（無法連線雲端）");
         el.className = "np-save-hint local";
       } else if (userLoggedIn) {
-        el.textContent = "\u25A1 本地已保存 · 登入平台帳號可同步雲端";
+        el.textContent = demoBridgeT("saveLocalLogin", "□ 本地已保存 · 登入平台帳號可同步雲端");
         el.className = "np-save-hint local";
       } else {
-        el.textContent = "\u25A1 進度已保存至本機 · 登入後可同步雲端";
+        el.textContent = demoBridgeT("saveLocal", "□ 進度已保存至本機 · 登入後可同步雲端");
         el.className = "np-save-hint local";
       }
     },

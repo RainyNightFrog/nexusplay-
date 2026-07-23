@@ -221,9 +221,9 @@
     "publishing": "發布中…",
     "optional": "（選填）",
     "share": "分享",
-    "backToGameMenu": "回到遊戲主選單",
-    "backToGameMenuDone": "已返回遊戲主選單，可重新選擇難度",
-    "backToGameMenuFailed": "無法連線至遊戲，請重新整理頁面後再試",
+    "backToGameMenu": "返回遊戲主選單",
+    "backToGameMenuDone": "已返回遊戲主選單 — 可重新選擇難度",
+    "backToGameMenuFailed": "無法連線到遊戲。請重新整理頁面後再試",
     "embed": "嵌入",
     "view": "查看",
     "creator": "創作者",
@@ -1530,6 +1530,46 @@
     "cyber-fortune": {
       "badge": "賽博博弈旗艦",
       "description": "這是一場融合了未來大數據統計與博弈策略的頭腦風暴。在霓虹交織的賽博夜城中，利用獨創的 012 矩陣與全餐對戰策略，精準推算對手的下一步。在概率的世界裡，你就是唯一的王。"
+    },
+    "neon-snake-extreme": {
+      "badge": "虛擬電競",
+      "description": "五種食物、移動障礙、氮氣加速與子彈時間慢動作；連擊倍率、觸控 D-pad／滑動轉向。四段難度刷新極限紀錄！"
+    },
+    "cyber-bubble-pop": {
+      "badge": "虛擬電競",
+      "description": "彈道預覽、頂部下壓、閃電／黑洞／炸彈特殊球與連鎖 Combo 限時倍率。經典泡泡龍的賽博電競重製版，手機觸控就緒。"
+    },
+    "quantum-tic-tac-toe": {
+      "badge": "虛擬電競",
+      "description": "5×5 連五對決、量子糾纏雙格落子與回合限時；四段 AI 難度、連勝統計與觸控落子，在量子棋盤上超越對手！"
+    },
+    "void-brick-breaker": {
+      "badge": "虛擬電競",
+      "description": "多球／雷射／磁力／黏球道具、爆炸與鋼鐵特殊磚、Combo 連破倍率與星塵粒子。四段難度虛空打磚塊，支援拖曳與虛擬鍵。"
+    },
+    "rainy-frog-dash": {
+      "badge": "虛擬電競",
+      "description": "雨夜霓虹跑酷：二段跳、滑翔、護盾與火箭道具、金幣 Combo、多段障礙編隊與天氣相位。手機觸控就緒！"
+    },
+    "neon-tetromino-rush": {
+      "badge": "虛擬電競",
+      "description": "幽靈預覽、保留、五格 Next、7-Bag 隨機、霓虹狂熱雙倍分、連消 Combo 與難度垃圾行。手機虛擬鍵支援。"
+    },
+    "galactic-invader-2026": {
+      "badge": "虛擬電競",
+      "description": "Lv1～4 武器升級、護盾吸收、四段彈幕 Boss 血條戰與追蹤／環形彈幕。復古射擊星際強化版，手機虛擬鍵就緒。"
+    },
+    "memory-matrix-glitch": {
+      "badge": "虛擬電競",
+      "description": "限時翻牌配對、Glitch 故障特效與連擊倍率；炸彈懲罰、錯配扣秒、完美通關獎勵。觸控翻牌，解鎖駭客矩陣！"
+    },
+    "overdrive-cyber-pong": {
+      "badge": "虛擬電競",
+      "description": "曲球 spin、三重重力井與預測 AI；觸控拖曳擋板、粒子拖尾與本地雙人對戰，先達標分數者勝！"
+    },
+    "cyber-neon-runner": {
+      "badge": "虛擬電競",
+      "description": "多型障礙、護盾磁鐵加速道具、金幣 Combo 倍率與里程碑事件；雷射彈藥節奏破障。桌面鍵鼠與手機觸控皆可在 Night City 衝刺到黎明！"
     }
   },
   "errors": {
