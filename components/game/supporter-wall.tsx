@@ -161,7 +161,7 @@ export function SupporterWall({
         {t("supporterWallEmpty")}
       </p>
     ) : (
-      <ul className="mx-auto mt-5 flex max-w-sm flex-col items-stretch gap-2">
+      <ul className="mx-auto mt-5 flex max-w-md flex-col items-stretch gap-2">
         {supporters.map((supporter, index) => {
           const rank = RANK_STYLES[index];
           const isAnonymous =
@@ -180,41 +180,44 @@ export function SupporterWall({
             <li
               key={`${supporter.createdAt}-${index}`}
               className={cn(
-                "flex flex-col items-center gap-1.5 rounded-xl border px-4 py-3 text-center",
+                "flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5",
                 rank?.row ??
                   "border-white/[0.06] bg-white/[0.02] hover:border-amber-400/20 hover:bg-amber-500/[0.04]",
                 isMe && "ring-1 ring-amber-300/35"
               )}
             >
-              <RankMark index={index} />
+              <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                <RankMark index={index} />
 
-              <div className="flex max-w-full flex-col items-center gap-1">
-                {isAnonymous ? (
-                  <span className="text-[13px] text-zinc-400">{displayName}</span>
-                ) : (
-                  <UserBadge
-                    username={displayName}
-                    title={supporter.equippedTitle}
-                    layout="stacked"
-                    animateTitle={false}
-                    className="items-center"
-                    usernameClassName={cn(
-                      "max-w-[14rem] truncate text-center text-[14px] font-medium tracking-wide",
-                      index === 0 || isMe ? "text-amber-50" : "text-zinc-100"
-                    )}
-                    titleClassName="text-[9px] text-amber-200/75"
-                  />
-                )}
-                {isMe && (
-                  <span className="rounded-full border border-amber-400/35 bg-amber-500/15 px-2 py-px text-[10px] tracking-wide text-amber-100">
-                    {tChat("you")}
-                  </span>
-                )}
+                <div className="flex min-w-0 items-center gap-1.5">
+                  {isAnonymous ? (
+                    <span className="truncate text-[13px] text-zinc-400">
+                      {displayName}
+                    </span>
+                  ) : (
+                    <UserBadge
+                      username={displayName}
+                      title={supporter.equippedTitle}
+                      layout="compact"
+                      animateTitle={false}
+                      usernameClassName={cn(
+                        "max-w-[11rem] truncate text-[13px] font-medium tracking-wide sm:max-w-[14rem]",
+                        index === 0 || isMe ? "text-amber-50" : "text-zinc-100"
+                      )}
+                      titleClassName="text-[8px] text-amber-200/75"
+                    />
+                  )}
+                  {isMe && (
+                    <span className="shrink-0 rounded-full border border-amber-400/35 bg-amber-500/15 px-1.5 py-px text-[10px] tracking-wide text-amber-100">
+                      {tChat("you")}
+                    </span>
+                  )}
+                </div>
               </div>
 
               <span
                 className={cn(
-                  "rounded-md border px-2.5 py-0.5 font-serif text-[13px] tracking-wide tabular-nums",
+                  "shrink-0 rounded-md border px-2.5 py-0.5 font-serif text-[13px] tracking-wide tabular-nums",
                   rank?.amount ??
                     "border-white/10 bg-white/[0.03] text-zinc-300"
                 )}
