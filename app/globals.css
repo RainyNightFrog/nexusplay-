@@ -849,6 +849,21 @@
   filter: drop-shadow(0 0 10px rgba(167, 139, 250, 0.45));
 }
 
+/* 手機：減輕陰影濾鏡，避免支持者牆多個特效造成卡頓 */
+@media (max-width: 767px) {
+  .supporter-username-premium {
+    filter: drop-shadow(0 0 4px rgba(167, 139, 250, 0.3));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .supporter-username,
+  .supporter-username-premium {
+    animation: none;
+    background-position: 50% 50%;
+  }
+}
+
 .title-supporter-v1 {
   color: rgb(251 191 36);
 }

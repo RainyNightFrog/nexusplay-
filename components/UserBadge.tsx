@@ -17,6 +17,8 @@ type UserBadgeProps = {
   title?: EquippedTitle | null;
   isSupporter?: boolean;
   supporterBadge?: string | null;
+  /** 永久傳說支持者：特效與 SVIP（premium）相同 */
+  supporterLifetime?: boolean;
   className?: string;
   usernameClassName?: string;
   titleClassName?: string;
@@ -42,6 +44,7 @@ export function UserBadge({
   title,
   isSupporter = false,
   supporterBadge = null,
+  supporterLifetime = false,
   className,
   usernameClassName,
   titleClassName,
@@ -54,7 +57,12 @@ export function UserBadge({
   fallbackRoleRainbow = false,
 }: UserBadgeProps) {
   const locale = useLocale();
-  const supporterTier = getSupporterDisplayTier(isSupporter, supporterBadge);
+  const supporterTier = getSupporterDisplayTier(
+    isSupporter,
+    supporterBadge,
+    title,
+    supporterLifetime
+  );
   const isSupporterDisplay = supporterTier !== "none";
 
   const titleLabel = localizeTitleName(title?.name, locale);

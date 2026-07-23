@@ -9,6 +9,7 @@ export const SUPPORTER_PASS_TIERS = [
     interval: "month" as const,
     badge: "supporter_v1",
     labelKey: "tier5Monthly",
+    bonusAp: 3_000,
   },
   {
     id: "supporter_10_monthly",
@@ -16,6 +17,7 @@ export const SUPPORTER_PASS_TIERS = [
     interval: "month" as const,
     badge: "supporter_v2",
     labelKey: "tier10Monthly",
+    bonusAp: 8_000,
   },
   {
     id: "supporter_5_yearly",
@@ -23,6 +25,7 @@ export const SUPPORTER_PASS_TIERS = [
     interval: "year" as const,
     badge: "supporter_v1",
     labelKey: "tier5Yearly",
+    bonusAp: 40_000,
   },
   {
     id: "supporter_10_yearly",
@@ -30,6 +33,7 @@ export const SUPPORTER_PASS_TIERS = [
     interval: "year" as const,
     badge: "supporter_v2",
     labelKey: "tier10Yearly",
+    bonusAp: 100_000,
   },
 ] as const;
 
@@ -44,6 +48,8 @@ export const LIFETIME_SUPPORTER_MAX_USD = 10000;
 export const LIFETIME_SUPPORTER_MIN_CENTS = LIFETIME_SUPPORTER_MIN_USD * 100;
 export const LIFETIME_SUPPORTER_MAX_CENTS = LIFETIME_SUPPORTER_MAX_USD * 100;
 export const LIFETIME_SUPPORTER_BADGE = "supporter_v2" as const;
+/** 永久方案：每 1 USD 贈送 AP */
+export const LIFETIME_SUPPORTER_BONUS_AP_PER_USD = 800;
 
 export type CheckoutSelectionId =
   | SupporterPassTierId
@@ -64,6 +70,34 @@ export function isLifetimeSupporterTierId(value: unknown): boolean {
 
 export function formatTierPriceUsd(cents: number) {
   return (cents / 100).toFixed(2);
+}
+
+export type ResolvedSupporterPassCheckout = {
+  tierId: string;
+  priceCents: number;
+  badge: string;
+  interval: SupporterBillingInterval | "lifetime";
+  lifetime: boolean;
+  bonusAp: number;
+};
+
+/** 永久方案依實付金額計算贈送 AP */
+export function getLifetimeSupporterBonusAp(priceCents: number) {
+  if (!Number.isFinite(priceCents) || priceCents <= 0) return 0;
+  const usd = priceCents / 100;
+  return Math.floor(usd * LIFETIME_SUPPORTER_BONUS_AP_PER_USD);
+}
+
+export function getSupporterPassBonusAp(
+  checkout: Pick<
+    ResolvedSupporterPassCheckout,
+    "lifetime" | "priceCents" | "bonusAp"
+  >
+) {
+  if (checkout.lifetime) {
+    return getLifetimeSupporterBonusAp(checkout.priceCents);
+  }
+  return Math.max(0, Math.floor(checkout.bonusAp));
 }
 
 /** 解析自訂永久支持金額（USD），最低 250 */
@@ -100,14 +134,6 @@ export function parseLifetimeSupporterAmountUsd(
   };
 }
 
-export type ResolvedSupporterPassCheckout = {
-  tierId: string;
-  priceCents: number;
-  badge: string;
-  interval: SupporterBillingInterval | "lifetime";
-  lifetime: boolean;
-};
-
 export function resolveSupporterPassCheckout(input: {
   tierId: string;
   customAmountUsd?: unknown;
@@ -120,6 +146,7 @@ export function resolveSupporterPassCheckout(input: {
       return { ok: false, error: amount.error };
     }
 
+    const bonusAp = getLifetimeSupporterBonusAp(amount.cents);
     return {
       ok: true,
       checkout: {
@@ -128,6 +155,7 @@ export function resolveSupporterPassCheckout(input: {
         badge: LIFETIME_SUPPORTER_BADGE,
         interval: "lifetime",
         lifetime: true,
+        bonusAp,
       },
     };
   }
@@ -145,6 +173,7 @@ export function resolveSupporterPassCheckout(input: {
       badge: tier.badge,
       interval: tier.interval,
       lifetime: false,
+      bonusAp: tier.bonusAp,
     },
   };
 }

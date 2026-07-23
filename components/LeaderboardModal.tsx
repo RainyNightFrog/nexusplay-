@@ -530,7 +530,8 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
       <DialogTrigger
         className={cn(
           buttonVariants({ variant: "outline", size: "sm" }),
-          "relative gap-1.5 border-amber-400/25 bg-amber-500/10 px-2.5 text-amber-200 shadow-md shadow-amber-500/10 sm:px-3",
+          "relative size-9 shrink-0 gap-1.5 border-amber-400/25 bg-amber-500/10 p-0 text-amber-200 shadow-md shadow-amber-500/10",
+          "sm:h-8 sm:w-auto sm:px-3",
           "hover:border-amber-300/40 hover:bg-amber-500/15 hover:text-amber-100",
           "before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit]",
           "before:bg-gradient-to-r before:from-cyan-500/0 before:via-violet-500/10 before:to-fuchsia-500/0",

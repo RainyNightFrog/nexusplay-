@@ -26,6 +26,7 @@ import {
   LIFETIME_SUPPORTER_TIER_ID,
   SUPPORTER_PASS_TIERS,
   formatTierPriceUsd,
+  getLifetimeSupporterBonusAp,
   type CheckoutSelectionId,
   type SupporterPassTierId,
 } from "@/lib/supporter-pass";
@@ -41,6 +42,10 @@ const PERK_ICONS = [Sparkles, Palette, HeartHandshake] as const;
 
 function getBillingLabelKey(interval: "month" | "year") {
   return interval === "year" ? "billingYearly" : "billingMonthly";
+}
+
+function formatBonusAp(count: number) {
+  return count.toLocaleString("en-US");
 }
 
 export function SupporterView() {
@@ -64,6 +69,11 @@ export function SupporterView() {
   const [paymentsLive, setPaymentsLive] = useState(false);
 
   const isLifetimeSelected = selectedTier === LIFETIME_SUPPORTER_TIER_ID;
+  const lifetimeBonusAp = getLifetimeSupporterBonusAp(
+    Math.round(
+      (Number.parseFloat(lifetimeAmount) || LIFETIME_SUPPORTER_MIN_USD) * 100
+    )
+  );
 
   useEffect(() => {
     fetch("/api/checkout/supporter-pass")
@@ -295,6 +305,11 @@ export function SupporterView() {
                     {t(getBillingLabelKey(tier.interval))}
                   </p>
                   <ul className="mt-4 space-y-1 text-xs text-zinc-500">
+                    <li>
+                      {t("tierPerkBonusAp", {
+                        count: formatBonusAp(tier.bonusAp),
+                      })}
+                    </li>
                     <li>{t("tierPerkBadge")}</li>
                     <li>{t("tierPerkUsername")}</li>
                     <li>
@@ -355,6 +370,11 @@ export function SupporterView() {
                 {t("tierLifetimeDesc")}
               </p>
               <ul className="mt-3 space-y-1 text-xs text-zinc-500">
+                <li>
+                  {t("tierPerkBonusAp", {
+                    count: formatBonusAp(lifetimeBonusAp),
+                  })}
+                </li>
                 <li>{t("tierPerkSvipAll")}</li>
                 <li>{t("tierPerkComposer")}</li>
                 <li>{t("tierPerkLifetimeTitle")}</li>

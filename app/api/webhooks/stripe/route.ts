@@ -12,6 +12,7 @@ import {
   markTipPaymentFailed,
 } from "@/lib/tip-payment-webhook";
 import { handleSupporterSubscriptionDeleted } from "@/lib/supporter-subscription-webhook";
+import { handleSupporterInvoicePaid } from "@/lib/supporter-invoice-webhook";
 import {
   handleSupporterPassDisputeLost,
   handleSupporterPassRefund,
@@ -72,6 +73,11 @@ export async function POST(request: Request) {
       case "customer.subscription.deleted": {
         const subscription = event.data.object as Stripe.Subscription;
         await handleSupporterSubscriptionDeleted(subscription);
+        break;
+      }
+      case "invoice.paid": {
+        const invoice = event.data.object as Stripe.Invoice;
+        await handleSupporterInvoicePaid(invoice);
         break;
       }
       case "payment_intent.succeeded": {

@@ -2,12 +2,61 @@ import type Stripe from "stripe";
 import {
   LIFETIME_SUPPORTER_MIN_CENTS,
   LIFETIME_SUPPORTER_TIER_ID,
+  parseSupporterPassTierId,
+  resolveSupporterPassCheckout,
+  type ResolvedSupporterPassCheckout,
 } from "@/lib/supporter-pass";
+import { creditSupporterPassBonusForCheckout } from "@/lib/supporter-ap-bonus";
 import { grantSupporterStatus } from "@/lib/supporter-pass-service";
 import {
   markOrderSucceeded,
   type OrderRow,
 } from "@/lib/checkout-order-webhook";
+
+function resolveCheckoutForBonus(
+  session: Stripe.Checkout.Session,
+  order: OrderRow,
+  lifetime: boolean
+): ResolvedSupporterPassCheckout {
+  const tierId =
+    session.metadata?.supporter_tier_id?.trim() ||
+    (lifetime ? LIFETIME_SUPPORTER_TIER_ID : "");
+
+  const customAmountUsd = lifetime
+    ? order.total_amount_cents / 100
+    : undefined;
+
+  const resolved = resolveSupporterPassCheckout({
+    tierId: tierId || LIFETIME_SUPPORTER_TIER_ID,
+    customAmountUsd,
+  });
+
+  if (resolved.ok) {
+    return resolved.checkout;
+  }
+
+  const tier = parseSupporterPassTierId(tierId);
+  if (tier) {
+    return {
+      tierId: tier.id,
+      priceCents: order.total_amount_cents,
+      badge: tier.badge,
+      interval: tier.interval,
+      lifetime: false,
+      bonusAp: tier.bonusAp,
+    };
+  }
+
+  // 後備：無法辨識方案時不發 AP
+  return {
+    tierId: tierId || "unknown",
+    priceCents: order.total_amount_cents,
+    badge: session.metadata?.supporter_badge ?? "supporter_v1",
+    interval: lifetime ? "lifetime" : "month",
+    lifetime,
+    bonusAp: 0,
+  };
+}
 
 function resolveLifetimeFlag(
   session: Stripe.Checkout.Session,
@@ -95,6 +144,18 @@ export async function finalizeSupporterPassCheckout(
     badge,
     lifetime,
   });
+
+  const checkout = resolveCheckoutForBonus(session, order, lifetime);
+  try {
+    await creditSupporterPassBonusForCheckout({
+      userId,
+      orderId: order.id,
+      checkout,
+    });
+  } catch (error) {
+    // 身分已授予；AP 發放失敗應讓 webhook 重試（冪等）
+    throw error;
+  }
 
   return true;
 }

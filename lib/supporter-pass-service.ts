@@ -9,6 +9,7 @@ import {
   resolveSupporterPassCheckout,
   type ResolvedSupporterPassCheckout,
 } from "@/lib/supporter-pass";
+import { creditSupporterPassBonusForCheckout } from "@/lib/supporter-ap-bonus";
 import { announceLifetimeSupporterBecome } from "@/lib/supporter-lifetime-announce";
 import { ensurePayerStripeCustomer } from "@/lib/stripe-payer-customer";
 import {
@@ -367,6 +368,13 @@ export async function recordPreviewSupporterPass(params: {
     userId: params.userId,
     badge: checkout.badge,
     lifetime: checkout.lifetime,
+  });
+
+  await creditSupporterPassBonusForCheckout({
+    userId: params.userId,
+    orderId: data.id,
+    checkout,
+    supabase,
   });
 
   return {

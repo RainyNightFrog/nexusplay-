@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Gamepad2,
   MessagesSquare,
+  HeartHandshake,
   Upload,
   Sparkles,
   Zap,
@@ -34,6 +35,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { FeaturedGames } from "@/components/home/featured-games";
 import { AnnouncementMarquee } from "@/components/home/announcement-marquee";
 import { HomePersonalizedSections } from "@/components/home/home-personalized-sections";
+import { HomeSupporterSection } from "@/components/home/home-supporter-section";
 import { PriceFilterSidebar } from "@/components/home/price-filter-sidebar";
 import {
   BentoGameGrid,
@@ -311,18 +313,31 @@ export function HomePageClient({ initialGames }: HomePageClientProps) {
           <SiteSearch />
         </div>
 
-        <div className="ml-auto flex items-center gap-2 sm:gap-3">
+        <div className="ml-auto flex items-center gap-1 sm:gap-2 md:gap-3">
           <MobileSearchButton />
           <Link
             href="/community"
             className={cn(
               buttonVariants({ variant: "outline", size: "sm" }),
-              "inline-flex gap-1.5 border-violet-400/20 bg-violet-500/10 px-2 text-violet-200 hover:border-violet-400/30 hover:bg-violet-500/15 sm:px-3"
+              "inline-flex size-9 shrink-0 items-center justify-center gap-1.5 border-violet-400/20 bg-violet-500/10 p-0 text-violet-200 hover:border-violet-400/30 hover:bg-violet-500/15",
+              "sm:h-8 sm:w-auto sm:px-3"
             )}
             aria-label={tNav("community")}
           >
             <MessagesSquare className="size-3.5" />
             <span className="hidden sm:inline">{tNav("community")}</span>
+          </Link>
+          <Link
+            href="/supporter"
+            className={cn(
+              buttonVariants({ variant: "outline", size: "sm" }),
+              "inline-flex size-9 shrink-0 items-center justify-center gap-1.5 border-amber-400/20 bg-amber-500/10 p-0 text-amber-200 hover:border-amber-400/30 hover:bg-amber-500/15",
+              "sm:h-8 sm:w-auto sm:px-3"
+            )}
+            aria-label={t("supporterNav")}
+          >
+            <HeartHandshake className="size-3.5" />
+            <span className="hidden sm:inline">{t("supporterNav")}</span>
           </Link>
           <LanguageSwitcher />
           <LeaderboardNavButton />
@@ -432,6 +447,8 @@ export function HomePageClient({ initialGames }: HomePageClientProps) {
           favoriteBusyId={favoriteBusyId}
           onFavoriteClick={(gameId) => void handleFavoriteClick(gameId)}
         />
+
+        <HomeSupporterSection />
 
         <HomePersonalizedSections profileId={profile?.id} />
 
