@@ -103,7 +103,6 @@
     "db:achievements-expand": "node scripts/run-achievements-expand.mjs",
     "db:achievements-titles-expand": "node scripts/run-achievements-titles-expand.mjs",
     "db:achievements-hardcore": "node scripts/run-achievements-hardcore-expand.mjs",
-    "db:ap-shop": "node scripts/run-ap-shop.mjs",
     "db:assign-admin": "node scripts/assign-admin.mjs",
     "setup:production-auth": "node scripts/configure-production-auth.mjs",
     "setup:resend-domain": "node scripts/setup-resend-domain.mjs",

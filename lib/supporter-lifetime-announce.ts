@@ -27,7 +27,52 @@ export function buildLifetimeOnlineAnnouncement(
 export function buildSvipOnlineAnnouncement(
   displayName: string | null | undefined
 ) {
-  return `✨【SVIP】${formatDisplayName(displayName)}已上線！`;
+  return `【SVIP】${formatDisplayName(displayName)}已上線！`;
+}
+
+/** 世界頻道支持者系統公告（上線／成為永久支持者），前端以公告樣式呈現 */
+export function isSupporterChatAnnouncement(content: string): boolean {
+  return parseSupporterChatAnnouncement(content) !== null;
+}
+
+export type SupporterChatAnnouncementParts = {
+  kind: "svip_online" | "lifetime_online" | "lifetime_become";
+  prefix: string;
+  displayName: string;
+  suffix: string;
+};
+
+/** 拆出公告裡的玩家名稱，供點擊查看資料 */
+export function parseSupporterChatAnnouncement(
+  content: string
+): SupporterChatAnnouncementParts | null {
+  const text = content.trim();
+
+  const becomeMatch = text.match(
+    /^(⚡\s*傳說降臨！「)(.+?)(」成為永久支持者.*)$/
+  );
+  if (becomeMatch) {
+    return {
+      kind: "lifetime_become",
+      prefix: becomeMatch[1],
+      displayName: becomeMatch[2],
+      suffix: becomeMatch[3],
+    };
+  }
+
+  const onlineMatch = text.match(
+    /^((?:[✨⚡]\s*)?【(SVIP|RainyNightFrog)】)(.+?)(已上線！)$/
+  );
+  if (onlineMatch) {
+    return {
+      kind: onlineMatch[2] === "SVIP" ? "svip_online" : "lifetime_online",
+      prefix: onlineMatch[1],
+      displayName: onlineMatch[3],
+      suffix: onlineMatch[4],
+    };
+  }
+
+  return null;
 }
 
 async function insertWorldAnnouncement(params: {
@@ -80,9 +125,11 @@ export type PremiumOnlineAnnounceResult =
  * SVIP／永久傳說支持者上線時世界頻道廣播。
  * 永久傳說優先使用傳說文案；一般 SVIP 使用 SVIP 文案。
  * 成功回傳 announced；冷卻中或不符資格回傳 skipped。
+ * `force: true` 可略過冷卻（僅供手動重發測試）。
  */
 export async function announcePremiumSupporterOnline(
-  userId: string
+  userId: string,
+  options?: { force?: boolean }
 ): Promise<PremiumOnlineAnnounceResult> {
   const supabase = createServerSupabase();
   const { data: profile, error } = await supabase
@@ -118,14 +165,16 @@ export async function announcePremiumSupporterOnline(
 
   const kind = isLifetime ? "lifetime" : "svip";
 
-  const lastAt = profile.supporter_lifetime_announced_at
-    ? new Date(profile.supporter_lifetime_announced_at).getTime()
-    : 0;
-  if (
-    Number.isFinite(lastAt) &&
-    Date.now() - lastAt < LIFETIME_ONLINE_ANNOUNCE_COOLDOWN_MS
-  ) {
-    return { announced: false, reason: "cooldown" };
+  if (!options?.force) {
+    const lastAt = profile.supporter_lifetime_announced_at
+      ? new Date(profile.supporter_lifetime_announced_at).getTime()
+      : 0;
+    if (
+      Number.isFinite(lastAt) &&
+      Date.now() - lastAt < LIFETIME_ONLINE_ANNOUNCE_COOLDOWN_MS
+    ) {
+      return { announced: false, reason: "cooldown" };
+    }
   }
 
   const nowIso = new Date().toISOString();

@@ -28,6 +28,7 @@ import { UserBadge } from "@/components/UserBadge";
 import { useChatPlayerProfile } from "@/hooks/use-chat-player-profile";
 import type { ChatMessage } from "@/lib/chat";
 import type { EquippedTitle } from "@/lib/titles";
+import { localizeAchievementTitle } from "@/lib/achievement-i18n";
 import { formatCountryName } from "@/lib/request-geo";
 import { normalizeWebsite } from "@/lib/profile-settings";
 import {
@@ -560,7 +561,9 @@ export function ChatPlayerCard({
                         className="inline-flex items-center gap-1 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-xs text-amber-100 sm:text-sm"
                       >
                         <span>{item.badge_icon}</span>
-                        <span>{item.title}</span>
+                        <span>
+                          {localizeAchievementTitle(item.title, locale)}
+                        </span>
                       </span>
                     ))}
                   </div>

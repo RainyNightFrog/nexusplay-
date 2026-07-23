@@ -13,7 +13,7 @@ import { resolveEquippedTitles } from "@/lib/equipped-title-service";
 import {
   resolveCosmeticCssByCodes,
   resolveEquippedCosmeticsMap,
-} from "@/lib/ap-shop-service";
+} from "@/lib/cosmetics-resolve";
 import { formatForumAuthor } from "@/lib/forum";
 import { resolveAdminDisplayRole } from "@/lib/admin-display-role";
 import { resolveUserAvatarUrl } from "@/lib/resolve-user-avatar";

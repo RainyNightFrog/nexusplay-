@@ -23,7 +23,7 @@ export type UserProfile = {
   profile_showcase_tags: ProfileShowcaseTagId[];
   equipped_title_id: string | null;
   equipped_title: EquippedTitle | null;
-  /** AP 商店外觀：商店 item code */
+  /** 外觀：已裝備 item code（頭像框／名字色／氣泡） */
   equipped_avatar_frame: string | null;
   equipped_name_color: string | null;
   equipped_chat_bubble: string | null;

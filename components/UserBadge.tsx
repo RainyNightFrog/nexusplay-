@@ -1,7 +1,9 @@
 "use client";
 
+import { useLocale } from "next-intl";
 import type { EquippedTitle } from "@/lib/titles";
 import { getTitleDisplayClass } from "@/lib/titles";
+import { localizeTitleName } from "@/lib/title-i18n";
 import {
   getSupporterDisplayTier,
   supporterUsernameClassByTier,
@@ -18,7 +20,7 @@ type UserBadgeProps = {
   className?: string;
   usernameClassName?: string;
   titleClassName?: string;
-  /** AP 商店名字顏色 class */
+  /** 名字顏色 CSS class */
   nameColorClass?: string | null;
   layout?: "inline" | "stacked" | "compact";
   animateTitle?: boolean;
@@ -51,10 +53,11 @@ export function UserBadge({
   fallbackRoleLabel = null,
   fallbackRoleRainbow = false,
 }: UserBadgeProps) {
+  const locale = useLocale();
   const supporterTier = getSupporterDisplayTier(isSupporter, supporterBadge);
   const isSupporterDisplay = supporterTier !== "none";
 
-  const titleLabel = title?.name ?? null;
+  const titleLabel = localizeTitleName(title?.name, locale);
   const secondaryLabel = titleLabel ?? fallbackRoleLabel ?? null;
   const isRoleFallback = !titleLabel && Boolean(fallbackRoleLabel);
   const wrapRnfFrame = Boolean(

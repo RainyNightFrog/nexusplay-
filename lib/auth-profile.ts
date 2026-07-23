@@ -5,7 +5,7 @@ import { isAdminUser } from "@/lib/admin-auth";
 import {
   getEquippedCosmetics,
   resolveCosmeticCssByCodes,
-} from "@/lib/ap-shop-service";
+} from "@/lib/cosmetics-resolve";
 import { resolveEquippedTitleForUser } from "@/lib/equipped-title-service";
 import { profileFromUserMetadata } from "@/lib/profile-from-metadata";
 import { isMissingProfilesRelation } from "@/lib/profiles-access";

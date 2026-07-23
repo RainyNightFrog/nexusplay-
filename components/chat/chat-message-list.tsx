@@ -11,6 +11,7 @@ import {
   supporterMessageContentClassByTier,
   type SupporterDisplayTier,
 } from "@/lib/supporter-tier";
+import { parseSupporterChatAnnouncement } from "@/lib/supporter-lifetime-announce";
 import { resolveChatAuthorRoleFallback } from "@/lib/admin-display-role";
 import { resolveChatMessageSupporterTier } from "@/lib/virtual-player-supporter";
 import { cn } from "@/lib/utils";
@@ -123,7 +124,11 @@ export function ChatMessageList({
     >
       {messages.map((message) => {
         const recalled = Boolean(message.recalled_at);
-        const showRecall = canRecall(message);
+        const announcement = recalled
+          ? null
+          : parseSupporterChatAnnouncement(message.content);
+        const isAnnouncement = announcement !== null;
+        const showRecall = !isAnnouncement && canRecall(message);
         const { tier: supporterTier, badge: supporterBadge } =
           resolveChatMessageSupporterTier(
             message,
@@ -145,6 +150,88 @@ export function ChatMessageList({
             player: t("rolePlayer"),
           }
         );
+
+        if (isAnnouncement) {
+          const parsed = announcement;
+          const useRainbow =
+            parsed.kind === "svip_online" ||
+            parsed.kind === "lifetime_online";
+          const rainbowClass = supporterMessageContentClassByTier.premium;
+
+          return (
+            <div
+              key={message.id}
+              className="flex justify-center px-1 py-1.5"
+              role="status"
+            >
+              <div className="flex max-w-[92%] flex-col items-center gap-0.5">
+                <span className="text-[10px] tracking-wide text-zinc-500">
+                  {t("systemAnnouncement")}
+                  <span className="mx-1.5 text-zinc-700">·</span>
+                  {formatChatTime(message.created_at)}
+                </span>
+                <div
+                  className={cn(
+                    "rounded-full border px-3.5 py-1.5 text-center text-xs font-medium leading-relaxed shadow-sm",
+                    useRainbow
+                      ? "border-violet-400/35 bg-gradient-to-r from-violet-500/15 via-fuchsia-500/10 to-amber-400/15"
+                      : "border-amber-400/30 bg-amber-500/10"
+                  )}
+                >
+                  {useRainbow ? (
+                    <span className="inline whitespace-pre-wrap break-words">
+                      <RainbowSafeText
+                        text={parsed.prefix}
+                        rainbowClassName={rainbowClass}
+                      />
+                      {onAuthorClick ? (
+                        <button
+                          type="button"
+                          onClick={() => onAuthorClick(message)}
+                          className={cn(
+                            "!inline cursor-pointer border-0 bg-transparent p-0 underline-offset-2 hover:underline",
+                            rainbowClass
+                          )}
+                          aria-label={parsed.displayName}
+                        >
+                          {parsed.displayName}
+                        </button>
+                      ) : (
+                        <RainbowSafeText
+                          text={parsed.displayName}
+                          rainbowClassName={rainbowClass}
+                        />
+                      )}
+                      <RainbowSafeText
+                        text={parsed.suffix}
+                        rainbowClassName={rainbowClass}
+                      />
+                    </span>
+                  ) : (
+                    <span className="inline whitespace-pre-wrap break-words text-amber-100">
+                      {parsed.prefix}
+                      {onAuthorClick ? (
+                        <button
+                          type="button"
+                          onClick={() => onAuthorClick(message)}
+                          className="inline cursor-pointer font-semibold text-amber-200 underline-offset-2 hover:underline"
+                          aria-label={parsed.displayName}
+                        >
+                          {parsed.displayName}
+                        </button>
+                      ) : (
+                        <span className="font-semibold text-amber-200">
+                          {parsed.displayName}
+                        </span>
+                      )}
+                      {parsed.suffix}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        }
 
         return (
           <div

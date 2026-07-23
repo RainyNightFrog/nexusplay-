@@ -321,7 +321,8 @@ export async function loadUserAchievementMetrics(
 export function formatProgressLabel(
   code: string,
   current: number,
-  target: number
+  target: number,
+  locale = "zh-HK"
 ): string {
   if (code === "big_tipper" || code === "big_tipper_500") {
     return `HK$${current}/${target}`;
@@ -335,6 +336,11 @@ export function formatProgressLabel(
     const th = Math.max(1, Math.floor(target / 3600));
     return `${ch}/${th}h`;
   }
-  if (code.startsWith("veteran_")) return `${current}/${target}天`;
+  if (code.startsWith("veteran_")) {
+    const normalized = locale.toLowerCase();
+    const unit =
+      normalized.startsWith("zh") ? "天" : normalized.startsWith("ja") ? "日" : "d";
+    return `${current}/${target}${unit}`;
+  }
   return `${current}/${target}`;
 }

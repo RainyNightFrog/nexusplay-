@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   ArrowRight,
   Crown,
@@ -22,18 +22,19 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserBadge } from "@/components/UserBadge";
-import { ApShopPanel } from "@/components/ApShopPanel";
 import { useAuth } from "@/hooks/use-auth";
-import type { ApShopItem, ApWallet, EquippedCosmetics } from "@/lib/ap-shop";
-import type { ApShopItemKind } from "@/lib/ap-shop";
 import {
-  ACHIEVEMENT_CATEGORY_LABELS,
   ACHIEVEMENT_CATEGORY_ORDER,
   type AchievementCategory,
   type AchievementWithProgress,
 } from "@/lib/achievements";
 import { formatProgressLabel } from "@/lib/achievement-progress";
 import type { TitleWardrobeEntry } from "@/lib/titles";
+import { localizeTitleName } from "@/lib/title-i18n";
+import {
+  localizeAchievementByCode,
+  localizeAchievementTitle,
+} from "@/lib/achievement-i18n";
 import {
   SUPPORTER_TITLE_LIFETIME,
   SUPPORTER_TITLE_V1,
@@ -42,7 +43,6 @@ import {
 import { Link } from "@/i18n/navigation";
 import {
   RARITY_BORDER_CLASS,
-  RARITY_LABELS,
   getTitleDisplayClass,
 } from "@/lib/titles";
 import { cn } from "@/lib/utils";
@@ -58,8 +58,6 @@ type AchievementsResponse = {
     unlocked_count: number;
     total_count: number;
     total_points: number;
-    spendable_ap?: number;
-    lifetime_ap?: number;
     completion_percent: number;
     claimable_count?: number;
   };
@@ -86,6 +84,26 @@ const RARITY_GLOW: Record<string, string> = {
   epic: "from-violet-500/25 to-fuchsia-500/15",
   legendary: "from-amber-400/25 via-fuchsia-500/20 to-cyan-400/20",
 };
+
+const CATEGORY_LABEL_KEYS: Record<
+  AchievementCategory,
+  | "categoryGameplay"
+  | "categorySocial"
+  | "categoryCreator"
+  | "categorySpecial"
+> = {
+  gameplay: "categoryGameplay",
+  social: "categorySocial",
+  creator: "categoryCreator",
+  special: "categorySpecial",
+};
+
+const RARITY_LABEL_KEYS = {
+  common: "rarityCommon",
+  rare: "rarityRare",
+  epic: "rarityEpic",
+  legendary: "rarityLegendary",
+} as const;
 
 function formatUnlockPercent(value: number) {
   if (value <= 0) return "0%";
@@ -179,7 +197,7 @@ function AchievementProgressPanel({
           <div key={item.category} className="space-y-1 px-1">
             <div className="flex items-center justify-between text-xs sm:text-sm">
               <span className="text-zinc-400">
-                {ACHIEVEMENT_CATEGORY_LABELS[item.category]}
+                {t(CATEGORY_LABEL_KEYS[item.category])}
               </span>
               <span className="tabular-nums text-zinc-500">
                 {item.unlocked}/{item.total}
@@ -197,7 +215,7 @@ function AchievementProgressPanel({
 
       <div className="mt-auto rounded-lg border border-amber-400/15 bg-amber-500/5 p-3 text-center">
         <p className="text-xs text-zinc-500 sm:text-sm">{t("statPoints")}</p>
-        <p className="text-lg font-bold text-amber-300 sm:text-xl">{summary.total_points} AP</p>
+        <p className="text-lg font-bold text-amber-300 sm:text-xl">{summary.total_points}</p>
       </div>
     </aside>
   );
@@ -213,13 +231,21 @@ function AchievementCard({
   onClaim?: (code: string) => void;
 }) {
   const t = useTranslations("achievements");
+  const locale = useLocale();
   const locked = !achievement.unlocked;
   const claimable = achievement.claimable && locked;
   const progressLabel = formatProgressLabel(
     achievement.code,
     achievement.progress_current,
-    achievement.progress_target
+    achievement.progress_target,
+    locale
   );
+  const localized = localizeAchievementByCode(achievement.code, locale, {
+    title: achievement.title,
+    description: achievement.description,
+  });
+  const displayAchievementTitle = localized.title;
+  const displayAchievementDescription = localized.description;
 
   return (
     <div
@@ -262,7 +288,7 @@ function AchievementCard({
                 locked ? "text-zinc-500" : "text-zinc-100"
               )}
             >
-              {achievement.title}
+              {displayAchievementTitle}
             </h4>
             <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-300">
               +{achievement.points}
@@ -270,12 +296,12 @@ function AchievementCard({
           </div>
 
           <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-zinc-400 sm:text-base">
-            {achievement.description}
+            {displayAchievementDescription}
           </p>
 
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs sm:text-sm">
             <span className="text-zinc-600">
-              {ACHIEVEMENT_CATEGORY_LABELS[achievement.category]}
+              {t(CATEGORY_LABEL_KEYS[achievement.category])}
             </span>
             <span className="text-zinc-700">·</span>
             <span className="text-cyan-400/80">
@@ -400,8 +426,11 @@ function TitleCard({
   onGoToAchievements?: () => void;
 }) {
   const t = useTranslations("achievements");
+  const locale = useLocale();
   const locked = !title.unlocked;
   const achievement = title.unlock_achievement;
+  const displayTitleName =
+    localizeTitleName(title.name, locale) ?? title.name;
 
   const statusLabel = title.is_equipped
     ? t("equippedNow")
@@ -447,7 +476,7 @@ function TitleCard({
               {statusLabel}
             </span>
             <span className="rounded-full border border-white/10 bg-black/30 px-2 py-0.5 text-[11px] text-zinc-400">
-              {RARITY_LABELS[title.rarity_tier]}
+              {t(RARITY_LABEL_KEYS[title.rarity_tier])}
             </span>
           </div>
           {title.is_equipped ? (
@@ -469,13 +498,18 @@ function TitleCard({
                   : getTitleDisplayClass(title.css_class, title.rarity_tier)
               )}
             >
-              {title.name}
+              {displayTitleName}
             </p>
 
             <p className="mt-1 text-left text-xs leading-snug text-zinc-400 sm:text-sm">
               {achievement ? (
                 <>
-                  {t("unlockRequirement", { achievement: achievement.title })}{" "}
+                  {t("unlockRequirement", {
+                    achievement: localizeAchievementTitle(
+                      achievement.title,
+                      locale
+                    ),
+                  })}{" "}
                   <span aria-hidden>{achievement.badge_icon}</span>
                   {!locked && (
                     <span
@@ -497,10 +531,6 @@ function TitleCard({
                 t("unlockRequirementSupporterPremium")
               ) : title.name === SUPPORTER_TITLE_LIFETIME ? (
                 t("unlockRequirementSupporterLifetime")
-              ) : title.name === "AP 先驅" ||
-                title.name === "霓虹旅人" ||
-                title.name === "點數帝王" ? (
-                t("unlockRequirementApShop")
               ) : (
                 t("unlockRequirementUnknown")
               )}
@@ -594,15 +624,13 @@ function TitleCard({
 
 export function AchievementsModal({ open, onOpenChange }: AchievementsModalProps) {
   const t = useTranslations("achievements");
+  const locale = useLocale();
   const { profile, refreshProfile } = useAuth();
-  const [activeTab, setActiveTab] = useState<"achievements" | "titles" | "shop">(
+  const [activeTab, setActiveTab] = useState<"achievements" | "titles">(
     "achievements"
   );
   const [achievementsData, setAchievementsData] = useState<AchievementsResponse | null>(null);
   const [titlesData, setTitlesData] = useState<TitlesResponse | null>(null);
-  const [shopWallet, setShopWallet] = useState<ApWallet | null>(null);
-  const [shopItems, setShopItems] = useState<ApShopItem[]>([]);
-  const [shopEquipped, setShopEquipped] = useState<EquippedCosmetics | null>(null);
   const [loading, setLoading] = useState(false);
   const [equippingId, setEquippingId] = useState<string | "unequip" | null>(null);
   const [claimingCode, setClaimingCode] = useState<string | "all" | null>(null);
@@ -613,13 +641,10 @@ export function AchievementsModal({ open, onOpenChange }: AchievementsModalProps
     setError(false);
 
     try {
-      const [achievementsRes, titlesRes, shopRes] = await Promise.all([
+      const [achievementsRes, titlesRes] = await Promise.all([
         fetch("/api/achievements", { credentials: "same-origin", cache: "no-store" }),
         profile
           ? fetch("/api/titles", { credentials: "same-origin", cache: "no-store" })
-          : Promise.resolve(null),
-        profile
-          ? fetch("/api/ap/shop", { credentials: "same-origin", cache: "no-store" })
           : Promise.resolve(null),
       ]);
 
@@ -640,26 +665,6 @@ export function AchievementsModal({ open, onOpenChange }: AchievementsModalProps
         setTitlesData(null);
       }
 
-      if (shopRes) {
-        if (shopRes.ok) {
-          const shopPayload = (await shopRes.json()) as {
-            wallet: ApWallet;
-            items: ApShopItem[];
-            equipped: EquippedCosmetics;
-          };
-          setShopWallet(shopPayload.wallet);
-          setShopItems(shopPayload.items);
-          setShopEquipped(shopPayload.equipped);
-        } else {
-          setShopWallet(null);
-          setShopItems([]);
-          setShopEquipped(null);
-        }
-      } else {
-        setShopWallet(null);
-        setShopItems([]);
-        setShopEquipped(null);
-      }
     } catch {
       setError(true);
       if (!silent) {
@@ -768,53 +773,6 @@ export function AchievementsModal({ open, onOpenChange }: AchievementsModalProps
     }
   };
 
-  const handleShopPurchase = async (itemCode: string) => {
-    const response = await fetch("/api/ap/purchase", {
-      method: "POST",
-      credentials: "same-origin",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ item_code: itemCode }),
-    });
-    const payload = (await response.json()) as {
-      error?: string;
-      wallet?: ApWallet;
-      items?: ApShopItem[];
-      equipped?: EquippedCosmetics;
-    };
-    if (!response.ok) {
-      throw new Error(payload.error || t("shopBuyFailed"));
-    }
-    if (payload.wallet) setShopWallet(payload.wallet);
-    if (payload.items) setShopItems(payload.items);
-    if (payload.equipped) setShopEquipped(payload.equipped);
-    await fetchData(true);
-    await refreshProfile();
-  };
-
-  const handleShopEquip = async (
-    kind: Exclude<ApShopItemKind, "title">,
-    itemCode: string | null
-  ) => {
-    const response = await fetch("/api/ap/equip", {
-      method: "POST",
-      credentials: "same-origin",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ kind, item_code: itemCode }),
-    });
-    const payload = (await response.json()) as {
-      error?: string;
-      wallet?: ApWallet;
-      items?: ApShopItem[];
-      equipped?: EquippedCosmetics;
-    };
-    if (!response.ok) {
-      throw new Error(payload.error || t("shopEquipFailed"));
-    }
-    if (payload.wallet) setShopWallet(payload.wallet);
-    if (payload.items) setShopItems(payload.items);
-    if (payload.equipped) setShopEquipped(payload.equipped);
-    await refreshProfile();
-  };
 
   const claimableCount =
     achievementsData?.summary.claimable_count ??
@@ -828,7 +786,14 @@ export function AchievementsModal({ open, onOpenChange }: AchievementsModalProps
       [],
   })).filter((group) => group.items.length > 0);
 
-  const allTitles = titlesData?.titles ?? [];
+  const AP_SHOP_ONLY_TITLE_NAMES = new Set([
+    "AP 先驅",
+    "霓虹旅人",
+    "點數帝王",
+  ]);
+  const allTitles = (titlesData?.titles ?? []).filter(
+    (title) => title.unlocked || !AP_SHOP_ONLY_TITLE_NAMES.has(title.name)
+  );
   const equippedTitleEntry =
     allTitles.find((title) => title.is_equipped) ??
     (profile?.equipped_title
@@ -866,7 +831,7 @@ export function AchievementsModal({ open, onOpenChange }: AchievementsModalProps
           </DialogHeader>
 
           {profile && achievementsData && (
-            <div className="grid grid-cols-2 gap-3 rounded-xl border border-white/8 bg-zinc-900/50 p-3 text-center sm:grid-cols-4 sm:gap-4 sm:p-4">
+            <div className="grid grid-cols-3 gap-3 rounded-xl border border-white/8 bg-zinc-900/50 p-3 text-center sm:gap-4 sm:p-4">
               <div>
                 <p className="text-xl font-bold text-cyan-300 sm:text-2xl">
                   {achievementsData.summary.unlocked_count}
@@ -875,18 +840,9 @@ export function AchievementsModal({ open, onOpenChange }: AchievementsModalProps
               </div>
               <div>
                 <p className="text-xl font-bold text-amber-300 sm:text-2xl">
-                  {achievementsData.summary.spendable_ap ??
-                    shopWallet?.balance ??
-                    achievementsData.summary.total_points}
+                  {achievementsData.summary.total_points}
                 </p>
-                <p className="text-xs text-zinc-500 sm:text-sm">{t("statSpendableAp")}</p>
-              </div>
-              <div>
-                <p className="text-xl font-bold text-orange-300 sm:text-2xl">
-                  {achievementsData.summary.lifetime_ap ??
-                    achievementsData.summary.total_points}
-                </p>
-                <p className="text-xs text-zinc-500 sm:text-sm">{t("statLifetimeAp")}</p>
+                <p className="text-xs text-zinc-500 sm:text-sm">{t("statPoints")}</p>
               </div>
               <div>
                 <p className="text-xl font-bold text-violet-300 sm:text-2xl">
@@ -900,7 +856,7 @@ export function AchievementsModal({ open, onOpenChange }: AchievementsModalProps
           <Tabs
             value={activeTab}
             onValueChange={(value) =>
-              setActiveTab(value as "achievements" | "titles" | "shop")
+              setActiveTab(value as "achievements" | "titles")
             }
             className="flex min-h-0 flex-1 flex-col"
           >
@@ -926,16 +882,6 @@ export function AchievementsModal({ open, onOpenChange }: AchievementsModalProps
                 >
                   👑 {t("tabTitles")}
                 </TabsTrigger>
-                <TabsTrigger
-                  value="shop"
-                  className={cn(
-                    TAB_TRIGGER_CLASS,
-                    "!h-11 sm:!h-12",
-                    "data-active:bg-gradient-to-r data-active:from-cyan-500/25 data-active:to-emerald-500/20 data-active:text-cyan-100"
-                  )}
-                >
-                  🛒 {t("tabShop")}
-                </TabsTrigger>
               </TabsList>
 
               <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/5 px-4 py-3 text-base text-zinc-500 sm:px-5">
@@ -946,9 +892,7 @@ export function AchievementsModal({ open, onOpenChange }: AchievementsModalProps
                       ? t("loadError")
                       : activeTab === "titles"
                         ? t("titlesTabHint")
-                        : activeTab === "shop"
-                          ? t("shopTabHint")
-                          : t("liveStats")}
+                        : t("liveStats")}
                 </span>
                 <Button
                   type="button"
@@ -1009,7 +953,7 @@ export function AchievementsModal({ open, onOpenChange }: AchievementsModalProps
                               <p className="text-base text-zinc-500 sm:text-lg">
                                 {achievementsData.summary.unlocked_count}/
                                 {achievementsData.summary.total_count} ·{" "}
-                                {achievementsData.summary.total_points} AP
+                                {achievementsData.summary.total_points}
                               </p>
                             </div>
                           </div>
@@ -1018,7 +962,7 @@ export function AchievementsModal({ open, onOpenChange }: AchievementsModalProps
                       {groupedAchievements.map((group) => (
                         <section key={group.category}>
                           <h3 className="mb-2.5 flex items-center justify-between px-1 text-sm font-semibold uppercase tracking-wider text-zinc-500 sm:text-base">
-                            <span>{ACHIEVEMENT_CATEGORY_LABELS[group.category]}</span>
+                            <span>{t(CATEGORY_LABEL_KEYS[group.category])}</span>
                             <span className="text-xs font-normal normal-case tabular-nums text-zinc-600 sm:text-sm">
                               {group.items.filter((i) => i.unlocked).length}/{group.items.length}
                             </span>
@@ -1105,22 +1049,6 @@ export function AchievementsModal({ open, onOpenChange }: AchievementsModalProps
                   )}
                 </TabsContent>
 
-                <TabsContent value="shop" className="mt-0 outline-none">
-                  {!profile ? (
-                    <p className="py-16 text-center text-base text-zinc-500">
-                      {t("loginRequired")}
-                    </p>
-                  ) : (
-                    <ApShopPanel
-                      wallet={shopWallet}
-                      items={shopItems}
-                      equipped={shopEquipped}
-                      loading={loading}
-                      onPurchase={handleShopPurchase}
-                      onEquip={handleShopEquip}
-                    />
-                  )}
-                </TabsContent>
                 </div>
 
                 {activeTab === "achievements" && achievementsData && profile && (
@@ -1160,7 +1088,8 @@ export function AchievementsModal({ open, onOpenChange }: AchievementsModalProps
                   profile.equipped_title.rarity_tier
                 )}
               >
-                {profile.equipped_title.name}
+                {localizeTitleName(profile.equipped_title.name, locale) ??
+                  profile.equipped_title.name}
               </span>
             </p>
           )}
