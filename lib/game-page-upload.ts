@@ -17,8 +17,21 @@ import {
   parseStringArray,
 } from "@/lib/game-page-content";
 import { sanitizePlainText } from "@/lib/sanitize-plain";
-import { formatMaxSize, MAX_COVER_BYTES } from "@/lib/upload-limits";
+import {
+  formatMaxSize,
+  MAX_COVER_BYTES,
+  PRODUCTION_FORMDATA_SAFE_BYTES,
+} from "@/lib/upload-limits";
 import type { SupabaseClient } from "@supabase/supabase-js";
+
+export function assertImageBatchWithinFormDataLimit(files: File[]) {
+  const total = files.reduce((sum, file) => sum + file.size, 0);
+  if (total > PRODUCTION_FORMDATA_SAFE_BYTES) {
+    throw new Error(
+      `圖庫／更新配圖合計不可超過約 ${formatMaxSize(PRODUCTION_FORMDATA_SAFE_BYTES)}（目前 ${formatMaxSize(total)}）。請減少張數或壓縮後再試。`
+    );
+  }
+}
 
 export async function uploadImageFiles(
   supabase: SupabaseClient,
@@ -26,29 +39,39 @@ export async function uploadImageFiles(
   maxCount: number
 ) {
   const urls: string[] = [];
+  const paths: string[] = [];
 
-  for (const file of files.slice(0, maxCount)) {
-    if (!isValidGalleryImage(file)) {
-      throw new Error("圖片僅支援 .png、.jpg、.webp 格式");
-    }
-    if (file.size > MAX_COVER_BYTES) {
-      throw new Error(
-        `單張圖片不可超過 ${formatMaxSize(MAX_COVER_BYTES)}（目前 ${formatMaxSize(file.size)}）`
+  try {
+    for (const file of files.slice(0, maxCount)) {
+      if (!isValidGalleryImage(file)) {
+        throw new Error("圖片僅支援 .png、.jpg、.webp 格式");
+      }
+      if (file.size > MAX_COVER_BYTES) {
+        throw new Error(
+          `單張圖片不可超過 ${formatMaxSize(MAX_COVER_BYTES)}（目前 ${formatMaxSize(file.size)}）`
+        );
+      }
+
+      const buffer = await file.arrayBuffer();
+      const upload = await uploadBuffer(
+        supabase,
+        COVERS_BUCKET,
+        file.name,
+        buffer,
+        file.type || "image/jpeg"
       );
+      urls.push(upload.publicUrl);
+      paths.push(upload.path);
     }
-
-    const buffer = await file.arrayBuffer();
-    const upload = await uploadBuffer(
-      supabase,
-      COVERS_BUCKET,
-      file.name,
-      buffer,
-      file.type || "image/jpeg"
-    );
-    urls.push(upload.publicUrl);
+  } catch (error) {
+    if (paths.length > 0) {
+      const { removeStoragePaths } = await import("@/lib/game-storage");
+      await removeStoragePaths(supabase, COVERS_BUCKET, paths);
+    }
+    throw error;
   }
 
-  return urls;
+  return { urls, paths };
 }
 
 export async function resolveGalleryUpdate(
@@ -58,16 +81,20 @@ export async function resolveGalleryUpdate(
 ) {
   const keptUrls = parseGalleryUrlsField(formData);
   const newFiles = collectGalleryFiles(formData);
-  const uploadedUrls = await uploadImageFiles(
+  assertImageBatchWithinFormDataLimit(newFiles);
+  const uploaded = await uploadImageFiles(
     supabase,
     newFiles,
     MAX_GALLERY_IMAGES - keptUrls.length
   );
 
-  return mergeGalleryUrls(
-    keptUrls.length > 0 ? keptUrls : parseStringArray(existingGallery),
-    uploadedUrls
-  );
+  return {
+    urls: mergeGalleryUrls(
+      keptUrls.length > 0 ? keptUrls : parseStringArray(existingGallery),
+      uploaded.urls
+    ),
+    uploadedPaths: uploaded.paths,
+  };
 }
 
 export async function resolveDevlogUpdate(
@@ -77,7 +104,10 @@ export async function resolveDevlogUpdate(
   publishVersion: boolean
 ) {
   if (!publishVersion) {
-    return parseDevlogEntries(existingDevlogs);
+    return {
+      entries: parseDevlogEntries(existingDevlogs),
+      uploadedPaths: [] as string[],
+    };
   }
 
   const devlogTitle = sanitizePlainText(
@@ -89,21 +119,28 @@ export async function resolveDevlogUpdate(
     MAX_DEVLOG_CONTENT_LENGTH
   );
   const devlogImages = collectDevlogImageFiles(formData);
+  assertImageBatchWithinFormDataLimit(devlogImages);
 
   if (!devlogTitle && !devlogContent && devlogImages.length === 0) {
-    return parseDevlogEntries(existingDevlogs);
+    return {
+      entries: parseDevlogEntries(existingDevlogs),
+      uploadedPaths: [] as string[],
+    };
   }
 
-  const imageUrls = await uploadImageFiles(
+  const uploaded = await uploadImageFiles(
     supabase,
     devlogImages,
     MAX_DEVLOG_IMAGES
   );
 
-  return appendDevlogEntry(existingDevlogs, {
-    title: devlogTitle || "版本更新",
-    content: devlogContent,
-    imageUrls,
-    createdAt: new Date().toISOString(),
-  });
+  return {
+    entries: appendDevlogEntry(existingDevlogs, {
+      title: devlogTitle || "版本更新",
+      content: devlogContent,
+      imageUrls: uploaded.urls,
+      createdAt: new Date().toISOString(),
+    }),
+    uploadedPaths: uploaded.paths,
+  };
 }

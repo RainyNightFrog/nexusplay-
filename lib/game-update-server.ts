@@ -3,11 +3,23 @@ import type { User } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { authorizeGameEdit } from "@/lib/game-auth";
 import {
+  resolveDevlogUpdate,
+  resolveGalleryUpdate,
+  assertImageBatchWithinFormDataLimit,
+} from "@/lib/game-page-upload";
+import {
+  collectDevlogImageFiles,
+  collectGalleryFiles,
+} from "@/lib/game-page-content";
+import { buildDirectUploadPrefix } from "@/lib/direct-upload-session";
+import {
   COVERS_BUCKET,
   extractPublicStoragePath,
   FILES_BUCKET,
+  isCreatorOwnedCoverPath,
   removeBuildFolder,
   removeStoragePaths,
+  removeStoragePrefix,
   uploadBuffer,
 } from "@/lib/game-storage";
 import { deleteGameAndAssets } from "@/lib/game-delete-server";
@@ -34,7 +46,7 @@ import {
 import { sanitizePlainText } from "@/lib/sanitize-plain";
 import { sanitizeRichHtml } from "@/lib/sanitize-rich-html";
 import { createServerSupabase } from "@/lib/supabase-server";
-import { resolveDirectBuildUpload, resolveDirectCoverUpload } from "@/lib/direct-upload-resolve";
+import { resolveDirectBuildUpload, resolveDirectCoverUpload, directCoverFinalizeMarkerPath, DIRECT_BUILD_FINALIZED_MARKER } from "@/lib/direct-upload-resolve";
 import {
   formatMaxSize,
   MAX_CATEGORY_LENGTH,
@@ -45,10 +57,6 @@ import {
   PRODUCTION_UPLOAD_BYTES,
 } from "@/lib/upload-limits";
 import { resolvePlatformFeePercentForSave } from "@/lib/tip-fee-policy";
-import {
-  resolveDevlogUpdate,
-  resolveGalleryUpdate,
-} from "@/lib/game-page-upload";
 import { isZipBuffer, isZipFile } from "@/lib/zip-file-validation";
 
 /** 創作者可更新的欄位；僅首次公開或遭拒後重新提交時重置審批狀態 */
@@ -332,7 +340,30 @@ export async function patchCreatorGame(input: {
   let newCoverUrl = record.cover_url;
   let newGameUrl = record.game_url;
   let newBuildPaths: string[] = [];
+  let contentImagePaths: string[] = [];
   let directBuildPrefix: string | null = null;
+  let claimedDirectCover = false;
+  let claimedDirectBuild = false;
+  let updateSucceeded = false;
+
+  const cleanupNewAssets = async () => {
+    if (newCoverPath) {
+      const coverTargets = [newCoverPath];
+      if (claimedDirectCover) {
+        coverTargets.push(directCoverFinalizeMarkerPath(newCoverPath));
+      }
+      await removeStoragePaths(supabase, COVERS_BUCKET, coverTargets);
+    }
+    if (contentImagePaths.length > 0) {
+      await removeStoragePaths(supabase, COVERS_BUCKET, contentImagePaths);
+    }
+    if (newBuildPaths.length > 0) {
+      await removeStoragePaths(supabase, FILES_BUCKET, newBuildPaths);
+    }
+    if (directBuildPrefix && claimedDirectBuild) {
+      await removeStoragePrefix(supabase, FILES_BUCKET, directBuildPrefix);
+    }
+  };
 
   try {
     if (useDirectCover) {
@@ -349,6 +380,7 @@ export async function patchCreatorGame(input: {
       }
       newCoverPath = resolvedCover.path;
       newCoverUrl = resolvedCover.publicUrl;
+      claimedDirectCover = true;
     } else if (hasCover) {
       const coverBuffer = await coverFile.arrayBuffer();
       const coverUpload = await uploadBuffer(
@@ -370,9 +402,7 @@ export async function patchCreatorGame(input: {
         token: directBuildToken,
       });
       if (!resolvedBuild.ok) {
-        if (newCoverPath) {
-          await removeStoragePaths(supabase, COVERS_BUCKET, [newCoverPath]);
-        }
+        await cleanupNewAssets();
         return NextResponse.json(
           { error: resolvedBuild.error },
           { status: 400 }
@@ -380,12 +410,11 @@ export async function patchCreatorGame(input: {
       }
       newGameUrl = resolvedBuild.playUrl;
       directBuildPrefix = resolvedBuild.prefix;
+      claimedDirectBuild = true;
     } else if (hasZip) {
       const zipBuffer = await gameZipFile.arrayBuffer();
       if (!isZipBuffer(zipBuffer)) {
-        if (newCoverPath) {
-          await removeStoragePaths(supabase, COVERS_BUCKET, [newCoverPath]);
-        }
+        await cleanupNewAssets();
         return NextResponse.json(
           { error: "遊戲檔案僅支援 .zip 壓縮檔" },
           { status: 400 }
@@ -403,32 +432,33 @@ export async function patchCreatorGame(input: {
     let devlogEntries: unknown;
 
     try {
-      galleryUrls = await resolveGalleryUpdate(
+      assertImageBatchWithinFormDataLimit([
+        ...collectGalleryFiles(formData),
+        ...collectDevlogImageFiles(formData),
+      ]);
+      const galleryResult = await resolveGalleryUpdate(
         supabase,
         formData,
         record.gallery_urls ?? []
       );
-      devlogEntries = await resolveDevlogUpdate(
+      const devlogResult = await resolveDevlogUpdate(
         supabase,
         formData,
         record.devlog_entries ?? [],
         publishVersion
       );
+      galleryUrls = galleryResult.urls;
+      devlogEntries = devlogResult.entries;
+      contentImagePaths = [
+        ...galleryResult.uploadedPaths,
+        ...devlogResult.uploadedPaths,
+      ];
     } catch (contentError) {
       const message =
         contentError instanceof Error
           ? contentError.message
           : "處理遊戲介紹圖片失敗";
-      if (newCoverPath) {
-        await removeStoragePaths(supabase, COVERS_BUCKET, [newCoverPath]);
-      }
-      if (newBuildPaths.length > 0) {
-        await removeStoragePaths(supabase, FILES_BUCKET, newBuildPaths);
-      }
-      if (directBuildPrefix) {
-        const { removeStoragePrefix } = await import("@/lib/game-storage");
-        await removeStoragePrefix(supabase, FILES_BUCKET, directBuildPrefix);
-      }
+      await cleanupNewAssets();
       return NextResponse.json({ error: message }, { status: 400 });
     }
 
@@ -528,19 +558,38 @@ export async function patchCreatorGame(input: {
       void onCreatorGameWentLive(createServerSupabase(), updated.creator_id);
     }
 
+    updateSucceeded = true;
     return NextResponse.json({ game: updated });
   } catch (error) {
-    if (newCoverPath) {
-      await removeStoragePaths(supabase, COVERS_BUCKET, [newCoverPath]);
-    }
-    if (newBuildPaths.length > 0) {
-      await removeStoragePaths(supabase, FILES_BUCKET, newBuildPaths);
-    }
-    if (directBuildPrefix) {
-      const { removeStoragePrefix } = await import("@/lib/game-storage");
-      await removeStoragePrefix(supabase, FILES_BUCKET, directBuildPrefix);
-    }
+    await cleanupNewAssets();
     throw error;
+  } finally {
+    if (!updateSucceeded) {
+      if (
+        !claimedDirectCover &&
+        useDirectCover &&
+        directCoverPath &&
+        isCreatorOwnedCoverPath(user.id, directCoverPath)
+      ) {
+        const markerPath = directCoverFinalizeMarkerPath(directCoverPath);
+        const { data: marker } = await supabase.storage
+          .from(COVERS_BUCKET)
+          .createSignedUrl(markerPath, 60);
+        if (!marker?.signedUrl) {
+          await removeStoragePaths(supabase, COVERS_BUCKET, [directCoverPath]);
+        }
+      }
+      if (!claimedDirectBuild && useDirectBuild) {
+        const prefix = buildDirectUploadPrefix(user.id, directBuildId);
+        const markerPath = `${prefix}/${DIRECT_BUILD_FINALIZED_MARKER}`;
+        const { data: marker } = await supabase.storage
+          .from(FILES_BUCKET)
+          .createSignedUrl(markerPath, 60);
+        if (!marker?.signedUrl) {
+          await removeStoragePrefix(supabase, FILES_BUCKET, prefix);
+        }
+      }
+    }
   }
 }
 

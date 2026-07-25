@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { extractAndUploadGameBuild } from "@/lib/extract-game-zip";
-import { resolveDirectBuildUpload, resolveDirectCoverUpload } from "@/lib/direct-upload-resolve";
+import { resolveDirectBuildUpload, resolveDirectCoverUpload, directCoverFinalizeMarkerPath, DIRECT_BUILD_FINALIZED_MARKER } from "@/lib/direct-upload-resolve";
 import { parseMonetizationFromFormData, parsePublishStatus } from "@/lib/game-publish";
 import { parsePricingFromFormData } from "@/lib/game-pricing";
 import {
@@ -20,7 +20,12 @@ import {
   parsePublishMetadataFromFormData,
   MAX_DETAILS_HTML_LENGTH,
 } from "@/lib/game-metadata";
-import { resolveGalleryUpdate } from "@/lib/game-page-upload";
+import { buildDirectUploadPrefix } from "@/lib/direct-upload-session";
+import { collectGalleryFiles } from "@/lib/game-page-content";
+import {
+  assertImageBatchWithinFormDataLimit,
+  resolveGalleryUpdate,
+} from "@/lib/game-page-upload";
 import { sanitizePlainText } from "@/lib/sanitize-plain";
 import { sanitizeRichHtml } from "@/lib/sanitize-rich-html";
 import { createServerSupabase } from "@/lib/supabase-server";
@@ -36,7 +41,14 @@ import {
 import { resolveGameSlugForSave } from "@/lib/game-slug";
 import { resolvePlatformFeePercentForSave } from "@/lib/tip-fee-policy";
 import { isZipBuffer, isZipFile } from "@/lib/zip-file-validation";
-import { COVERS_BUCKET, FILES_BUCKET, uploadBuffer, removeStoragePaths, removeStoragePrefix } from "@/lib/game-storage";
+import {
+  COVERS_BUCKET,
+  FILES_BUCKET,
+  isCreatorOwnedCoverPath,
+  uploadBuffer,
+  removeStoragePaths,
+  removeStoragePrefix,
+} from "@/lib/game-storage";
 
 export type GameUploadResult =
   | { ok: true; game: Record<string, unknown> }
@@ -103,6 +115,11 @@ export async function uploadCreatorGameFromFormData(params: {
   const publishStatus = parsePublishStatus(formData.get("publishStatus"));
   const isPublic = publishStatus === "public";
 
+  let succeeded = false;
+  let claimedDirectCover = false;
+  let claimedDirectBuild = false;
+
+  try {
   if (!title) {
     return { ok: false, status: 400, error: "請輸入遊戲名稱" };
   }
@@ -249,18 +266,26 @@ export async function uploadCreatorGameFromFormData(params: {
   const supabase = params.supabase ?? createServerSupabase();
   let coverPath: string | null = null;
   let buildPaths: string[] = [];
+  let galleryUploadedPaths: string[] = [];
   let directBuildPrefix: string | null = null;
   /** 直傳封面失敗回滾時要刪；伺服器轉傳封面同理 */
   let shouldCleanupCover = false;
 
   const cleanupPartialUpload = async () => {
     if (coverPath && shouldCleanupCover) {
-      await removeStoragePaths(supabase, COVERS_BUCKET, [coverPath]);
+      const coverTargets = [coverPath];
+      if (claimedDirectCover) {
+        coverTargets.push(directCoverFinalizeMarkerPath(coverPath));
+      }
+      await removeStoragePaths(supabase, COVERS_BUCKET, coverTargets);
+    }
+    if (galleryUploadedPaths.length > 0) {
+      await removeStoragePaths(supabase, COVERS_BUCKET, galleryUploadedPaths);
     }
     if (buildPaths.length > 0) {
       await removeStoragePaths(supabase, FILES_BUCKET, buildPaths);
     }
-    if (directBuildPrefix) {
+    if (directBuildPrefix && claimedDirectBuild) {
       await removeStoragePrefix(supabase, FILES_BUCKET, directBuildPrefix);
     }
   };
@@ -280,6 +305,7 @@ export async function uploadCreatorGameFromFormData(params: {
       coverPath = resolvedCover.path;
       coverPublicUrl = resolvedCover.publicUrl;
       shouldCleanupCover = true;
+      claimedDirectCover = true;
     } else {
       const coverBuffer = hasCoverFile
         ? await (coverFile as File).arrayBuffer()
@@ -313,6 +339,7 @@ export async function uploadCreatorGameFromFormData(params: {
       }
       playUrl = resolvedBuild.playUrl;
       directBuildPrefix = resolvedBuild.prefix;
+      claimedDirectBuild = true;
     } else {
       const zipBuffer = await (gameZipFile as File).arrayBuffer();
       if (!isZipBuffer(zipBuffer)) {
@@ -326,7 +353,10 @@ export async function uploadCreatorGameFromFormData(params: {
 
     let galleryUrls: string[] = [];
     try {
-      galleryUrls = await resolveGalleryUpdate(supabase, formData, []);
+      assertImageBatchWithinFormDataLimit(collectGalleryFiles(formData));
+      const galleryResult = await resolveGalleryUpdate(supabase, formData, []);
+      galleryUrls = galleryResult.urls;
+      galleryUploadedPaths = galleryResult.uploadedPaths;
     } catch (contentError) {
       const message =
         contentError instanceof Error
@@ -378,9 +408,45 @@ export async function uploadCreatorGameFromFormData(params: {
       throw new Error(`資料庫寫入失敗：${error.message}`);
     }
 
+    succeeded = true;
     return { ok: true, game: data as Record<string, unknown> };
   } catch (error) {
     await cleanupPartialUpload();
     return mapUploadError(error);
+  }
+  } finally {
+    // 僅清理「尚未 claim」的直傳殘檔（例如 AI／slug 驗證失敗）。
+    // 已 claim 的資產由 cleanupPartialUpload 處理；不可刪別人已 claim 的 build。
+    if (!succeeded) {
+      const cleanupClient = params.supabase ?? createServerSupabase();
+      if (
+        !claimedDirectCover &&
+        directCoverPath &&
+        isCreatorOwnedCoverPath(params.creatorId, directCoverPath)
+      ) {
+        const markerPath = directCoverFinalizeMarkerPath(directCoverPath);
+        const { data: marker } = await cleanupClient.storage
+          .from(COVERS_BUCKET)
+          .createSignedUrl(markerPath, 60);
+        if (!marker?.signedUrl) {
+          await removeStoragePaths(cleanupClient, COVERS_BUCKET, [
+            directCoverPath,
+          ]);
+        }
+      }
+      if (!claimedDirectBuild && useDirectBuild) {
+        const prefix = buildDirectUploadPrefix(
+          params.creatorId,
+          directBuildId
+        );
+        const markerPath = `${prefix}/${DIRECT_BUILD_FINALIZED_MARKER}`;
+        const { data: marker } = await cleanupClient.storage
+          .from(FILES_BUCKET)
+          .createSignedUrl(markerPath, 60);
+        if (!marker?.signedUrl) {
+          await removeStoragePrefix(cleanupClient, FILES_BUCKET, prefix);
+        }
+      }
+    }
   }
 }

@@ -12,6 +12,40 @@ import {
   isCreatorOwnedCoverPath,
 } from "@/lib/game-storage";
 
+/** 標記此建置已進入 finalize，防止同一 token 重複提交共用資產 */
+export const DIRECT_BUILD_FINALIZED_MARKER = ".rnf-finalized";
+
+function coverFinalizeMarkerPath(coverPath: string) {
+  return `${coverPath}.rnf-finalized`;
+}
+
+export function directCoverFinalizeMarkerPath(coverPath: string) {
+  return coverFinalizeMarkerPath(coverPath);
+}
+
+async function claimFinalizeMarker(
+  supabase: SupabaseClient,
+  bucket: string,
+  markerPath: string,
+  alreadyUsedError: string
+) {
+  const { error } = await supabase.storage.from(bucket).upload(
+    markerPath,
+    new Blob(["1"], { type: "text/plain" }),
+    {
+      upsert: false,
+      contentType: "text/plain",
+      cacheControl: "3600",
+    }
+  );
+
+  if (error) {
+    return { ok: false as const, error: alreadyUsedError };
+  }
+
+  return { ok: true as const, markerPath };
+}
+
 /** 用短效 signed URL 確認物件存在，避免整檔 download 拖慢 finalize */
 async function assertStorageObjectExists(
   supabase: SupabaseClient,
@@ -52,6 +86,14 @@ export async function resolveDirectCoverUpload(
   );
   if (!exists.ok) return exists;
 
+  const claimed = await claimFinalizeMarker(
+    supabase,
+    COVERS_BUCKET,
+    coverFinalizeMarkerPath(path),
+    "此封面已被使用或正在提交中，請重新上傳封面"
+  );
+  if (!claimed.ok) return claimed;
+
   const { data: publicData } = supabase.storage
     .from(COVERS_BUCKET)
     .getPublicUrl(path);
@@ -59,6 +101,7 @@ export async function resolveDirectCoverUpload(
   return {
     ok: true as const,
     path,
+    markerPath: claimed.markerPath,
     publicUrl: publicData.publicUrl,
   };
 }
@@ -103,6 +146,14 @@ export async function resolveDirectBuildUpload(
     "找不到已直傳的遊戲檔案，請重新上傳壓縮檔"
   );
   if (!exists.ok) return exists;
+
+  const claimed = await claimFinalizeMarker(
+    supabase,
+    FILES_BUCKET,
+    `${prefix}/${DIRECT_BUILD_FINALIZED_MARKER}`,
+    "此建置已被使用或正在提交中，請重新上傳壓縮檔"
+  );
+  if (!claimed.ok) return claimed;
 
   const { data: publicData } = supabase.storage
     .from(FILES_BUCKET)

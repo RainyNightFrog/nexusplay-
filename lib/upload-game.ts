@@ -4,6 +4,7 @@ import { appendPublishMetadataToFormData } from "@/lib/game-metadata";
 import { appendPricingToFormData, type GamePricingValues } from "@/lib/game-pricing";
 import { readApiJson } from "@/lib/fetch-api-json";
 import {
+  cleanupDirectUploadArtifacts,
   createDirectUploadSession,
   uploadCoverDirect,
   uploadZipBuildDirect,
@@ -51,10 +52,12 @@ export async function uploadGame(
   onProgress?.("正在準備直傳…");
   const session = await createDirectUploadSession();
 
-  // 封面與 ZIP 建置並行，縮短總等待時間；任一方失敗時清掉已上傳封面
+  // 封面與 ZIP 建置並行；直傳階段失敗才由 client 清殘檔（finalize 後交給伺服器）
   let uploadedCoverPath: string | undefined;
   let cover: Awaited<ReturnType<typeof uploadCoverDirect>> | undefined;
-  let build: Awaited<ReturnType<typeof uploadZipBuildDirect>>;
+  let build: Awaited<ReturnType<typeof uploadZipBuildDirect>> | undefined;
+  let zipUploadStarted = Boolean(input.gameZipFile);
+
   try {
     [cover, build] = await Promise.all([
       input.coverFile
@@ -73,15 +76,11 @@ export async function uploadGame(
       }),
     ]);
   } catch (error) {
-    if (uploadedCoverPath) {
-      const { createClient } = await import("@/lib/supabase/client");
-      const { COVERS_BUCKET, removeStoragePaths } = await import(
-        "@/lib/game-storage"
-      );
-      await removeStoragePaths(createClient(), COVERS_BUCKET, [
-        uploadedCoverPath,
-      ]);
-    }
+    await cleanupDirectUploadArtifacts({
+      userId: session.userId,
+      buildId: zipUploadStarted ? session.buildId : undefined,
+      coverPath: uploadedCoverPath,
+    });
     throw error;
   }
 
@@ -102,11 +101,13 @@ export async function uploadGame(
 
   formData.append("directBuildId", session.buildId);
   formData.append("directBuildToken", session.token);
-  formData.append("directIndexPath", build.indexPath);
+  formData.append("directIndexPath", build!.indexPath);
   if (cover?.path) {
     formData.append("directCoverPath", cover.path);
   }
 
+  // finalize 失敗清理由伺服器負責；client 若在「已成功寫入但回應丟失」時刪檔，
+  // 會拆掉已上架資產，故此處不再 cleanupDirectUploadArtifacts。
   const response = await fetch("/api/games/upload", {
     method: "POST",
     credentials: "same-origin",

@@ -46,6 +46,7 @@ import {
 } from "@/lib/supporter-tier";
 import { cn } from "@/lib/utils";
 import { CreatorUsernameField } from "@/components/profile/creator-username-field";
+import { PresetAvatarPicker } from "@/components/profile/preset-avatar-picker";
 import { ProfileShowcaseTagsEditor } from "@/components/settings/profile-showcase-tags-editor";
 import { normalizeCreatorUsername } from "@/lib/creator-username";
 import { PROFILE_LIMITS } from "@/lib/profile-settings";
@@ -74,6 +75,7 @@ export default function ProfilePage() {
   const [showcaseTags, setShowcaseTags] = useState<ProfileShowcaseTagId[]>([]);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [pendingPresetId, setPendingPresetId] = useState<string | null>(null);
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -138,6 +140,7 @@ export default function ProfilePage() {
     });
 
     setAvatarUploading(true);
+    setPendingPresetId(null);
     setError(null);
 
     try {
@@ -171,6 +174,41 @@ export default function ProfilePage() {
     } finally {
       setAvatarUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  async function handlePresetAvatarSelect(presetId: string) {
+    setPendingPresetId(presetId);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/auth/avatar/preset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ presetId }),
+      });
+
+      const data = (await response.json()) as {
+        avatar_url?: string;
+        error?: string;
+      };
+
+      if (!response.ok || !data.avatar_url) {
+        throw new Error(data.error ?? t("avatarFailed"));
+      }
+
+      setAvatarPreview((prev) => {
+        if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
+        return data.avatar_url!;
+      });
+      await refreshProfile();
+      showToast(t("avatarUpdated"));
+    } catch (presetError) {
+      const raw =
+        presetError instanceof Error ? presetError.message : null;
+      setError(translateApiError(raw) ?? raw ?? t("avatarFailed"));
+    } finally {
+      setPendingPresetId(null);
     }
   }
 
@@ -248,14 +286,15 @@ export default function ProfilePage() {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                disabled={avatarUploading}
+                disabled={avatarUploading || pendingPresetId != null}
                 className={cn(
                   "group relative mt-1 size-28 overflow-hidden rounded-full",
                   "border-2 border-white/10 transition-all duration-300",
                   "hover:border-cyan-400/70 hover:shadow-lg hover:shadow-cyan-500/25",
                   supporterTier !== "none" &&
                     supporterAvatarRingClassByTier[supporterTier],
-                  avatarUploading && "pointer-events-none opacity-70"
+                  (avatarUploading || pendingPresetId != null) &&
+                    "pointer-events-none opacity-70"
                 )}
               >
               {avatarPreview ? (
@@ -272,7 +311,7 @@ export default function ProfilePage() {
                 </div>
               )}
               <div className="absolute inset-0 flex items-center justify-center bg-zinc-950/50 opacity-0 transition-opacity group-hover:opacity-100">
-                {avatarUploading ? (
+                {avatarUploading || pendingPresetId != null ? (
                   <Loader2 className="size-6 animate-spin text-cyan-300" />
                 ) : (
                   <Camera className="size-6 text-cyan-300" />
@@ -290,6 +329,13 @@ export default function ProfilePage() {
             />
 
             <p className="mt-3 text-xs text-zinc-500">{t("avatarHint")}</p>
+
+            <PresetAvatarPicker
+              currentAvatarUrl={avatarPreview}
+              disabled={avatarUploading || pendingPresetId != null}
+              pendingPresetId={pendingPresetId}
+              onSelect={(presetId) => void handlePresetAvatarSelect(presetId)}
+            />
 
             <div className="mt-4 flex flex-col items-center gap-2 text-center">
               <UserBadge
@@ -539,7 +585,12 @@ export default function ProfilePage() {
 
             <Button
               type="submit"
-              disabled={saving || !displayName.trim() || avatarUploading}
+              disabled={
+                saving ||
+                !displayName.trim() ||
+                avatarUploading ||
+                pendingPresetId != null
+              }
               className="w-full gap-2 bg-gradient-to-r from-cyan-500 to-violet-600 text-white hover:from-cyan-400 hover:to-violet-500"
             >
               {saving ? (

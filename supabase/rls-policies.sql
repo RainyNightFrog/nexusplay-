@@ -90,7 +90,7 @@ create policy "Public read game files"
   to anon, authenticated
   using (bucket_id = 'game-files');
 
--- 已登入創作者可上傳（伺服器端 API 仍使用 service role，此政策防禦直接 REST 濫用）
+-- 已登入創作者或管理員可上傳（伺服器端 API 仍使用 service role，此政策防禦直接 REST 濫用）
 -- 直傳路徑必須綁定本人：covers/{uid}/…、builds/{uid}/…
 create policy "Creators upload game covers"
   on storage.objects
@@ -99,9 +99,13 @@ create policy "Creators upload game covers"
   with check (
     bucket_id = 'game-covers'
     and name like ('covers/' || auth.uid()::text || '/%')
-    and exists (
-      select 1 from public.profiles
-      where profiles.id = auth.uid() and profiles.role = 'creator'
+    and (
+      public.is_admin()
+      or exists (
+        select 1 from public.profiles
+        where profiles.id = auth.uid()
+          and (profiles.role = 'creator' or profiles.is_admin = true)
+      )
     )
   );
 
@@ -112,9 +116,13 @@ create policy "Creators upload game files"
   with check (
     bucket_id = 'game-files'
     and name like ('builds/' || auth.uid()::text || '/%')
-    and exists (
-      select 1 from public.profiles
-      where profiles.id = auth.uid() and profiles.role = 'creator'
+    and (
+      public.is_admin()
+      or exists (
+        select 1 from public.profiles
+        where profiles.id = auth.uid()
+          and (profiles.role = 'creator' or profiles.is_admin = true)
+      )
     )
   );
 

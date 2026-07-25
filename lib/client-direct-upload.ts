@@ -10,6 +10,7 @@ import {
   COVERS_BUCKET,
   FILES_BUCKET,
   buildCreatorCoverPath,
+  removeStoragePaths,
   removeStoragePrefix,
 } from "@/lib/game-storage";
 import {
@@ -89,6 +90,28 @@ function createThrottledProgress(
       flush(message, true);
     },
   };
+}
+
+export async function cleanupDirectUploadArtifacts(input: {
+  userId: string;
+  buildId?: string;
+  coverPath?: string;
+}) {
+  const supabase = createClient();
+  const tasks: Promise<void>[] = [];
+
+  if (input.coverPath) {
+    tasks.push(
+      removeStoragePaths(supabase, COVERS_BUCKET, [input.coverPath])
+    );
+  }
+
+  if (input.buildId) {
+    const prefix = buildDirectUploadPrefix(input.userId, input.buildId);
+    tasks.push(removeStoragePrefix(supabase, FILES_BUCKET, prefix));
+  }
+
+  await Promise.all(tasks);
 }
 
 export async function createDirectUploadSession() {
@@ -193,6 +216,7 @@ export async function uploadZipBuildDirect(input: {
       if (aborted) return;
 
       if (content.byteLength > MAX_SINGLE_EXTRACTED_FILE_BYTES) {
+        aborted = true;
         throw new Error(
           `解壓後單檔過大（${normalizedPath}），超過 ${MAX_SINGLE_EXTRACTED_FILE_BYTES / (1024 * 1024)} MB 上限`
         );
@@ -200,6 +224,7 @@ export async function uploadZipBuildDirect(input: {
 
       extractedTotal += content.byteLength;
       if (extractedTotal > MAX_UNCOMPRESSED_TOTAL_BYTES) {
+        aborted = true;
         throw new Error(
           "解壓後總大小超過上限，可能是 zip bomb 攻擊，請壓縮遊戲資源後再試"
         );
@@ -217,7 +242,9 @@ export async function uploadZipBuildDirect(input: {
           contentType: mime,
         }
       );
+      if (aborted) return;
       if (error) {
+        aborted = true;
         throw new Error(`遊戲檔案上傳失敗：${error.message}`);
       }
 
@@ -232,6 +259,10 @@ export async function uploadZipBuildDirect(input: {
   }
 
   if (firstError) {
+    // 等仍在飛的 worker 停住後再清，並再清一次以防競態寫入
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    await removeStoragePrefix(supabase, FILES_BUCKET, prefix);
+    await new Promise((resolve) => setTimeout(resolve, 200));
     await removeStoragePrefix(supabase, FILES_BUCKET, prefix);
     throw firstError;
   }

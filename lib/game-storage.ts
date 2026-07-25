@@ -68,24 +68,35 @@ async function listStorageFilesRecursive(
   prefix: string
 ): Promise<string[]> {
   const normalizedPrefix = prefix.replace(/\/$/, "");
-  const { data, error } = await supabase.storage
-    .from(bucket)
-    .list(normalizedPrefix, { limit: 1000 });
-
-  if (error || !data) {
-    return [];
-  }
-
   const paths: string[] = [];
+  const pageSize = 1000;
+  let offset = 0;
 
-  for (const item of data) {
-    const itemPath = `${normalizedPrefix}/${item.name}`;
+  while (true) {
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .list(normalizedPrefix, { limit: pageSize, offset });
 
-    if (item.id === null) {
-      paths.push(...(await listStorageFilesRecursive(supabase, bucket, itemPath)));
-    } else {
-      paths.push(itemPath);
+    if (error || !data || data.length === 0) {
+      break;
     }
+
+    for (const item of data) {
+      const itemPath = `${normalizedPrefix}/${item.name}`;
+
+      if (item.id === null) {
+        paths.push(
+          ...(await listStorageFilesRecursive(supabase, bucket, itemPath))
+        );
+      } else {
+        paths.push(itemPath);
+      }
+    }
+
+    if (data.length < pageSize) {
+      break;
+    }
+    offset += pageSize;
   }
 
   return paths;

@@ -5,12 +5,16 @@ import {
   getClientIp,
   rateLimitResponse,
 } from "@/lib/rate-limit";
+import { assertTrustedBrowserOrigin } from "@/lib/request-origin";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 
 export const maxDuration = 300;
 
 export async function POST(request: Request) {
   try {
+    const originDenied = assertTrustedBrowserOrigin(request);
+    if (originDenied) return originDenied;
+
     const ip = getClientIp(request);
     const limit = checkRateLimit(`games:upload:${ip}`, 5, 60_000);
     if (!limit.allowed) {
@@ -24,6 +28,11 @@ export async function POST(request: Request) {
 
     if (!user) {
       return NextResponse.json({ error: "請先登入" }, { status: 401 });
+    }
+
+    const userLimit = checkRateLimit(`games:upload:user:${user.id}`, 5, 60_000);
+    if (!userLimit.allowed) {
+      return rateLimitResponse(userLimit.retryAfterSec);
     }
 
     const role = await resolveUserRole(authClient, user);

@@ -3,12 +3,20 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 const SESSION_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 function getUploadSessionSecret() {
-  return (
-    process.env.DIRECT_UPLOAD_SESSION_SECRET ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    "rainynightfrog-direct-upload"
-  );
+  const dedicated = process.env.DIRECT_UPLOAD_SESSION_SECRET?.trim();
+  if (dedicated) return dedicated;
+
+  const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (serviceRole) return serviceRole;
+
+  // 正式站禁止回退到公開 anon key／硬編碼，避免可偽造直傳 session
+  if (process.env.VERCEL || process.env.NODE_ENV === "production") {
+    throw new Error(
+      "缺少 DIRECT_UPLOAD_SESSION_SECRET（或 SUPABASE_SERVICE_ROLE_KEY），無法簽署直傳工作階段"
+    );
+  }
+
+  return "rainynightfrog-direct-upload-dev-only";
 }
 
 export function createDirectUploadBuildId() {
@@ -18,17 +26,6 @@ export function createDirectUploadBuildId() {
 /** builds/{userId}/{buildId}/… — 綁定上傳者，避免引用他人建置 */
 export function buildDirectUploadPrefix(userId: string, buildId: string) {
   return `builds/${userId}/${buildId}`;
-}
-
-export function isCreatorOwnedBuildPath(
-  userId: string,
-  buildId: string,
-  indexPath: string
-) {
-  const prefix = `${buildDirectUploadPrefix(userId, buildId)}/`;
-  const normalized = indexPath.replace(/^\/+/, "");
-  // indexPath 本身是相對路徑；完整 storage path 另驗
-  return Boolean(normalized) && !normalized.includes("..");
 }
 
 export function isCreatorOwnedBuildStoragePath(

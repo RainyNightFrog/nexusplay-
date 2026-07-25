@@ -4,6 +4,7 @@ import { appendPublishMetadataToFormData } from "@/lib/game-metadata";
 import { appendPricingToFormData, type GamePricingValues } from "@/lib/game-pricing";
 import { readApiJson } from "@/lib/fetch-api-json";
 import {
+  cleanupDirectUploadArtifacts,
   createDirectUploadSession,
   uploadCoverDirect,
   uploadZipBuildDirect,
@@ -100,9 +101,10 @@ export async function fetchManageGame(
     credentials: "same-origin",
   });
 
-  const payload = await readApiJson<{ game?: ManageGameRecord; isOrphan?: boolean }>(
-    response
-  );
+  const payload = await readApiJson<{
+    game?: ManageGameRecord;
+    isOrphan?: boolean;
+  }>(response);
 
   if (!response.ok) {
     throw new Error(payload.error ?? "讀取遊戲資料失敗");
@@ -143,6 +145,8 @@ export async function updateGame(
     const session = await createDirectUploadSession();
 
     let uploadedCoverPath: string | undefined;
+    const shouldCleanupBuild = Boolean(input.gameZipFile);
+
     try {
       const [cover, build] = await Promise.all([
         input.coverFile
@@ -172,15 +176,11 @@ export async function updateGame(
         directIndexPath = build.indexPath;
       }
     } catch (error) {
-      if (uploadedCoverPath) {
-        const { createClient } = await import("@/lib/supabase/client");
-        const { COVERS_BUCKET, removeStoragePaths } = await import(
-          "@/lib/game-storage"
-        );
-        await removeStoragePaths(createClient(), COVERS_BUCKET, [
-          uploadedCoverPath,
-        ]);
-      }
+      await cleanupDirectUploadArtifacts({
+        userId: session.userId,
+        buildId: shouldCleanupBuild ? session.buildId : undefined,
+        coverPath: uploadedCoverPath,
+      });
       throw error;
     }
   }
@@ -202,10 +202,7 @@ export async function updateGame(
     formData.append("directIndexPath", directIndexPath);
   }
 
-  formData.append(
-    "galleryUrls",
-    JSON.stringify(input.galleryUrls ?? [])
-  );
+  formData.append("galleryUrls", JSON.stringify(input.galleryUrls ?? []));
   for (const file of input.galleryFiles ?? []) {
     formData.append("galleryImages", file);
   }
@@ -235,6 +232,7 @@ export async function updateGame(
     input.publishVersion ? "正在發布新版本..." : "正在儲存變更..."
   );
 
+  // finalize 失敗清理由伺服器負責，避免「已成功但回應丟失」時 client 誤刪上架資產
   const response = await fetch(`/api/games/${gameId}/update`, {
     method: "PATCH",
     credentials: "same-origin",

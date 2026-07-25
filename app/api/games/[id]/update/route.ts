@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
 import { resolveUserRole, hasCreatorDashboardAccess } from "@/lib/auth-profile";
+import {
+  checkRateLimit,
+  getClientIp,
+  rateLimitResponse,
+} from "@/lib/rate-limit";
+import { assertTrustedBrowserOrigin } from "@/lib/request-origin";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 
 export const maxDuration = 300;
@@ -9,6 +15,15 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const originDenied = assertTrustedBrowserOrigin(request);
+    if (originDenied) return originDenied;
+
+    const ip = getClientIp(request);
+    const limit = checkRateLimit(`games:update:${ip}`, 10, 60_000);
+    if (!limit.allowed) {
+      return rateLimitResponse(limit.retryAfterSec);
+    }
+
     const { id } = await params;
     const numericId = Number.parseInt(id, 10);
 
@@ -23,6 +38,11 @@ export async function PATCH(
 
     if (!user) {
       return NextResponse.json({ error: "請先登入" }, { status: 401 });
+    }
+
+    const userLimit = checkRateLimit(`games:update:user:${user.id}`, 8, 60_000);
+    if (!userLimit.allowed) {
+      return rateLimitResponse(userLimit.retryAfterSec);
     }
 
     const role = await resolveUserRole(authClient, user);
