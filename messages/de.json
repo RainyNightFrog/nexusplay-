@@ -2693,5 +2693,27 @@
     "rarityEpic": "Epic",
     "rarityLegendary": "Legendary",
     "rarityMythic": "Mythic"
+  },
+  "pwa": {
+    "install_title": "RainyNightFrog App installieren",
+    "install_desc": "Zum Startbildschirm hinzufügen für Vollbild-Erlebnis!",
+    "banner_headline": "📱 RainyNightFrog App installieren und im Vollbild spielen!",
+    "install_cta": "Jetzt installieren",
+    "install_later": "Später",
+    "menu_install": "App laden / Zum Startbildschirm",
+    "ios_title": "Zum Startbildschirm",
+    "ios_desc": "Native Vollbild-Erfahrung auf iPhone / iPad",
+    "ios_step1": "Tippe unten in Safari auf Teilen",
+    "ios_step2": "Scrolle und wähle „Zum Home-Bildschirm“",
+    "ios_step3": "Namen bestätigen und Hinzufügen tippen",
+    "ios_got_it": "Verstanden",
+    "manual_desc": "Über das Browser-Menü RainyNightFrog installieren",
+    "manual_step1": "Browser-Menü öffnen (meist ⋮ oben rechts)",
+    "manual_step2": "„App installieren“ oder „Zum Startbildschirm“ wählen",
+    "manual_step3": "Bestätigen und im Vollbild starten",
+    "installed": "Bereits installiert — Vollbild-App-Modus aktiv",
+    "settings_title": "Desktop-App installieren",
+    "settings_desc": "Zum Startbildschirm hinzufügen für Vollbild ohne Adressleiste",
+    "unavailable": "Ein-Tipp-Installation nicht verfügbar. Chrome oder Safari nutzen."
   }
 }

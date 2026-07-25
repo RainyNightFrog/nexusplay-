@@ -2693,5 +2693,27 @@
     "rarityEpic": "Epic",
     "rarityLegendary": "Legendary",
     "rarityMythic": "Mythic"
+  },
+  "pwa": {
+    "install_title": "Cài đặt RainyNightFrog App",
+    "install_desc": "Thêm vào màn hình chính để trải nghiệm toàn màn hình!",
+    "banner_headline": "📱 Cài RainyNightFrog App để chơi toàn màn hình!",
+    "install_cta": "Cài ngay",
+    "install_later": "Để sau",
+    "menu_install": "Tải App / Thêm vào màn hình chính",
+    "ios_title": "Thêm vào màn hình chính",
+    "ios_desc": "Trải nghiệm giống app gốc trên iPhone / iPad",
+    "ios_step1": "Chạm nút Chia sẻ ở cuối Safari",
+    "ios_step2": "Cuộn và chọn “Thêm vào Màn hình chính”",
+    "ios_step3": "Xác nhận tên rồi chạm Thêm",
+    "ios_got_it": "Đã hiểu",
+    "manual_desc": "Dùng menu trình duyệt để cài RainyNightFrog",
+    "manual_step1": "Mở menu trình duyệt (thường là ⋮ góc trên phải)",
+    "manual_step2": "Chọn “Cài đặt ứng dụng” hoặc “Thêm vào màn hình chính”",
+    "manual_step3": "Xác nhận để mở toàn màn hình từ màn hình chính",
+    "installed": "Đã cài — đang ở chế độ app toàn màn hình",
+    "settings_title": "Cài App máy tính",
+    "settings_desc": "Thêm RainyNightFrog vào màn hình chính để chơi toàn màn hình không thanh địa chỉ",
+    "unavailable": "Không hỗ trợ cài một chạm. Hãy dùng Chrome hoặc Safari."
   }
 }

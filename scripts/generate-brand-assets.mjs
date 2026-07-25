@@ -108,6 +108,12 @@ async function buildAssets() {
     .png()
     .toFile(path.join(brandDir, "rainynightfrog-icon-256.png"));
 
+  await iconTransparent
+    .clone()
+    .resize(192, 192, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .png()
+    .toFile(path.join(brandDir, "rainynightfrog-icon-192.png"));
+
   const iconFavicon = await iconTransparent
     .clone()
     .resize(256, 256, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
@@ -116,6 +122,27 @@ async function buildAssets() {
 
   await buildFaviconPng(iconFavicon, 32, path.join(appDir, "icon.png"));
   await buildFaviconPng(iconFavicon, 180, path.join(appDir, "apple-icon.png"));
+
+  /** PWA / A2HS icons（含 maskable 安全邊距） */
+  const PWA_BG = { r: 10, g: 10, b: 16, alpha: 1 };
+  async function buildPwaIcon(size, outputPath) {
+    const content = Math.round(size * 0.78);
+    const pad = Math.round((size - content) / 2);
+    const icon = await sharp(iconFavicon)
+      .resize(content, content, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .png()
+      .toBuffer();
+    await sharp({
+      create: { width: size, height: size, channels: 4, background: PWA_BG },
+    })
+      .composite([{ input: icon, left: pad, top: pad }])
+      .png()
+      .toFile(outputPath);
+  }
+
+  await buildPwaIcon(192, path.join(brandDir, "icon-192.png"));
+  await buildPwaIcon(512, path.join(brandDir, "icon-512.png"));
+  await buildPwaIcon(180, path.join(brandDir, "apple-touch-icon.png"));
 
   const logoForOg = await logoTransparent
     .clone()

@@ -2693,5 +2693,27 @@
     "rarityEpic": "Epic",
     "rarityLegendary": "Legendary",
     "rarityMythic": "Mythic"
+  },
+  "pwa": {
+    "install_title": "RainyNightFrog アプリをインストール",
+    "install_desc": "ホーム画面に追加して、全画面の快適な体験を！",
+    "banner_headline": "📱 RainyNightFrog をインストールして全画面でプレイ！",
+    "install_cta": "今すぐインストール",
+    "install_later": "あとで",
+    "menu_install": "アプリをダウンロード / ホームに追加",
+    "ios_title": "ホーム画面に追加",
+    "ios_desc": "iPhone／iPad でネイティブアプリのような全画面体験",
+    "ios_step1": "Safari 下部の「共有」ボタンをタップ",
+    "ios_step2": "メニューをスクロールし「ホーム画面に追加」を選択",
+    "ios_step3": "名前を確認して「追加」をタップ",
+    "ios_got_it": "わかりました",
+    "manual_desc": "ブラウザのメニューから RainyNightFrog をホームに追加",
+    "manual_step1": "ブラウザメニューを開く（右上の ⋮ など）",
+    "manual_step2": "「アプリをインストール」または「ホーム画面に追加」を選択",
+    "manual_step3": "確認後、ホームから全画面で起動",
+    "installed": "インストール済み — 全画面アプリモードで表示中",
+    "settings_title": "デスクトップ App をインストール",
+    "settings_desc": "ホーム画面に追加して、アドレスバーなしの全画面プレイ",
+    "unavailable": "ワンタップインストール非対応です。Chrome または Safari をご利用ください。"
   }
 }

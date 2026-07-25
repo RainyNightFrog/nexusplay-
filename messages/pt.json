@@ -2693,5 +2693,27 @@
     "rarityEpic": "Epic",
     "rarityLegendary": "Legendary",
     "rarityMythic": "Mythic"
+  },
+  "pwa": {
+    "install_title": "Instalar RainyNightFrog App",
+    "install_desc": "Adicione à tela inicial para uma experiência em ecrã inteiro!",
+    "banner_headline": "📱 Instale a RainyNightFrog App e jogue em ecrã inteiro!",
+    "install_cta": "Instalar agora",
+    "install_later": "Mais tarde",
+    "menu_install": "Transferir App / Adicionar ao ecrã",
+    "ios_title": "Adicionar ao ecrã inicial",
+    "ios_desc": "Experiência tipo app nativa no iPhone / iPad",
+    "ios_step1": "Toque em Partilhar na parte inferior do Safari",
+    "ios_step2": "Deslize e escolha “Adicionar ao ecrã inicial”",
+    "ios_step3": "Confirme o nome e toque em Adicionar",
+    "ios_got_it": "Entendi",
+    "manual_desc": "Use o menu do browser para instalar a RainyNightFrog",
+    "manual_step1": "Abra o menu do browser (normalmente ⋮)",
+    "manual_step2": "Escolha “Instalar aplicação” ou “Adicionar ao ecrã inicial”",
+    "manual_step3": "Confirme para abrir em ecrã inteiro",
+    "installed": "Já instalada — modo app em ecrã inteiro",
+    "settings_title": "Instalar App",
+    "settings_desc": "Adicione a RainyNightFrog ao ecrã inicial para jogar sem barra de endereço",
+    "unavailable": "Instalação rápida indisponível. Use Chrome ou Safari."
   }
 }

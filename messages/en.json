@@ -2681,5 +2681,27 @@
     "devlogMilestoneTitle": "Milestone",
     "devlogMilestoneBody": "🏆 Milestone reached!\n\nThank you for the support. More content is coming soon.",
     "toolsNavLink": "Creator tools"
+  },
+  "pwa": {
+    "install_title": "Install RainyNightFrog App",
+    "install_desc": "Add to your home screen for a fullscreen, native-like experience!",
+    "banner_headline": "📱 Install RainyNightFrog App for a fullscreen speed boost!",
+    "install_cta": "Install now",
+    "install_later": "Maybe later",
+    "menu_install": "Download App / Add to Home",
+    "ios_title": "Add to Home Screen",
+    "ios_desc": "Get a native-like fullscreen experience on iPhone / iPad",
+    "ios_step1": "Tap the Share button at the bottom of Safari",
+    "ios_step2": "Scroll and choose “Add to Home Screen”",
+    "ios_step3": "Confirm the name, then tap Add to launch from your home screen",
+    "ios_got_it": "Got it",
+    "manual_desc": "Use your browser menu to install RainyNightFrog and hide the address bar",
+    "manual_step1": "Open the browser menu (usually ⋮ in the top-right)",
+    "manual_step2": "Choose “Install app” or “Add to Home screen”",
+    "manual_step3": "Confirm to open fullscreen from your home screen",
+    "installed": "Already installed — you are in fullscreen app mode",
+    "settings_title": "Install desktop App",
+    "settings_desc": "Add RainyNightFrog to your home screen for fullscreen play without the browser chrome",
+    "unavailable": "One-tap install is unavailable here. Use Chrome or Safari “Add to Home Screen”."
   }
 }

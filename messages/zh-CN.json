@@ -2684,5 +2684,27 @@
     "rarityEpic": "史诗",
     "rarityLegendary": "传说",
     "rarityMythic": "神话"
+  },
+  "pwa": {
+    "install_title": "安装 RainyNightFrog App",
+    "install_desc": "安装到主屏幕，获得全屏极速体验！",
+    "banner_headline": "📱 安装 RainyNightFrog App，获得全屏极速体验！",
+    "install_cta": "立即安装",
+    "install_later": "稍后再说",
+    "menu_install": "下载 App / 添加到桌面",
+    "ios_title": "添加到主屏幕",
+    "ios_desc": "在 iPhone／iPad 上获得如原生 App 的全屏体验",
+    "ios_step1": "点击浏览器下方的「分享」按钮",
+    "ios_step2": "向上滑动菜单，选择「添加到主屏幕」",
+    "ios_step3": "确认名称后轻点「添加」，即可从桌面一键打开",
+    "ios_got_it": "我知道了",
+    "manual_desc": "通过浏览器菜单将 RainyNightFrog 添加到桌面，即可隐藏地址栏",
+    "manual_step1": "打开浏览器菜单（通常为右上角 ⋮）",
+    "manual_step2": "选择「安装应用」或「添加到主屏幕」",
+    "manual_step3": "确认后即可从桌面以全屏打开",
+    "installed": "已安装为 App，正在以全屏模式使用",
+    "settings_title": "安装桌面 App",
+    "settings_desc": "将 RainyNightFrog 加到手机主屏幕，隐藏地址栏、全屏游玩",
+    "unavailable": "当前浏览器暂不支持一键安装，请改用 Chrome 或 Safari 的「添加到主屏幕」"
   }
 }

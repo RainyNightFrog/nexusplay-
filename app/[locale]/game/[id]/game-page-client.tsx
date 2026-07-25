@@ -34,6 +34,7 @@ import {
   type ChatPlayerPreview,
 } from "@/components/chat/chat-player-card";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
+import { MobileNavMenu } from "@/components/layout/mobile-nav-menu";
 import { SiteHeader } from "@/components/layout/site-header";
 import { LeaderboardNavButton } from "@/components/LeaderboardModal";
 import { Link, useRouter } from "@/i18n/navigation";
@@ -673,13 +674,14 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
           {tc("preparingGame")}
         </div>
       )}
-      <SiteHeader>
+      <SiteHeader hideBrandOnMobile>
           <Link
             href="/"
             className={cn(
               buttonVariants({ variant: "ghost", size: "sm" }),
-              "gap-1.5 text-zinc-400 hover:text-cyan-300"
+              "min-h-10 min-w-10 shrink-0 gap-1.5 px-2 text-zinc-400 hover:text-cyan-300 touch-manipulation sm:min-h-0 sm:min-w-0 sm:px-3"
             )}
+            aria-label={tn("backHome")}
           >
             <ArrowLeft className="size-4" />
             <span className="hidden sm:inline">{tn("backHome")}</span>
@@ -689,7 +691,8 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
             {game.title}
           </h1>
 
-          <div className="ml-auto flex items-center gap-2">
+          {/* 桌面完整導覽；手機收進選單，避免頂欄擠爆誤觸 */}
+          <div className="ml-auto hidden items-center gap-2 md:flex">
             <LeaderboardNavButton />
             <LanguageSwitcher />
             <Link
@@ -700,13 +703,21 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
               )}
             >
               <MessagesSquare className="size-3.5" />
-              <span className="hidden sm:inline">{t("communityForum")}</span>
+              <span>{t("communityForum")}</span>
               {forumPostCount > 0 && (
                 <span className="rounded-full bg-violet-500/25 px-1.5 py-0.5 text-[10px] font-bold">
                   {forumPostCount}
                 </span>
               )}
             </Link>
+          </div>
+          <div className="ml-auto flex items-center md:hidden">
+            <MobileNavMenu
+              showExploreLinks={false}
+              forumHref={buildGameHref(game, "/forum")}
+              forumLabel={t("communityForum")}
+              forumCount={forumPostCount}
+            />
           </div>
       </SiteHeader>
 
@@ -763,7 +774,7 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
               }}
             >
               {showFullscreen && iframeSrc && (
-                <div className="flex shrink-0 items-center justify-between gap-2 border-b border-white/10 px-3 py-2 sm:gap-3 sm:px-4 sm:py-3">
+                <div className="flex shrink-0 items-center justify-between gap-2 border-b border-white/10 px-2 py-2 sm:gap-3 sm:px-4 sm:py-3">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-white">
                       {game.title}
@@ -772,13 +783,13 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
                       {tc("fullscreenHint")}
                     </p>
                   </div>
-                  <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+                  <div className="flex shrink-0 items-center gap-1 sm:gap-2">
                     {showGameMenuButton && (
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={handleBackToGameMenu}
-                        className="gap-1.5 border-white/10 bg-white/5 px-2 text-zinc-300 hover:border-emerald-400/30 hover:text-white sm:px-3"
+                        className="min-h-10 gap-1.5 border-white/10 bg-white/5 px-2.5 text-zinc-300 hover:border-emerald-400/30 hover:text-white touch-manipulation sm:min-h-0 sm:px-3"
                       >
                         <Gamepad2 className="size-3.5" />
                         <span className="hidden sm:inline">
@@ -791,7 +802,7 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
                         variant="outline"
                         size="sm"
                         onClick={handleScrollToTip}
-                        className="gap-1.5 border-fuchsia-400/30 bg-fuchsia-500/10 px-2 text-fuchsia-100 hover:border-fuchsia-400/50 hover:bg-fuchsia-500/15 sm:px-3"
+                        className="min-h-10 gap-1.5 border-fuchsia-400/30 bg-fuchsia-500/10 px-2.5 text-fuchsia-100 hover:border-fuchsia-400/50 hover:bg-fuchsia-500/15 touch-manipulation sm:min-h-0 sm:px-3"
                       >
                         <Coins className="size-3.5" />
                         <span className="hidden sm:inline">
@@ -803,7 +814,7 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
                       variant="outline"
                       size="sm"
                       onClick={handleShare}
-                      className="gap-1.5 border-white/10 bg-white/5 px-2 text-zinc-300 hover:border-cyan-400/30 hover:text-white sm:px-3"
+                      className="min-h-10 gap-1.5 border-white/10 bg-white/5 px-2.5 text-zinc-300 hover:border-cyan-400/30 hover:text-white touch-manipulation sm:min-h-0 sm:px-3"
                     >
                       <Share2 className="size-3.5" />
                       <span className="hidden sm:inline">{tc("share")}</span>
@@ -812,10 +823,10 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
                       variant="ghost"
                       size="icon-sm"
                       onClick={closeFullscreen}
-                      className="shrink-0 text-zinc-400 hover:text-white"
+                      className="size-10 shrink-0 text-zinc-400 hover:text-white touch-manipulation sm:size-7"
                       aria-label={tc("fullscreenHint")}
                     >
-                      <X className="size-4" />
+                      <X className="size-5 sm:size-4" />
                     </Button>
                   </div>
                 </div>
@@ -974,7 +985,7 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
 
               {!showFullscreen && (
                 <div className="flex flex-col gap-3 border-t border-white/5 px-3 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-4">
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs leading-relaxed text-zinc-500">
                     {isUpcoming
                       ? tw("comingSoonDesc")
                       : showPurchaseGate
@@ -983,7 +994,7 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
                           ? t("startPlayHint")
                           : t("reuploadHint")}
                   </p>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
                     {isUpcoming && (
                       <Button
                         type="button"
@@ -991,8 +1002,8 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
                         disabled={wishlistSubmitting}
                         onClick={() => void toggleWishlist()}
                         className={cn(
-                          "gap-1.5 border border-fuchsia-400/40 bg-fuchsia-500/15 text-fuchsia-100",
-                          "shadow-[0_0_16px_rgba(232,121,249,0.35)] hover:bg-fuchsia-500/25"
+                          "min-h-10 justify-center gap-1.5 border border-fuchsia-400/40 bg-fuchsia-500/15 text-fuchsia-100 touch-manipulation",
+                          "shadow-[0_0_16px_rgba(232,121,249,0.35)] hover:bg-fuchsia-500/25 sm:min-h-0"
                         )}
                       >
                         {wishlistSubmitting ? (
@@ -1013,7 +1024,7 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
                         href={editGameHref}
                         className={cn(
                           buttonVariants({ variant: "outline", size: "sm" }),
-                          "gap-1.5 border-amber-400/30 bg-amber-500/10 text-amber-100 hover:border-amber-400/50 hover:bg-amber-500/15"
+                          "min-h-10 justify-center gap-1.5 border-amber-400/30 bg-amber-500/10 text-amber-100 touch-manipulation hover:border-amber-400/50 hover:bg-amber-500/15 sm:min-h-0"
                         )}
                       >
                         <Pencil className="size-3.5" />
@@ -1026,7 +1037,7 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
                         size="sm"
                         onClick={handleBackToGameMenu}
                         disabled={!iframeSrc || !playable}
-                        className="gap-1.5 border-white/10 bg-white/5 text-zinc-300 hover:border-emerald-400/30 hover:text-white disabled:opacity-40"
+                        className="min-h-10 justify-center gap-1.5 border-white/10 bg-white/5 text-zinc-300 touch-manipulation hover:border-emerald-400/30 hover:text-white disabled:opacity-40 sm:min-h-0"
                       >
                         <Gamepad2 className="size-3.5" />
                         {tc("backToGameMenu")}
@@ -1037,7 +1048,7 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
                         variant="outline"
                         size="sm"
                         onClick={handleScrollToTip}
-                        className="gap-1.5 border-fuchsia-400/30 bg-fuchsia-500/10 text-fuchsia-100 hover:border-fuchsia-400/50 hover:bg-fuchsia-500/15"
+                        className="min-h-10 justify-center gap-1.5 border-fuchsia-400/30 bg-fuchsia-500/10 text-fuchsia-100 touch-manipulation hover:border-fuchsia-400/50 hover:bg-fuchsia-500/15 sm:min-h-0"
                       >
                         <Coins className="size-3.5" />
                         {t("tipSupportButton")}
@@ -1047,7 +1058,7 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
                       variant="outline"
                       size="sm"
                       onClick={handleShare}
-                      className="gap-1.5 border-white/10 bg-white/5 text-zinc-300 hover:border-cyan-400/30 hover:text-white"
+                      className="min-h-10 justify-center gap-1.5 border-white/10 bg-white/5 text-zinc-300 touch-manipulation hover:border-cyan-400/30 hover:text-white sm:min-h-0"
                     >
                       <Share2 className="size-3.5" />
                       {tc("share")}
@@ -1067,7 +1078,7 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
                       size="sm"
                       onClick={() => setShowFullscreen(true)}
                       disabled={!iframeSrc || !showCreatorFullscreen}
-                      className="gap-1.5 border-amber-400/30 bg-amber-500/10 text-amber-100 hover:border-amber-400/50 hover:bg-amber-500/15 disabled:opacity-40 touch-manipulation"
+                      className="col-span-2 min-h-11 justify-center gap-1.5 border-amber-400/30 bg-amber-500/10 text-amber-100 touch-manipulation hover:border-amber-400/50 hover:bg-amber-500/15 disabled:opacity-40 sm:col-span-1 sm:min-h-0"
                     >
                       <Maximize2 className="size-3.5" />
                       {tc("expandGame")}

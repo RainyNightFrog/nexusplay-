@@ -2681,5 +2681,27 @@
     "devlogMilestoneTitle": "里程碑",
     "devlogMilestoneBody": "🏆 達成里程碑！\n\n感謝各位玩家的支持，我們達成了新的里程碑。\n\n未來會帶來更多內容與活動，敬請期待！",
     "toolsNavLink": "創作者工具"
+  },
+  "pwa": {
+    "install_title": "安裝 RainyNightFrog App",
+    "install_desc": "安裝至主畫面，獲得全螢幕極速體驗！",
+    "banner_headline": "📱 安裝 RainyNightFrog App，獲得全螢幕極速體驗！",
+    "install_cta": "立即安裝",
+    "install_later": "稍後再說",
+    "menu_install": "下載 App / 加至桌面",
+    "ios_title": "加至主畫面",
+    "ios_desc": "在 iPhone／iPad 上獲得如原生 App 的全螢幕體驗",
+    "ios_step1": "點擊瀏覽器下方的「分享」按鈕",
+    "ios_step2": "向上滑動選單，選擇「加至主畫面」",
+    "ios_step3": "確認名稱後輕觸「加入」，即可從桌面一鍵開啟",
+    "ios_got_it": "我知道了",
+    "manual_desc": "依瀏覽器選單將 RainyNightFrog 加到桌面，即可隱藏網址列",
+    "manual_step1": "開啟瀏覽器選單（通常為右上角 ⋮）",
+    "manual_step2": "選擇「安裝應用程式」或「加至主畫面」",
+    "manual_step3": "確認後即可從桌面以全螢幕開啟",
+    "installed": "已安裝為 App，正在以全螢幕模式使用",
+    "settings_title": "安裝桌面 App",
+    "settings_desc": "將 RainyNightFrog 加到手機主畫面，隱藏網址列、全螢幕遊玩",
+    "unavailable": "目前瀏覽器暫不支援一鍵安裝，請改用 Chrome 或 Safari 的「加至主畫面」"
   }
 }

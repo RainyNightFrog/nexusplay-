@@ -2693,5 +2693,27 @@
     "rarityEpic": "Epic",
     "rarityLegendary": "Legendary",
     "rarityMythic": "Mythic"
+  },
+  "pwa": {
+    "install_title": "ติดตั้ง RainyNightFrog App",
+    "install_desc": "เพิ่มไปยังหน้าจอหลักเพื่อประสบการณ์เต็มจอ!",
+    "banner_headline": "📱 ติดตั้ง RainyNightFrog App เพื่อเล่นแบบเต็มจอ!",
+    "install_cta": "ติดตั้งเลย",
+    "install_later": "ไว้ทีหลัง",
+    "menu_install": "ดาวน์โหลด App / เพิ่มไปยังหน้าจอหลัก",
+    "ios_title": "เพิ่มไปยังหน้าจอหลัก",
+    "ios_desc": "ประสบการณ์แบบแอปเนทีฟบน iPhone / iPad",
+    "ios_step1": "แตะปุ่มแชร์ด้านล่างของ Safari",
+    "ios_step2": "เลื่อนแล้วเลือก “เพิ่มไปยังหน้าจอหลัก”",
+    "ios_step3": "ยืนยันชื่อแล้วแตะเพิ่ม",
+    "ios_got_it": "เข้าใจแล้ว",
+    "manual_desc": "ใช้เมนูเบราว์เซอร์เพื่อติดตั้ง RainyNightFrog",
+    "manual_step1": "เปิดเมนูเบราว์เซอร์ (มักเป็น ⋮ มุมขวาบน)",
+    "manual_step2": "เลือก “ติดตั้งแอป” หรือ “เพิ่มไปยังหน้าจอหลัก”",
+    "manual_step3": "ยืนยันแล้วเปิดแบบเต็มจอจากหน้าจอหลัก",
+    "installed": "ติดตั้งแล้ว — กำลังใช้โหมดแอปเต็มจอ",
+    "settings_title": "ติดตั้งแอปเดสก์ท็อป",
+    "settings_desc": "เพิ่ม RainyNightFrog ไปยังหน้าจอหลักเพื่อเล่นเต็มจอโดยไม่มีแถบที่อยู่",
+    "unavailable": "ไม่รองรับติดตั้งแบบแตะครั้งเดียว ใช้ Chrome หรือ Safari"
   }
 }
