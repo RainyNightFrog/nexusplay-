@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
-import { Loader2, LogOut, Heart, Palette, Settings, Shield, UserRound, Bell, Trophy, Sparkles, Download } from "lucide-react";
+import { Loader2, LogOut, Heart, LayoutDashboard, Palette, Settings, Shield, UserRound, Bell, Trophy, Sparkles, Download } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { AchievementsModal } from "@/components/AchievementsModal";
@@ -276,10 +276,14 @@ export function CreatorDashboardLink() {
       href={href}
       className={cn(
         buttonVariants({ variant: "outline", size: "sm" }),
-        "hidden border-white/10 bg-white/5 text-zinc-200 backdrop-blur-sm hover:border-violet-400/30 hover:bg-violet-500/10 hover:text-white sm:inline-flex"
+        "hidden size-8 shrink-0 items-center justify-center gap-1.5 border-white/10 bg-white/5 p-0 text-zinc-200 backdrop-blur-sm",
+        "hover:border-violet-400/30 hover:bg-violet-500/10 hover:text-white sm:inline-flex",
+        "xl:h-8 xl:w-auto xl:px-3"
       )}
+      aria-label={t("creatorDashboard")}
     >
-      {t("creatorDashboard")}
+      <LayoutDashboard className="size-3.5" />
+      <span className="hidden xl:inline">{t("creatorDashboard")}</span>
     </Link>
   );
 }

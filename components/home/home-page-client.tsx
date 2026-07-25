@@ -310,33 +310,35 @@ export function HomePageClient({ initialGames }: HomePageClientProps) {
       </AnimatePresence>
       {/* Navbar */}
       <SiteHeader zIndex="50">
-        <div className="relative mx-auto hidden max-w-md flex-1 md:block">
+        <div className="relative hidden min-w-0 flex-1 md:block">
           <SiteSearch />
         </div>
 
         {/* 桌面：完整導覽；手機：收進「更多」選單，避免登入後頂欄擠爆 */}
-        <div className="ml-auto hidden items-center gap-2 md:flex md:gap-3">
+        <div className="ml-auto hidden shrink-0 items-center gap-1.5 md:flex xl:gap-2">
           <Link
             href="/community"
             className={cn(
               buttonVariants({ variant: "outline", size: "sm" }),
-              "inline-flex h-8 shrink-0 items-center justify-center gap-1.5 border-violet-400/20 bg-violet-500/10 px-3 text-violet-200 hover:border-violet-400/30 hover:bg-violet-500/15"
+              "inline-flex size-8 shrink-0 items-center justify-center gap-1.5 border-violet-400/20 bg-violet-500/10 p-0 text-violet-200 hover:border-violet-400/30 hover:bg-violet-500/15",
+              "xl:h-8 xl:w-auto xl:px-3"
             )}
             aria-label={tNav("community")}
           >
             <MessagesSquare className="size-3.5" />
-            <span>{tNav("community")}</span>
+            <span className="hidden xl:inline">{tNav("community")}</span>
           </Link>
           <Link
             href="/supporter"
             className={cn(
               buttonVariants({ variant: "outline", size: "sm" }),
-              "inline-flex h-8 shrink-0 items-center justify-center gap-1.5 border-amber-400/20 bg-amber-500/10 px-3 text-amber-200 hover:border-amber-400/30 hover:bg-amber-500/15"
+              "inline-flex size-8 shrink-0 items-center justify-center gap-1.5 border-amber-400/20 bg-amber-500/10 p-0 text-amber-200 hover:border-amber-400/30 hover:bg-amber-500/15",
+              "xl:h-8 xl:w-auto xl:px-3"
             )}
             aria-label={t("supporterNav")}
           >
             <HeartHandshake className="size-3.5" />
-            <span>{t("supporterNav")}</span>
+            <span className="hidden xl:inline">{t("supporterNav")}</span>
           </Link>
           <LanguageSwitcher />
           <LeaderboardNavButton />

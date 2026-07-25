@@ -40,7 +40,7 @@ export function LanguageSwitcher() {
         disabled={isPending}
         className={cn(
           "inline-flex size-9 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/5 p-0",
-          "text-sm text-zinc-200 backdrop-blur-sm outline-none sm:h-9 sm:w-auto sm:px-2.5",
+          "text-sm text-zinc-200 backdrop-blur-sm outline-none xl:h-9 xl:w-auto xl:px-2.5",
           "transition-all duration-300 ease-out",
           "hover:border-cyan-400/35 hover:bg-cyan-500/10 hover:text-white",
           "hover:shadow-[0_0_18px_rgba(34,211,238,0.25)]",
@@ -57,7 +57,7 @@ export function LanguageSwitcher() {
             isPending && "animate-spin"
           )}
         />
-        <span className="hidden max-w-[5rem] truncate font-medium sm:inline">
+        <span className="hidden max-w-[5rem] truncate font-medium xl:inline">
           {currentLabel}
         </span>
       </DropdownMenuTrigger>

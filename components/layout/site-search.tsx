@@ -201,7 +201,7 @@ export function SiteSearch({
   const showDropdown = showAssist || showResults;
 
   return (
-    <div ref={containerRef} className={cn("relative", className)}>
+    <div ref={containerRef} className={cn("relative z-50", className)}>
       <form onSubmit={handleSubmit}>
         <Search className="pointer-events-none absolute left-3.5 top-1/2 z-10 size-4 -translate-y-1/2 text-zinc-500" />
         <input
@@ -228,7 +228,8 @@ export function SiteSearch({
       {showDropdown && (
         <div
           className={cn(
-            "absolute left-0 right-0 top-[calc(100%+0.5rem)] z-50 max-h-[min(70vh,24rem)] overflow-y-auto rounded-xl",
+            "absolute left-0 top-[calc(100%+0.5rem)] z-[60] w-[min(28rem,calc(100vw-1.25rem))] min-w-full",
+            "max-h-[min(70vh,28rem)] overflow-y-auto overscroll-contain rounded-xl",
             "border border-white/10 bg-zinc-900/95 shadow-2xl shadow-black/50 backdrop-blur-xl"
           )}
         >

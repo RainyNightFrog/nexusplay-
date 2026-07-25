@@ -111,7 +111,7 @@ function SearchPageContent() {
           <ArrowLeft className="size-4" />
           <span className="hidden sm:inline">{tNav("backHome")}</span>
         </Link>
-        <div className="mx-auto hidden max-w-md flex-1 px-4 md:block">
+        <div className="mx-auto hidden min-w-0 flex-1 px-4 md:block">
           <SiteSearch defaultQuery={query} />
         </div>
         <NavActions className="ml-auto" />

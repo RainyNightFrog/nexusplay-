@@ -50,12 +50,12 @@ export function DailyQuestsNavButton() {
           "relative inline-flex size-10 items-center justify-center rounded-full border border-cyan-400/30",
           "bg-cyan-500/10 text-cyan-100 touch-manipulation",
           "shadow-[0_0_12px_rgba(34,211,238,0.12)] transition hover:border-cyan-400/50 hover:bg-cyan-500/15",
-          "md:size-auto md:gap-1.5 md:px-3 md:py-1.5 md:text-sm"
+          "md:size-9 xl:size-auto xl:gap-1.5 xl:px-3 xl:py-1.5 xl:text-sm"
         )}
         aria-label={t("navLabel")}
       >
         <Target className="size-3.5 text-cyan-300" />
-        <span className="hidden md:inline">{t("navLabel")}</span>
+        <span className="hidden xl:inline">{t("navLabel")}</span>
         {claimableCount > 0 && (
           <span className="absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white">
             {claimableCount > 9 ? "9+" : claimableCount}
