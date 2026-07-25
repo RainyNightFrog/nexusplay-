@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Bell, Loader2 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { useAuth } from "@/hooks/use-auth";
+import { useVisibleInterval } from "@/hooks/use-visible-interval";
 import {
   NotificationFilterBar,
   type NotificationFilter,
@@ -68,12 +69,14 @@ export function NotificationBell() {
     }
 
     void loadNotifications();
-    const interval = window.setInterval(() => {
-      void loadNotifications();
-    }, 60_000);
-
-    return () => window.clearInterval(interval);
   }, [profile, loadNotifications]);
+
+  useVisibleInterval(
+    () => {
+      void loadNotifications();
+    },
+    profile ? 90_000 : null
+  );
 
   useEffect(() => {
     if (open) {

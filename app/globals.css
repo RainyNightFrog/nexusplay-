@@ -338,6 +338,28 @@
     [role="button"] {
       touch-action: manipulation;
     }
+
+    /* 手機／觸控：關閉常駐 Aurora 動畫與游標層，降低 GPU 負載與過熱 */
+    .nexus-aurora-mesh--animated,
+    .nexus-aurora-sweep,
+    .nexus-aurora-orb {
+      animation: none !important;
+      will-change: auto !important;
+    }
+
+    .nexus-aurora-sweep {
+      opacity: 0.12;
+      filter: blur(36px);
+    }
+
+    .nexus-aurora-orb {
+      opacity: 0.55;
+      filter: blur(28px);
+    }
+
+    .nexus-cursor-stars-layer {
+      display: none !important;
+    }
   }
 }
 
@@ -755,7 +777,7 @@
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
-  filter: drop-shadow(0 0 8px rgba(167, 139, 250, 0.45));
+  -webkit-text-fill-color: transparent;
 }
 
 .title-tier-legendary {
@@ -771,8 +793,8 @@
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
+  -webkit-text-fill-color: transparent;
   animation: title-gradient-flow 3s ease-in-out infinite;
-  filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.4));
 }
 
 .title-tier-mythic {
@@ -789,13 +811,15 @@
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
+  -webkit-text-fill-color: transparent;
   animation: title-gradient-flow 2.6s ease-in-out infinite;
-  filter: drop-shadow(0 0 12px rgba(232, 121, 249, 0.55));
 }
 
 .title-tier-no-animate.title-tier-legendary,
 .title-tier-no-animate.title-tier-mythic,
-.title-tier-no-animate.animate-gradient {
+.title-tier-no-animate.animate-gradient,
+.title-tier-no-animate[class*="title-ap-"],
+.title-tier-no-animate[class*="ap-name-"] {
   animation: none;
   background-position: 0% 50%;
 }
@@ -831,6 +855,7 @@
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
+  -webkit-text-fill-color: transparent;
   animation: supporter-username-rainbow 5s linear infinite;
 }
 
@@ -846,13 +871,15 @@
     #ff6b6b
   );
   animation-duration: 3.5s;
-  filter: drop-shadow(0 0 10px rgba(167, 139, 250, 0.45));
 }
 
-/* 手機：減輕陰影濾鏡，避免支持者牆多個特效造成卡頓 */
+/* 手機：減輕特效；勿對 background-clip 文字使用 filter（會變空白／亂碼） */
 @media (max-width: 767px) {
+  .supporter-username,
   .supporter-username-premium {
-    filter: drop-shadow(0 0 4px rgba(167, 139, 250, 0.3));
+    animation: none;
+    background-position: 50% 50%;
+    filter: none;
   }
 }
 
@@ -879,7 +906,7 @@
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
-  filter: drop-shadow(0 0 8px rgba(167, 139, 250, 0.35));
+  -webkit-text-fill-color: transparent;
 }
 
 /* ── 永久傳說稱號 RainyNightFrog：外框雷電特效 + 內層炫彩文字 ── */
@@ -1254,6 +1281,7 @@
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
+  -webkit-text-fill-color: transparent;
   animation: title-gradient-flow 2.8s ease-in-out infinite;
 }
 
@@ -1264,6 +1292,7 @@
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
+  -webkit-text-fill-color: transparent;
   animation: title-gradient-flow 3s ease-in-out infinite;
 }
 
@@ -1281,7 +1310,7 @@
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
-  filter: drop-shadow(0 0 8px rgba(167, 139, 250, 0.55));
+  -webkit-text-fill-color: transparent;
   animation: title-gradient-flow 2.4s ease-in-out infinite;
 }
 
@@ -1300,6 +1329,7 @@
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
+  -webkit-text-fill-color: transparent;
   animation: title-gradient-flow 2.6s ease-in-out infinite;
 }
 
@@ -1310,7 +1340,7 @@
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
-  filter: drop-shadow(0 0 8px rgba(124, 58, 237, 0.5));
+  -webkit-text-fill-color: transparent;
   animation: title-gradient-flow 2.8s ease-in-out infinite;
 }
 
@@ -1328,7 +1358,7 @@
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
-  filter: drop-shadow(0 0 12px rgba(74, 222, 128, 0.65));
+  -webkit-text-fill-color: transparent;
   animation: title-gradient-flow 1.8s ease-in-out infinite;
 }
 
@@ -1353,6 +1383,7 @@
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
+  -webkit-text-fill-color: transparent;
   animation: title-gradient-flow 2.5s ease-in-out infinite;
 }
 
@@ -1371,7 +1402,7 @@
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
-  filter: drop-shadow(0 0 10px rgba(244, 114, 182, 0.55));
+  -webkit-text-fill-color: transparent;
   animation: title-gradient-flow 1.6s ease-in-out infinite;
 }
 
@@ -1445,4 +1476,30 @@
     0 0 20px rgba(74, 222, 128, 0.4),
     0 0 28px rgba(34, 211, 238, 0.3);
   animation: title-gradient-flow 2s ease-in-out infinite;
+}
+/* 觸控裝置：強制靜態背景／稱號，避免手機過熱與漸層字消失 */
+@media (hover: none), (pointer: coarse) {
+  .nexus-aurora-mesh--animated,
+  .nexus-aurora-sweep,
+  .nexus-aurora-orb {
+    animation: none !important;
+    will-change: auto !important;
+  }
+
+  .nexus-cursor-stars-layer {
+    display: none !important;
+  }
+
+  [class*="title-ap-"],
+  .title-tier-legendary,
+  .title-tier-mythic,
+  .title-tier-epic,
+  .ap-name-crimson,
+  .ap-name-prism-myth,
+  .supporter-username,
+  .supporter-username-premium {
+    animation: none !important;
+    background-position: 0% 50% !important;
+    filter: none !important;
+  }
 }

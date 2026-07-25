@@ -47,7 +47,7 @@ export function SiteHeader({
         <div className="flex min-w-0 flex-1 items-center gap-2 md:gap-4">
           {children}
         </div>
-        <div className="flex shrink-0 items-center gap-1.5 pl-1 md:gap-2 md:pl-3">
+        <div className="flex shrink-0 items-center gap-1 pl-1 md:gap-2 md:pl-3">
           <ApStoreNavButton />
           <DailyQuestsNavButton />
           <UserNav />

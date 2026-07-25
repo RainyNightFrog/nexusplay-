@@ -16,6 +16,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/use-auth";
 import { requestOpenPlayerDm } from "@/lib/open-player-dm";
+import { OPEN_LEADERBOARD_EVENT } from "@/lib/open-leaderboard";
 import { getInitials } from "@/lib/auth";
 import { UserBadge } from "@/components/UserBadge";
 import {
@@ -426,6 +427,16 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
   const [reopenLeaderboardAfterProfile, setReopenLeaderboardAfterProfile] =
     useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    function onRequestOpen() {
+      setOpen(true);
+    }
+    window.addEventListener(OPEN_LEADERBOARD_EVENT, onRequestOpen);
+    return () => {
+      window.removeEventListener(OPEN_LEADERBOARD_EVENT, onRequestOpen);
+    };
+  }, []);
 
   const handlePlayerClick = useCallback(
     (entry: PlatformLeaderboardEntry) => {

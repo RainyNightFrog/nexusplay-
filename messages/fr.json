@@ -33,6 +33,7 @@
     "notifications": "Notifications",
     "searchOpen": "Ouvrir la recherche",
     "achievements": "Réalisations et titres",
+    "moreMenu": "Plus",
     "supporterPass": "平台支持者"
   },
   "leaderboard": {
@@ -2617,6 +2618,7 @@
     "tabBadge": "Badge Effects",
     "livePreview": "Live Preview",
     "previewHint": "Preview: {name}",
+    "badgePreviewSample": "Badge effect preview",
     "buy": "Buy",
     "equip": "Equip",
     "unequip": "Unequip",

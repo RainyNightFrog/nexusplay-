@@ -72,6 +72,15 @@ const TITLE_NAME_EN: Record<string, string> = {
   點數帝王: "AP Emperor",
   // 虛擬玩家專用
   排行榜常客: "Leaderboard Regular",
+  // AP 商店稱號
+  霓虹新星: "Neon Nova",
+  賽博浪客: "Cyber Ronin",
+  虛空領主: "Void Lord",
+  雨夜帝王: "Rain Emperor",
+  像素旅人: "Pixel Wanderer",
+  霓虹先知: "Neon Oracle",
+  深淵傳令: "Abyss Herald",
+  永夜蛙神: "Eternal Frog",
 };
 
 /** 簡體顯示（與繁中不同者） */
@@ -142,6 +151,14 @@ const TITLE_NAME_ZH_CN: Record<string, string> = {
   霓虹旅人: "霓虹旅人",
   點數帝王: "点数帝王",
   排行榜常客: "排行榜常客",
+  霓虹新星: "霓虹新星",
+  賽博浪客: "赛博浪客",
+  虛空領主: "虚空领主",
+  雨夜帝王: "雨夜帝王",
+  像素旅人: "像素旅人",
+  霓虹先知: "霓虹先知",
+  深淵傳令: "深渊传令",
+  永夜蛙神: "永夜蛙神",
 };
 
 export function localizeTitleName(

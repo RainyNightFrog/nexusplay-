@@ -220,13 +220,67 @@ export function ApStoreModal({ open, onOpenChange }: ApStoreModalProps) {
                 </div>
               ) : data ? (
                 <div className="grid gap-4 lg:grid-cols-[1fr_240px]">
+                  {/* 手機：預覽置頂並 sticky，選商品時不必捲到最底才看得到 */}
+                  <aside className="order-first rounded-2xl border border-cyan-400/20 bg-zinc-900/80 p-3 sm:p-4 lg:order-last lg:sticky lg:top-0 lg:self-start">
+                    <p className="mb-2 text-center text-xs font-semibold uppercase tracking-wide text-cyan-300 sm:mb-3">
+                      {t("livePreview")}
+                    </p>
+                    <div className="flex flex-col items-center gap-3 rounded-xl border border-white/10 bg-zinc-950/70 p-3 sm:p-4">
+                      <div
+                        className={cn(
+                          "relative flex size-14 items-center justify-center overflow-hidden rounded-full border border-cyan-400/30 bg-gradient-to-br from-cyan-500/30 to-violet-600/40",
+                          selected?.category === "avatar_frame"
+                            ? selected.cssClass
+                            : profile.equipped_avatar_frame_class
+                        )}
+                      >
+                        {profile.avatar_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={profile.avatar_url}
+                            alt=""
+                            className="size-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-sm font-bold text-white">
+                            {(profile.display_name ?? "?").slice(0, 2)}
+                          </span>
+                        )}
+                      </div>
+                      <UserBadge
+                        username={profile.display_name}
+                        title={previewTitle}
+                        nameColorClass={previewNameColor}
+                        layout="stacked"
+                        isSupporter={profile.is_supporter}
+                        supporterBadge={profile.supporter_badge}
+                        animateTitle={false}
+                      />
+                      {selected?.category === "badge_effect" && (
+                        <div
+                          className={cn(
+                            "w-full rounded-xl border border-white/15 px-3 py-2 text-center text-xs text-zinc-200",
+                            selected.cssClass
+                          )}
+                        >
+                          {t("badgePreviewSample")}
+                        </div>
+                      )}
+                      {selected && (
+                        <p className="text-center text-[11px] text-zinc-500">
+                          {t("previewHint", { name: selected.name })}
+                        </p>
+                      )}
+                    </div>
+                  </aside>
+
                   <Tabs defaultValue="title" className="min-w-0">
-                    <TabsList className="mb-3 flex h-auto w-full flex-wrap justify-center gap-1 rounded-xl border border-white/10 bg-zinc-900/80 p-1">
+                    <TabsList className="mb-3 flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-xl border border-white/10 bg-zinc-900/80 p-1 sm:flex-wrap sm:justify-center">
                       {CATEGORIES.map((category) => (
                         <TabsTrigger
                           key={category}
                           value={category}
-                          className="flex-1 rounded-lg px-2 py-2 text-xs sm:text-sm"
+                          className="shrink-0 rounded-lg px-2.5 py-2 text-xs sm:flex-1 sm:text-sm"
                         >
                           {categoryLabel(category)}
                         </TabsTrigger>
@@ -237,7 +291,7 @@ export function ApStoreModal({ open, onOpenChange }: ApStoreModalProps) {
                       <TabsContent
                         key={category}
                         value={category}
-                        className="max-h-[52vh] space-y-2 overflow-y-auto pr-1"
+                        className="max-h-[42vh] space-y-2 overflow-y-auto pr-1 sm:max-h-[52vh]"
                       >
                         {data.items
                           .filter((item) => item.category === category)
@@ -254,7 +308,7 @@ export function ApStoreModal({ open, onOpenChange }: ApStoreModalProps) {
                               )}
                             >
                               <div className="flex flex-wrap items-start justify-between gap-2">
-                                <div>
+                                <div className="min-w-0 flex-1">
                                   <p className="text-sm font-semibold text-white">
                                     {item.name}
                                   </p>
@@ -262,7 +316,7 @@ export function ApStoreModal({ open, onOpenChange }: ApStoreModalProps) {
                                     {item.description}
                                   </p>
                                 </div>
-                                <div className="text-right">
+                                <div className="shrink-0 text-right">
                                   <span
                                     className={cn(
                                       "rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase",
@@ -338,39 +392,6 @@ export function ApStoreModal({ open, onOpenChange }: ApStoreModalProps) {
                       </TabsContent>
                     ))}
                   </Tabs>
-
-                  <aside className="rounded-2xl border border-cyan-400/20 bg-zinc-900/80 p-4">
-                    <p className="mb-3 text-center text-xs font-semibold uppercase tracking-wide text-cyan-300">
-                      {t("livePreview")}
-                    </p>
-                    <div className="flex flex-col items-center gap-3 rounded-xl border border-white/10 bg-zinc-950/70 p-4">
-                      <div
-                        className={cn(
-                          "relative flex size-14 items-center justify-center overflow-hidden rounded-full border border-cyan-400/30 bg-gradient-to-br from-cyan-500/30 to-violet-600/40",
-                          selected?.category === "avatar_frame"
-                            ? selected.cssClass
-                            : profile.equipped_avatar_frame_class
-                        )}
-                      >
-                        <span className="text-sm font-bold text-white">
-                          {(profile.display_name ?? "?").slice(0, 2)}
-                        </span>
-                      </div>
-                      <UserBadge
-                        username={profile.display_name}
-                        title={previewTitle}
-                        nameColorClass={previewNameColor}
-                        layout="stacked"
-                        isSupporter={profile.is_supporter}
-                        supporterBadge={profile.supporter_badge}
-                      />
-                      {selected && (
-                        <p className="text-center text-[11px] text-zinc-500">
-                          {t("previewHint", { name: selected.name })}
-                        </p>
-                      )}
-                    </div>
-                  </aside>
                 </div>
               ) : null}
             </div>

@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Coins } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { ApStoreModal } from "@/components/ap-store/ApStoreModal";
 import { useAuth } from "@/hooks/use-auth";
+import { useVisibleInterval } from "@/hooks/use-visible-interval";
 import { cn } from "@/lib/utils";
 
 export function ApStoreNavButton() {
@@ -28,12 +29,12 @@ export function ApStoreNavButton() {
     }
   }, [profile]);
 
-  useEffect(() => {
-    void refreshBalance();
-    if (!profile) return;
-    const timer = window.setInterval(() => void refreshBalance(), 90_000);
-    return () => window.clearInterval(timer);
-  }, [profile, refreshBalance]);
+  useVisibleInterval(
+    () => {
+      void refreshBalance();
+    },
+    profile ? 180_000 : null
+  );
 
   if (!profile) return null;
 
@@ -41,12 +42,15 @@ export function ApStoreNavButton() {
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setOpen(true);
+          void refreshBalance();
+        }}
         className={cn(
-          "relative inline-flex items-center gap-1.5 rounded-full border border-amber-400/35",
-          "bg-amber-500/10 px-2.5 py-1.5 text-xs font-semibold text-amber-100",
-          "shadow-[0_0_16px_rgba(251,191,36,0.2)] transition hover:border-amber-400/55 hover:bg-amber-500/15",
-          "md:px-3 md:text-sm"
+          "relative inline-flex items-center gap-1 rounded-full border border-amber-400/35",
+          "bg-amber-500/10 px-2 py-1.5 text-xs font-semibold text-amber-100",
+          "shadow-[0_0_12px_rgba(251,191,36,0.15)] transition hover:border-amber-400/55 hover:bg-amber-500/15",
+          "md:gap-1.5 md:px-3 md:text-sm md:shadow-[0_0_16px_rgba(251,191,36,0.2)]"
         )}
         aria-label={t("navLabel")}
       >

@@ -16,6 +16,8 @@ export function ActivityPulseTracker() {
   const pathname = usePathname();
   const { profile, loading } = useAuth();
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pathnameRef = useRef(pathname);
+  pathnameRef.current = pathname;
 
   useEffect(() => {
     if (loading || !profile) {
@@ -27,7 +29,9 @@ export function ActivityPulseTracker() {
     }
 
     const sendPulse = () => {
-      const playing = isGamePlayPath(pathname);
+      if (document.visibilityState === "hidden") return;
+
+      const playing = isGamePlayPath(pathnameRef.current);
 
       fetch("/api/activity/pulse", {
         method: "POST",
@@ -40,17 +44,38 @@ export function ActivityPulseTracker() {
       }).catch(() => undefined);
     };
 
-    sendPulse();
+    const start = () => {
+      if (intervalRef.current) return;
+      intervalRef.current = setInterval(sendPulse, ACTIVITY_PULSE_MS);
+    };
 
-    intervalRef.current = setInterval(sendPulse, ACTIVITY_PULSE_MS);
+    const stop = () => {
+      if (!intervalRef.current) return;
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    };
 
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        stop();
+      } else {
+        sendPulse();
+        start();
       }
     };
-  }, [loading, pathname, profile]);
+
+    if (document.visibilityState !== "hidden") {
+      sendPulse();
+      start();
+    }
+
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      stop();
+    };
+  }, [loading, profile]);
 
   return null;
 }

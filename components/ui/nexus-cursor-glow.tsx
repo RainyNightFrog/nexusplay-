@@ -16,12 +16,20 @@ function isCursorEffectDisabled() {
   return document.documentElement.dataset.reduceMotion === "true";
 }
 
+/** 觸控／手機裝置不跑游標軌跡，避免常駐 rAF 造成過熱 */
+function isTouchPrimaryDevice() {
+  return window.matchMedia("(hover: none), (pointer: coarse)").matches;
+}
+
 export function NexusCursorGlow() {
   const layerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const layer = layerRef.current;
-    if (!layer || isCursorEffectDisabled()) return;
+    if (!layer || isCursorEffectDisabled() || isTouchPrimaryDevice()) {
+      if (layer) layer.style.display = "none";
+      return;
+    }
 
     const stars = Array.from(
       layer.querySelectorAll<HTMLElement>("[data-cursor-star]")
@@ -32,6 +40,7 @@ export function NexusCursorGlow() {
     let targetX = window.innerWidth / 2;
     let targetY = window.innerHeight / 2;
     let visible = false;
+    let running = false;
     const points = stars.map(() => ({ x: targetX, y: targetY }));
 
     const applyPositions = () => {
@@ -56,6 +65,24 @@ export function NexusCursorGlow() {
       }
 
       applyPositions();
+
+      // 游標靜止且已跟上目標時暫停 rAF，降低空轉耗電
+      const settled = points.every(
+        (point) =>
+          Math.abs(point.x - targetX) < 0.4 && Math.abs(point.y - targetY) < 0.4
+      );
+      if (!visible || settled) {
+        running = false;
+        rafId = 0;
+        return;
+      }
+
+      rafId = window.requestAnimationFrame(tick);
+    };
+
+    const ensureRunning = () => {
+      if (running || isCursorEffectDisabled()) return;
+      running = true;
       rafId = window.requestAnimationFrame(tick);
     };
 
@@ -72,6 +99,7 @@ export function NexusCursorGlow() {
           point.y = targetY;
         });
       }
+      ensureRunning();
     };
 
     const onLeave = () => {
@@ -82,12 +110,11 @@ export function NexusCursorGlow() {
     applyPositions();
     document.addEventListener("mousemove", onMove, { passive: true });
     document.documentElement.addEventListener("mouseleave", onLeave);
-    rafId = window.requestAnimationFrame(tick);
 
     return () => {
       document.removeEventListener("mousemove", onMove);
       document.documentElement.removeEventListener("mouseleave", onLeave);
-      window.cancelAnimationFrame(rafId);
+      if (rafId) window.cancelAnimationFrame(rafId);
       layer.style.removeProperty("opacity");
     };
   }, []);

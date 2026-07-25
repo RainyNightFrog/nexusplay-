@@ -33,6 +33,7 @@
     "notifications": "通知",
     "searchOpen": "検索を開く",
     "achievements": "実績と称号",
+    "moreMenu": "その他",
     "supporterPass": "平台支持者"
   },
   "leaderboard": {
@@ -2617,6 +2618,7 @@
     "tabBadge": "Badge Effects",
     "livePreview": "Live Preview",
     "previewHint": "Preview: {name}",
+    "badgePreviewSample": "Badge effect preview",
     "buy": "Buy",
     "equip": "Equip",
     "unequip": "Unequip",

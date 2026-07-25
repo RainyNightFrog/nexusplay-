@@ -96,7 +96,7 @@ export function UserBadge({
     usernameClassName,
     isSupporterDisplay &&
       supporterTier === "premium" &&
-      "!bg-clip-text !text-transparent hover:!text-transparent",
+      "!bg-clip-text !text-transparent hover:!text-transparent [-webkit-text-fill-color:transparent]",
     isSupporterDisplay &&
       supporterTier === "basic" &&
       "!text-amber-300 hover:!text-amber-200"

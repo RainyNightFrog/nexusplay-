@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Target } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { DailyQuestsModal } from "@/components/quests/DailyQuestsModal";
 import { useAuth } from "@/hooks/use-auth";
+import { useVisibleInterval } from "@/hooks/use-visible-interval";
 import { cn } from "@/lib/utils";
 
 export function DailyQuestsNavButton() {
@@ -28,12 +29,12 @@ export function DailyQuestsNavButton() {
     }
   }, [profile]);
 
-  useEffect(() => {
-    void refreshBadge();
-    if (!profile) return;
-    const timer = window.setInterval(() => void refreshBadge(), 60_000);
-    return () => window.clearInterval(timer);
-  }, [profile, refreshBadge]);
+  useVisibleInterval(
+    () => {
+      void refreshBadge();
+    },
+    profile ? 120_000 : null
+  );
 
   if (!profile) return null;
 
@@ -41,18 +42,20 @@ export function DailyQuestsNavButton() {
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setOpen(true);
+          void refreshBadge();
+        }}
         className={cn(
-          "relative inline-flex items-center gap-1.5 rounded-full border border-cyan-400/30",
-          "bg-cyan-500/10 px-2.5 py-1.5 text-xs font-medium text-cyan-100",
-          "shadow-[0_0_16px_rgba(34,211,238,0.15)] transition hover:border-cyan-400/50 hover:bg-cyan-500/15",
-          "md:px-3 md:text-sm"
+          "relative inline-flex size-9 items-center justify-center rounded-full border border-cyan-400/30",
+          "bg-cyan-500/10 text-cyan-100",
+          "shadow-[0_0_12px_rgba(34,211,238,0.12)] transition hover:border-cyan-400/50 hover:bg-cyan-500/15",
+          "md:size-auto md:gap-1.5 md:px-3 md:py-1.5 md:text-sm"
         )}
         aria-label={t("navLabel")}
       >
         <Target className="size-3.5 text-cyan-300" />
-        <span className="hidden sm:inline">{t("navLabel")}</span>
-        <span className="sm:hidden">🎯</span>
+        <span className="hidden md:inline">{t("navLabel")}</span>
         {claimableCount > 0 && (
           <span className="absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white">
             {claimableCount > 9 ? "9+" : claimableCount}

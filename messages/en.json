@@ -33,6 +33,7 @@
     "adminCenter": "Admin Center",
     "roleAdmin": "Super Admin",
     "achievements": "Achievements & Titles",
+    "moreMenu": "More",
     "supporterPass": "平台支持者"
   },
   "quests": {
@@ -74,6 +75,7 @@
     "tabBadge": "Badge Effects",
     "livePreview": "Live Preview",
     "previewHint": "Preview: {name}",
+    "badgePreviewSample": "Badge effect preview bubble",
     "buy": "Buy",
     "equip": "Equip",
     "unequip": "Unequip",

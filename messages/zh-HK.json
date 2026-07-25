@@ -33,7 +33,8 @@
     "rolePlayer": "玩家",
     "adminCenter": "管理員中心",
     "roleAdmin": "超級管理員",
-    "achievements": "成就與稱號"
+    "achievements": "成就與稱號",
+    "moreMenu": "更多選單"
   },
   "quests": {
     "title": "每日／每周任務",
@@ -74,6 +75,7 @@
     "tabBadge": "專屬徽章",
     "livePreview": "即時預覽",
     "previewHint": "預覽：{name}",
+    "badgePreviewSample": "徽章特效預覽氣泡",
     "buy": "購買",
     "equip": "裝備",
     "unequip": "卸下",

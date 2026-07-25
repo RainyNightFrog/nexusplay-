@@ -33,6 +33,7 @@
     "notifications": "알림",
     "searchOpen": "검색 열기",
     "achievements": "업적 및 타이틀",
+    "moreMenu": "더보기",
     "supporterPass": "平台支持者"
   },
   "leaderboard": {
@@ -2617,6 +2618,7 @@
     "tabBadge": "Badge Effects",
     "livePreview": "Live Preview",
     "previewHint": "Preview: {name}",
+    "badgePreviewSample": "Badge effect preview",
     "buy": "Buy",
     "equip": "Equip",
     "unequip": "Unequip",
