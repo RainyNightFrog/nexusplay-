@@ -5,10 +5,12 @@ import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { ChatInput } from "@/components/chat/chat-input";
 import { RainbowSafeText } from "@/components/supporter/rainbow-safe-text";
+import { UserBadge } from "@/components/UserBadge";
 import {
   useAdminSupportChat,
   useAdminSupportContact,
 } from "@/hooks/use-admin-support-chat";
+import { useAuth } from "@/hooks/use-auth";
 import {
   useOpenPlayerDm,
   usePlayerDmChat,
@@ -41,11 +43,15 @@ function DmMessageBubble({
   isOwn,
   senderName,
   supporterTier = "none",
+  nameColorClass = null,
+  chatBubbleClass = null,
 }: {
   content: string;
   isOwn: boolean;
   senderName?: string | null;
   supporterTier?: SupporterDisplayTier;
+  nameColorClass?: string | null;
+  chatBubbleClass?: string | null;
 }) {
   const isSupporter = supporterTier !== "none";
   return (
@@ -55,13 +61,20 @@ function DmMessageBubble({
           "max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap break-words",
           isOwn
             ? "bg-gradient-to-r from-cyan-600 to-violet-600"
-            : "border border-white/10 bg-white/5"
+            : "border border-white/10 bg-white/5",
+          chatBubbleClass
         )}
       >
         {!isOwn && senderName ? (
-          <p className="mb-1 text-[10px] font-medium text-zinc-400">
-            {senderName}
-          </p>
+          <div className="mb-1">
+            <UserBadge
+              username={senderName}
+              showSupporterBadge={false}
+              animateTitle={false}
+              nameColorClass={nameColorClass}
+              usernameClassName="text-[10px] font-medium text-zinc-400"
+            />
+          </div>
         ) : null}
         {isSupporter && supporterTier === "premium" ? (
           <RainbowSafeText
@@ -93,6 +106,8 @@ function ContactListItem({
   pinned,
   isAdminContact,
   avatarUrl,
+  avatarFrameClass,
+  nameColorClass,
 }: {
   contact: {
     id: string;
@@ -106,6 +121,8 @@ function ContactListItem({
   pinned?: boolean;
   isAdminContact?: boolean;
   avatarUrl?: string | null;
+  avatarFrameClass?: string | null;
+  nameColorClass?: string | null;
 }) {
   return (
     <button
@@ -117,7 +134,13 @@ function ContactListItem({
         pinned && "border border-amber-400/20 bg-amber-500/5"
       )}
     >
-      <div className="relative size-10 shrink-0 overflow-hidden rounded-full ring-1 ring-white/10">
+      <div
+        className={cn(
+          "relative size-10 shrink-0 rounded-full ring-1 ring-white/10",
+          avatarFrameClass
+        )}
+      >
+        <div className="absolute inset-0 overflow-hidden rounded-full">
         {avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -143,17 +166,23 @@ function ContactListItem({
             )}
           </div>
         )}
+        </div>
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span
-            className={cn(
-              "truncate text-sm font-semibold",
-              isAdminContact ? "text-amber-100" : "text-zinc-100"
-            )}
-          >
-            {contact.displayName}
-          </span>
+          {isAdminContact ? (
+            <span className="truncate text-sm font-semibold text-amber-100">
+              {contact.displayName}
+            </span>
+          ) : (
+            <UserBadge
+              username={contact.displayName}
+              showSupporterBadge={false}
+              animateTitle={false}
+              nameColorClass={nameColorClass}
+              usernameClassName="truncate text-sm font-semibold text-zinc-100"
+            />
+          )}
           {contact.unread && (
             <Badge className="border-cyan-400/30 bg-cyan-500/15 px-1.5 py-0 text-[10px] text-cyan-200">
               NEW
@@ -292,6 +321,8 @@ function PlayerDmThread({
   const title = chat.thread?.peerDisplayName ?? fallbackName ?? t("playerDmTitle");
   const peerUserId = chat.thread?.peerUserId ?? null;
   const peerAvatarUrl = chat.thread?.peerAvatarUrl ?? null;
+  const peerAvatarFrameClass = chat.thread?.peerAvatarFrameClass ?? null;
+  const peerNameColorClass = chat.thread?.peerNameColorClass ?? null;
 
   function openProfile() {
     if (!onProfileClick || !peerUserId) return;
@@ -319,7 +350,13 @@ function PlayerDmThread({
           disabled={!onProfileClick || !peerUserId}
           className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-1 py-0.5 text-left transition-colors hover:bg-white/5 disabled:pointer-events-none"
         >
-          <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/8 text-zinc-200 ring-1 ring-white/10">
+          <div
+            className={cn(
+              "relative flex size-8 shrink-0 items-center justify-center rounded-full bg-white/8 text-zinc-200 ring-1 ring-white/10",
+              peerAvatarFrameClass
+            )}
+          >
+            <span className="absolute inset-0 overflow-hidden rounded-full">
             {peerAvatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -328,13 +365,20 @@ function PlayerDmThread({
                 className="h-full w-full object-cover"
               />
             ) : (
-              <MessageCircle className="size-4" />
+              <span className="flex size-full items-center justify-center">
+                <MessageCircle className="size-4" />
+              </span>
             )}
+            </span>
           </div>
           <div className="min-w-0 flex-1 text-left">
-            <p className="truncate text-sm font-semibold text-zinc-100 underline-offset-2 hover:underline">
-              {title}
-            </p>
+            <UserBadge
+              username={title}
+              showSupporterBadge={false}
+              animateTitle={false}
+              nameColorClass={peerNameColorClass}
+              usernameClassName="truncate text-sm font-semibold text-zinc-100 underline-offset-2 hover:underline"
+            />
           </div>
         </button>
       </div>
@@ -361,6 +405,8 @@ function PlayerDmThread({
                 isOwn={message.is_own}
                 senderName={message.sender_display_name}
                 supporterTier={message.sender_supporter_tier ?? "none"}
+                nameColorClass={message.sender_name_color_class}
+                chatBubbleClass={message.sender_chat_bubble_class}
               />
             ))}
             <div ref={chat.bottomRef} />
@@ -411,6 +457,7 @@ function VirtualDmThread({
   supporterTier?: SupporterDisplayTier;
 }) {
   const t = useTranslations("chat");
+  const { profile } = useAuth();
   const [draft, setDraft] = useState("");
   const chat = useVirtualDm(virtualPlayerId, true);
   const player = getVirtualPlayerById(virtualPlayerId);
@@ -418,6 +465,7 @@ function VirtualDmThread({
     player?.displayName ?? fallbackName ?? t("playerDmTitle");
   const avatarUrl =
     fallbackAvatar ?? resolveVirtualPlayerAvatarUrl(virtualPlayerId);
+  const ownBubbleClass = profile?.equipped_chat_bubble_class ?? null;
 
   function openProfile() {
     if (!onProfileClick) return;
@@ -487,6 +535,7 @@ function VirtualDmThread({
                   content={message.content}
                   isOwn={isOwn}
                   supporterTier={messageTier}
+                  chatBubbleClass={isOwn ? ownBubbleClass : null}
                 />
               );
             })}
@@ -667,6 +716,8 @@ export function ChatContactsPanel({
       lastMessageAt: contact.lastMessageAt,
       unread: contact.unread,
       avatarUrl: contact.avatarUrl,
+      avatarFrameClass: contact.avatarFrameClass,
+      nameColorClass: contact.nameColorClass,
     })),
     ...virtualContacts.contacts.map((contact) => ({
       key: toVirtualDmContactId(contact.id),
@@ -676,6 +727,8 @@ export function ChatContactsPanel({
       lastMessageAt: contact.lastMessageAt,
       unread: false,
       avatarUrl: contact.avatarUrl as string | null,
+      avatarFrameClass: null as string | null,
+      nameColorClass: null as string | null,
     })),
   ].sort((a, b) => {
     const aTime = a.lastMessageAt ? Date.parse(a.lastMessageAt) : 0;
@@ -730,6 +783,8 @@ export function ChatContactsPanel({
                   unread: contact.unread,
                 }}
                 avatarUrl={contact.avatarUrl}
+                avatarFrameClass={contact.avatarFrameClass}
+                nameColorClass={contact.nameColorClass}
                 active={false}
                 onSelect={() => setSelectedId(contact.id)}
               />

@@ -39,6 +39,37 @@ function isRainyNightFrogTitleClass(cssClass: string | null | undefined) {
   return (cssClass ?? "").includes("title-rainynightfrog");
 }
 
+/** 有 AP 名字色時，去掉會蓋掉 color／漸層字的 Tailwind 文字色 class */
+function stripConflictingTextColorClasses(className?: string) {
+  if (!className) return className;
+  return className
+    .split(/\s+/)
+    .filter((token) => {
+      if (!token) return false;
+      // 保留對齊／換行／省略
+      if (
+        /(?:^|:)text-(?:left|center|right|justify|start|end|wrap|nowrap|balance|pretty|ellipsis|clip)\b/.test(
+          token
+        )
+      ) {
+        return true;
+      }
+      // 保留字級：text-sm、text-lg、text-[10px] 等
+      if (
+        /(?:^|:)text-(?:xs|sm|base|lg|xl|2xl|3xl|4xl|5xl|6xl|7xl|8xl|9xl)\b/.test(
+          token
+        ) ||
+        /(?:^|:)text-\[[^\]]+\]/.test(token)
+      ) {
+        return true;
+      }
+      // 去掉純色／語意色（含 hover:text-*）
+      if (/(?:^|:)text-/.test(token)) return false;
+      return true;
+    })
+    .join(" ");
+}
+
 export function UserBadge({
   username,
   title,
@@ -89,11 +120,17 @@ export function UserBadge({
         )
       : null;
 
+  const resolvedUsernameClass =
+    !isSupporterDisplay && nameColorClass
+      ? stripConflictingTextColorClasses(usernameClassName)
+      : usernameClassName;
+
   const nameClass = cn(
     "font-medium",
     isSupporterDisplay && supporterUsernameClassByTier[supporterTier],
+    resolvedUsernameClass,
+    // AP 名字色放最後，避免被 text-zinc-*／text-white 蓋掉
     !isSupporterDisplay && nameColorClass,
-    usernameClassName,
     isSupporterDisplay &&
       supporterTier === "premium" &&
       "!bg-clip-text !text-transparent hover:!text-transparent [-webkit-text-fill-color:transparent]",

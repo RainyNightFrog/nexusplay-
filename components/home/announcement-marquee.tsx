@@ -24,8 +24,10 @@ type AnnouncementMarqueeProps = {
   games?: Game[];
 };
 
-const GAME_PICK_COUNT = 6;
-const FEED_ROTATE_MS = 3 * 60 * 1000;
+/** 每次進站／輪替時抽出的公告與遊戲推薦數量（從更大內容池隨機抽） */
+const ANNOUNCEMENT_PICK_COUNT = 8;
+const GAME_PICK_COUNT = 8;
+const FEED_ROTATE_MS = 2 * 60 * 1000;
 
 function MarqueeSeparator() {
   return (
@@ -138,9 +140,11 @@ export function AnnouncementMarquee({
   );
 
   const feedItems = useMemo(() => {
+    void feedSeed;
     const announcements = buildAnnouncementMarqueeItems(
       (announcement) => t(announcement.messageKey),
-      uploadHref
+      uploadHref,
+      { count: ANNOUNCEMENT_PICK_COUNT }
     );
     const gameItems = buildGameMarqueeItems(marqueeGames, formatGameLabel, {
       count: GAME_PICK_COUNT,

@@ -252,7 +252,7 @@ export function ChatMessageList({
                 onClick={() => onAuthorClick?.(message)}
                 disabled={!onAuthorClick}
                 className={cn(
-                  "flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full text-[10px] font-semibold uppercase transition-opacity",
+                  "relative flex size-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold uppercase transition-opacity",
                   message.is_creator
                     ? "bg-gradient-to-br from-violet-500/30 to-cyan-500/30 text-cyan-100 ring-1 ring-cyan-400/20"
                     : supporterTier === "premium"
@@ -265,16 +265,20 @@ export function ChatMessageList({
                 )}
                 aria-label={message.author_name}
               >
-                {message.author_avatar_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={message.author_avatar_url}
-                    alt=""
-                    className="size-7 rounded-full object-cover"
-                  />
-                ) : (
-                  message.author_name.slice(0, 1)
-                )}
+                <span className="absolute inset-0 overflow-hidden rounded-full">
+                  {message.author_avatar_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={message.author_avatar_url}
+                      alt=""
+                      className="size-full object-cover"
+                    />
+                  ) : (
+                    <span className="flex size-full items-center justify-center">
+                      {message.author_name.slice(0, 1)}
+                    </span>
+                  )}
+                </span>
               </button>
             </div>
 

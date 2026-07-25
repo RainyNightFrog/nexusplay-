@@ -117,6 +117,21 @@ export function isSelectableAvatarPresetId(id: string): boolean {
   return PRESET_ID_SET.has(id);
 }
 
+/** 判斷目前頭像 URL 是否對應某個預設頭像（忽略 size 差異） */
+export function avatarUrlMatchesPresetId(
+  avatarUrl: string | null | undefined,
+  presetId: string
+): boolean {
+  if (!avatarUrl) return false;
+  try {
+    const url = new URL(avatarUrl);
+    if (!url.hostname.includes("dicebear.com")) return false;
+    return url.searchParams.get("seed") === presetId;
+  } catch {
+    return false;
+  }
+}
+
 export function resolveSelectableAvatarPresetUrl(
   presetId: string,
   size: number = 256

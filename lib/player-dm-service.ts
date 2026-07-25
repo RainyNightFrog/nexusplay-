@@ -4,6 +4,8 @@ import {
   isAccountRestricted,
 } from "@/lib/account-status";
 import { getAmbientUserPlayerMap } from "@/lib/ambient-user-index";
+import { assertNoChatUrls } from "@/lib/chat-content-policy";
+import { buildCosmeticsCssMap } from "@/lib/cosmetics-resolve";
 import {
   PLAYER_DM_LIMITS,
   type PlayerDmContact,
@@ -170,16 +172,21 @@ export async function listPlayerDmContacts(
   }
 
   const threads = (data ?? []) as ThreadRow[];
+  const peerIds = threads.map((thread) => peerIdFromThread(thread, viewerId));
+  const cosmeticsMap = await buildCosmeticsCssMap(supabase, peerIds);
   const contacts: PlayerDmContact[] = [];
 
   for (const thread of threads) {
     const peerUserId = peerIdFromThread(thread, viewerId);
     const peer = await getProfileBrief(supabase, peerUserId);
+    const cos = cosmeticsMap.get(peerUserId);
     contacts.push({
       threadId: thread.id,
       peerUserId,
       displayName: peer.displayName,
       avatarUrl: peer.avatarUrl,
+      avatarFrameClass: cos?.avatar_frame_class ?? null,
+      nameColorClass: cos?.name_color_class ?? null,
       lastMessage: thread.last_message_preview,
       lastMessageAt: thread.last_message_at,
       unread: isUnreadForViewer(thread, viewerId),
@@ -247,11 +254,16 @@ export async function getOrCreatePlayerDmThread(
   }
 
   const peer = await getProfileBrief(supabase, peerUserId);
+  const cos = (await buildCosmeticsCssMap(supabase, [peerUserId])).get(
+    peerUserId
+  );
   return {
     id: thread.id,
     peerUserId,
     peerDisplayName: peer.displayName,
     peerAvatarUrl: peer.avatarUrl,
+    peerAvatarFrameClass: cos?.avatar_frame_class ?? null,
+    peerNameColorClass: cos?.name_color_class ?? null,
     lastMessageAt: thread.last_message_at,
     lastMessagePreview: thread.last_message_preview,
     unread: isUnreadForViewer(thread, viewerId),
@@ -350,12 +362,17 @@ export async function listPlayerDmMessages(
 
   if (error) {
     if (isMissingDmTable(error)) {
+      const cos = (await buildCosmeticsCssMap(supabase, [peerUserId])).get(
+        peerUserId
+      );
       return {
         thread: {
           id: thread.id,
           peerUserId,
           peerDisplayName: peer.displayName,
           peerAvatarUrl: peer.avatarUrl,
+          peerAvatarFrameClass: cos?.avatar_frame_class ?? null,
+          peerNameColorClass: cos?.name_color_class ?? null,
           lastMessageAt: thread.last_message_at,
           lastMessagePreview: thread.last_message_preview,
           unread: false,
@@ -378,25 +395,33 @@ export async function listPlayerDmMessages(
     [peerUserId, peer.displayName],
   ]);
 
-  const tierMap = await resolveDmSupporterTiers(supabase, [
-    viewerId,
-    peerUserId,
+  const [tierMap, cosmeticsMap] = await Promise.all([
+    resolveDmSupporterTiers(supabase, [viewerId, peerUserId]),
+    buildCosmeticsCssMap(supabase, [viewerId, peerUserId]),
   ]);
 
   const messages: PlayerDmMessage[] = ((data ?? []) as MessageRow[]).map(
-    (row) => ({
-      id: row.id,
-      thread_id: row.thread_id,
-      sender_user_id: row.sender_user_id,
-      sender_display_name:
-        nameCache.get(row.sender_user_id) ??
-        (row.sender_user_id === viewerId ? "你" : peer.displayName),
-      content: row.content,
-      created_at: row.created_at,
-      is_own: row.sender_user_id === viewerId,
-      sender_supporter_tier: tierMap.get(row.sender_user_id) ?? "none",
-    })
+    (row) => {
+      const cos = cosmeticsMap.get(row.sender_user_id);
+      return {
+        id: row.id,
+        thread_id: row.thread_id,
+        sender_user_id: row.sender_user_id,
+        sender_display_name:
+          nameCache.get(row.sender_user_id) ??
+          (row.sender_user_id === viewerId ? "你" : peer.displayName),
+        content: row.content,
+        created_at: row.created_at,
+        is_own: row.sender_user_id === viewerId,
+        sender_supporter_tier: tierMap.get(row.sender_user_id) ?? "none",
+        sender_avatar_frame_class: cos?.avatar_frame_class ?? null,
+        sender_name_color_class: cos?.name_color_class ?? null,
+        sender_chat_bubble_class: cos?.chat_bubble_class ?? null,
+      };
+    }
   );
+
+  const peerCos = cosmeticsMap.get(peerUserId);
 
   return {
     thread: {
@@ -404,6 +429,8 @@ export async function listPlayerDmMessages(
       peerUserId,
       peerDisplayName: peer.displayName,
       peerAvatarUrl: peer.avatarUrl,
+      peerAvatarFrameClass: peerCos?.avatar_frame_class ?? null,
+      peerNameColorClass: peerCos?.name_color_class ?? null,
       lastMessageAt: thread.last_message_at,
       lastMessagePreview: thread.last_message_preview,
       unread: false,
@@ -427,6 +454,16 @@ export async function sendPlayerDmMessage(
   }
 
   await assertCanPostChat(viewerId);
+
+  const { data: posterProfile } = await supabase
+    .from("profiles")
+    .select("is_admin")
+    .eq("id", viewerId)
+    .maybeSingle();
+
+  if (!posterProfile?.is_admin) {
+    assertNoChatUrls(trimmed);
+  }
 
   const thread = await getThreadForViewer(supabase, threadId, viewerId);
   const peerUserId = peerIdFromThread(thread, viewerId);
@@ -467,7 +504,11 @@ export async function sendPlayerDmMessage(
   }
 
   const row = inserted as MessageRow;
-  const tierMap = await resolveDmSupporterTiers(supabase, [viewerId]);
+  const [tierMap, cosmeticsMap] = await Promise.all([
+    resolveDmSupporterTiers(supabase, [viewerId]),
+    buildCosmeticsCssMap(supabase, [viewerId]),
+  ]);
+  const cos = cosmeticsMap.get(viewerId);
   return {
     id: row.id,
     thread_id: row.thread_id,
@@ -477,6 +518,9 @@ export async function sendPlayerDmMessage(
     created_at: row.created_at,
     is_own: true,
     sender_supporter_tier: tierMap.get(viewerId) ?? "none",
+    sender_avatar_frame_class: cos?.avatar_frame_class ?? null,
+    sender_name_color_class: cos?.name_color_class ?? null,
+    sender_chat_bubble_class: cos?.chat_bubble_class ?? null,
   };
 }
 

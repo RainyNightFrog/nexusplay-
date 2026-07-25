@@ -8,22 +8,9 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   AVATAR_PRESET_PAGE_SIZE,
+  avatarUrlMatchesPresetId,
   listSelectableAvatarPresets,
 } from "@/lib/virtual-player-avatar";
-
-function avatarUrlMatchesPreset(
-  avatarUrl: string | null,
-  presetId: string
-): boolean {
-  if (!avatarUrl) return false;
-  try {
-    const url = new URL(avatarUrl);
-    if (!url.hostname.includes("dicebear.com")) return false;
-    return url.searchParams.get("seed") === presetId;
-  } catch {
-    return false;
-  }
-}
 
 type PresetAvatarPickerProps = {
   currentAvatarUrl: string | null;
@@ -68,32 +55,35 @@ export function PresetAvatarPicker({
           const isPending = pendingPresetId === preset.id;
           const isSelected =
             !selecting &&
-            avatarUrlMatchesPreset(currentAvatarUrl, preset.id);
+            avatarUrlMatchesPresetId(currentAvatarUrl, preset.id);
 
           return (
             <button
               key={preset.id}
               type="button"
-              disabled={disabled || selecting}
+              disabled={disabled || selecting || isSelected}
               onClick={() => onSelect(preset.id)}
               className={cn(
-                "group relative flex flex-col items-center gap-1.5 rounded-xl border p-2",
+                "group relative aspect-square overflow-hidden rounded-full border p-0.5",
                 "bg-white/[0.02] transition-all duration-200",
                 "hover:border-cyan-400/40 hover:bg-cyan-500/5",
-                "disabled:pointer-events-none disabled:opacity-60",
+                "disabled:pointer-events-none",
+                (disabled || selecting) && !isSelected && !isPending
+                  ? "opacity-60"
+                  : null,
                 isSelected || isPending
                   ? "border-cyan-400/60 bg-cyan-500/10 shadow-sm shadow-cyan-500/20"
                   : "border-white/8"
               )}
-              title={preset.displayName}
+              aria-label={t("presetAvatarsTitle")}
             >
-              <span className="relative size-14 overflow-hidden rounded-full border border-white/10 bg-zinc-900">
+              <span className="relative block size-full overflow-hidden rounded-full bg-zinc-900">
                 <Image
                   src={preset.url}
-                  alt={preset.displayName}
+                  alt=""
                   fill
                   className="object-cover transition-transform duration-200 group-hover:scale-105"
-                  sizes="56px"
+                  sizes="72px"
                 />
                 {isPending ? (
                   <span className="absolute inset-0 flex items-center justify-center bg-zinc-950/55">
@@ -104,9 +94,6 @@ export function PresetAvatarPicker({
                     <Check className="size-4 text-cyan-300" />
                   </span>
                 ) : null}
-              </span>
-              <span className="line-clamp-2 w-full text-center text-[10px] leading-tight text-zinc-500 group-hover:text-zinc-300">
-                {preset.displayName}
               </span>
             </button>
           );

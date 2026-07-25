@@ -72,4 +72,5 @@ export const API_ERROR_KEY_BY_MESSAGE: Record<string, string> = {
   "創作者尚未連結 Stripe": "creatorStripeNotConnected",
   "請先登入才能打賞": "loginRequiredTip",
   "不能打賞自己的遊戲": "selfTipNotAllowed",
+  "訊息不可包含網址或連結": "chatUrlNotAllowed",
 };

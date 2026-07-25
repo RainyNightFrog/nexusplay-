@@ -8,10 +8,17 @@ export type HomeAnnouncement = {
   accent?: HomeAnnouncementAccent;
 };
 
+/** 主頁跑馬燈公告池：每次進站會隨機抽出一部分，讓資訊不重複 */
 export const HOME_ANNOUNCEMENTS: HomeAnnouncement[] = [
   {
     id: "launch",
     messageKey: "announcements.launch",
+    accent: "cyan",
+  },
+  {
+    id: "tipHowItWorks",
+    messageKey: "announcements.tipHowItWorks",
+    href: "#game-grid",
     accent: "cyan",
   },
   {
@@ -75,6 +82,94 @@ export const HOME_ANNOUNCEMENTS: HomeAnnouncement[] = [
     id: "starGames",
     messageKey: "announcements.starGames",
     href: "#featured-games",
+    accent: "amber",
+  },
+  {
+    id: "tipSearch",
+    messageKey: "announcements.tipSearch",
+    accent: "cyan",
+  },
+  {
+    id: "tipFilter",
+    messageKey: "announcements.tipFilter",
+    href: "#game-grid",
+    accent: "violet",
+  },
+  {
+    id: "tipBrowse",
+    messageKey: "announcements.tipBrowse",
+    href: "#game-grid",
+    accent: "amber",
+  },
+  {
+    id: "tipFree",
+    messageKey: "announcements.tipFree",
+    href: "#game-grid",
+    accent: "cyan",
+  },
+  {
+    id: "tipArcade",
+    messageKey: "announcements.tipArcade",
+    href: "/game/neon-snake-extreme",
+    accent: "fuchsia",
+  },
+  {
+    id: "tipSupport",
+    messageKey: "announcements.tipSupport",
+    accent: "amber",
+  },
+  {
+    id: "tipLogin",
+    messageKey: "announcements.tipLogin",
+    href: "/auth",
+    accent: "violet",
+  },
+  {
+    id: "playVoidGacha",
+    messageKey: "announcements.playVoidGacha",
+    href: "/game/void-gacha",
+    accent: "violet",
+  },
+  {
+    id: "playCoreDefense",
+    messageKey: "announcements.playCoreDefense",
+    href: "/game/core-defense",
+    accent: "amber",
+  },
+  {
+    id: "playCyberFortune",
+    messageKey: "announcements.playCyberFortune",
+    href: "/game/cyber-fortune",
+    accent: "cyan",
+  },
+  {
+    id: "playNeonAbyss",
+    messageKey: "announcements.playNeonAbyss",
+    href: "/game/neon-abyss-runner",
+    accent: "cyan",
+  },
+  {
+    id: "playVoidRelay",
+    messageKey: "announcements.playVoidRelay",
+    href: "/game/void-relay",
+    accent: "violet",
+  },
+  {
+    id: "playPulseProtocol",
+    messageKey: "announcements.playPulseProtocol",
+    href: "/game/pulse-protocol",
+    accent: "fuchsia",
+  },
+  {
+    id: "playSignalBreach",
+    messageKey: "announcements.playSignalBreach",
+    href: "/game/signal-breach",
+    accent: "cyan",
+  },
+  {
+    id: "playOrbitalSalvage",
+    messageKey: "announcements.playOrbitalSalvage",
+    href: "/game/orbital-salvage",
     accent: "amber",
   },
 ];

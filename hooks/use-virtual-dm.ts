@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { VirtualContactSummary, VirtualDmMessage } from "@/lib/virtual-dm";
+import { useApiError } from "@/hooks/use-api-error";
 
 export function useVirtualContacts(enabled: boolean) {
   const t = useTranslations("chat");
@@ -50,6 +51,7 @@ export function useVirtualContacts(enabled: boolean) {
 
 export function useVirtualDm(playerId: string | null, enabled: boolean) {
   const t = useTranslations("chat");
+  const { translateApiError } = useApiError();
   const [messages, setMessages] = useState<VirtualDmMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
@@ -128,13 +130,14 @@ export function useVirtualDm(playerId: string | null, enabled: boolean) {
         setMessages(data.messages ?? []);
         return true;
       } catch (err) {
-        setError(err instanceof Error ? err.message : t("sendFailed"));
+        const raw = err instanceof Error ? err.message : null;
+        setError(translateApiError(raw) ?? raw ?? t("sendFailed"));
         return false;
       } finally {
         setSending(false);
       }
     },
-    [enabled, playerId, t]
+    [enabled, playerId, t, translateApiError]
   );
 
   return {

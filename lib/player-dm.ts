@@ -11,6 +11,8 @@ export type PlayerDmContact = {
   peerUserId: string;
   displayName: string;
   avatarUrl: string | null;
+  avatarFrameClass: string | null;
+  nameColorClass: string | null;
   lastMessage: string | null;
   lastMessageAt: string | null;
   unread: boolean;
@@ -26,6 +28,9 @@ export type PlayerDmMessage = {
   is_own: boolean;
   /** 發送者支持者顯示層級：none / basic(VIP) / premium(SVIP) */
   sender_supporter_tier: import("@/lib/supporter-tier").SupporterDisplayTier;
+  sender_avatar_frame_class: string | null;
+  sender_name_color_class: string | null;
+  sender_chat_bubble_class: string | null;
 };
 
 export type PlayerDmThreadSummary = {
@@ -33,6 +38,8 @@ export type PlayerDmThreadSummary = {
   peerUserId: string;
   peerDisplayName: string;
   peerAvatarUrl: string | null;
+  peerAvatarFrameClass: string | null;
+  peerNameColorClass: string | null;
   lastMessageAt: string;
   lastMessagePreview: string | null;
   unread: boolean;

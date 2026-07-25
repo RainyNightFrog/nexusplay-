@@ -51,6 +51,7 @@ import { ProfileShowcaseTagsEditor } from "@/components/settings/profile-showcas
 import { normalizeCreatorUsername } from "@/lib/creator-username";
 import { PROFILE_LIMITS } from "@/lib/profile-settings";
 import type { ProfileShowcaseTagId } from "@/lib/profile-showcase-tags";
+import { avatarUrlMatchesPresetId } from "@/lib/virtual-player-avatar";
 
 export default function ProfilePage() {
   const t = useTranslations("profile");
@@ -178,6 +179,9 @@ export default function ProfilePage() {
   }
 
   async function handlePresetAvatarSelect(presetId: string) {
+    if (avatarUploading || pendingPresetId != null) return;
+    if (avatarUrlMatchesPresetId(avatarPreview, presetId)) return;
+
     setPendingPresetId(presetId);
     setError(null);
 
@@ -188,10 +192,15 @@ export default function ProfilePage() {
         body: JSON.stringify({ presetId }),
       });
 
-      const data = (await response.json()) as {
-        avatar_url?: string;
-        error?: string;
-      };
+      let data: { avatar_url?: string; error?: string } = {};
+      try {
+        data = (await response.json()) as {
+          avatar_url?: string;
+          error?: string;
+        };
+      } catch {
+        throw new Error(t("avatarFailed"));
+      }
 
       if (!response.ok || !data.avatar_url) {
         throw new Error(data.error ?? t("avatarFailed"));
@@ -288,15 +297,17 @@ export default function ProfilePage() {
                 onClick={() => fileInputRef.current?.click()}
                 disabled={avatarUploading || pendingPresetId != null}
                 className={cn(
-                  "group relative mt-1 size-28 overflow-hidden rounded-full",
+                  "group relative mt-1 size-28 rounded-full",
                   "border-2 border-white/10 transition-all duration-300",
                   "hover:border-cyan-400/70 hover:shadow-lg hover:shadow-cyan-500/25",
                   supporterTier !== "none" &&
                     supporterAvatarRingClassByTier[supporterTier],
+                  profile.equipped_avatar_frame_class,
                   (avatarUploading || pendingPresetId != null) &&
                     "pointer-events-none opacity-70"
                 )}
               >
+              <span className="absolute inset-0 overflow-hidden rounded-full">
               {avatarPreview ? (
                 <Image
                   src={avatarPreview}
@@ -310,13 +321,21 @@ export default function ProfilePage() {
                   {initials}
                 </div>
               )}
-              <div className="absolute inset-0 flex items-center justify-center bg-zinc-950/50 opacity-0 transition-opacity group-hover:opacity-100">
+              <div
+                className={cn(
+                  "absolute inset-0 flex items-center justify-center bg-zinc-950/50 transition-opacity",
+                  avatarUploading || pendingPresetId != null
+                    ? "opacity-100"
+                    : "opacity-0 group-hover:opacity-100"
+                )}
+              >
                 {avatarUploading || pendingPresetId != null ? (
                   <Loader2 className="size-6 animate-spin text-cyan-300" />
                 ) : (
                   <Camera className="size-6 text-cyan-300" />
                 )}
               </div>
+              </span>
             </button>
             </div>
 
@@ -344,6 +363,7 @@ export default function ProfilePage() {
                 isSupporter={profile.is_supporter}
                 supporterBadge={profile.supporter_badge}
                 showSupporterBadge={false}
+                nameColorClass={profile.equipped_name_color_class}
                 usernameClassName="text-lg font-semibold text-zinc-100"
                 titleClassName="text-xs"
               />

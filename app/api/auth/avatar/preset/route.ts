@@ -15,12 +15,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "請先登入" }, { status: 401 });
     }
 
-    const body = (await request.json()) as { presetId?: unknown };
+    let body: { presetId?: unknown };
+    try {
+      body = (await request.json()) as { presetId?: unknown };
+    } catch {
+      return NextResponse.json({ error: "請選擇預設頭像" }, { status: 400 });
+    }
+
     const presetId =
       typeof body.presetId === "string" ? body.presetId.trim() : "";
 
     if (!presetId) {
       return NextResponse.json({ error: "請選擇預設頭像" }, { status: 400 });
+    }
+
+    // 只允許白名單預設 ID，避免寫入任意外部 URL
+    if (presetId.length > 64 || !/^[a-z0-9-]+$/i.test(presetId)) {
+      return NextResponse.json({ error: "無效的預設頭像" }, { status: 400 });
     }
 
     const avatarUrl = resolveSelectableAvatarPresetUrl(presetId, 256);

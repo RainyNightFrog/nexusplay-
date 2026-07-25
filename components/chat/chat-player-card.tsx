@@ -61,6 +61,8 @@ export type ChatPlayerPreview = {
   displayName: string;
   avatarUrl: string | null;
   equippedTitle: EquippedTitle | null;
+  avatarFrameClass?: string | null;
+  nameColorClass?: string | null;
   isSupporter?: boolean;
   supporterBadge?: string | null;
   isCreator: boolean;
@@ -78,6 +80,8 @@ export function chatMessageToPlayerPreview(
     displayName: message.author_name,
     avatarUrl: message.author_avatar_url,
     equippedTitle: message.author_equipped_title,
+    avatarFrameClass: message.author_avatar_frame_class,
+    nameColorClass: message.author_name_color_class,
     isSupporter: message.author_is_supporter,
     supporterBadge: message.author_supporter_badge,
     isCreator: message.is_creator,
@@ -239,6 +243,10 @@ export function ChatPlayerCard({
   const detail = profile;
   const avatarUrl = detail?.avatarUrl ?? player.avatarUrl;
   const equippedTitle = player.equippedTitle ?? detail?.equippedTitle ?? null;
+  const avatarFrameClass =
+    detail?.avatarFrameClass ?? player.avatarFrameClass ?? null;
+  const nameColorClass =
+    detail?.nameColorClass ?? player.nameColorClass ?? null;
   const supporterTier = getSupporterDisplayTier(
     detail?.isSupporter ?? player.isSupporter ?? false,
     detail?.supporterBadge ?? player.supporterBadge ?? null
@@ -322,14 +330,16 @@ export function ChatPlayerCard({
                 <div className="relative">
                   <div
                     className={cn(
-                      "relative size-20 overflow-hidden rounded-full ring-2",
+                      "relative size-20 rounded-full ring-2",
                       isCreator
                         ? "ring-violet-400/40"
                         : supporterTier !== "none"
                           ? supporterAvatarRingClassByTier[supporterTier]
-                          : "ring-white/10"
+                          : "ring-white/10",
+                      avatarFrameClass
                     )}
                   >
+                    <div className="absolute inset-0 overflow-hidden rounded-full">
                     {avatarUrl ? (
                       <Image
                         src={avatarUrl}
@@ -343,6 +353,7 @@ export function ChatPlayerCard({
                         {displayName.slice(0, 1)}
                       </div>
                     )}
+                    </div>
                   </div>
                   {detail?.isOnline && (
                     <span className="absolute bottom-0.5 right-0.5 size-3.5 rounded-full border-2 border-zinc-950 bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
@@ -355,14 +366,16 @@ export function ChatPlayerCard({
                 <SupporterAvatarInsignia tier={supporterTier} size="md" />
                 <div
                   className={cn(
-                    "relative mt-1 size-20 overflow-hidden rounded-full ring-2",
+                    "relative mt-1 size-20 rounded-full ring-2",
                     isCreator
                       ? "ring-violet-400/40"
                       : supporterTier !== "none"
                         ? supporterAvatarRingClassByTier[supporterTier]
-                        : "ring-white/10"
+                        : "ring-white/10",
+                    avatarFrameClass
                   )}
                 >
+                  <div className="absolute inset-0 overflow-hidden rounded-full">
                   {avatarUrl ? (
                     <Image
                       src={avatarUrl}
@@ -376,6 +389,7 @@ export function ChatPlayerCard({
                       {displayName.slice(0, 1)}
                     </div>
                   )}
+                  </div>
                 </div>
                 {detail?.isOnline && (
                   <span className="absolute bottom-0.5 right-0.5 size-3.5 rounded-full border-2 border-zinc-950 bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
@@ -393,6 +407,7 @@ export function ChatPlayerCard({
                     supporterBadge={detail?.supporterBadge}
                     showSupporterBadge={false}
                     animateTitle={false}
+                    nameColorClass={nameColorClass}
                     usernameClassName="text-lg font-semibold text-zinc-100 sm:text-xl"
                     titleClassName="text-xs sm:text-sm"
                   />

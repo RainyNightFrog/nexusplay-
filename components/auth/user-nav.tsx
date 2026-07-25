@@ -79,23 +79,27 @@ export function UserNav() {
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         className={cn(
-          "relative flex size-9 items-center justify-center overflow-hidden rounded-full",
+          "relative flex size-9 items-center justify-center rounded-full",
           "border border-cyan-400/30 bg-gradient-to-br from-cyan-500/30 to-violet-600/40",
           "shadow-md shadow-cyan-500/20 transition-transform hover:scale-105",
           profile.equipped_avatar_frame_class
         )}
         aria-label={t("userMenu")}
       >
-        {profile.avatar_url ? (
-          <Image
-            src={profile.avatar_url}
-            alt={profile.display_name}
-            fill
-            className="object-cover"
-          />
-        ) : (
-          <span className="text-xs font-bold text-white">{initials}</span>
-        )}
+        <span className="absolute inset-0 overflow-hidden rounded-full">
+          {profile.avatar_url ? (
+            <Image
+              src={profile.avatar_url}
+              alt={profile.display_name}
+              fill
+              className="object-cover"
+            />
+          ) : (
+            <span className="flex size-full items-center justify-center text-xs font-bold text-white">
+              {initials}
+            </span>
+          )}
+        </span>
       </button>
 
       {open && (

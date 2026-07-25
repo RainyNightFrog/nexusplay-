@@ -6,6 +6,7 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import type { ChatChannel, ChatMessage } from "@/lib/chat";
 import { CHAT_LIMITS } from "@/lib/chat";
 import { createClient } from "@/lib/supabase/client";
+import { useApiError } from "@/hooks/use-api-error";
 
 /** 輪詢間隔：本機開發時觸發 maintainAmbientChat；亦作 Realtime 後備 */
 export const CHAT_POLL_INTERVAL_MS = 60_000;
@@ -77,6 +78,7 @@ function mergeMessages(existing: ChatMessage[], incoming: ChatMessage[]) {
 
 export function useChatMessages(channel: ChatChannel, enabled: boolean) {
   const t = useTranslations("chat");
+  const { translateApiError } = useApiError();
   const [messages, setMessages] = useState<ChatMessage[]>(
     () => chatMessageCache.get(channel) ?? []
   );
@@ -97,9 +99,12 @@ export function useChatMessages(channel: ChatChannel, enabled: boolean) {
       if (err instanceof Error && err.message === "invalid response") {
         return t("connectionFailed");
       }
-      return err instanceof Error ? err.message : fallback;
+      if (err instanceof Error) {
+        return translateApiError(err.message) ?? err.message;
+      }
+      return fallback;
     },
-    [t]
+    [t, translateApiError]
   );
 
   const loadMessages = useCallback(

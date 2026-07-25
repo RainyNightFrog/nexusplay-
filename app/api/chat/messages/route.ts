@@ -75,11 +75,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ message }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "發送訊息失敗";
-    const status = message.includes("過快") || message.includes("頻繁") || message.includes("重複")
-      ? 429
-      : message.includes("創作者")
-        ? 403
-        : 500;
+    const status =
+      message.includes("網址") || message.includes("連結")
+        ? 400
+        : message.includes("過快") ||
+            message.includes("頻繁") ||
+            message.includes("重複")
+          ? 429
+          : message.includes("創作者") || message.includes("禁言")
+            ? 403
+            : 500;
     return NextResponse.json({ error: message }, { status });
   }
 }

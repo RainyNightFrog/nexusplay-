@@ -161,3 +161,38 @@ export async function resolveCosmeticCssByCodes(
 
   return map;
 }
+
+export type CosmeticsCssClasses = {
+  avatar_frame_class: string | null;
+  name_color_class: string | null;
+  chat_bubble_class: string | null;
+};
+
+/** 批次解析使用者已裝備外觀 → CSS class */
+export async function buildCosmeticsCssMap(
+  supabase: SupabaseClient,
+  userIds: string[]
+): Promise<Map<string, CosmeticsCssClasses>> {
+  const cosmeticsMap = await resolveEquippedCosmeticsMap(supabase, userIds);
+  const cosmeticCodes = [...cosmeticsMap.values()].flatMap(
+    (c) =>
+      [c.avatar_frame, c.name_color, c.chat_bubble].filter(Boolean) as string[]
+  );
+  const cssByCode = await resolveCosmeticCssByCodes(supabase, cosmeticCodes);
+
+  const cosmeticsCssMap = new Map<string, CosmeticsCssClasses>();
+  for (const [userId, cos] of cosmeticsMap) {
+    cosmeticsCssMap.set(userId, {
+      avatar_frame_class: cos.avatar_frame
+        ? (cssByCode.get(cos.avatar_frame) ?? null)
+        : null,
+      name_color_class: cos.name_color
+        ? (cssByCode.get(cos.name_color) ?? null)
+        : null,
+      chat_bubble_class: cos.chat_bubble
+        ? (cssByCode.get(cos.chat_bubble) ?? null)
+        : null,
+    });
+  }
+  return cosmeticsCssMap;
+}

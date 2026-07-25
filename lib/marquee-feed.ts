@@ -4,7 +4,7 @@ import {
   type HomeAnnouncement,
   type HomeAnnouncementAccent,
 } from "@/lib/home-announcements";
-import { getPlatformGameMeta } from "@/lib/platform-catalog";
+import { PLATFORM_GAMES, getPlatformGameMeta } from "@/lib/platform-catalog";
 
 export type MarqueeAnnouncementItem = {
   kind: "announcement";
@@ -32,6 +32,8 @@ export const GAME_PICK_TEMPLATE_KEYS = [
   "announcements.gameRecommend",
   "announcements.gamePlayNow",
   "announcements.gameTrending",
+  "announcements.gameMustTry",
+  "announcements.gameClickPlay",
 ] as const;
 
 export type GamePickTemplateKey = (typeof GAME_PICK_TEMPLATE_KEYS)[number];
@@ -42,6 +44,8 @@ const ACCENT_CYCLE: HomeAnnouncementAccent[] = [
   "fuchsia",
   "amber",
 ];
+
+const PLATFORM_SLUGS = new Set(PLATFORM_GAMES.map((game) => game.slug));
 
 export function shuffleInPlace<T>(items: T[], random = Math.random): void {
   for (let index = items.length - 1; index > 0; index -= 1) {
@@ -69,14 +73,44 @@ export function resolveGameAccent(title: string, index: number): HomeAnnouncemen
   return ACCENT_CYCLE[index % ACCENT_CYCLE.length] ?? "cyan";
 }
 
+function isPlatformGame(game: Game): boolean {
+  return Boolean(game.slug && PLATFORM_SLUGS.has(game.slug));
+}
+
+/**
+ * 優先抽平台虛擬遊戲（街機 + demos），其餘再補社群作品，
+ * 讓跑馬燈常出現可點擊直達的推薦。
+ */
 export function buildGameMarqueeItems(
   games: Game[],
   formatLabel: (templateKey: GamePickTemplateKey, title: string) => string,
   options?: { count?: number; random?: () => number }
 ): MarqueeGameItem[] {
   const random = options?.random ?? Math.random;
-  const count = options?.count ?? 6;
-  const picks = pickRandomItems(games, count, random);
+  const count = options?.count ?? 8;
+  const platformGames = games.filter(isPlatformGame);
+  const communityGames = games.filter((game) => !isPlatformGame(game));
+
+  const platformQuota = Math.min(
+    Math.max(Math.ceil(count * 0.65), Math.min(5, count)),
+    platformGames.length,
+    count
+  );
+  const communityQuota = Math.min(count - platformQuota, communityGames.length);
+
+  const picks = [
+    ...pickRandomItems(platformGames, platformQuota, random),
+    ...pickRandomItems(communityGames, communityQuota, random),
+  ];
+
+  // 平台遊戲不足時，用社群作品補滿
+  if (picks.length < count) {
+    const usedIds = new Set(picks.map((game) => game.id));
+    const leftovers = games.filter((game) => !usedIds.has(game.id));
+    picks.push(...pickRandomItems(leftovers, count - picks.length, random));
+  }
+
+  shuffleInPlace(picks, random);
 
   return picks.map((game, index) => {
     const templateKey = pickGameTemplateKey(random);
@@ -94,9 +128,14 @@ export function buildGameMarqueeItems(
 
 export function buildAnnouncementMarqueeItems(
   formatLabel: (announcement: HomeAnnouncement) => string,
-  uploadHref?: string
+  uploadHref?: string,
+  options?: { count?: number; random?: () => number }
 ): MarqueeAnnouncementItem[] {
-  return HOME_ANNOUNCEMENTS.map((announcement) => ({
+  const random = options?.random ?? Math.random;
+  const count = options?.count ?? HOME_ANNOUNCEMENTS.length;
+  const selected = pickRandomItems(HOME_ANNOUNCEMENTS, count, random);
+
+  return selected.map((announcement) => ({
     kind: "announcement" as const,
     id: announcement.id,
     label: formatLabel(announcement),

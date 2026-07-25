@@ -244,12 +244,13 @@ export function ApStoreModal({ open, onOpenChange }: ApStoreModalProps) {
                     <div className="flex flex-col items-center gap-3 rounded-xl border border-white/10 bg-zinc-950/70 p-3 sm:p-4">
                       <div
                         className={cn(
-                          "relative flex size-14 items-center justify-center overflow-hidden rounded-full border border-cyan-400/30 bg-gradient-to-br from-cyan-500/30 to-violet-600/40",
+                          "relative flex size-14 items-center justify-center rounded-full border border-cyan-400/30 bg-gradient-to-br from-cyan-500/30 to-violet-600/40",
                           selected?.category === "avatar_frame"
                             ? selected.cssClass
                             : profile.equipped_avatar_frame_class
                         )}
                       >
+                        <span className="absolute inset-0 overflow-hidden rounded-full">
                         {profile.avatar_url ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
@@ -258,10 +259,11 @@ export function ApStoreModal({ open, onOpenChange }: ApStoreModalProps) {
                             className="size-full object-cover"
                           />
                         ) : (
-                          <span className="text-sm font-bold text-white">
+                          <span className="flex size-full items-center justify-center text-sm font-bold text-white">
                             {(profile.display_name ?? "?").slice(0, 2)}
                           </span>
                         )}
+                        </span>
                       </div>
                       <UserBadge
                         username={profile.display_name}

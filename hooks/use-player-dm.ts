@@ -7,6 +7,7 @@ import type {
   PlayerDmMessage,
   PlayerDmThreadSummary,
 } from "@/lib/player-dm";
+import { useApiError } from "@/hooks/use-api-error";
 
 export function usePlayerDmContacts(enabled: boolean) {
   const t = useTranslations("chat");
@@ -87,6 +88,7 @@ export function useOpenPlayerDm() {
 
 export function usePlayerDmChat(threadId: string | null, enabled: boolean) {
   const t = useTranslations("chat");
+  const { translateApiError } = useApiError();
   const [thread, setThread] = useState<PlayerDmThreadSummary | null>(null);
   const [messages, setMessages] = useState<PlayerDmMessage[]>([]);
   const [loading, setLoading] = useState(false);
@@ -175,13 +177,14 @@ export function usePlayerDmChat(threadId: string | null, enabled: boolean) {
         }
         return true;
       } catch (err) {
-        setError(err instanceof Error ? err.message : t("sendFailed"));
+        const raw = err instanceof Error ? err.message : null;
+        setError(translateApiError(raw) ?? raw ?? t("sendFailed"));
         return false;
       } finally {
         setSending(false);
       }
     },
-    [enabled, loadMessages, t, threadId]
+    [enabled, loadMessages, t, threadId, translateApiError]
   );
 
   return {

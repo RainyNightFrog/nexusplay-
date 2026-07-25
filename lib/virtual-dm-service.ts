@@ -4,6 +4,7 @@ import {
 } from "@/lib/virtual-dm-replies";
 import type { VirtualContactSummary, VirtualDmMessage } from "@/lib/virtual-dm";
 import { VIRTUAL_DM_LIMITS } from "@/lib/virtual-dm";
+import { assertNoChatUrls } from "@/lib/chat-content-policy";
 import { resolveVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
 import { getVirtualPlayerById } from "@/lib/virtual-players";
 import { createServerSupabase } from "@/lib/supabase-server";
@@ -241,6 +242,8 @@ export async function sendVirtualDmMessage(
   if (trimmed.length > VIRTUAL_DM_LIMITS.content) {
     throw new Error("訊息過長");
   }
+
+  assertNoChatUrls(trimmed);
 
   const { error: insertUserError } = await supabase
     .from("chat_virtual_dm_messages")

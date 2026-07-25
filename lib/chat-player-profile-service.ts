@@ -21,6 +21,7 @@ import {
   VIRTUAL_LEADERBOARD_USER_PREFIX,
 } from "@/lib/platform-leaderboard-virtual";
 import { resolveEquippedTitleForUser } from "@/lib/equipped-title-service";
+import { buildCosmeticsCssMap } from "@/lib/cosmetics-resolve";
 import { resolveVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
 import { getVirtualPlayerSocialStats } from "@/lib/virtual-player-public-profile";
 import {
@@ -54,6 +55,8 @@ export type ChatPlayerPublicProfile = {
   displayName: string;
   avatarUrl: string | null;
   equippedTitle: EquippedTitle | null;
+  avatarFrameClass: string | null;
+  nameColorClass: string | null;
   isCreator: boolean;
   adminRole: AdminDisplayRole;
   isVirtual: boolean;
@@ -169,6 +172,7 @@ async function loadRealUserProfile(
     followerCountRes,
     equippedTitle,
     ordersRes,
+    cosmeticsMap,
   ] = await Promise.all([
     supabase
       .from("user_activity_stats")
@@ -208,6 +212,7 @@ async function loadRealUserProfile(
       .eq("buyer_id", userId)
       .eq("order_type", "supporter_pass")
       .eq("status", "succeeded"),
+    buildCosmeticsCssMap(supabase, [userId]),
   ]);
 
   if (activityRes.error) throw new Error(activityRes.error.message);
@@ -251,6 +256,8 @@ async function loadRealUserProfile(
     isAdmin: viewer?.isAdmin,
   });
 
+  const cos = cosmeticsMap.get(userId);
+
   return {
     profile: {
       userId,
@@ -264,6 +271,8 @@ async function loadRealUserProfile(
       displayName: profile.display_name?.trim() || "匿名玩家",
       avatarUrl: resolvedAvatarUrl,
       equippedTitle,
+      avatarFrameClass: cos?.avatar_frame_class ?? null,
+      nameColorClass: cos?.name_color_class ?? null,
       isCreator: profile.role === "creator",
       adminRole: resolveAdminDisplayRole(profile.is_admin === true, false),
       isVirtual: false,
@@ -349,6 +358,8 @@ async function loadVirtualPlayerProfile(
     displayName: player.displayName,
     avatarUrl: resolveVirtualPlayerAvatarUrl(virtualPlayerId),
     equippedTitle: getVirtualPlayerEquippedTitle(virtualPlayerId),
+    avatarFrameClass: null,
+    nameColorClass: null,
     isCreator,
     adminRole: "none",
     isVirtual: true,

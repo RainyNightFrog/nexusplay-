@@ -6,14 +6,12 @@ import {
   type ChatMessageRecord,
   isValidChatChannel,
 } from "@/lib/chat";
+import { assertNoChatUrls } from "@/lib/chat-content-policy";
 import { getAmbientUserPlayerMap } from "@/lib/ambient-user-index";
 import { listAuthAdminUsers } from "@/lib/auth-admin-users-cache";
 import { resolveVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
 import { resolveEquippedTitles } from "@/lib/equipped-title-service";
-import {
-  resolveCosmeticCssByCodes,
-  resolveEquippedCosmeticsMap,
-} from "@/lib/cosmetics-resolve";
+import { buildCosmeticsCssMap } from "@/lib/cosmetics-resolve";
 import { formatForumAuthor } from "@/lib/forum";
 import { resolveAdminDisplayRole } from "@/lib/admin-display-role";
 import { resolveUserAvatarUrl } from "@/lib/resolve-user-avatar";
@@ -33,41 +31,6 @@ function historyCutoffIso() {
   return new Date(
     Date.now() - CHAT_LIMITS.historyDays * 86_400_000
   ).toISOString();
-}
-
-async function buildCosmeticsCssMap(
-  supabase: SupabaseClient,
-  userIds: string[]
-) {
-  const cosmeticsMap = await resolveEquippedCosmeticsMap(supabase, userIds);
-  const cosmeticCodes = [...cosmeticsMap.values()].flatMap(
-    (c) =>
-      [c.avatar_frame, c.name_color, c.chat_bubble].filter(Boolean) as string[]
-  );
-  const cssByCode = await resolveCosmeticCssByCodes(supabase, cosmeticCodes);
-
-  const cosmeticsCssMap = new Map<
-    string,
-    {
-      avatar_frame_class: string | null;
-      name_color_class: string | null;
-      chat_bubble_class: string | null;
-    }
-  >();
-  for (const [userId, cos] of cosmeticsMap) {
-    cosmeticsCssMap.set(userId, {
-      avatar_frame_class: cos.avatar_frame
-        ? (cssByCode.get(cos.avatar_frame) ?? null)
-        : null,
-      name_color_class: cos.name_color
-        ? (cssByCode.get(cos.name_color) ?? null)
-        : null,
-      chat_bubble_class: cos.chat_bubble
-        ? (cssByCode.get(cos.chat_bubble) ?? null)
-        : null,
-    });
-  }
-  return cosmeticsCssMap;
 }
 
 async function resolveAuthorProfiles(userIds: string[]) {
@@ -313,6 +276,18 @@ export async function createChatMessage(
   await assertCanPostChat(input.userId);
 
   await assertCanPostInChannel(supabase, input.userId, input.channel);
+
+  const { data: posterProfile } = await supabase
+    .from("profiles")
+    .select("is_admin")
+    .eq("id", input.userId)
+    .maybeSingle();
+
+  // 管理員可發連結（公告／說明）；玩家與創作者一律禁止
+  if (!posterProfile?.is_admin) {
+    assertNoChatUrls(input.content);
+  }
+
   await checkChatRateLimit(supabase, input.userId, input.content);
 
   const { data, error } = await supabase

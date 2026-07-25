@@ -70,7 +70,9 @@ export async function POST(request: Request, context: RouteContext) {
       message.includes("找不到") ||
       message.includes("長度") ||
       message.includes("停權") ||
-      message.includes("禁言")
+      message.includes("禁言") ||
+      message.includes("網址") ||
+      message.includes("連結")
         ? 400
         : 500;
     return NextResponse.json({ error: message }, { status });
