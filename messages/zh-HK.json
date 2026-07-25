@@ -484,6 +484,8 @@
     "supporterWallEmpty": "尚無支持者——成為首位支持者吧！",
     "supporterWallLoading": "載入支持者…",
     "supporterCount": "共 {count} 位",
+    "supporterWallSvipTitle": "SVIP",
+    "supporterWallVipTitle": "VIP",
     "supporterPerkBadge": "專屬勳章",
     "supporterPerkFx": "名稱特效",
     "supporterPerkEcosystem": "支持獨立生態",

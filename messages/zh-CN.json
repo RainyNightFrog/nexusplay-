@@ -310,6 +310,8 @@
     "supporterWallEmpty": "暂无支持者——成为首位支持者吧！",
     "supporterWallLoading": "加载支持者…",
     "supporterCount": "共 {count} 位",
+    "supporterWallSvipTitle": "SVIP",
+    "supporterWallVipTitle": "VIP",
     "supporterPerkBadge": "专属勋章",
     "supporterPerkFx": "名称特效",
     "supporterPerkEcosystem": "支持独立生态",

@@ -297,6 +297,8 @@
     "supporterWallEmpty": "아직 후원자가 없습니다 — 첫 번째 후원자가 되어 보세요!",
     "supporterWallLoading": "후원자 불러오는 중…",
     "supporterCount": "후원자 {count}명",
+    "supporterWallSvipTitle": "SVIP",
+    "supporterWallVipTitle": "VIP",
     "supporterPerkBadge": "전용 배지",
     "supporterPerkFx": "이름 효과",
     "supporterPerkEcosystem": "인디 게임 응원",

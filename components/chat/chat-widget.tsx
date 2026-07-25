@@ -137,7 +137,7 @@ export function ChatWidget() {
   const isLoggedIn = Boolean(profile);
   const { unreadCount, reload: reloadUnread } =
     useChatContactsUnread(isLoggedIn);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const [channel, setChannel] = useState<ChatTab>("world");
   const [drafts, setDrafts] = useState<Record<ChatChannel, string>>({
     world: "",

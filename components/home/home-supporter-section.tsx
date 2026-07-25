@@ -61,6 +61,125 @@ function supporterToPlayerPreview(
   };
 }
 
+function isSvipSupporter(supporter: PlatformSupporterPublic) {
+  return supporter.tier === "premium" || supporter.supporterLifetime;
+}
+
+type SupporterWallGroupProps = {
+  title: string;
+  countLabel: string;
+  supporters: PlatformSupporterPublic[];
+  accent: "svip" | "vip";
+  reduceMotion: boolean | null;
+  onOpen: (supporter: PlatformSupporterPublic) => void;
+};
+
+function SupporterWallGroup({
+  title,
+  countLabel,
+  supporters,
+  accent,
+  reduceMotion,
+  onOpen,
+}: SupporterWallGroupProps) {
+  if (supporters.length === 0) return null;
+
+  const isSvip = accent === "svip";
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div
+          className={cn(
+            "inline-flex items-center gap-2 text-sm font-semibold",
+            isSvip ? "text-violet-300" : "text-amber-300"
+          )}
+        >
+          <Users
+            className={cn(
+              "size-4 shrink-0",
+              isSvip ? "text-violet-400" : "text-amber-400"
+            )}
+          />
+          {title}
+        </div>
+        <p className="text-xs text-zinc-500">{countLabel}</p>
+      </div>
+
+      <ul className="grid grid-cols-2 gap-2 min-[400px]:gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+        {supporters.map((supporter, index) => (
+          <motion.li
+            key={supporter.id}
+            initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+            whileInView={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{
+              duration: 0.35,
+              delay: reduceMotion ? 0 : Math.min(index * 0.03, 0.36),
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => onOpen(supporter)}
+              className={cn(
+                "flex min-w-0 w-full cursor-pointer flex-col items-center gap-1.5 rounded-xl border bg-white/[0.03] px-2 py-3 text-left sm:gap-2 sm:px-2.5",
+                "transition-colors focus-visible:outline-none focus-visible:ring-2",
+                isSvip
+                  ? "border-violet-400/20 hover:border-violet-300/40 hover:bg-violet-500/[0.07] focus-visible:ring-violet-400/40"
+                  : "border-white/10 hover:border-amber-400/35 hover:bg-amber-500/[0.06] focus-visible:ring-amber-400/40"
+              )}
+            >
+              {/* pt 預留 VIP/SVIP 角標空間，避免被裁切或壓到隔壁列 */}
+              <div className="relative pt-5">
+                <div
+                  className={cn(
+                    "relative size-11 overflow-hidden rounded-full sm:size-12",
+                    supporter.tier !== "none" &&
+                      supporterAvatarRingClassByTier[supporter.tier]
+                  )}
+                >
+                  {supporter.avatarUrl ? (
+                    <Image
+                      src={supporter.avatarUrl}
+                      alt={supporter.displayName}
+                      fill
+                      className="object-cover"
+                      sizes="48px"
+                      unoptimized={Boolean(supporter.virtualPlayerId)}
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-amber-500/30 to-violet-600/35 text-sm font-bold text-white">
+                      {getInitials(supporter.displayName)}
+                    </div>
+                  )}
+                </div>
+                <SupporterAvatarInsignia
+                  isSupporter
+                  supporterBadge={supporter.supporterBadge}
+                  tier={supporter.tier}
+                  size="xs"
+                />
+              </div>
+              <div className="w-full min-w-0 overflow-hidden [&_.supporter-username-premium]:max-md:[filter:none]">
+                <UserBadge
+                  username={supporter.displayName}
+                  isSupporter
+                  supporterBadge={supporter.supporterBadge}
+                  supporterLifetime={supporter.supporterLifetime}
+                  layout="stacked"
+                  showSupporterBadge={false}
+                  usernameClassName="max-w-full truncate text-center text-[11px] sm:text-xs"
+                  className="w-full max-w-full items-center"
+                />
+              </div>
+            </button>
+          </motion.li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function HomeSupporterSection() {
   const t = useTranslations("home");
   const { profile } = useAuth();
@@ -76,6 +195,11 @@ export function HomeSupporterSection() {
   const isMember =
     profile?.is_supporter === true ||
     getSupporterDisplayTierFromProfile(profile) !== "none";
+
+  const svipSupporters = supporters.filter(isSvipSupporter);
+  const vipSupporters = supporters.filter(
+    (supporter) => !isSvipSupporter(supporter)
+  );
 
   useEffect(() => {
     return deferClientTask(() => {
@@ -206,77 +330,28 @@ export function HomeSupporterSection() {
               <p className="text-sm text-zinc-400">{t("supporterWallEmpty")}</p>
             </div>
           ) : (
-            <ul className="grid grid-cols-2 gap-2 min-[400px]:gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-              {supporters.map((supporter, index) => (
-                <motion.li
-                  key={supporter.id}
-                  initial={reduceMotion ? false : { opacity: 0, y: 10 }}
-                  whileInView={
-                    reduceMotion ? undefined : { opacity: 1, y: 0 }
-                  }
-                  viewport={{ once: true }}
-                  transition={{
-                    duration: 0.35,
-                    delay: reduceMotion
-                      ? 0
-                      : Math.min(index * 0.03, 0.36),
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => openSupporterProfile(supporter)}
-                    className={cn(
-                      "flex min-w-0 w-full cursor-pointer flex-col items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-2 py-3 text-left sm:gap-2 sm:px-2.5",
-                      "transition-colors hover:border-amber-400/35 hover:bg-amber-500/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/40"
-                    )}
-                  >
-                    {/* pt 預留 VIP/SVIP 角標空間，避免被裁切或壓到隔壁列 */}
-                    <div className="relative pt-5">
-                      <div
-                        className={cn(
-                          "relative size-11 overflow-hidden rounded-full sm:size-12",
-                          supporter.tier !== "none" &&
-                            supporterAvatarRingClassByTier[supporter.tier]
-                        )}
-                      >
-                        {supporter.avatarUrl ? (
-                          <Image
-                            src={supporter.avatarUrl}
-                            alt={supporter.displayName}
-                            fill
-                            className="object-cover"
-                            sizes="48px"
-                            unoptimized={Boolean(supporter.virtualPlayerId)}
-                          />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-amber-500/30 to-violet-600/35 text-sm font-bold text-white">
-                            {getInitials(supporter.displayName)}
-                          </div>
-                        )}
-                      </div>
-                      <SupporterAvatarInsignia
-                        isSupporter
-                        supporterBadge={supporter.supporterBadge}
-                        tier={supporter.tier}
-                        size="xs"
-                      />
-                    </div>
-                    <div className="w-full min-w-0 overflow-hidden [&_.supporter-username-premium]:max-md:[filter:none]">
-                      <UserBadge
-                        username={supporter.displayName}
-                        isSupporter
-                        supporterBadge={supporter.supporterBadge}
-                        supporterLifetime={supporter.supporterLifetime}
-                        layout="stacked"
-                        showSupporterBadge={false}
-                        usernameClassName="max-w-full truncate text-center text-[11px] sm:text-xs"
-                        className="w-full max-w-full items-center"
-                      />
-                    </div>
-                  </button>
-                </motion.li>
-              ))}
-            </ul>
+            <div className="space-y-7">
+              <SupporterWallGroup
+                title={t("supporterWallSvipTitle")}
+                countLabel={t("supporterCount", {
+                  count: svipSupporters.length,
+                })}
+                supporters={svipSupporters}
+                accent="svip"
+                reduceMotion={reduceMotion}
+                onOpen={openSupporterProfile}
+              />
+              <SupporterWallGroup
+                title={t("supporterWallVipTitle")}
+                countLabel={t("supporterCount", {
+                  count: vipSupporters.length,
+                })}
+                supporters={vipSupporters}
+                accent="vip"
+                reduceMotion={reduceMotion}
+                onOpen={openSupporterProfile}
+              />
+            </div>
           )}
         </div>
       </motion.div>

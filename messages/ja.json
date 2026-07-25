@@ -297,6 +297,8 @@
     "supporterWallEmpty": "まだサポーターがいません——最初の一人になりましょう！",
     "supporterWallLoading": "サポーターを読み込み中…",
     "supporterCount": "{count} 人のサポーター",
+    "supporterWallSvipTitle": "SVIP",
+    "supporterWallVipTitle": "VIP",
     "supporterPerkBadge": "専用バッジ",
     "supporterPerkFx": "名前エフェクト",
     "supporterPerkEcosystem": "インディーを応援",

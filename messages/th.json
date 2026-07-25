@@ -297,6 +297,8 @@
     "supporterWallEmpty": "ยังไม่มีผู้สนับสนุน — เป็นคนแรกเลย!",
     "supporterWallLoading": "กำลังโหลดผู้สนับสนุน…",
     "supporterCount": "ผู้สนับสนุน {count} คน",
+    "supporterWallSvipTitle": "SVIP",
+    "supporterWallVipTitle": "VIP",
     "supporterPerkBadge": "เหรียญพิเศษ",
     "supporterPerkFx": "เอฟเฟกต์ชื่อ",
     "supporterPerkEcosystem": "สนับสนุนอินดี้",

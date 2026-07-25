@@ -597,6 +597,8 @@
     "supporterWallEmpty": "No supporters yet — be the first!",
     "supporterWallLoading": "Loading supporters…",
     "supporterCount": "{count} supporters",
+    "supporterWallSvipTitle": "SVIP",
+    "supporterWallVipTitle": "VIP",
     "supporterPerkBadge": "Exclusive badge",
     "supporterPerkFx": "Name effects",
     "supporterPerkEcosystem": "Support indie games"

@@ -297,6 +297,8 @@
     "supporterWallEmpty": "Pas encore de soutiens — soyez le premier !",
     "supporterWallLoading": "Chargement des soutiens…",
     "supporterCount": "{count} soutiens",
+    "supporterWallSvipTitle": "SVIP",
+    "supporterWallVipTitle": "VIP",
     "supporterPerkBadge": "Badge exclusif",
     "supporterPerkFx": "Effets de nom",
     "supporterPerkEcosystem": "Soutenir l'indie",
