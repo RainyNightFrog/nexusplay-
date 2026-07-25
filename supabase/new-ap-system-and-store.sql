@@ -349,7 +349,7 @@ values
   ),
   (
     'frame_void_orbit', 'avatar_frame', 'legendary', 70000,
-    '虛空軌道框', '傳說頭像框：軌道粒子環',
+    '虛空軌道框', '傳說頭像框：電弧軌道環與火花軌跡',
     '{"cssClass":"ap-frame-void-orbit","animated":true}'::jsonb,
     null, true, 30, 240
   ),
@@ -447,7 +447,7 @@ values
   ),
   (
     'frame_eternal_rain', 'avatar_frame', 'mythic', 160000,
-    '永雨神環', '神話頭像框：永雨粒子神環',
+    '永雨神環', '神話頭像框：頭像外圍閃電與電弧神環',
     '{"cssClass":"ap-frame-eternal-rain","glow":true,"animated":true}'::jsonb,
     null, true, 8, 250
   ),

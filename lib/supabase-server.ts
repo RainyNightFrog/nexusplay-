@@ -26,6 +26,13 @@ export function createServerSupabase() {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+    global: {
+      headers: {
+        // 新版 sb_secret_／sb_publishable_ key 亦走 apikey；明確帶上避免偶發驗簽混淆
+        apikey: key,
+      },
     },
   });
 }

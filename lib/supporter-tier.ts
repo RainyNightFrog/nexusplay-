@@ -11,12 +11,18 @@ export const SUPPORTER_TITLE_V2 = "熱心支持者";
 export const SUPPORTER_TITLE_LIFETIME = "RainyNightFrog";
 export const SUPPORTER_TITLE_LIFETIME_CSS = "title-rainynightfrog";
 
-export type SupporterDisplayTier = "none" | "basic" | "premium";
+/** basic=VIP · premium=SVIP · lifetime=永久傳說 */
+export type SupporterDisplayTier = "none" | "basic" | "premium" | "lifetime";
 
 export function isPremiumSupporterBadge(
   badge: string | null | undefined
 ): boolean {
   return badge === SUPPORTER_BADGE_V2;
+}
+
+/** SVIP 或永久傳說（共享多數炫彩文字特效，頭像框再分級） */
+export function isSvipLikeTier(tier: SupporterDisplayTier): boolean {
+  return tier === "premium" || tier === "lifetime";
 }
 
 function hasSupporterBadge(badge: string | null | undefined) {
@@ -47,19 +53,27 @@ export function getSupporterDisplayTier(
   isSupporter: boolean,
   badge: string | null | undefined,
   equippedTitle?: EquippedTitle | null,
-  /** 永久傳說支持者：特效與 SVIP（premium）相同 */
-  supporterLifetime?: boolean | null
+  supporterLifetime?: boolean | null,
+  isSuperAdmin?: boolean | null
 ): SupporterDisplayTier {
+  // 超級管理員（profiles.is_admin）固定顯示永久傳說 LEGEND
+  if (isSuperAdmin === true) {
+    return "lifetime";
+  }
   if (
     !isSupporterMember(isSupporter, badge, equippedTitle) &&
     supporterLifetime !== true
   ) {
     return "none";
   }
-  return isPremiumSupporterBadge(badge) ||
+  if (
     supporterLifetime === true ||
-    equippedTitle?.name === SUPPORTER_TITLE_V2 ||
     equippedTitle?.name === SUPPORTER_TITLE_LIFETIME
+  ) {
+    return "lifetime";
+  }
+  return isPremiumSupporterBadge(badge) ||
+    equippedTitle?.name === SUPPORTER_TITLE_V2
     ? "premium"
     : "basic";
 }
@@ -67,7 +81,11 @@ export function getSupporterDisplayTier(
 export function getSupporterDisplayTierFromProfile(
   profile: Pick<
     UserProfile,
-    "is_supporter" | "supporter_badge" | "equipped_title" | "supporter_lifetime"
+    | "is_supporter"
+    | "supporter_badge"
+    | "equipped_title"
+    | "supporter_lifetime"
+    | "is_admin"
   > | null | undefined
 ): SupporterDisplayTier {
   if (!profile) return "none";
@@ -75,7 +93,8 @@ export function getSupporterDisplayTierFromProfile(
     profile.is_supporter === true,
     profile.supporter_badge,
     profile.equipped_title,
-    profile.supporter_lifetime === true
+    profile.supporter_lifetime === true,
+    profile.is_admin === true
   );
 }
 
@@ -86,29 +105,46 @@ export function getSupporterTitleNameForBadge(badge: string): string {
 }
 
 export const supporterUsernameClassByTier = {
-  basic: "font-semibold text-amber-300 drop-shadow-[0_0_8px_rgba(251,191,36,0.35)]",
+  basic:
+    "font-semibold text-amber-300 drop-shadow-[0_0_8px_rgba(251,191,36,0.35)]",
   premium: "supporter-username supporter-username-premium font-semibold",
+  lifetime: "supporter-username supporter-username-lifetime font-semibold",
 } as const;
 
 export const supporterMessageContentClassByTier = {
   basic:
     "font-semibold text-amber-300 drop-shadow-[0_0_8px_rgba(251,191,36,0.35)]",
   premium: "supporter-username supporter-username-premium font-semibold",
+  lifetime: "supporter-username supporter-username-lifetime font-semibold",
 } as const;
 
 /** 僅 SVIP／傳說支持者打字需鏡像層（彩虹漸層）；VIP 直接在 textarea 顯示金色 */
 export const supporterComposerMirrorClassByTier = {
   basic: "font-medium text-amber-300",
   premium: "supporter-username supporter-username-premium font-semibold",
+  lifetime: "supporter-username supporter-username-lifetime font-semibold",
 } as const;
 
 export const supporterComposerTextClassByTier = {
   basic: "text-amber-300 caret-amber-300",
   premium: "text-transparent caret-violet-300",
+  lifetime: "text-transparent caret-amber-200",
 } as const;
 
+/**
+ * 頭像外圈特效（掛在外層 wrapper，避免與 AP 商店 ap-frame-* 的 ::before/::after 衝突）
+ */
 export const supporterAvatarRingClassByTier = {
-  basic: "ring-2 ring-amber-400/55 shadow-[0_0_18px_rgba(251,191,36,0.28)]",
+  basic: "supporter-avatar-fx supporter-avatar-fx--vip",
+  premium: "supporter-avatar-fx supporter-avatar-fx--svip",
+  lifetime: "supporter-avatar-fx supporter-avatar-fx--legend",
+} as const;
+
+/** 列表／聊天等多個頭像並排時用：靜態光環，不跑旋轉／閃電（省 GPU） */
+export const supporterAvatarRingClassByTierLite = {
+  basic: "supporter-avatar-fx supporter-avatar-fx--vip supporter-avatar-fx--lite",
   premium:
-    "ring-2 ring-violet-300/55 shadow-[0_0_22px_rgba(167,139,250,0.35)]",
+    "supporter-avatar-fx supporter-avatar-fx--svip supporter-avatar-fx--lite",
+  lifetime:
+    "supporter-avatar-fx supporter-avatar-fx--legend supporter-avatar-fx--lite",
 } as const;

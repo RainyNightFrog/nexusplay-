@@ -597,6 +597,8 @@
     "supporterWallEmpty": "No supporters yet — be the first!",
     "supporterWallLoading": "Loading supporters…",
     "supporterCount": "{count} supporters",
+    "supporterWallLegendTitle": "LEGEND",
+
     "supporterWallSvipTitle": "SVIP",
     "supporterWallVipTitle": "VIP",
     "supporterPerkBadge": "Exclusive badge",
@@ -1277,6 +1279,10 @@
     "accessibility": "Accessibility & performance",
     "reduceMotion": "Reduce motion",
     "reduceMotionDesc": "Reduce page animations and transitions to ease motion sickness",
+    "disableCosmeticFx": "Disable avatar & title effects",
+    "disableCosmeticFxDesc": "Hide animated avatar frames, supporter glows, and title lightning on this device to save power",
+    "hideMySupporterFx": "Hide my supporter effects",
+    "hideMySupporterFxDesc": "Turn off VIP / SVIP / LEGEND glow and badge on your own avatar (this device only)",
     "resetTitle": "Reset to defaults",
     "resetDesc": "Restore all system settings to RainyNightFrog defaults",
     "resetBtn": "Reset settings",
@@ -2541,7 +2547,9 @@
     "tierPerkComposer": "✓ 聊天輸入文字彩虹特效",
     "composerPreviewSample": "傳說支持者上線！",
     "tierPerkVipText": "✓ 金色名稱與輸入文字特效",
-    "vipTextPreview": "金色文字特效"
+    "vipTextPreview": "金色文字特效",
+    "badgeLabelLifetime": "LEGEND",
+    "badgeTitleLifetime": "Lifetime Legend Supporter RainyNightFrog"
   },
   "creatorTools": {
     "pageTitle": "Creator Toolbox",

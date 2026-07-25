@@ -257,10 +257,10 @@ export function ApStoreModal({ open, onOpenChange }: ApStoreModalProps) {
                     <p className="mb-2 text-center text-xs font-semibold uppercase tracking-wide text-cyan-300 sm:mb-3">
                       {t("livePreview")}
                     </p>
-                    <div className="flex flex-col items-center gap-3 rounded-xl border border-white/10 bg-zinc-950/70 p-3 sm:p-4">
+                    <div className="flex flex-col items-center gap-3 overflow-visible rounded-xl border border-white/10 bg-zinc-950/70 p-3 sm:p-4">
                       <div
                         className={cn(
-                          "relative flex size-14 items-center justify-center rounded-full border border-cyan-400/30 bg-gradient-to-br from-cyan-500/30 to-violet-600/40",
+                          "relative flex size-14 items-center justify-center overflow-visible rounded-full border border-cyan-400/30 bg-gradient-to-br from-cyan-500/30 to-violet-600/40",
                           selected?.category === "avatar_frame"
                             ? selected.cssClass
                             : profile.equipped_avatar_frame_class
@@ -285,9 +285,11 @@ export function ApStoreModal({ open, onOpenChange }: ApStoreModalProps) {
                         username={profile.display_name}
                         title={previewTitle}
                         nameColorClass={previewNameColor}
+                        preferNameColor={Boolean(previewNameColor)}
                         layout="stacked"
                         isSupporter={profile.is_supporter}
                         supporterBadge={profile.supporter_badge}
+                        supporterLifetime={profile.supporter_lifetime}
                         animateTitle={false}
                       />
                       {selected?.category === "badge_effect" && (

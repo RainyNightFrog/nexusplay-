@@ -83,6 +83,11 @@ export async function grantSupporterStatus(params: {
       }
     }
   }
+
+  const { invalidatePlatformSupportersCache } = await import(
+    "@/lib/platform-supporters-service"
+  );
+  invalidatePlatformSupportersCache();
 }
 
 export async function revokeSupporterStatus(
@@ -148,6 +153,11 @@ export async function revokeSupporterStatus(
   if (error) {
     throw new Error(error.message);
   }
+
+  const { invalidatePlatformSupportersCache } = await import(
+    "@/lib/platform-supporters-service"
+  );
+  invalidatePlatformSupportersCache();
 
   return { revoked: true as const };
 }

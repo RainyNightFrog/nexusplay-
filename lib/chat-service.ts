@@ -128,18 +128,20 @@ function mapChatMessage(
       ? resolveVirtualPlayerAvatarUrl(virtualPlayerId)
       : (profile?.avatar_url ?? null),
     author_equipped_title: titleMap.get(record.user_id) ?? null,
-    author_avatar_frame_class:
-      cosmetics?.avatar_frame_class ??
-      virtualCosmetics?.avatarFrameClass ??
-      null,
-    author_name_color_class:
-      cosmetics?.name_color_class ?? virtualCosmetics?.nameColorClass ?? null,
-    author_chat_bubble_class:
-      cosmetics?.chat_bubble_class ??
-      virtualCosmetics?.chatBubbleClass ??
-      null,
+    // 虛擬玩家：僅少數抽中者掛外觀；其餘不套 DB／預設框，避免全員特效
+    author_avatar_frame_class: virtualPlayerId
+      ? (virtualCosmetics?.avatarFrameClass ?? null)
+      : (cosmetics?.avatar_frame_class ?? null),
+    author_name_color_class: virtualPlayerId
+      ? (virtualCosmetics?.nameColorClass ?? null)
+      : (cosmetics?.name_color_class ?? null),
+    author_chat_bubble_class: virtualPlayerId
+      ? (virtualCosmetics?.chatBubbleClass ?? null)
+      : (cosmetics?.chat_bubble_class ?? null),
     author_is_supporter:
-      virtualSupporter?.isSupporter === true || supporter?.isSupporter === true,
+      virtualSupporter?.isSupporter === true ||
+      supporter?.isSupporter === true ||
+      profile?.is_admin === true,
     author_supporter_badge:
       virtualSupporter?.badge ?? supporter?.badge ?? null,
     author_admin_role: resolveAdminDisplayRole(profile?.is_admin === true, false),

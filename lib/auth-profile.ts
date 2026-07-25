@@ -177,10 +177,11 @@ export async function resolveUserProfile(
       equipped_chat_bubble_class: cosmetics.chat_bubble
         ? (cssMap.get(cosmetics.chat_bubble) ?? null)
         : null,
-      is_supporter: profile.is_supporter === true,
+      is_supporter: profile.is_supporter === true || isAdmin,
       supporter_since: readOptionalString(profile.supporter_since),
       supporter_badge: readOptionalString(profile.supporter_badge),
-      supporter_lifetime: profile.supporter_lifetime === true,
+      // 超級管理員顯示為 LEGEND（與永久傳說同階）
+      supporter_lifetime: profile.supporter_lifetime === true || isAdmin,
     };
   }
 

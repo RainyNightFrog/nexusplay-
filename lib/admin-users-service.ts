@@ -452,6 +452,11 @@ export async function setAdminFlag(params: {
 
   if (updateError) throw new Error(updateError.message);
 
+  const { invalidatePlatformSupportersCache } = await import(
+    "@/lib/platform-supporters-service"
+  );
+  invalidatePlatformSupportersCache();
+
   return {
     userId: params.userId,
     email: authUser.user.email ?? params.actorEmail ?? null,

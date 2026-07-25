@@ -87,7 +87,7 @@ const AP_STORE_CATALOG_EN: Record<string, ApStoreCatalogEntry> = {
   },
   frame_void_orbit: {
     name: "Void Orbit Frame",
-    description: "Legendary frame: orbital particle ring",
+    description: "Legendary frame: orbiting arc ring with spark trails",
   },
   frame_mint_hex: {
     name: "Mint Hex Frame",
@@ -103,7 +103,7 @@ const AP_STORE_CATALOG_EN: Record<string, ApStoreCatalogEntry> = {
   },
   frame_eternal_rain: {
     name: "Eternal Rain Halo",
-    description: "Mythic frame: eternal rain particle halo",
+    description: "Mythic frame: lightning bolts and electric halo around your avatar",
   },
   badge_mint_spark: {
     name: "Mint Spark",
@@ -218,7 +218,7 @@ const AP_STORE_CATALOG_ZH_CN: Record<string, ApStoreCatalogEntry> = {
   },
   frame_void_orbit: {
     name: "虚空轨道框",
-    description: "传说头像框：轨道粒子环",
+    description: "传说头像框：电弧轨道环与火花轨迹",
   },
   frame_mint_hex: {
     name: "薄荷六角框",
@@ -234,7 +234,7 @@ const AP_STORE_CATALOG_ZH_CN: Record<string, ApStoreCatalogEntry> = {
   },
   frame_eternal_rain: {
     name: "永雨神环",
-    description: "神话头像框：永雨粒子神环",
+    description: "神话头像框：头像外围闪电与电弧神环",
   },
   badge_mint_spark: {
     name: "薄荷火花",

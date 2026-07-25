@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { getInitials } from "@/lib/auth";
 import { deferClientTask } from "@/lib/defer-client";
+import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
 import { getVirtualPlayerEquippedTitle } from "@/lib/virtual-player-supporter";
 import { requestOpenPlayerDm } from "@/lib/open-player-dm";
 import type { PlatformSupporterPublic } from "@/lib/platform-supporters-service";
@@ -30,6 +31,7 @@ import {
   getSupporterDisplayTierFromProfile,
   supporterAvatarRingClassByTier,
 } from "@/lib/supporter-tier";
+import { API_FETCH_TIMEOUT_MS } from "@/lib/with-timeout";
 import { cn } from "@/lib/utils";
 
 const PERK_ICONS = [Sparkles, Palette, HeartHandshake] as const;
@@ -45,6 +47,7 @@ function supporterToPlayerPreview(
       equippedTitle: getVirtualPlayerEquippedTitle(supporter.virtualPlayerId),
       isSupporter: true,
       supporterBadge: supporter.supporterBadge,
+      supporterLifetime: supporter.supporterLifetime,
     });
   }
 
@@ -58,18 +61,46 @@ function supporterToPlayerPreview(
     avatarUrl: supporter.avatarUrl,
     isSupporter: true,
     supporterBadge: supporter.supporterBadge,
+    supporterLifetime: supporter.supporterLifetime,
   };
 }
 
-function isSvipSupporter(supporter: PlatformSupporterPublic) {
-  return supporter.tier === "premium" || supporter.supporterLifetime;
+function isLegendSupporter(supporter: PlatformSupporterPublic) {
+  return supporter.tier === "lifetime" || supporter.supporterLifetime;
 }
+
+function isSvipOnlySupporter(supporter: PlatformSupporterPublic) {
+  return supporter.tier === "premium" && !isLegendSupporter(supporter);
+}
+
+type WallAccent = "legend" | "svip" | "vip";
+
+const WALL_ACCENT_STYLES: Record<
+  WallAccent,
+  { title: string; icon: string; card: string }
+> = {
+  legend: {
+    title: "text-rose-300",
+    icon: "text-sky-400",
+    card: "border-rose-400/25 hover:border-sky-400/40 hover:bg-rose-500/[0.07] focus-visible:ring-sky-400/40",
+  },
+  svip: {
+    title: "text-violet-300",
+    icon: "text-violet-400",
+    card: "border-violet-400/20 hover:border-violet-300/40 hover:bg-violet-500/[0.07] focus-visible:ring-violet-400/40",
+  },
+  vip: {
+    title: "text-amber-300",
+    icon: "text-amber-400",
+    card: "border-white/10 hover:border-amber-400/35 hover:bg-amber-500/[0.06] focus-visible:ring-amber-400/40",
+  },
+};
 
 type SupporterWallGroupProps = {
   title: string;
   countLabel: string;
   supporters: PlatformSupporterPublic[];
-  accent: "svip" | "vip";
+  accent: WallAccent;
   reduceMotion: boolean | null;
   onOpen: (supporter: PlatformSupporterPublic) => void;
 };
@@ -84,7 +115,7 @@ function SupporterWallGroup({
 }: SupporterWallGroupProps) {
   if (supporters.length === 0) return null;
 
-  const isSvip = accent === "svip";
+  const styles = WALL_ACCENT_STYLES[accent];
 
   return (
     <div className="space-y-3">
@@ -92,24 +123,20 @@ function SupporterWallGroup({
         <div
           className={cn(
             "inline-flex items-center gap-2 text-sm font-semibold",
-            isSvip ? "text-violet-300" : "text-amber-300"
+            styles.title
           )}
         >
-          <Users
-            className={cn(
-              "size-4 shrink-0",
-              isSvip ? "text-violet-400" : "text-amber-400"
-            )}
-          />
+          <Users className={cn("size-4 shrink-0", styles.icon)} />
           {title}
         </div>
         <p className="text-xs text-zinc-500">{countLabel}</p>
       </div>
 
-      <ul className="grid grid-cols-2 gap-2 min-[400px]:gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+      <ul className="grid grid-cols-2 gap-2 overflow-visible min-[400px]:gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
         {supporters.map((supporter, index) => (
           <motion.li
             key={supporter.id}
+            className="overflow-visible"
             initial={reduceMotion ? false : { opacity: 0, y: 10 }}
             whileInView={reduceMotion ? undefined : { opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -122,22 +149,21 @@ function SupporterWallGroup({
               type="button"
               onClick={() => onOpen(supporter)}
               className={cn(
-                "flex min-w-0 w-full cursor-pointer flex-col items-center gap-1.5 rounded-xl border bg-white/[0.03] px-2 py-3 text-left sm:gap-2 sm:px-2.5",
+                "flex min-w-0 w-full cursor-pointer flex-col items-center gap-1.5 overflow-visible rounded-xl border bg-white/[0.03] px-2 py-3 text-left sm:gap-2 sm:px-2.5",
                 "transition-colors focus-visible:outline-none focus-visible:ring-2",
-                isSvip
-                  ? "border-violet-400/20 hover:border-violet-300/40 hover:bg-violet-500/[0.07] focus-visible:ring-violet-400/40"
-                  : "border-white/10 hover:border-amber-400/35 hover:bg-amber-500/[0.06] focus-visible:ring-amber-400/40"
+                styles.card
               )}
             >
-              {/* pt 預留 VIP/SVIP 角標空間，避免被裁切或壓到隔壁列 */}
-              <div className="relative pt-5">
+              {/* pt 預留 VIP/SVIP/LEGEND 角標空間；支持者牆展示完整頭像特效 */}
+              <div className="relative overflow-visible px-2 pb-2 pt-5">
                 <div
                   className={cn(
-                    "relative size-11 overflow-hidden rounded-full sm:size-12",
+                    "relative inline-flex",
                     supporter.tier !== "none" &&
                       supporterAvatarRingClassByTier[supporter.tier]
                   )}
                 >
+                  <div className="relative size-11 overflow-hidden rounded-full sm:size-12">
                   {supporter.avatarUrl ? (
                     <Image
                       src={supporter.avatarUrl}
@@ -152,10 +178,12 @@ function SupporterWallGroup({
                       {getInitials(supporter.displayName)}
                     </div>
                   )}
+                  </div>
                 </div>
                 <SupporterAvatarInsignia
                   isSupporter
                   supporterBadge={supporter.supporterBadge}
+                  supporterLifetime={supporter.supporterLifetime}
                   tier={supporter.tier}
                   size="xs"
                 />
@@ -168,6 +196,7 @@ function SupporterWallGroup({
                   supporterLifetime={supporter.supporterLifetime}
                   layout="stacked"
                   showSupporterBadge={false}
+                  animateTitle={false}
                   usernameClassName="max-w-full truncate text-center text-[11px] sm:text-xs"
                   className="w-full max-w-full items-center"
                 />
@@ -194,33 +223,79 @@ export function HomeSupporterSection() {
 
   const isMember =
     profile?.is_supporter === true ||
+    profile?.is_admin === true ||
     getSupporterDisplayTierFromProfile(profile) !== "none";
 
-  const svipSupporters = supporters.filter(isSvipSupporter);
+  const legendSupporters = supporters.filter(isLegendSupporter);
+  const svipSupporters = supporters.filter(isSvipOnlySupporter);
   const vipSupporters = supporters.filter(
-    (supporter) => !isSvipSupporter(supporter)
+    (supporter) =>
+      !isLegendSupporter(supporter) && !isSvipOnlySupporter(supporter)
   );
 
-  useEffect(() => {
-    return deferClientTask(() => {
-      fetch("/api/supporters")
-        .then((response) => (response.ok ? response.json() : null))
-        .then(
-          (data: {
-            supporters?: PlatformSupporterPublic[];
-            total?: number;
-          } | null) => {
-            setSupporters(data?.supporters ?? []);
-            setTotal(data?.total ?? data?.supporters?.length ?? 0);
-          }
-        )
-        .catch(() => {
-          setSupporters([]);
-          setTotal(0);
-        })
-        .finally(() => setHydrated(true));
-    });
+  const loadSupporters = useCallback((markHydrated: boolean) => {
+    const controller = new AbortController();
+    fetchWithTimeout(
+      `/api/supporters?t=${Date.now()}`,
+      {
+        cache: "no-store",
+        signal: controller.signal,
+      },
+      API_FETCH_TIMEOUT_MS
+    )
+      .then((response) => (response.ok ? response.json() : null))
+      .then(
+        (data: {
+          supporters?: PlatformSupporterPublic[];
+          total?: number;
+        } | null) => {
+          if (!data) return;
+          setSupporters(data.supporters ?? []);
+          setTotal(data.total ?? data.supporters?.length ?? 0);
+        }
+      )
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+        // 失敗保留既有名單，避免牆面被清空
+      })
+      .finally(() => {
+        if (markHydrated) setHydrated(true);
+      });
+    return () => controller.abort();
   }, []);
+
+  useEffect(() => {
+    let abortFetch: (() => void) | undefined;
+    const cancelDefer = deferClientTask(() => {
+      abortFetch = loadSupporters(true);
+    });
+    return () => {
+      cancelDefer();
+      abortFetch?.();
+    };
+  }, [
+    loadSupporters,
+    profile?.is_supporter,
+    profile?.supporter_badge,
+    profile?.supporter_lifetime,
+    profile?.is_admin,
+  ]);
+
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === "visible") {
+        loadSupporters(false);
+      }
+    };
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [loadSupporters]);
 
   const openSupporterProfile = useCallback(
     (supporter: PlatformSupporterPublic) => {
@@ -331,6 +406,16 @@ export function HomeSupporterSection() {
             </div>
           ) : (
             <div className="space-y-7">
+              <SupporterWallGroup
+                title={t("supporterWallLegendTitle")}
+                countLabel={t("supporterCount", {
+                  count: legendSupporters.length,
+                })}
+                supporters={legendSupporters}
+                accent="legend"
+                reduceMotion={reduceMotion}
+                onOpen={openSupporterProfile}
+              />
               <SupporterWallGroup
                 title={t("supporterWallSvipTitle")}
                 countLabel={t("supporterCount", {

@@ -19,6 +19,7 @@ import { requestOpenPlayerDm } from "@/lib/open-player-dm";
 import { OPEN_LEADERBOARD_EVENT } from "@/lib/open-leaderboard";
 import { getInitials } from "@/lib/auth";
 import { UserBadge } from "@/components/UserBadge";
+import { SupporterAvatarInsignia } from "@/components/supporter/supporter-avatar-insignia";
 import {
   ChatPlayerCard,
   leaderboardEntryToPlayerPreview,
@@ -33,6 +34,13 @@ import {
   type PlatformLeaderboardEntry,
   type PlatformLeaderboardsResponse,
 } from "@/lib/platform-leaderboard";
+import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
+import { API_FETCH_TIMEOUT_MS } from "@/lib/with-timeout";
+import {
+  getSupporterDisplayTier,
+  supporterAvatarRingClassByTier,
+} from "@/lib/supporter-tier";
+import { useAppSettings } from "@/components/settings/app-settings-provider";
 import { cn } from "@/lib/utils";
 
 type LeaderboardTab = "online" | "playTime" | "donated";
@@ -41,10 +49,10 @@ const TAB_TRIGGER_CLASS =
   "flex h-9 min-w-0 flex-1 basis-0 items-center justify-center rounded-lg border-0 px-1 text-center text-xs font-medium leading-tight after:hidden sm:px-1.5 sm:text-sm";
 
 const TOP_RGB_BORDER =
-  "relative overflow-hidden rounded-2xl p-[2px] bg-gradient-to-r from-cyan-500 via-violet-500 to-fuchsia-500 animate-pulse shadow-[0_0_28px_rgba(139,92,246,0.4)]";
+  "relative overflow-visible rounded-2xl p-[2px] bg-gradient-to-r from-cyan-500 via-violet-500 to-fuchsia-500 animate-pulse shadow-[0_0_28px_rgba(139,92,246,0.4)]";
 
 const TOP_RGB_INNER =
-  "rounded-[14px] border border-white/10 bg-zinc-950/90 backdrop-blur-xl";
+  "overflow-visible rounded-[14px] border border-white/10 bg-zinc-950/90 backdrop-blur-xl";
 
 function RankBadge({ rank }: { rank: number }) {
   if (rank === 1) {
@@ -90,43 +98,72 @@ function PlayerAvatar({
   avatarUrl,
   rank,
   avatarFrameClass,
+  supporterTier,
+  supporterLifetime,
 }: {
   displayName: string;
   avatarUrl: string | null;
   rank: number;
   avatarFrameClass?: string | null;
+  supporterTier?: import("@/lib/supporter-tier").SupporterDisplayTier;
+  supporterLifetime?: boolean;
 }) {
   const isTopThree = rank <= 3;
   const initials = getInitials(displayName);
+  const tier = supporterTier ?? "none";
+  const showFx = tier !== "none";
 
   return (
     <div
       className={cn(
-        "relative shrink-0 rounded-full",
-        isTopThree ? "size-14 ring-2 ring-white/20" : "size-10",
-        avatarFrameClass
+        "relative flex w-[3.75rem] shrink-0 flex-col items-center overflow-visible sm:w-[4.25rem]",
+        showFx ? "gap-1 pt-1" : null,
+        isTopThree && showFx ? "w-[4.5rem] sm:w-[5rem]" : null
       )}
     >
-      <div className="absolute inset-0 overflow-hidden rounded-full">
-        {avatarUrl ? (
-          <Image
-            src={avatarUrl}
-            alt={displayName}
-            fill
-            className="object-cover"
-          />
-        ) : (
-          <div
-            className={cn(
-              "flex h-full w-full items-center justify-center bg-gradient-to-br font-bold text-white",
-              isTopThree
-                ? "from-cyan-500/40 via-violet-500/40 to-fuchsia-500/40 text-lg"
-                : "from-cyan-500/25 to-violet-600/30 text-base"
-            )}
-          >
-            {initials}
-          </div>
+      {showFx && (
+        <SupporterAvatarInsignia
+          tier={tier}
+          size="xs"
+          supporterLifetime={supporterLifetime || tier === "lifetime"}
+          className="!static !left-auto !top-auto !z-30 !translate-x-0 !translate-y-0"
+        />
+      )}
+      <div
+        className={cn(
+          "relative inline-flex overflow-visible p-1.5",
+          showFx ? supporterAvatarRingClassByTier[tier] : null
         )}
+      >
+        <div
+          className={cn(
+            "relative shrink-0 rounded-full",
+            isTopThree ? "size-14 ring-2 ring-white/20" : "size-10",
+            avatarFrameClass
+          )}
+        >
+          <div className="absolute inset-0 overflow-hidden rounded-full">
+            {avatarUrl ? (
+              <Image
+                src={avatarUrl}
+                alt={displayName}
+                fill
+                className="object-cover"
+              />
+            ) : (
+              <div
+                className={cn(
+                  "flex h-full w-full items-center justify-center bg-gradient-to-br font-bold text-white",
+                  isTopThree
+                    ? "from-cyan-500/40 via-violet-500/40 to-fuchsia-500/40 text-lg"
+                    : "from-cyan-500/25 to-violet-600/30 text-base"
+                )}
+              >
+                {initials}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -148,6 +185,7 @@ function LeaderboardCard({
   const t = useTranslations("leaderboard");
   const tChat = useTranslations("chat");
   const tcx = useTranslations("common");
+  const { settings } = useAppSettings();
   const isTopThree = entry.rank <= 3;
   const adminRole = entry.adminRole ?? "none";
   const adminTitleLabel =
@@ -156,6 +194,17 @@ function LeaderboardCard({
       : adminRole === "admin"
         ? tChat("rolePlatformAdmin")
         : null;
+  const supporterTier = getSupporterDisplayTier(
+    entry.isSupporter === true,
+    entry.supporterBadge,
+    entry.equippedTitle,
+    entry.supporterLifetime === true,
+    entry.adminRole === "super_admin"
+  );
+  // 排行榜：僅「隱藏我的特效」影響自己；關閉特效交給 CSS，避免整環被拿掉看起來像壞掉
+  const showSupporterFx =
+    supporterTier !== "none" &&
+    !(settings.hideMySupporterFx && entry.isMe === true);
 
   const valueLabel =
     tab === "donated"
@@ -180,14 +229,14 @@ function LeaderboardCard({
           : undefined
       }
       className={cn(
-        "flex items-center gap-3 px-4 py-3 sm:gap-4 sm:px-5",
+        "flex items-start gap-3 overflow-visible px-4 py-3.5 sm:items-center sm:gap-4 sm:px-5",
         entry.isMe && "bg-cyan-500/5",
         onPlayerClick &&
           "cursor-pointer rounded-xl transition-colors hover:bg-white/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/40"
       )}
       key={`${animateKey}-${entry.userId}-${entry.rank}`}
     >
-      <div className="flex w-10 shrink-0 items-center justify-center sm:w-11">
+      <div className="flex w-10 shrink-0 items-center justify-center self-center sm:w-11">
         <RankBadge rank={entry.rank} />
       </div>
 
@@ -195,20 +244,34 @@ function LeaderboardCard({
         displayName={entry.displayName}
         avatarUrl={entry.avatarUrl}
         rank={entry.rank}
-        avatarFrameClass={entry.avatarFrameClass}
+        avatarFrameClass={
+          settings.disableCosmeticFx ? null : entry.avatarFrameClass
+        }
+        supporterTier={showSupporterFx ? supporterTier : "none"}
+        supporterLifetime={
+          showSupporterFx &&
+          (entry.supporterLifetime === true || supporterTier === "lifetime")
+        }
       />
 
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 self-center">
         <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
           <UserBadge
             username={entry.displayName}
             title={adminTitleLabel ? null : entry.equippedTitle}
             fallbackRoleLabel={adminTitleLabel}
             fallbackRoleRainbow={Boolean(adminTitleLabel)}
-            isSupporter={entry.isSupporter}
+            isSupporter={showSupporterFx}
             supporterBadge={entry.supporterBadge}
-            showSupporterBadge
-            nameColorClass={entry.nameColorClass}
+            supporterLifetime={
+              showSupporterFx &&
+              (entry.supporterLifetime === true ||
+                supporterTier === "lifetime")
+            }
+            showSupporterBadge={false}
+            nameColorClass={
+              settings.disableCosmeticFx ? null : entry.nameColorClass
+            }
             layout="compact"
             animateTitle={false}
             maxTitleWidth="max-w-[7.5rem] sm:max-w-[9rem]"
@@ -317,7 +380,7 @@ function LeaderboardList({
   }
 
   return (
-    <div className="space-y-3.5 sm:space-y-4">
+    <div className="space-y-3.5 overflow-visible sm:space-y-4">
       {entries.map((entry) => (
         <LeaderboardCard
           key={entry.userId}
@@ -403,7 +466,7 @@ function LeaderboardTabPanel({
   const pageEntries = entries.slice(start, start + LEADERBOARD_PAGE_SIZE);
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pt-2.5 pb-6 md:py-2.5 md:pb-2.5 [scrollbar-gutter:stable]">
+    <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pt-3 pb-6 md:py-3 md:pb-3 [scrollbar-gutter:stable]">
       <LeaderboardList
         entries={pageEntries}
         tab={tab}
@@ -439,6 +502,7 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
   const [reopenLeaderboardAfterProfile, setReopenLeaderboardAfterProfile] =
     useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const fetchInFlightRef = useRef(false);
 
   useEffect(() => {
     function onRequestOpen() {
@@ -479,13 +543,18 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
   }, []);
 
   const fetchLeaderboards = useCallback(async (silent = false) => {
+    if (fetchInFlightRef.current) return;
+    fetchInFlightRef.current = true;
+
     if (!silent) setLoading(true);
     else setRefreshing(true);
 
     try {
-      const response = await fetch("/api/leaderboards", {
-        credentials: "same-origin",
-      });
+      const response = await fetchWithTimeout(
+        "/api/leaderboards",
+        { credentials: "same-origin" },
+        API_FETCH_TIMEOUT_MS
+      );
 
       if (!response.ok) {
         throw new Error("fetch failed");
@@ -498,8 +567,9 @@ export function LeaderboardNavButton({ className }: { className?: string }) {
       setAnimateKey(payload.fetchedAt);
     } catch {
       setFetchError(true);
-      if (!silent) setData(null);
+      // 失敗／逾時保留舊資料，勿整頁清空
     } finally {
+      fetchInFlightRef.current = false;
       if (!silent) setLoading(false);
       setRefreshing(false);
     }

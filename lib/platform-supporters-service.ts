@@ -8,9 +8,16 @@ import { resolveVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
 import {
   VIRTUAL_SVIP_PLAYER_IDS,
   VIRTUAL_VIP_PLAYER_IDS,
+  VIRTUAL_LIFETIME_PLAYER_IDS,
   getVirtualPlayerSupporterBadge,
+  isVirtualPlayerLifetimeSupporter,
 } from "@/lib/virtual-player-supporter";
 import { getVirtualPlayerById } from "@/lib/virtual-players";
+import {
+  SERVER_QUERY_TIMEOUT_MS,
+  isTimeoutError,
+  withTimeout,
+} from "@/lib/with-timeout";
 
 export type PlatformSupporterPublic = {
   id: string;
@@ -29,8 +36,8 @@ export type PlatformSupportersResponse = {
   total: number;
 };
 
-const DISPLAY_LIMIT = 24;
-const CACHE_TTL_MS = 20_000;
+const DISPLAY_LIMIT = 36;
+const CACHE_TTL_MS = 8_000;
 
 type ProfileRow = {
   id: string;
@@ -39,6 +46,7 @@ type ProfileRow = {
   supporter_badge: string | null;
   supporter_lifetime: boolean | null;
   supporter_since: string | null;
+  is_admin: boolean | null;
 };
 
 type SupportersCache = {
@@ -48,8 +56,14 @@ type SupportersCache = {
 
 let supportersCache: SupportersCache | null = null;
 
+/** 授予／撤銷／管理員旗標變更後呼叫，避免牆面卡住舊資料 */
+export function invalidatePlatformSupportersCache() {
+  supportersCache = null;
+}
+
 function tierRank(tier: SupporterDisplayTier, lifetime: boolean): number {
-  if (lifetime || tier === "premium") return 0;
+  if (lifetime || tier === "lifetime") return -1;
+  if (tier === "premium") return 0;
   if (tier === "basic") return 1;
   return 2;
 }
@@ -67,13 +81,16 @@ function sortSupporters(a: PlatformSupporterPublic, b: PlatformSupporterPublic) 
 }
 
 function mapRow(row: ProfileRow): PlatformSupporterPublic {
+  const isSuperAdmin = row.is_admin === true;
   const supporterBadge = row.supporter_badge?.trim() || null;
-  const supporterLifetime = row.supporter_lifetime === true;
+  const supporterLifetime =
+    row.supporter_lifetime === true || isSuperAdmin;
   const tier = getSupporterDisplayTier(
     true,
     supporterBadge,
     null,
-    supporterLifetime
+    supporterLifetime,
+    isSuperAdmin
   );
 
   return {
@@ -105,7 +122,11 @@ function virtualSupporterSince(playerId: string): string {
 }
 
 function buildVirtualSupporterEntries(): PlatformSupporterPublic[] {
-  const ids = [...VIRTUAL_SVIP_PLAYER_IDS, ...VIRTUAL_VIP_PLAYER_IDS];
+  const ids = [
+    ...VIRTUAL_LIFETIME_PLAYER_IDS,
+    ...VIRTUAL_SVIP_PLAYER_IDS,
+    ...VIRTUAL_VIP_PLAYER_IDS,
+  ];
   const entries: PlatformSupporterPublic[] = [];
 
   for (const playerId of ids) {
@@ -115,13 +136,19 @@ function buildVirtualSupporterEntries(): PlatformSupporterPublic[] {
     const supporterBadge = getVirtualPlayerSupporterBadge(playerId);
     if (!supporterBadge) continue;
 
-    const tier = getSupporterDisplayTier(true, supporterBadge);
+    const supporterLifetime = isVirtualPlayerLifetimeSupporter(playerId);
+    const tier = getSupporterDisplayTier(
+      true,
+      supporterBadge,
+      null,
+      supporterLifetime
+    );
     entries.push({
       id: `${VIRTUAL_LEADERBOARD_USER_PREFIX}${playerId}`,
       displayName: player.displayName,
       avatarUrl: resolveVirtualPlayerAvatarUrl(playerId),
       supporterBadge,
-      supporterLifetime: false,
+      supporterLifetime,
       supporterSince: virtualSupporterSince(playerId),
       tier,
       virtualPlayerId: playerId,
@@ -139,37 +166,55 @@ export async function listPlatformSupporters(
     return supportersCache.payload;
   }
 
-  const { data, error } = await supabase
-    .from("profiles")
-    .select(
-      "id, display_name, avatar_url, supporter_badge, supporter_lifetime, supporter_since"
-    )
-    .eq("is_supporter", true);
+  try {
+    // 含 is_admin：超管顯示為 LEGEND，即使 DB 未標 is_supporter
+    const { data, error } = await withTimeout(
+      Promise.resolve(
+        supabase
+          .from("profiles")
+          .select(
+            "id, display_name, avatar_url, supporter_badge, supporter_lifetime, supporter_since, is_admin"
+          )
+          .or("is_supporter.eq.true,is_admin.eq.true")
+      ),
+      SERVER_QUERY_TIMEOUT_MS,
+      "listPlatformSupporters"
+    );
 
-  if (error) {
-    throw new Error(`讀取平台支持者失敗：${error.message}`);
+    if (error) {
+      if (supportersCache) return supportersCache.payload;
+      throw new Error(`讀取平台支持者失敗：${error.message}`);
+    }
+
+    const real = (data as ProfileRow[] | null ?? []).map(mapRow);
+    const realNames = new Set(
+      real.map((item) => item.displayName.trim().toLowerCase())
+    );
+
+    // 若真實會員已用同名，略過虛擬條目，避免牆上看起來像重複帳號
+    const virtual = buildVirtualSupporterEntries().filter(
+      (item) => !realNames.has(item.displayName.trim().toLowerCase())
+    );
+
+    const all = [...real, ...virtual].sort(sortSupporters);
+    const payload: PlatformSupportersResponse = {
+      supporters: all.slice(0, DISPLAY_LIMIT),
+      total: all.length,
+    };
+
+    supportersCache = {
+      expiresAt: Date.now() + CACHE_TTL_MS,
+      payload,
+    };
+
+    return payload;
+  } catch (error) {
+    if (supportersCache) {
+      if (isTimeoutError(error)) {
+        console.warn("[supporters] query timed out; using stale cache");
+      }
+      return supportersCache.payload;
+    }
+    throw error;
   }
-
-  const real = (data as ProfileRow[] | null ?? []).map(mapRow);
-  const realNames = new Set(
-    real.map((item) => item.displayName.trim().toLowerCase())
-  );
-
-  // 若真實會員已用同名，略過虛擬條目，避免牆上看起來像重複帳號
-  const virtual = buildVirtualSupporterEntries().filter(
-    (item) => !realNames.has(item.displayName.trim().toLowerCase())
-  );
-
-  const all = [...real, ...virtual].sort(sortSupporters);
-  const payload: PlatformSupportersResponse = {
-    supporters: all.slice(0, DISPLAY_LIMIT),
-    total: all.length,
-  };
-
-  supportersCache = {
-    expiresAt: now + CACHE_TTL_MS,
-    payload,
-  };
-
-  return payload;
 }

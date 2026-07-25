@@ -32,6 +32,7 @@ import { getVirtualPlayerById } from "@/lib/virtual-players";
 import { getVirtualPlayerSupporterFlags } from "@/lib/virtual-player-supporter";
 import {
   getSupporterDisplayTier,
+  isSvipLikeTier,
   supporterMessageContentClassByTier,
   type SupporterDisplayTier,
 } from "@/lib/supporter-tier";
@@ -76,10 +77,12 @@ function DmMessageBubble({
             />
           </div>
         ) : null}
-        {isSupporter && supporterTier === "premium" ? (
+        {isSupporter && isSvipLikeTier(supporterTier ?? "none") ? (
           <RainbowSafeText
             text={content}
-            rainbowClassName={supporterMessageContentClassByTier.premium}
+            rainbowClassName={
+              supporterMessageContentClassByTier[supporterTier ?? "premium"]
+            }
           />
         ) : (
           <span

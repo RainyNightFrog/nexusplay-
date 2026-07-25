@@ -21,6 +21,11 @@ import {
   getVirtualPlatformLeaderboardEntries,
   mergePlatformLeaderboardEntries,
 } from "@/lib/platform-leaderboard-virtual";
+import {
+  SERVER_QUERY_TIMEOUT_MS,
+  isTimeoutError,
+  withTimeout,
+} from "@/lib/with-timeout";
 
 type ProfileRow = {
   id: string;
@@ -28,6 +33,7 @@ type ProfileRow = {
   avatar_url: string | null;
   is_supporter: boolean | null;
   supporter_badge: string | null;
+  supporter_lifetime: boolean | null;
   is_admin: boolean | null;
 };
 
@@ -341,8 +347,11 @@ function mapEntries(
       isMe: currentUserId ? isMe : undefined,
       isDonationMasked,
       donationTier,
-      isSupporter: profile?.is_supporter === true,
+      isSupporter:
+        profile?.is_supporter === true || profile?.is_admin === true,
       supporterBadge: profile?.supporter_badge ?? null,
+      supporterLifetime:
+        profile?.supporter_lifetime === true || profile?.is_admin === true,
       adminRole,
     };
   });
@@ -358,7 +367,7 @@ async function loadProfiles(
   const { data, error } = await supabase
     .from("profiles")
     .select(
-      "id, display_name, avatar_url, is_supporter, supporter_badge, is_admin"
+      "id, display_name, avatar_url, is_supporter, supporter_badge, supporter_lifetime, is_admin"
     )
     .in("id", uniqueIds);
 
@@ -379,42 +388,58 @@ async function loadLeaderboardCore(
     return leaderboardCoreCache;
   }
 
-  // 冷啟動時 backfill 與 listUsers 並行，避免串行多等一輪 Auth API
-  const [, authFlags] = await Promise.all([
-    ensureActivityStatsBackfill(supabase),
-    loadAuthUserFlags(supabase),
-  ]);
-  const ambientBotIds = authFlags.ambientBotIds;
+  try {
+    return await withTimeout(
+      (async () => {
+        // 冷啟動時 backfill 與 listUsers 並行，避免串行多等一輪 Auth API
+        const [, authFlags] = await Promise.all([
+          ensureActivityStatsBackfill(supabase),
+          loadAuthUserFlags(supabase),
+        ]);
+        const ambientBotIds = authFlags.ambientBotIds;
 
-  const [onlineRows, playRows, donatedRows] = await Promise.all([
-    fetchTopByColumn(supabase, "total_online_time", ambientBotIds),
-    fetchTopByColumn(supabase, "total_play_time", ambientBotIds),
-    fetchTopContributionRows(supabase, ambientBotIds),
-  ]);
+        const [onlineRows, playRows, donatedRows] = await Promise.all([
+          fetchTopByColumn(supabase, "total_online_time", ambientBotIds),
+          fetchTopByColumn(supabase, "total_play_time", ambientBotIds),
+          fetchTopContributionRows(supabase, ambientBotIds),
+        ]);
 
-  const userIds = [
-    ...onlineRows.map((row) => row.user_id),
-    ...playRows.map((row) => row.user_id),
-    ...donatedRows.map((row) => row.user_id),
-  ];
+        const userIds = [
+          ...onlineRows.map((row) => row.user_id),
+          ...playRows.map((row) => row.user_id),
+          ...donatedRows.map((row) => row.user_id),
+        ];
 
-  const [profiles, titleMap, cosmeticsMap] = await Promise.all([
-    loadProfiles(supabase, userIds),
-    resolveEquippedTitles(supabase, userIds),
-    buildCosmeticsCssMap(supabase, userIds),
-  ]);
+        const [profiles, titleMap, cosmeticsMap] = await Promise.all([
+          loadProfiles(supabase, userIds),
+          resolveEquippedTitles(supabase, userIds),
+          buildCosmeticsCssMap(supabase, userIds),
+        ]);
 
-  leaderboardCoreCache = {
-    expiresAt: now + LEADERBOARD_CACHE_TTL_MS,
-    onlineRows,
-    playRows,
-    donatedRows,
-    profiles,
-    titleMap,
-    cosmeticsMap,
-    metadataAdminIds: authFlags.metadataAdminIds,
-  };
-  return leaderboardCoreCache;
+        leaderboardCoreCache = {
+          expiresAt: Date.now() + LEADERBOARD_CACHE_TTL_MS,
+          onlineRows,
+          playRows,
+          donatedRows,
+          profiles,
+          titleMap,
+          cosmeticsMap,
+          metadataAdminIds: authFlags.metadataAdminIds,
+        };
+        return leaderboardCoreCache;
+      })(),
+      SERVER_QUERY_TIMEOUT_MS,
+      "loadLeaderboardCore"
+    );
+  } catch (error) {
+    if (leaderboardCoreCache) {
+      if (isTimeoutError(error)) {
+        console.warn("[leaderboard] core load timed out; using stale cache");
+      }
+      return leaderboardCoreCache;
+    }
+    throw error;
+  }
 }
 
 export async function getPlatformLeaderboards(

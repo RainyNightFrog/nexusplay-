@@ -79,6 +79,7 @@ export type ChatPlayerPublicProfile = {
   countryCode: string | null;
   isSupporter: boolean;
   supporterBadge: string | null;
+  supporterLifetime: boolean;
   showcaseTags: ProfileShowcaseTagPayload[];
 };
 
@@ -130,7 +131,7 @@ async function loadRealUserProfile(
     supabase
       .from("profiles")
       .select(
-        "id, display_name, avatar_url, role, bio, player_number, is_supporter, supporter_badge, is_admin, created_at"
+        "id, display_name, avatar_url, role, bio, player_number, is_supporter, supporter_badge, supporter_lifetime, is_admin, created_at"
       )
       .eq("id", userId)
       .maybeSingle(),
@@ -293,8 +294,10 @@ async function loadRealUserProfile(
       playSeconds: activity?.total_play_time ?? 0,
       lastActiveAt,
       countryCode,
-      isSupporter: profile.is_supporter === true,
+      isSupporter: profile.is_supporter === true || profile.is_admin === true,
       supporterBadge: readOptionalString(profile.supporter_badge),
+      supporterLifetime:
+        profile.supporter_lifetime === true || profile.is_admin === true,
       showcaseTags: [],
     },
     showcasePreferences,
@@ -388,6 +391,7 @@ async function loadVirtualPlayerProfile(
     countryCode: getVirtualPlayerCountryCode(virtualPlayerId),
     isSupporter: virtualSupporterFlags?.isSupporter === true,
     supporterBadge: virtualSupporterFlags?.badge ?? null,
+    supporterLifetime: virtualSupporterFlags?.lifetime === true,
     showcaseTags: [],
   };
 }
@@ -501,7 +505,9 @@ export async function getChatPlayerPublicProfile(
   }
 
   if (userId) {
-    const ambientMap = await getAmbientUserPlayerMap(supabase, [userId]);
+    const ambientMap = await getAmbientUserPlayerMap(supabase, [userId]).catch(
+      () => new Map<string, string>()
+    );
     const mappedVirtualId = ambientMap.get(userId);
     if (mappedVirtualId) {
       const [virtualProfile, realLoaded] = await Promise.all([
@@ -515,7 +521,7 @@ export async function getChatPlayerPublicProfile(
           supabase,
           virtualPlayerId ?? mappedVirtualId,
           { preferCreator: profile.isCreator }
-        );
+        ).catch(() => null);
         profile = {
           ...profile,
           userId: ambientUserId ?? userId,
@@ -544,7 +550,7 @@ export async function getChatPlayerPublicProfile(
       supabase,
       profile.virtualPlayerId,
       { preferCreator: profile.isCreator }
-    );
+    ).catch(() => null);
     if (ambientUserId) {
       profile = { ...profile, userId: ambientUserId };
     }

@@ -11,6 +11,7 @@ import {
 } from "@/lib/chat-ambient-schedule";
 import { CHAT_LIMITS, type ChatChannel } from "@/lib/chat";
 import { createServerSupabase } from "@/lib/supabase-server";
+import { AMBIENT_BOOTSTRAP_BUDGET_MS } from "@/lib/with-timeout";
 
 const lastSeedAt: Partial<Record<ChatChannel, number>> = {};
 
@@ -84,8 +85,10 @@ export async function maintainAmbientChat(channel: ChatChannel) {
     Math.max(1, Math.floor(age / interval))
   );
   const staggerMs = Math.max(25_000, Math.floor(interval * 0.4));
+  const deadline = Date.now() + AMBIENT_BOOTSTRAP_BUDGET_MS;
 
   for (let i = 0; i < rounds; i += 1) {
+    if (Date.now() >= deadline) break;
     const at = new Date(Date.now() - (rounds - 1 - i) * staggerMs);
     if (channel === "world") {
       await postAmbientWorldChat({ at });

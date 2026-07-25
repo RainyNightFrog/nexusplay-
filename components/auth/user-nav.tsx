@@ -13,16 +13,21 @@ import { getCreatorDashboardHref } from "@/lib/creator-nav";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { useAuth } from "@/hooks/use-auth";
 import { usePwaInstallOptional } from "@/components/pwa/PwaInstallPrompt";
+import { useAppSettings } from "@/components/settings/app-settings-provider";
 import {
   getSupporterDisplayTierFromProfile,
+  isSvipLikeTier,
+  supporterAvatarRingClassByTier,
   supporterUsernameClassByTier,
 } from "@/lib/supporter-tier";
+import { shouldShowSupporterAvatarFx } from "@/lib/cosmetic-fx-prefs";
 import { cn } from "@/lib/utils";
 
 export function UserNav() {
   const t = useTranslations("nav");
   const tPwa = useTranslations("pwa");
   const { profile, loading, signOut, isCreator, isAdmin } = useAuth();
+  const { settings } = useAppSettings();
   const pwa = usePwaInstallOptional();
   const [open, setOpen] = useState(false);
   const [achievementsOpen, setAchievementsOpen] = useState(false);
@@ -68,6 +73,11 @@ export function UserNav() {
 
   const initials = getInitials(profile.display_name);
   const supporterTier = getSupporterDisplayTierFromProfile(profile);
+  const showSupporterFx = shouldShowSupporterAvatarFx({
+    settings,
+    isSelf: true,
+    tier: supporterTier,
+  });
   const roleLabel = isAdmin
     ? t("roleAdmin")
     : isCreator
@@ -77,7 +87,15 @@ export function UserNav() {
   return (
     <div className="flex items-center gap-1 md:gap-2">
       <NotificationBell />
-      <div className="relative" ref={menuRef}>
+      <div
+        className={cn(
+          "relative",
+          showSupporterFx &&
+            supporterTier !== "none" &&
+            supporterAvatarRingClassByTier[supporterTier]
+        )}
+        ref={menuRef}
+      >
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
@@ -86,7 +104,7 @@ export function UserNav() {
           "border border-cyan-400/30 bg-gradient-to-br from-cyan-500/30 to-violet-600/40",
           "shadow-md shadow-cyan-500/20 transition-transform hover:scale-105",
           "md:size-9",
-          profile.equipped_avatar_frame_class
+          !settings.disableCosmeticFx && profile.equipped_avatar_frame_class
         )}
         aria-label={t("userMenu")}
       >
@@ -117,21 +135,35 @@ export function UserNav() {
             <UserBadge
               username={profile.display_name}
               title={profile.equipped_title}
-              isSupporter={profile.is_supporter}
+              isSupporter={showSupporterFx && profile.is_supporter}
               supporterBadge={profile.supporter_badge}
+              supporterLifetime={
+                showSupporterFx && profile.supporter_lifetime
+              }
+              showSupporterBadge={showSupporterFx}
               layout="stacked"
-              nameColorClass={profile.equipped_name_color_class}
+              nameColorClass={
+                settings.disableCosmeticFx
+                  ? null
+                  : profile.equipped_name_color_class
+              }
               usernameClassName="truncate text-sm font-medium text-white"
               titleClassName="text-[10px]"
             />
             <p
               className={cn(
                 "mt-0.5 text-xs",
-                supporterTier === "none" && "text-zinc-500",
-                supporterTier === "basic" && supporterUsernameClassByTier.basic,
-                supporterTier === "premium" &&
+                (!showSupporterFx || supporterTier === "none") &&
+                  "text-zinc-500",
+                showSupporterFx &&
+                  supporterTier === "basic" &&
+                  supporterUsernameClassByTier.basic,
+                showSupporterFx &&
+                  isSvipLikeTier(supporterTier) &&
                   cn(
-                    supporterUsernameClassByTier.premium,
+                    supporterUsernameClassByTier[
+                      supporterTier === "lifetime" ? "lifetime" : "premium"
+                    ],
                     "!bg-clip-text !text-transparent"
                   )
               )}

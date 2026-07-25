@@ -824,9 +824,29 @@
 .title-tier-no-animate.title-tier-mythic,
 .title-tier-no-animate.animate-gradient,
 .title-tier-no-animate[class*="title-ap-"],
-.title-tier-no-animate[class*="ap-name-"] {
+.title-tier-no-animate[class*="ap-name-"],
+.title-tier-no-animate.title-rainynightfrog {
   animation: none;
   background-position: 0% 50%;
+}
+
+/* 列表／compact：凍結 RainyNightFrog 外框雷電與 filter 動畫 */
+.title-fx-static.title-rainynightfrog-frame,
+.title-fx-static.title-rainynightfrog-frame::before,
+.title-fx-static.title-rainynightfrog-frame::after {
+  animation: none !important;
+  filter: none !important;
+}
+
+.title-fx-static.title-rainynightfrog-frame {
+  box-shadow:
+    0 0 0 1px rgba(56, 189, 248, 0.45),
+    0 0 8px rgba(56, 189, 248, 0.25);
+}
+
+.title-fx-static.title-rainynightfrog-frame::before,
+.title-fx-static.title-rainynightfrog-frame::after {
+  opacity: 0.55 !important;
 }
 
 .animate-gradient {
@@ -878,19 +898,395 @@
   animation-duration: 3.5s;
 }
 
+.supporter-username-lifetime {
+  background-image: linear-gradient(
+    90deg,
+    #fde68a,
+    #67e8f9,
+    #c4b5fd,
+    #f9a8d4,
+    #4ade80,
+    #fbbf24,
+    #38bdf8,
+    #fde68a
+  );
+  background-size: 340% auto;
+  animation-duration: 2.4s;
+  filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.45));
+}
+
+/* ── 支持者頭像框（VIP < SVIP < 永久傳說）── */
+@keyframes supporter-avatar-vip-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 2px rgba(251, 191, 36, 0.75),
+      0 0 14px rgba(251, 191, 36, 0.35),
+      0 0 24px rgba(245, 158, 11, 0.2);
+  }
+  50% {
+    box-shadow:
+      0 0 0 2px rgba(253, 224, 71, 0.95),
+      0 0 18px rgba(251, 191, 36, 0.55),
+      0 0 30px rgba(252, 211, 77, 0.35);
+  }
+}
+
+@keyframes supporter-avatar-svip-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 2px rgba(196, 181, 253, 0.85),
+      0 0 16px rgba(167, 139, 250, 0.45),
+      0 0 28px rgba(244, 114, 182, 0.25);
+  }
+  45% {
+    box-shadow:
+      0 0 0 2px rgba(255, 255, 255, 0.75),
+      0 0 20px rgba(167, 139, 250, 0.65),
+      0 0 34px rgba(34, 211, 238, 0.4),
+      0 0 44px rgba(244, 114, 182, 0.3);
+  }
+}
+
+@keyframes supporter-avatar-legend-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 2px rgba(248, 113, 113, 0.95),
+      0 0 14px rgba(239, 68, 68, 0.65),
+      0 0 26px rgba(59, 130, 246, 0.55),
+      0 0 40px rgba(30, 64, 175, 0.45);
+  }
+  38% {
+    box-shadow:
+      0 0 0 2px rgba(96, 165, 250, 1),
+      0 0 18px rgba(239, 68, 68, 0.9),
+      0 0 32px rgba(37, 99, 235, 0.75),
+      0 0 48px rgba(15, 23, 42, 0.85),
+      0 0 64px rgba(185, 28, 28, 0.45);
+  }
+  58% {
+    box-shadow:
+      0 0 0 2px rgba(239, 68, 68, 0.95),
+      0 0 16px rgba(59, 130, 246, 0.85),
+      0 0 30px rgba(220, 38, 38, 0.55),
+      0 0 46px rgba(30, 58, 138, 0.55);
+  }
+}
+
+.supporter-avatar-fx {
+  position: relative;
+  display: inline-flex;
+  border-radius: 9999px;
+  overflow: visible !important;
+  isolation: isolate;
+}
+
+.supporter-avatar-fx::before,
+.supporter-avatar-fx::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* VIP：金色柔光環＋慢速軌道火花 */
+.supporter-avatar-fx--vip {
+  animation: supporter-avatar-vip-glow 2.8s ease-in-out infinite;
+}
+
+.supporter-avatar-fx--vip::before {
+  inset: -5px;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(251, 191, 36, 0.15) 30deg,
+    rgba(253, 224, 71, 0.95) 42deg,
+    rgba(255, 255, 255, 0.8) 48deg,
+    transparent 60deg,
+    transparent 180deg,
+    rgba(245, 158, 11, 0.9) 195deg,
+    transparent 215deg
+  );
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 3px),
+    #000 calc(100% - 1.5px)
+  );
+  mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 3px),
+    #000 calc(100% - 1.5px)
+  );
+  animation: ap-frame-orbit-spin 4.5s linear infinite;
+  opacity: 0.9;
+}
+
+.supporter-avatar-fx--vip::after {
+  inset: -8px;
+  background:
+    radial-gradient(
+      circle at 50% 4%,
+      rgba(253, 224, 71, 0.95) 0 1.2px,
+      transparent 2px
+    ),
+    radial-gradient(
+      circle at 90% 40%,
+      rgba(251, 191, 36, 0.9) 0 1.1px,
+      transparent 1.9px
+    ),
+    radial-gradient(
+      circle at 20% 85%,
+      rgba(255, 255, 255, 0.85) 0 1px,
+      transparent 1.8px
+    );
+  animation: ap-frame-orbit-spin 6s linear infinite reverse;
+  opacity: 0.85;
+}
+
+/* SVIP：紫青電弧環＋中等閃爍 */
+.supporter-avatar-fx--svip {
+  animation: supporter-avatar-svip-glow 2.2s ease-in-out infinite;
+}
+
+.supporter-avatar-fx--svip::before {
+  inset: -6px;
+  background: conic-gradient(
+    from 10deg,
+    transparent 0deg,
+    rgba(167, 139, 250, 0.2) 18deg,
+    rgba(255, 255, 255, 0.95) 28deg,
+    rgba(103, 232, 249, 0.95) 34deg,
+    rgba(244, 114, 182, 0.85) 40deg,
+    transparent 55deg,
+    transparent 120deg,
+    rgba(192, 132, 252, 0.95) 135deg,
+    rgba(255, 255, 255, 0.85) 142deg,
+    transparent 158deg,
+    transparent 240deg,
+    rgba(34, 211, 238, 0.9) 255deg,
+    transparent 275deg
+  );
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 3.5px),
+    #000 calc(100% - 1.5px)
+  );
+  mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 3.5px),
+    #000 calc(100% - 1.5px)
+  );
+  animation:
+    ap-frame-orbit-spin 3.4s linear infinite,
+    ap-frame-bolt-flicker 2s ease-in-out infinite;
+}
+
+.supporter-avatar-fx--svip::after {
+  inset: -10px;
+  background:
+    radial-gradient(
+      circle at 50% 3%,
+      rgba(255, 255, 255, 0.95) 0 1.3px,
+      transparent 2.2px
+    ),
+    radial-gradient(
+      circle at 88% 25%,
+      rgba(103, 232, 249, 0.95) 0 1.2px,
+      transparent 2px
+    ),
+    radial-gradient(
+      circle at 92% 60%,
+      rgba(167, 139, 250, 0.95) 0 1.2px,
+      transparent 2px
+    ),
+    radial-gradient(
+      circle at 70% 90%,
+      rgba(244, 114, 182, 0.9) 0 1.1px,
+      transparent 1.9px
+    ),
+    radial-gradient(
+      circle at 15% 78%,
+      rgba(192, 132, 252, 0.9) 0 1.2px,
+      transparent 2px
+    ),
+    radial-gradient(
+      circle at 10% 30%,
+      rgba(34, 211, 238, 0.9) 0 1.1px,
+      transparent 1.9px
+    );
+  animation:
+    ap-frame-orbit-spin 5s linear infinite reverse,
+    ap-frame-bolt-flicker 2.4s ease-in-out infinite reverse;
+}
+
+/* 永久傳說：頭像外圍閃電（紅／藍／黑） */
+.supporter-avatar-fx--legend {
+  animation: supporter-avatar-legend-glow 1.7s ease-in-out infinite;
+}
+
+.supporter-avatar-fx--legend::before {
+  inset: -8px;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(239, 68, 68, 0.3) 10deg,
+    rgba(255, 255, 255, 0.95) 18deg,
+    rgba(59, 130, 246, 1) 26deg,
+    rgba(15, 15, 15, 0.95) 34deg,
+    transparent 48deg,
+    transparent 70deg,
+    rgba(37, 99, 235, 1) 82deg,
+    rgba(239, 68, 68, 0.95) 90deg,
+    transparent 105deg,
+    transparent 140deg,
+    rgba(15, 15, 15, 1) 152deg,
+    rgba(96, 165, 250, 0.95) 160deg,
+    transparent 175deg,
+    transparent 210deg,
+    rgba(220, 38, 38, 1) 222deg,
+    rgba(30, 58, 138, 0.95) 230deg,
+    transparent 245deg,
+    transparent 290deg,
+    rgba(59, 130, 246, 1) 302deg,
+    rgba(127, 29, 29, 0.95) 310deg,
+    transparent 325deg
+  );
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 4px),
+    #000 calc(100% - 2px)
+  );
+  mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 4px),
+    #000 calc(100% - 2px)
+  );
+  animation:
+    ap-frame-orbit-spin 2.4s linear infinite,
+    ap-frame-bolt-flicker 1.5s ease-in-out infinite;
+}
+
+.supporter-avatar-fx--legend::after {
+  inset: -13px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none'%3E%3Cg stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M50 1 L55 12 L50 12 L58 26 L45 14 L51 14 Z' fill='%23ef4444' stroke='%23171717' stroke-width='0.45'/%3E%3Cpath d='M88 16 L81 24 L84 25 L73 36 L85 28 L82 27 Z' fill='%233b82f6' stroke='%230a0a0a' stroke-width='0.45'/%3E%3Cpath d='M99 50 L88 55 L88 50 L75 58 L87 45 L87 50 Z' fill='%230a0a0a' stroke='%2360a5fa' stroke-width='0.45'/%3E%3Cpath d='M86 86 L78 78 L81 76 L70 66 L84 74 L80 76 Z' fill='%23dc2626' stroke='%231e3a8a' stroke-width='0.45'/%3E%3Cpath d='M50 99 L45 88 L50 88 L42 74 L55 86 L49 86 Z' fill='%232563eb' stroke='%230a0a0a' stroke-width='0.45'/%3E%3Cpath d='M14 86 L22 78 L19 76 L30 66 L16 74 L20 76 Z' fill='%23171717' stroke='%23ef4444' stroke-width='0.45'/%3E%3Cpath d='M1 50 L12 45 L12 50 L25 42 L13 55 L13 50 Z' fill='%23f87171' stroke='%230a0a0a' stroke-width='0.45'/%3E%3Cpath d='M14 16 L22 24 L19 25 L30 36 L16 28 L20 27 Z' fill='%231d4ed8' stroke='%23ef4444' stroke-width='0.45'/%3E%3C/g%3E%3C/svg%3E"),
+    radial-gradient(
+      circle at 50% 2%,
+      rgba(239, 68, 68, 0.98) 0 1.5px,
+      transparent 2.5px
+    ),
+    radial-gradient(
+      circle at 93% 28%,
+      rgba(59, 130, 246, 0.95) 0 1.3px,
+      transparent 2.2px
+    ),
+    radial-gradient(
+      circle at 82% 90%,
+      rgba(15, 15, 15, 0.98) 0 1.3px,
+      transparent 2.2px
+    ),
+    radial-gradient(
+      circle at 12% 75%,
+      rgba(37, 99, 235, 0.95) 0 1.3px,
+      transparent 2.2px
+    ),
+    radial-gradient(
+      circle at 8% 25%,
+      rgba(220, 38, 38, 0.95) 0 1.2px,
+      transparent 2px
+    );
+  background-size: 100% 100%, auto, auto, auto, auto, auto;
+  background-repeat: no-repeat;
+  animation:
+    ap-frame-orbit-spin 5.2s linear infinite reverse,
+    ap-frame-spark-twinkle 1.4s ease-in-out infinite,
+    ap-frame-bolt-flicker 1.7s ease-in-out infinite reverse;
+}
+
+/* 電腦完整特效：略降刷新負擔（仍保留視覺，但少動 filter／box-shadow） */
+@media (hover: hover) and (pointer: fine) {
+  .supporter-avatar-fx--vip {
+    animation-duration: 3.6s;
+  }
+
+  .supporter-avatar-fx--svip {
+    animation-duration: 3s;
+  }
+
+  .supporter-avatar-fx--legend {
+    animation-duration: 2.4s;
+  }
+
+  .supporter-avatar-fx--legend::after {
+    /* SVG 閃電層改為較慢閃爍，減少每幀 filter 重繪壓力 */
+    animation:
+      ap-frame-orbit-spin 7s linear infinite reverse,
+      ap-frame-spark-twinkle 2.2s ease-in-out infinite;
+  }
+}
+
+/* 列表精簡版：只留靜態色環，關掉 ::before/::after 與 box-shadow 動畫 */
+.supporter-avatar-fx--lite {
+  animation: none !important;
+}
+
+.supporter-avatar-fx--lite.supporter-avatar-fx--vip {
+  box-shadow:
+    0 0 0 2px rgba(251, 191, 36, 0.8),
+    0 0 12px rgba(251, 191, 36, 0.35);
+}
+
+.supporter-avatar-fx--lite.supporter-avatar-fx--svip {
+  box-shadow:
+    0 0 0 2px rgba(196, 181, 253, 0.85),
+    0 0 14px rgba(167, 139, 250, 0.4);
+}
+
+.supporter-avatar-fx--lite.supporter-avatar-fx--legend {
+  box-shadow:
+    0 0 0 2px rgba(248, 113, 113, 0.95),
+    0 0 14px rgba(59, 130, 246, 0.55),
+    0 0 22px rgba(30, 64, 175, 0.45);
+}
+
+.supporter-avatar-fx--lite::before,
+.supporter-avatar-fx--lite::after {
+  content: none !important;
+  display: none !important;
+  animation: none !important;
+}
+
 /* 手機：減輕特效；勿對 background-clip 文字使用 filter（會變空白／亂碼） */
 @media (max-width: 767px) {
   .supporter-username,
-  .supporter-username-premium {
+  .supporter-username-premium,
+  .supporter-username-lifetime {
     animation: none;
     background-position: 50% 50%;
     filter: none;
+  }
+
+  .title-rainynightfrog,
+  .title-rainynightfrog-frame,
+  .title-rainynightfrog-frame::before,
+  .title-rainynightfrog-frame::after {
+    animation: none;
+    filter: none;
+  }
+
+  .title-rainynightfrog-frame {
+    box-shadow:
+      0 0 0 1px rgba(56, 189, 248, 0.45),
+      0 0 8px rgba(56, 189, 248, 0.25);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .supporter-username,
-  .supporter-username-premium {
+  .supporter-username-premium,
+  .supporter-username-lifetime {
     animation: none;
     background-position: 50% 50%;
   }
@@ -981,6 +1377,7 @@
 .title-rainynightfrog-frame {
   position: relative;
   display: inline-block;
+  margin-inline-start: 0.35em;
   padding: 0.18em 0.55em 0.22em;
   border-radius: 0.4em;
   vertical-align: baseline;
@@ -1238,12 +1635,193 @@
   ) !important;
 }
 
+@keyframes ap-frame-orbit-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes ap-frame-orbit-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 2px rgba(167, 139, 250, 0.9),
+      0 0 14px rgba(34, 211, 238, 0.45),
+      0 0 26px rgba(139, 92, 246, 0.4),
+      0 0 36px rgba(99, 102, 241, 0.2);
+  }
+  50% {
+    box-shadow:
+      0 0 0 2px rgba(103, 232, 249, 0.95),
+      0 0 18px rgba(167, 139, 250, 0.65),
+      0 0 32px rgba(34, 211, 238, 0.5),
+      0 0 44px rgba(192, 132, 252, 0.35);
+  }
+}
+
+@keyframes ap-frame-mythic-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 2px rgba(74, 222, 128, 0.95),
+      0 0 16px rgba(34, 211, 238, 0.55),
+      0 0 28px rgba(192, 132, 252, 0.45),
+      0 0 40px rgba(251, 191, 36, 0.3);
+  }
+  40% {
+    box-shadow:
+      0 0 0 2px rgba(255, 255, 255, 0.95),
+      0 0 20px rgba(103, 232, 249, 0.85),
+      0 0 36px rgba(74, 222, 128, 0.55),
+      0 0 52px rgba(251, 191, 36, 0.45),
+      0 0 64px rgba(192, 132, 252, 0.35);
+  }
+  55% {
+    box-shadow:
+      0 0 0 2px rgba(251, 191, 36, 0.9),
+      0 0 18px rgba(192, 132, 252, 0.65),
+      0 0 34px rgba(34, 211, 238, 0.5),
+      0 0 48px rgba(74, 222, 128, 0.35);
+  }
+}
+
+@keyframes ap-frame-bolt-flicker {
+  0%,
+  100% {
+    opacity: 0.55;
+    filter: drop-shadow(0 0 2px rgba(103, 232, 249, 0.5));
+  }
+  42% {
+    opacity: 0.8;
+  }
+  46% {
+    opacity: 1;
+    filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.95))
+      drop-shadow(0 0 12px rgba(251, 191, 36, 0.9))
+      drop-shadow(0 0 18px rgba(34, 211, 238, 0.85));
+  }
+  52% {
+    opacity: 0.7;
+  }
+  78% {
+    opacity: 0.95;
+    filter: drop-shadow(0 0 5px rgba(74, 222, 128, 0.85))
+      drop-shadow(0 0 10px rgba(192, 132, 252, 0.7));
+  }
+}
+
+@keyframes ap-frame-spark-twinkle {
+  0%,
+  100% {
+    opacity: 0.65;
+    transform: rotate(0deg) scale(1);
+  }
+  35% {
+    opacity: 1;
+    transform: rotate(12deg) scale(1.04);
+  }
+  55% {
+    opacity: 0.55;
+    transform: rotate(18deg) scale(0.98);
+  }
+  75% {
+    opacity: 0.95;
+    transform: rotate(28deg) scale(1.06);
+  }
+}
+
+/* 傳說：虛空軌道 — 電弧環＋軌道火花 */
 .ap-frame-void-orbit {
-  box-shadow:
-    0 0 0 2px rgba(167, 139, 250, 0.85),
-    0 0 18px rgba(34, 211, 238, 0.45),
-    0 0 28px rgba(139, 92, 246, 0.35);
-  animation: title-gradient-flow 2.4s ease-in-out infinite;
+  position: relative;
+  overflow: visible !important;
+  isolation: isolate;
+  animation: ap-frame-orbit-glow 2.4s ease-in-out infinite;
+}
+
+.ap-frame-void-orbit::before,
+.ap-frame-void-orbit::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.ap-frame-void-orbit::before {
+  inset: -7px;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(167, 139, 250, 0.15) 20deg,
+    rgba(103, 232, 249, 0.95) 32deg,
+    rgba(255, 255, 255, 0.9) 38deg,
+    transparent 48deg,
+    transparent 110deg,
+    rgba(192, 132, 252, 0.9) 122deg,
+    rgba(34, 211, 238, 0.85) 132deg,
+    transparent 145deg,
+    transparent 210deg,
+    rgba(167, 139, 250, 0.95) 222deg,
+    rgba(255, 255, 255, 0.75) 228deg,
+    transparent 240deg,
+    transparent 300deg,
+    rgba(34, 211, 238, 0.9) 312deg,
+    transparent 328deg
+  );
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 3.5px),
+    #000 calc(100% - 2px)
+  );
+  mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 3.5px),
+    #000 calc(100% - 2px)
+  );
+  animation: ap-frame-orbit-spin 3.2s linear infinite;
+}
+
+.ap-frame-void-orbit::after {
+  inset: -11px;
+  background:
+    radial-gradient(
+      circle at 50% 4%,
+      rgba(255, 255, 255, 0.95) 0 1.4px,
+      transparent 2.2px
+    ),
+    radial-gradient(
+      circle at 88% 22%,
+      rgba(103, 232, 249, 0.95) 0 1.3px,
+      transparent 2.1px
+    ),
+    radial-gradient(
+      circle at 94% 55%,
+      rgba(167, 139, 250, 0.95) 0 1.2px,
+      transparent 2px
+    ),
+    radial-gradient(
+      circle at 78% 88%,
+      rgba(34, 211, 238, 0.9) 0 1.3px,
+      transparent 2.1px
+    ),
+    radial-gradient(
+      circle at 28% 92%,
+      rgba(192, 132, 252, 0.95) 0 1.2px,
+      transparent 2px
+    ),
+    radial-gradient(
+      circle at 6% 48%,
+      rgba(103, 232, 249, 0.9) 0 1.3px,
+      transparent 2.1px
+    ),
+    radial-gradient(
+      circle at 18% 14%,
+      rgba(255, 255, 255, 0.85) 0 1.1px,
+      transparent 1.9px
+    );
+  animation:
+    ap-frame-orbit-spin 4.8s linear infinite reverse,
+    ap-frame-bolt-flicker 2.2s ease-in-out infinite;
 }
 
 .ap-name-gold-legend {
@@ -1431,13 +2009,103 @@
   animation: title-gradient-flow 2.8s ease-in-out infinite;
 }
 
+/* 神話：永雨神環 — 頭像外圈閃電＋電弧＋火花 */
 .ap-frame-eternal-rain {
-  box-shadow:
-    0 0 0 2px rgba(74, 222, 128, 0.95),
-    0 0 18px rgba(34, 211, 238, 0.55),
-    0 0 32px rgba(192, 132, 252, 0.45),
-    0 0 40px rgba(251, 191, 36, 0.25);
-  animation: title-gradient-flow 1.7s ease-in-out infinite;
+  position: relative;
+  overflow: visible !important;
+  isolation: isolate;
+  animation: ap-frame-mythic-glow 1.8s ease-in-out infinite;
+}
+
+.ap-frame-eternal-rain::before,
+.ap-frame-eternal-rain::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.ap-frame-eternal-rain::before {
+  inset: -8px;
+  background: conic-gradient(
+    from 20deg,
+    transparent 0deg,
+    rgba(74, 222, 128, 0.2) 12deg,
+    rgba(255, 255, 255, 0.95) 22deg,
+    rgba(103, 232, 249, 1) 28deg,
+    rgba(251, 191, 36, 0.9) 34deg,
+    transparent 48deg,
+    transparent 70deg,
+    rgba(192, 132, 252, 0.95) 82deg,
+    rgba(255, 255, 255, 0.9) 88deg,
+    transparent 102deg,
+    transparent 130deg,
+    rgba(34, 211, 238, 1) 142deg,
+    rgba(74, 222, 128, 0.95) 150deg,
+    transparent 165deg,
+    transparent 195deg,
+    rgba(251, 191, 36, 1) 208deg,
+    rgba(255, 255, 255, 0.95) 214deg,
+    rgba(244, 114, 182, 0.85) 220deg,
+    transparent 235deg,
+    transparent 270deg,
+    rgba(103, 232, 249, 1) 282deg,
+    rgba(255, 255, 255, 0.9) 290deg,
+    transparent 305deg,
+    transparent 330deg,
+    rgba(192, 132, 252, 0.95) 342deg,
+    transparent 355deg
+  );
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 4px),
+    #000 calc(100% - 2px)
+  );
+  mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 4px),
+    #000 calc(100% - 2px)
+  );
+  animation:
+    ap-frame-orbit-spin 2.6s linear infinite,
+    ap-frame-bolt-flicker 1.6s ease-in-out infinite;
+}
+
+.ap-frame-eternal-rain::after {
+  inset: -14px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none'%3E%3Cg stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M50 2 L54 11 L50 11 L56 22 L47 13 L51 13 Z' fill='%23fde047' stroke='%23fff' stroke-width='0.4'/%3E%3Cpath d='M86 18 L80 24 L83 25 L74 34 L84 28 L81 27 Z' fill='%2367e8f9' stroke='%23fff' stroke-width='0.4'/%3E%3Cpath d='M98 50 L89 54 L89 50 L78 56 L87 47 L87 51 Z' fill='%23c084fc' stroke='%23fff' stroke-width='0.4'/%3E%3Cpath d='M84 84 L78 78 L81 77 L72 68 L82 74 L79 75 Z' fill='%234ade80' stroke='%23fff' stroke-width='0.4'/%3E%3Cpath d='M50 98 L46 89 L50 89 L44 78 L53 87 L49 87 Z' fill='%23f472b6' stroke='%23fff' stroke-width='0.4'/%3E%3Cpath d='M16 84 L22 78 L19 77 L28 68 L18 74 L21 75 Z' fill='%2322d3ee' stroke='%23fff' stroke-width='0.4'/%3E%3Cpath d='M2 50 L11 46 L11 50 L22 44 L13 53 L13 49 Z' fill='%23fbbf24' stroke='%23fff' stroke-width='0.4'/%3E%3Cpath d='M16 18 L22 24 L19 25 L28 34 L18 28 L21 27 Z' fill='%23a78bfa' stroke='%23fff' stroke-width='0.4'/%3E%3C/g%3E%3Ccircle cx='50' cy='50' r='38' stroke='url(%23g)' stroke-width='0.6' stroke-dasharray='3 7' opacity='0.55'/%3E%3C/svg%3E"),
+    radial-gradient(
+      circle at 50% 2%,
+      rgba(255, 255, 255, 0.95) 0 1.5px,
+      transparent 2.4px
+    ),
+    radial-gradient(
+      circle at 92% 30%,
+      rgba(103, 232, 249, 0.95) 0 1.3px,
+      transparent 2.2px
+    ),
+    radial-gradient(
+      circle at 80% 90%,
+      rgba(251, 191, 36, 0.95) 0 1.3px,
+      transparent 2.2px
+    ),
+    radial-gradient(
+      circle at 12% 72%,
+      rgba(74, 222, 128, 0.95) 0 1.3px,
+      transparent 2.2px
+    ),
+    radial-gradient(
+      circle at 8% 28%,
+      rgba(192, 132, 252, 0.95) 0 1.2px,
+      transparent 2px
+    );
+  background-size: 100% 100%, auto, auto, auto, auto, auto;
+  background-repeat: no-repeat;
+  animation:
+    ap-frame-orbit-spin 5.5s linear infinite reverse,
+    ap-frame-spark-twinkle 1.5s ease-in-out infinite,
+    ap-frame-bolt-flicker 1.9s ease-in-out infinite reverse;
 }
 
 .ap-bubble-sky {
@@ -1502,9 +2170,131 @@
   .ap-name-crimson,
   .ap-name-prism-myth,
   .supporter-username,
-  .supporter-username-premium {
+  .supporter-username-premium,
+  .supporter-username-lifetime,
+  .title-rainynightfrog {
     animation: none !important;
     background-position: 0% 50% !important;
     filter: none !important;
   }
+
+  .title-rainynightfrog-frame,
+  .title-rainynightfrog-frame::before,
+  .title-rainynightfrog-frame::after {
+    animation: none !important;
+    filter: none !important;
+  }
+
+  .title-rainynightfrog-frame {
+    box-shadow:
+      0 0 0 1px rgba(56, 189, 248, 0.45),
+      0 0 8px rgba(56, 189, 248, 0.25);
+  }
+
+  /* 觸控裝置保留靜態光暈，關閉旋轉／閃爍以免過熱 */
+  .ap-frame-void-orbit,
+  .ap-frame-eternal-rain,
+  .supporter-avatar-fx--vip,
+  .supporter-avatar-fx--svip,
+  .supporter-avatar-fx--legend {
+    animation: none !important;
+  }
+
+  .ap-frame-void-orbit::before,
+  .ap-frame-void-orbit::after,
+  .ap-frame-eternal-rain::before,
+  .ap-frame-eternal-rain::after,
+  .supporter-avatar-fx--vip::before,
+  .supporter-avatar-fx--vip::after,
+  .supporter-avatar-fx--svip::before,
+  .supporter-avatar-fx--svip::after,
+  .supporter-avatar-fx--legend::before,
+  .supporter-avatar-fx--legend::after {
+    animation: none !important;
+    opacity: 0.85 !important;
+    filter: none !important;
+    transform: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ap-frame-void-orbit,
+  .ap-frame-eternal-rain,
+  .supporter-avatar-fx--vip,
+  .supporter-avatar-fx--svip,
+  .supporter-avatar-fx--legend,
+  .ap-frame-void-orbit::before,
+  .ap-frame-void-orbit::after,
+  .ap-frame-eternal-rain::before,
+  .ap-frame-eternal-rain::after,
+  .supporter-avatar-fx--vip::before,
+  .supporter-avatar-fx--vip::after,
+  .supporter-avatar-fx--svip::before,
+  .supporter-avatar-fx--svip::after,
+  .supporter-avatar-fx--legend::before,
+  .supporter-avatar-fx--legend::after,
+  .title-rainynightfrog,
+  .title-rainynightfrog-frame,
+  .title-rainynightfrog-frame::before,
+  .title-rainynightfrog-frame::after {
+    animation: none !important;
+  }
+
+  .title-rainynightfrog-frame::before,
+  .title-rainynightfrog-frame::after {
+    filter: none !important;
+  }
+}
+
+/* 設定：一鍵關閉外觀特效（本機） */
+html[data-disable-cosmetic-fx="true"] .supporter-avatar-fx,
+html[data-disable-cosmetic-fx="true"] .supporter-avatar-fx--vip,
+html[data-disable-cosmetic-fx="true"] .supporter-avatar-fx--svip,
+html[data-disable-cosmetic-fx="true"] .supporter-avatar-fx--legend {
+  animation: none !important;
+  box-shadow: none !important;
+}
+
+html[data-disable-cosmetic-fx="true"] .supporter-avatar-fx::before,
+html[data-disable-cosmetic-fx="true"] .supporter-avatar-fx::after,
+html[data-disable-cosmetic-fx="true"] .supporter-avatar-fx--vip::before,
+html[data-disable-cosmetic-fx="true"] .supporter-avatar-fx--vip::after,
+html[data-disable-cosmetic-fx="true"] .supporter-avatar-fx--svip::before,
+html[data-disable-cosmetic-fx="true"] .supporter-avatar-fx--svip::after,
+html[data-disable-cosmetic-fx="true"] .supporter-avatar-fx--legend::before,
+html[data-disable-cosmetic-fx="true"] .supporter-avatar-fx--legend::after,
+html[data-disable-cosmetic-fx="true"] .ap-frame-void-orbit::before,
+html[data-disable-cosmetic-fx="true"] .ap-frame-void-orbit::after,
+html[data-disable-cosmetic-fx="true"] .ap-frame-eternal-rain::before,
+html[data-disable-cosmetic-fx="true"] .ap-frame-eternal-rain::after,
+html[data-disable-cosmetic-fx="true"] .title-rainynightfrog-frame::before,
+html[data-disable-cosmetic-fx="true"] .title-rainynightfrog-frame::after {
+  content: none !important;
+  display: none !important;
+  animation: none !important;
+}
+
+html[data-disable-cosmetic-fx="true"] .ap-frame-void-orbit,
+html[data-disable-cosmetic-fx="true"] .ap-frame-eternal-rain,
+html[data-disable-cosmetic-fx="true"] [class*="ap-frame-"] {
+  animation: none !important;
+}
+
+html[data-disable-cosmetic-fx="true"] .title-rainynightfrog,
+html[data-disable-cosmetic-fx="true"] .title-rainynightfrog-frame,
+html[data-disable-cosmetic-fx="true"] .supporter-username,
+html[data-disable-cosmetic-fx="true"] .supporter-username-premium,
+html[data-disable-cosmetic-fx="true"] .supporter-username-lifetime,
+html[data-disable-cosmetic-fx="true"] [class*="title-ap-"],
+html[data-disable-cosmetic-fx="true"] .title-tier-legendary,
+html[data-disable-cosmetic-fx="true"] .title-tier-mythic,
+html[data-disable-cosmetic-fx="true"] .ap-name-crimson,
+html[data-disable-cosmetic-fx="true"] .ap-name-prism-myth {
+  animation: none !important;
+  filter: none !important;
+  background-position: 0% 50% !important;
+}
+
+html[data-disable-cosmetic-fx="true"] .title-rainynightfrog-frame {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2);
 }

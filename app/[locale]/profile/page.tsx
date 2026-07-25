@@ -41,10 +41,12 @@ import {
 } from "@/components/settings/account-shell";
 import { UserBadge } from "@/components/UserBadge";
 import { SupporterAvatarInsignia } from "@/components/supporter/supporter-avatar-insignia";
+import { useAppSettings } from "@/components/settings/app-settings-provider";
 import {
   getSupporterDisplayTierFromProfile,
   supporterAvatarRingClassByTier,
 } from "@/lib/supporter-tier";
+import { shouldShowSupporterAvatarFx } from "@/lib/cosmetic-fx-prefs";
 import { cn } from "@/lib/utils";
 import { CreatorUsernameField } from "@/components/profile/creator-username-field";
 import { PresetAvatarPicker } from "@/components/profile/preset-avatar-picker";
@@ -63,6 +65,7 @@ export default function ProfilePage() {
   const tCommon = useTranslations("common");
   const router = useRouter();
   const { profile, loading, refreshProfile, isCreator } = useAuth();
+  const { settings } = useAppSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [email, setEmail] = useState<string | null>(null);
@@ -87,6 +90,12 @@ export default function ProfilePage() {
   const supporterTier = profile
     ? getSupporterDisplayTierFromProfile(profile)
     : "none";
+  const showSupporterFx = shouldShowSupporterAvatarFx({
+    settings,
+    isSelf: true,
+    tier: supporterTier,
+  });
+  const displaySupporterTier = showSupporterFx ? supporterTier : "none";
 
   const showToast = useCallback((message: string) => {
     setToast(message);
@@ -290,24 +299,33 @@ export default function ProfilePage() {
       >
         <div className={accountCardClassName}>
           <div className="mb-8 flex flex-col items-center">
-            <div className="relative">
+            <div className="relative overflow-visible">
               <SupporterAvatarInsignia
-                isSupporter={profile.is_supporter}
+                isSupporter={showSupporterFx && profile.is_supporter}
                 supporterBadge={profile.supporter_badge}
-                tier={supporterTier}
+                supporterLifetime={
+                  showSupporterFx && profile.supporter_lifetime
+                }
+                tier={displaySupporterTier}
                 size="md"
               />
+              <div
+                className={cn(
+                  "relative mt-1 inline-flex",
+                  displaySupporterTier !== "none" &&
+                    supporterAvatarRingClassByTier[displaySupporterTier]
+                )}
+              >
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={avatarUploading || pendingPresetId != null}
                 className={cn(
-                  "group relative mt-1 size-28 rounded-full",
+                  "group relative size-28 rounded-full",
                   "border-2 border-white/10 transition-all duration-300",
                   "hover:border-cyan-400/70 hover:shadow-lg hover:shadow-cyan-500/25",
-                  supporterTier !== "none" &&
-                    supporterAvatarRingClassByTier[supporterTier],
-                  profile.equipped_avatar_frame_class,
+                  !settings.disableCosmeticFx &&
+                    profile.equipped_avatar_frame_class,
                   (avatarUploading || pendingPresetId != null) &&
                     "pointer-events-none opacity-70"
                 )}
@@ -342,6 +360,7 @@ export default function ProfilePage() {
               </div>
               </span>
             </button>
+              </div>
             </div>
 
             <input

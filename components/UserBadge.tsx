@@ -6,6 +6,7 @@ import { getTitleDisplayClass } from "@/lib/titles";
 import { localizeTitleName } from "@/lib/title-i18n";
 import {
   getSupporterDisplayTier,
+  isSvipLikeTier,
   supporterUsernameClassByTier,
 } from "@/lib/supporter-tier";
 import { adminRoleRainbowTextClass } from "@/lib/admin-display-role";
@@ -29,6 +30,11 @@ type UserBadgeProps = {
   maxTitleWidth?: string;
   /** 頭像已有 VIP/SVIP 時可關閉名字旁的徽章 */
   showSupporterBadge?: boolean;
+  /**
+   * 優先顯示 AP 名字色（略過 VIP／SVIP 炫彩字）。
+   * AP 商店預覽需要看得到名字色，不被支持者特效蓋掉。
+   */
+  preferNameColor?: boolean;
   /** 未佩戴稱號時顯示的角色標籤（例如「玩家」「創作者」） */
   fallbackRoleLabel?: string | null;
   /** 角色標籤使用 SVIP 同款炫彩漸層 */
@@ -84,6 +90,7 @@ export function UserBadge({
   animateTitle = true,
   maxTitleWidth = "max-w-[5.5rem]",
   showSupporterBadge = true,
+  preferNameColor = false,
   fallbackRoleLabel = null,
   fallbackRoleRainbow = false,
 }: UserBadgeProps) {
@@ -95,6 +102,10 @@ export function UserBadge({
     supporterLifetime
   );
   const isSupporterDisplay = supporterTier !== "none";
+  const showApNameColor = Boolean(nameColorClass) && (
+    preferNameColor || !isSupporterDisplay
+  );
+  const showSupporterNameFx = isSupporterDisplay && !showApNameColor;
 
   const titleLabel = localizeTitleName(title?.name, locale);
   const secondaryLabel = titleLabel ?? fallbackRoleLabel ?? null;
@@ -120,21 +131,20 @@ export function UserBadge({
         )
       : null;
 
-  const resolvedUsernameClass =
-    !isSupporterDisplay && nameColorClass
-      ? stripConflictingTextColorClasses(usernameClassName)
-      : usernameClassName;
+  const resolvedUsernameClass = showApNameColor
+    ? stripConflictingTextColorClasses(usernameClassName)
+    : usernameClassName;
 
   const nameClass = cn(
     "font-medium",
-    isSupporterDisplay && supporterUsernameClassByTier[supporterTier],
+    showSupporterNameFx && supporterUsernameClassByTier[supporterTier],
     resolvedUsernameClass,
     // AP 名字色放最後，避免被 text-zinc-*／text-white 蓋掉
-    !isSupporterDisplay && nameColorClass,
-    isSupporterDisplay &&
-      supporterTier === "premium" &&
+    showApNameColor && nameColorClass,
+    showSupporterNameFx &&
+      isSvipLikeTier(supporterTier) &&
       "!bg-clip-text !text-transparent hover:!text-transparent [-webkit-text-fill-color:transparent]",
-    isSupporterDisplay &&
+    showSupporterNameFx &&
       supporterTier === "basic" &&
       "!text-amber-300 hover:!text-amber-200"
   );
@@ -144,6 +154,7 @@ export function UserBadge({
       <SupporterBadge
         isSupporter={isSupporter}
         supporterBadge={supporterBadge}
+        supporterLifetime={supporterLifetime}
         tier={supporterTier}
       />
     ) : null;
@@ -156,12 +167,21 @@ export function UserBadge({
       </span>
     );
     if (!wrapRnfFrame) return inner;
-    return <span className="title-rainynightfrog-frame">{inner}</span>;
+    return (
+      <span
+        className={cn(
+          "title-rainynightfrog-frame",
+          !animateTitle && "title-fx-static"
+        )}
+      >
+        {inner}
+      </span>
+    );
   }
 
   if (layout === "stacked") {
     return (
-      <span className={cn("inline-flex flex-col items-center gap-0.5", className)}>
+      <span className={cn("inline-flex flex-col items-center gap-1", className)}>
         <span className="inline-flex items-center gap-1">
           <span className={nameClass}>{username}</span>
           {supporterIcon}
@@ -174,7 +194,11 @@ export function UserBadge({
   if (layout === "compact") {
     return (
       <span
-        className={cn("inline-flex min-w-0 max-w-full items-center gap-x-1", className)}
+        className={cn(
+          "inline-flex min-w-0 max-w-full items-center",
+          wrapRnfFrame ? "gap-x-2" : "gap-x-1",
+          className
+        )}
       >
         <span className={cn("min-w-0 truncate", nameClass)}>{username}</span>
         {supporterIcon}
@@ -188,7 +212,8 @@ export function UserBadge({
   return (
     <span
       className={cn(
-        "inline-flex flex-wrap items-center gap-x-1.5 gap-y-0.5",
+        "inline-flex flex-wrap items-center gap-y-0.5",
+        wrapRnfFrame ? "gap-x-2.5 sm:gap-x-3.5" : "gap-x-1.5",
         className
       )}
     >

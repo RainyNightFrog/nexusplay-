@@ -4,6 +4,8 @@ import {
   SUPPORTER_BADGE_V2,
   SUPPORTER_TITLE_V1,
   SUPPORTER_TITLE_V2,
+  SUPPORTER_TITLE_LIFETIME,
+  SUPPORTER_TITLE_LIFETIME_CSS,
   getSupporterDisplayTier,
   type SupporterDisplayTier,
 } from "@/lib/supporter-tier";
@@ -11,27 +13,40 @@ import {
 export type VirtualPlayerSupporterFlags = {
   isSupporter: true;
   badge: string;
+  lifetime?: boolean;
 };
 
-/** 聊天中顯示金色 VIP 的虛擬玩家（7 位） */
+/** 聊天中顯示金色 VIP 的虛擬玩家 */
 export const VIRTUAL_VIP_PLAYER_IDS = [
   "hk-03", // 迷宮探索者
   "hk-05", // 霓虹浪子
   "hk-06", // 街機老手
   "hk-11", // 涼風夜行
+  "hk-16", // 九龍街機王
+  "hk-25", // 雨夜青蛙友
   "cn-21", // 嘴馋小猫
   "cn-20", // 帝王傲世
+  "cn-28", // 咖啡续命人
   "en-13", // Healium
+  "en-20", // NeonCommuter
+  "en-30", // OneMoreRun
 ] as const;
 
-/** 聊天中顯示彩虹 SVIP 的虛擬玩家（2 位） */
+/** 聊天中顯示彩虹 SVIP 的虛擬玩家 */
 export const VIRTUAL_SVIP_PLAYER_IDS = [
   "cn-18", // 木槿暖夏
+  "cn-33", // 深夜食堂客
+] as const;
+
+/** 聊天中顯示永久傳說頭像特效的虛擬玩家 */
+export const VIRTUAL_LIFETIME_PLAYER_IDS = [
+  "hk-15", // 港島夜貓
   "en-05", // ObiWanKenobi
 ] as const;
 
 const VIP_ID_SET = new Set<string>(VIRTUAL_VIP_PLAYER_IDS);
 const SVIP_ID_SET = new Set<string>(VIRTUAL_SVIP_PLAYER_IDS);
+const LIFETIME_ID_SET = new Set<string>(VIRTUAL_LIFETIME_PLAYER_IDS);
 
 const VIRTUAL_COSMETIC_TITLES: EquippedTitle[] = [
   {
@@ -78,9 +93,14 @@ function hashString(value: string, salt: number) {
 export function getVirtualPlayerSupporterBadge(
   virtualPlayerId: string
 ): string | null {
+  if (LIFETIME_ID_SET.has(virtualPlayerId)) return SUPPORTER_BADGE_V2;
   if (SVIP_ID_SET.has(virtualPlayerId)) return SUPPORTER_BADGE_V2;
   if (VIP_ID_SET.has(virtualPlayerId)) return SUPPORTER_BADGE_V1;
   return null;
+}
+
+export function isVirtualPlayerLifetimeSupporter(virtualPlayerId: string) {
+  return LIFETIME_ID_SET.has(virtualPlayerId);
 }
 
 export function getVirtualPlayerSupporterFlags(
@@ -88,13 +108,25 @@ export function getVirtualPlayerSupporterFlags(
 ): VirtualPlayerSupporterFlags | null {
   const badge = getVirtualPlayerSupporterBadge(virtualPlayerId);
   if (!badge) return null;
-  return { isSupporter: true, badge };
+  return {
+    isSupporter: true,
+    badge,
+    lifetime: LIFETIME_ID_SET.has(virtualPlayerId),
+  };
 }
 
-/** 排行榜／聊天用：虛擬玩家佩戴稱號（VIP／SVIP 優先） */
+/** 排行榜／聊天用：虛擬玩家佩戴稱號（VIP／SVIP／永久傳說優先） */
 export function getVirtualPlayerEquippedTitle(
   virtualPlayerId: string
 ): EquippedTitle | null {
+  if (LIFETIME_ID_SET.has(virtualPlayerId)) {
+    return {
+      id: `virtual-title-lifetime-${virtualPlayerId}`,
+      name: SUPPORTER_TITLE_LIFETIME,
+      css_class: SUPPORTER_TITLE_LIFETIME_CSS,
+      rarity_tier: "legendary",
+    };
+  }
   const badge = getVirtualPlayerSupporterBadge(virtualPlayerId);
   if (badge === SUPPORTER_BADGE_V2) {
     return {
@@ -132,6 +164,7 @@ type ChatSupporterMessageLike = {
   author_is_supporter?: boolean;
   author_supporter_badge?: string | null;
   author_equipped_title?: EquippedTitle | null;
+  author_admin_role?: import("@/lib/admin-display-role").AdminDisplayRole;
 };
 
 export function resolveChatMessageSupporterTier(
@@ -150,18 +183,26 @@ export function resolveChatMessageSupporterTier(
     const flags = getVirtualPlayerSupporterFlags(message.virtual_player_id);
     if (flags) {
       return {
-        tier: getSupporterDisplayTier(true, flags.badge),
+        tier: getSupporterDisplayTier(
+          true,
+          flags.badge,
+          null,
+          flags.lifetime === true
+        ),
         badge: flags.badge,
       };
     }
     return { tier: "none", badge: null };
   }
 
+  const isSuperAdmin = message.author_admin_role === "super_admin";
   return {
     tier: getSupporterDisplayTier(
       message.author_is_supporter === true,
       message.author_supporter_badge,
-      message.author_equipped_title
+      message.author_equipped_title,
+      null,
+      isSuperAdmin
     ),
     badge: message.author_supporter_badge ?? null,
   };

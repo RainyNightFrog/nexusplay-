@@ -297,6 +297,8 @@
     "supporterWallEmpty": "아직 후원자가 없습니다 — 첫 번째 후원자가 되어 보세요!",
     "supporterWallLoading": "후원자 불러오는 중…",
     "supporterCount": "후원자 {count}명",
+    "supporterWallLegendTitle": "LEGEND",
+
     "supporterWallSvipTitle": "SVIP",
     "supporterWallVipTitle": "VIP",
     "supporterPerkBadge": "전용 배지",
@@ -2484,7 +2486,9 @@
     "tierPerkComposer": "✓ 聊天輸入文字彩虹特效",
     "composerPreviewSample": "傳說支持者上線！",
     "tierPerkVipText": "✓ 金色名稱與輸入文字特效",
-    "vipTextPreview": "金色文字特效"
+    "vipTextPreview": "金色文字特效",
+    "badgeLabelLifetime": "LEGEND",
+    "badgeTitleLifetime": "Lifetime Legend Supporter RainyNightFrog"
   },
   "creatorTools": {
     "pageTitle": "Creator Toolbox",

@@ -167,7 +167,7 @@ values
   ),
   (
     'frame_eternal_rain', 'avatar_frame', 'mythic', 160000,
-    '永雨神環', '神話頭像框：永雨粒子神環',
+    '永雨神環', '神話頭像框：頭像外圍閃電與電弧神環',
     '{"cssClass":"ap-frame-eternal-rain","glow":true,"animated":true}'::jsonb,
     null, true, 8, 250
   ),

@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { ChatPlayerPreview } from "@/components/chat/chat-player-card";
+import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
 import { isVirtualLeaderboardUserId } from "@/lib/platform-leaderboard-virtual";
 import type { ChatPlayerPublicProfile } from "@/lib/chat-player-profile-service";
+import { API_FETCH_TIMEOUT_MS } from "@/lib/with-timeout";
 
 const PROFILE_CACHE_TTL_MS = 45_000;
 
@@ -71,9 +73,10 @@ export function useChatPlayerProfile(
           params.set("userId", target.userId);
         }
 
-        const response = await fetch(
+        const response = await fetchWithTimeout(
           `/api/chat/players/profile?${params.toString()}`,
-          { credentials: "same-origin" }
+          { credentials: "same-origin" },
+          API_FETCH_TIMEOUT_MS
         );
         const data = (await response.json()) as {
           profile?: ChatPlayerPublicProfile;
@@ -90,10 +93,26 @@ export function useChatPlayerProfile(
           writeCachedProfile(target, nextProfile);
         }
       } catch (err) {
-        if (!options?.silent) {
+        const cached = readCachedProfile(target);
+        if (cached) {
+          // 逾時／失敗時保留舊快取，不整卡空白
+          setProfile(cached);
+        } else if (!options?.silent) {
           setProfile(null);
         }
-        setError(err instanceof Error ? err.message : t("playerCardLoadFailed"));
+        const raw =
+          err instanceof Error ? err.message : t("playerCardLoadFailed");
+        const lower = raw.toLowerCase();
+        const friendly =
+          lower.includes("invalid jwt") ||
+          lower.includes("jwt kid") ||
+          lower.includes("unrecognized jwt") ||
+          lower.includes("unable to parse or verify") ||
+          lower.includes("aborted") ||
+          lower.includes("timed out")
+            ? t("playerCardLoadFailed")
+            : raw;
+        setError(friendly);
       } finally {
         setLoading(false);
       }

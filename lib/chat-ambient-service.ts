@@ -15,6 +15,7 @@ import type { ChatChannel } from "@/lib/chat";
 import { CHAT_LIMITS } from "@/lib/chat";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { ambientEmailAliases, isAmbientLocalEmail } from "@/lib/ambient-local-email";
+import { listAuthAdminUsers } from "@/lib/auth-admin-users-cache";
 import {
   ambientBotEmail,
   ambientCreatorBotEmail,
@@ -26,6 +27,7 @@ import {
 } from "@/lib/virtual-players";
 import { resolveVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
 import { upsertBotProfile } from "@/lib/profile-player-number";
+import { AMBIENT_BOOTSTRAP_BUDGET_MS } from "@/lib/with-timeout";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 const WORLD_DIALOGUE_CHANCE = 0.58;
@@ -145,21 +147,25 @@ function pickPlayer(locale: VirtualPlayerLocale, excludeId?: string): VirtualPla
 
 async function listAmbientBotUsers(supabase: SupabaseClient) {
   let lastMessage = "listUsers failed";
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    const { data, error } = await supabase.auth.admin.listUsers({
-      page: 1,
-      perPage: 1000,
-    });
-    if (!error) {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const users = await listAuthAdminUsers(supabase, {
+        force: attempt > 0,
+      });
       const byEmail = new Map<string, string>();
-      for (const user of data.users ?? []) {
+      for (const user of users) {
         if (user.email && isAmbientLocalEmail(user.email)) {
           byEmail.set(user.email, user.id);
         }
       }
-      return byEmail;
+      // 有資料或最後一次嘗試都回傳（空 map 時 createUser 路徑仍可補帳）
+      if (byEmail.size > 0 || attempt === 2) {
+        return byEmail;
+      }
+      lastMessage = "listUsers returned empty";
+    } catch (error) {
+      lastMessage = error instanceof Error ? error.message : String(error);
     }
-    lastMessage = error.message;
     await new Promise((resolve) => setTimeout(resolve, 350 * (attempt + 1)));
   }
   throw new Error(lastMessage);
@@ -191,6 +197,15 @@ async function syncAmbientPlayerProfile(
   });
   // Auth Admin 偶發 JWT 驗簽失敗時，profile 已足夠供聊天顯示
   if (authError) {
+    const msg = authError.message.toLowerCase();
+    if (
+      msg.includes("invalid jwt") ||
+      msg.includes("jwt kid") ||
+      msg.includes("unrecognized jwt")
+    ) {
+      // 常見於新版 JWT Signing Keys；略過即可，勿刷螢幕
+      return;
+    }
     console.warn(
       `[ambient] skip auth metadata sync for ${player.id}: ${authError.message}`
     );
@@ -212,42 +227,60 @@ async function ensureAmbientPlayer(
     cache.get(legacyEmail) ??
     null;
   if (cached) {
-    await syncAmbientPlayerProfile(supabase, cached, player, options);
+    await syncAmbientPlayerProfile(supabase, cached, player, {
+      ...options,
+      skipAuthMetadata: true,
+    });
     cache.set(email, cached);
     cache.set(legacyEmail, cached);
     return cached;
   }
 
-  const { data, error } = await supabase.auth.admin.createUser({
-    email,
-    password: "AmbientBot_NexusPlay_2026!",
-    email_confirm: true,
-    user_metadata: {
-      display_name: player.displayName,
-      role: options?.asCreator ? "creator" : "player",
-      ambient_bot: true,
-      ambient_id: player.id,
-    },
-  });
+  let lastCreateError = "createUser failed";
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const { data, error } = await supabase.auth.admin.createUser({
+      email,
+      password: "AmbientBot_NexusPlay_2026!",
+      email_confirm: true,
+      user_metadata: {
+        display_name: player.displayName,
+        role: options?.asCreator ? "creator" : "player",
+        ambient_bot: true,
+        ambient_id: player.id,
+      },
+    });
 
-  if (error) {
-    const refreshed = await listAmbientBotUsers(supabase);
-    const existing = refreshed.get(email) ?? refreshed.get(legacyEmail);
-    if (existing) {
-      cache.set(email, existing);
-      cache.set(legacyEmail, existing);
-      await syncAmbientPlayerProfile(supabase, existing, player, options);
-      return existing;
+    if (!error && data.user?.id) {
+      const userId = data.user.id;
+      await syncAmbientPlayerProfile(supabase, userId, player, {
+        ...options,
+        skipAuthMetadata: true,
+      });
+      cache.set(email, userId);
+      cache.set(legacyEmail, userId);
+      return userId;
     }
-    throw new Error(error.message);
+
+    lastCreateError = error?.message ?? lastCreateError;
+    try {
+      const refreshed = await listAmbientBotUsers(supabase);
+      const existing = refreshed.get(email) ?? refreshed.get(legacyEmail);
+      if (existing) {
+        cache.set(email, existing);
+        cache.set(legacyEmail, existing);
+        await syncAmbientPlayerProfile(supabase, existing, player, {
+          ...options,
+          skipAuthMetadata: true,
+        });
+        return existing;
+      }
+    } catch {
+      // listUsers 偶發 JWT 失敗時繼續重試 createUser
+    }
+    await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)));
   }
 
-  const userId = data.user.id;
-  await syncAmbientPlayerProfile(supabase, userId, player, options);
-
-  cache.set(email, userId);
-  cache.set(legacyEmail, userId);
-  return userId;
+  throw new Error(lastCreateError);
 }
 
 async function insertAmbientMessage(
@@ -429,6 +462,7 @@ export async function ensureAllAmbientPlayers() {
   const cache = await listAmbientBotUsers(supabase);
   const created: string[] = [];
   const synced: string[] = [];
+  const failed: string[] = [];
 
   for (const player of VIRTUAL_PLAYERS) {
     for (const asCreator of [false, true] as const) {
@@ -436,14 +470,20 @@ export async function ensureAllAmbientPlayers() {
         ? ambientCreatorBotEmail(player.id)
         : ambientBotEmail(player.id);
       const existed = cache.has(email);
-      await ensureAmbientPlayer(supabase, player, cache, { asCreator });
       const label = `${asCreator ? "creator:" : "world:"}${player.displayName}`;
-      if (existed) synced.push(label);
-      else created.push(label);
+      try {
+        await ensureAmbientPlayer(supabase, player, cache, { asCreator });
+        if (existed) synced.push(label);
+        else created.push(label);
+      } catch (error) {
+        failed.push(
+          `${label} (${error instanceof Error ? error.message : String(error)})`
+        );
+      }
     }
   }
 
-  return { total: VIRTUAL_PLAYERS.length * 2, created, synced };
+  return { total: VIRTUAL_PLAYERS.length * 2, created, synced, failed };
 }
 
 const COSMETIC_SHOWCASE_LINES: Record<string, string[]> = {
@@ -535,7 +575,9 @@ export async function bootstrapAmbientWorldChat(messageCount = 14) {
   const supabase = createServerSupabase();
   const recent = await getRecentChannelContents(supabase, "world");
   const results: AmbientPostResult[] = [];
+  const deadline = Date.now() + AMBIENT_BOOTSTRAP_BUDGET_MS;
   for (let index = 0; index < messageCount; index += 1) {
+    if (Date.now() >= deadline) break;
     const minutesAgo = (messageCount - index) * 3 + Math.random() * 2;
     const at = new Date(Date.now() - minutesAgo * 60_000);
     const result = await postAmbientWorldChat({ at, recentContents: recent });
@@ -552,7 +594,9 @@ export async function bootstrapAmbientCreatorChat(messageCount = 8) {
   const supabase = createServerSupabase();
   const recent = await getRecentChannelContents(supabase, "creator");
   const results: AmbientPostResult[] = [];
+  const deadline = Date.now() + AMBIENT_BOOTSTRAP_BUDGET_MS;
   for (let index = 0; index < messageCount; index += 1) {
+    if (Date.now() >= deadline) break;
     const minutesAgo = (messageCount - index) * 28 + Math.random() * 8;
     const at = new Date(Date.now() - minutesAgo * 60_000);
     const result = await postAmbientCreatorChat({ at, recentContents: recent });

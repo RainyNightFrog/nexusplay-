@@ -310,6 +310,8 @@
     "supporterWallEmpty": "暂无支持者——成为首位支持者吧！",
     "supporterWallLoading": "加载支持者…",
     "supporterCount": "共 {count} 位",
+    "supporterWallLegendTitle": "LEGEND",
+
     "supporterWallSvipTitle": "SVIP",
     "supporterWallVipTitle": "VIP",
     "supporterPerkBadge": "专属勋章",
@@ -1022,6 +1024,10 @@
     "accessibility": "无障碍与性能",
     "reduceMotion": "减少动态效果",
     "reduceMotionDesc": "降低页面动画与过渡效果，减轻晕动症不适",
+    "disableCosmeticFx": "关闭头像与称号特效",
+    "disableCosmeticFxDesc": "本机不显示头像框动画、支持者光环与称号闪电，可提升性能并省电",
+    "hideMySupporterFx": "隐藏我的支持者特效",
+    "hideMySupporterFxDesc": "关闭自己头像上的 VIP／SVIP／LEGEND 光环与角标（仅影响本机显示）",
     "resetTitle": "恢复默认",
     "resetDesc": "将所有系统设置还原为 RainyNightFrog 默认值",
     "resetBtn": "重置设置",
@@ -2475,7 +2481,9 @@
     "tierPerkComposer": "✓ 聊天輸入文字彩虹特效",
     "composerPreviewSample": "傳說支持者上線！",
     "tierPerkVipText": "✓ 金色名稱與輸入文字特效",
-    "vipTextPreview": "金色文字特效"
+    "vipTextPreview": "金色文字特效",
+    "badgeLabelLifetime": "LEGEND",
+    "badgeTitleLifetime": "永久传说支持者 RainyNightFrog"
   },
   "creatorTools": {
     "pageTitle": "創作者工具箱",

@@ -7,6 +7,7 @@ import { ChatEmojiPicker } from "@/components/chat/chat-emoji-picker";
 import { RainbowSafeText } from "@/components/supporter/rainbow-safe-text";
 import { CHAT_LIMITS } from "@/lib/chat";
 import {
+  isSvipLikeTier,
   supporterComposerMirrorClassByTier,
   supporterComposerTextClassByTier,
   type SupporterDisplayTier,
@@ -45,7 +46,7 @@ export function ChatInput({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isSupporterComposer = supporterTier !== "none";
   const showComposerMirror =
-    supporterTier === "premium" && value.length > 0;
+    isSvipLikeTier(supporterTier) && value.length > 0;
 
   async function handleSend() {
     const trimmed = value.trim();
@@ -92,9 +93,11 @@ export function ChatInput({
           className={cn(
             "relative min-w-0 flex-1 rounded-xl border border-white/10 bg-zinc-900/80",
             isSupporterComposer &&
-              (supporterTier === "premium"
-                ? "focus-within:border-violet-400/35 focus-within:ring-2 focus-within:ring-violet-400/15"
-                : "focus-within:border-amber-400/35 focus-within:ring-2 focus-within:ring-amber-400/15"),
+              (supporterTier === "lifetime"
+                ? "focus-within:border-amber-300/40 focus-within:ring-2 focus-within:ring-cyan-400/20"
+                : isSvipLikeTier(supporterTier)
+                  ? "focus-within:border-violet-400/35 focus-within:ring-2 focus-within:ring-violet-400/15"
+                  : "focus-within:border-amber-400/35 focus-within:ring-2 focus-within:ring-amber-400/15"),
             !isSupporterComposer &&
               "focus-within:border-cyan-500/40 focus-within:ring-2 focus-within:ring-cyan-500/15"
           )}
@@ -126,7 +129,9 @@ export function ChatInput({
               <RainbowSafeText
                 text={value}
                 rainbowClassName={
-                  supporterComposerMirrorClassByTier[supporterTier]
+                  supporterComposerMirrorClassByTier[
+                    supporterTier === "lifetime" ? "lifetime" : "premium"
+                  ]
                 }
               />
             </div>

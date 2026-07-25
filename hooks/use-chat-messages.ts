@@ -6,13 +6,14 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import type { ChatChannel, ChatMessage } from "@/lib/chat";
 import { CHAT_LIMITS } from "@/lib/chat";
 import { createClient } from "@/lib/supabase/client";
+import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
 import { useApiError } from "@/hooks/use-api-error";
 import { useVisibleInterval } from "@/hooks/use-visible-interval";
+import { API_FETCH_TIMEOUT_MS } from "@/lib/with-timeout";
 
 /** 輪詢間隔：本機開發時觸發 maintainAmbientChat；亦作 Realtime 後備 */
 export const CHAT_POLL_INTERVAL_MS = 60_000;
 
-const CHAT_FETCH_TIMEOUT_MS = 8_000;
 const REALTIME_RELOAD_DEBOUNCE_MS = 400;
 
 /** 開發熱更新時保留聊天內容，避免每次改程式都清空並轉圈 */
@@ -24,13 +25,23 @@ export function useAmbientChatBackgroundPoll(
   enabled: boolean
 ) {
   const channelsKey = channels.join(",");
+  const inFlightRef = useRef(false);
 
   const poll = useCallback(() => {
-    if (!channelsKey) return;
+    if (!channelsKey || inFlightRef.current) return;
     const targetChannels = channelsKey.split(",") as ChatChannel[];
-    for (const channel of targetChannels) {
-      void fetch(`/api/chat/messages?channel=${encodeURIComponent(channel)}`);
-    }
+    inFlightRef.current = true;
+    void Promise.allSettled(
+      targetChannels.map((channel) =>
+        fetchWithTimeout(
+          `/api/chat/messages?channel=${encodeURIComponent(channel)}`,
+          {},
+          API_FETCH_TIMEOUT_MS
+        )
+      )
+    ).finally(() => {
+      inFlightRef.current = false;
+    });
   }, [channelsKey]);
 
   useVisibleInterval(
@@ -51,9 +62,10 @@ async function fetchChatMessages(
   channel: ChatChannel,
   signal: AbortSignal
 ): Promise<ChatMessage[]> {
-  const response = await fetch(
+  const response = await fetchWithTimeout(
     `/api/chat/messages?channel=${encodeURIComponent(channel)}`,
-    { signal }
+    { signal },
+    API_FETCH_TIMEOUT_MS
   );
   const data = await parseJsonResponse<{
     messages?: ChatMessage[];
@@ -89,6 +101,8 @@ export function useChatMessages(channel: ChatChannel, enabled: boolean) {
   const [error, setError] = useState<string | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const loadGenerationRef = useRef(0);
+  const loadInFlightRef = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
   const realtimeDebounceRef = useRef<number | null>(null);
 
   const formatError = useCallback(
@@ -110,6 +124,8 @@ export function useChatMessages(channel: ChatChannel, enabled: boolean) {
   const loadMessages = useCallback(
     async (options?: { silent?: boolean }) => {
       if (!enabled) return;
+      // 靜默輪詢防重入；切頻道等非 silent 會中止上一輪後重抓
+      if (options?.silent && loadInFlightRef.current) return;
 
       const generation = ++loadGenerationRef.current;
       const silent =
@@ -119,11 +135,10 @@ export function useChatMessages(channel: ChatChannel, enabled: boolean) {
       if (!silent) setLoading(true);
       setError(null);
 
+      abortRef.current?.abort();
       const controller = new AbortController();
-      const timeoutId = window.setTimeout(
-        () => controller.abort(),
-        CHAT_FETCH_TIMEOUT_MS
-      );
+      abortRef.current = controller;
+      loadInFlightRef.current = true;
 
       try {
         const incoming = await fetchChatMessages(channel, controller.signal);
@@ -133,9 +148,14 @@ export function useChatMessages(channel: ChatChannel, enabled: boolean) {
         setMessages(incoming);
       } catch (err) {
         if (generation !== loadGenerationRef.current) return;
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        // 失敗時保留舊訊息，只顯示錯誤
         setError(formatError(err, t("readFailed")));
       } finally {
-        window.clearTimeout(timeoutId);
+        if (abortRef.current === controller) {
+          abortRef.current = null;
+          loadInFlightRef.current = false;
+        }
         if (generation === loadGenerationRef.current && !silent) {
           setLoading(false);
         }

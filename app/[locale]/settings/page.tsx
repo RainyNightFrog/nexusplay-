@@ -476,6 +476,26 @@ export default function SettingsPage() {
               checked={settings.reduceMotion}
               onCheckedChange={(checked) => updateSettings({ reduceMotion: checked })}
             />
+
+            <SettingsToggle
+              id="disableCosmeticFx"
+              label={t("disableCosmeticFx")}
+              description={t("disableCosmeticFxDesc")}
+              checked={settings.disableCosmeticFx}
+              onCheckedChange={(checked) =>
+                updateSettings({ disableCosmeticFx: checked })
+              }
+            />
+
+            <SettingsToggle
+              id="hideMySupporterFx"
+              label={t("hideMySupporterFx")}
+              description={t("hideMySupporterFxDesc")}
+              checked={settings.hideMySupporterFx}
+              onCheckedChange={(checked) =>
+                updateSettings({ hideMySupporterFx: checked })
+              }
+            />
           </section>
         </div>
 

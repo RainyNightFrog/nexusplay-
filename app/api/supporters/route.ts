@@ -19,7 +19,8 @@ export async function GET(request: Request) {
 
     return NextResponse.json(data, {
       headers: {
-        "Cache-Control": "public, max-age=10, stale-while-revalidate=20",
+        // 升級支持者後牆面需盡快反映，避免 CDN／瀏覽器長時間快取舊名單
+        "Cache-Control": "private, no-store, max-age=0",
       },
     });
   } catch (error) {

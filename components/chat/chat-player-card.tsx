@@ -46,6 +46,7 @@ import {
 import { Link } from "@/i18n/navigation";
 import { FollowCreatorButton } from "@/components/creator/follow-creator-button";
 import { SupporterAvatarInsignia } from "@/components/supporter/supporter-avatar-insignia";
+import { useAppSettings } from "@/components/settings/app-settings-provider";
 import { cn } from "@/lib/utils";
 import {
   getSupporterDisplayTier,
@@ -55,6 +56,7 @@ import {
   resolveChatAuthorRoleFallback,
   type AdminDisplayRole,
 } from "@/lib/admin-display-role";
+import { isVirtualPlayerLifetimeSupporter } from "@/lib/virtual-player-supporter";
 
 export type ChatPlayerPreview = {
   userId: string;
@@ -65,6 +67,7 @@ export type ChatPlayerPreview = {
   nameColorClass?: string | null;
   isSupporter?: boolean;
   supporterBadge?: string | null;
+  supporterLifetime?: boolean;
   isCreator: boolean;
   adminRole?: AdminDisplayRole;
   isVirtual: boolean;
@@ -75,6 +78,10 @@ export type ChatPlayerPreview = {
 export function chatMessageToPlayerPreview(
   message: ChatMessage
 ): ChatPlayerPreview {
+  const virtualLifetime =
+    message.virtual_player_id != null &&
+    isVirtualPlayerLifetimeSupporter(message.virtual_player_id);
+  const isSuperAdmin = message.author_admin_role === "super_admin";
   return {
     userId: message.user_id,
     displayName: message.author_name,
@@ -82,8 +89,9 @@ export function chatMessageToPlayerPreview(
     equippedTitle: message.author_equipped_title,
     avatarFrameClass: message.author_avatar_frame_class,
     nameColorClass: message.author_name_color_class,
-    isSupporter: message.author_is_supporter,
+    isSupporter: message.author_is_supporter || isSuperAdmin,
     supporterBadge: message.author_supporter_badge,
+    supporterLifetime: virtualLifetime || isSuperAdmin,
     isCreator: message.is_creator,
     adminRole: message.author_admin_role ?? "none",
     isVirtual: message.is_virtual,
@@ -117,6 +125,7 @@ export function leaderboardEntryToPlayerPreview(
     isOwn: entry.isMe ?? false,
     isSupporter: entry.isSupporter,
     supporterBadge: entry.supporterBadge,
+    supporterLifetime: entry.supporterLifetime === true,
   };
 }
 
@@ -127,6 +136,7 @@ export function virtualPlayerToPlayerPreview(player: {
   equippedTitle?: EquippedTitle | null;
   isSupporter?: boolean;
   supporterBadge?: string | null;
+  supporterLifetime?: boolean;
 }): ChatPlayerPreview {
   return {
     userId: "",
@@ -135,6 +145,7 @@ export function virtualPlayerToPlayerPreview(player: {
     equippedTitle: player.equippedTitle ?? null,
     isSupporter: player.isSupporter,
     supporterBadge: player.supporterBadge,
+    supporterLifetime: player.supporterLifetime === true,
     isCreator: false,
     isVirtual: true,
     virtualPlayerId: player.id,
@@ -234,6 +245,7 @@ export function ChatPlayerCard({
   const t = useTranslations("chat");
   const tcx = useTranslations("common");
   const locale = useLocale();
+  const { settings } = useAppSettings();
   const { profile, loading, error } = useChatPlayerProfile(player, open);
 
   const formatDuration = (seconds: number) =>
@@ -244,18 +256,30 @@ export function ChatPlayerCard({
   const displayName = player.isOwn ? t("you") : player.displayName;
   const detail = profile;
   const avatarUrl = detail?.avatarUrl ?? player.avatarUrl;
-  const equippedTitle = player.equippedTitle ?? detail?.equippedTitle ?? null;
-  const avatarFrameClass =
-    detail?.avatarFrameClass ?? player.avatarFrameClass ?? null;
-  const nameColorClass =
-    detail?.nameColorClass ?? player.nameColorClass ?? null;
-  const supporterTier = getSupporterDisplayTier(
-    detail?.isSupporter ?? player.isSupporter ?? false,
-    detail?.supporterBadge ?? player.supporterBadge ?? null
-  );
+  const equippedTitle = detail?.equippedTitle ?? player.equippedTitle ?? null;
+  const isVirtual = detail?.isVirtual ?? player.isVirtual;
+  const avatarFrameClass = settings.disableCosmeticFx
+    ? null
+    : (detail?.avatarFrameClass ?? player.avatarFrameClass ?? null);
+  const nameColorClass = settings.disableCosmeticFx
+    ? null
+    : (detail?.nameColorClass ?? player.nameColorClass ?? null);
+  const supporterLifetime =
+    detail?.supporterLifetime === true || player.supporterLifetime === true;
   const isCreator = detail?.isCreator ?? player.isCreator;
   const adminRole: AdminDisplayRole =
     detail?.adminRole ?? player.adminRole ?? "none";
+  const supporterTier = getSupporterDisplayTier(
+    detail?.isSupporter ?? player.isSupporter ?? false,
+    detail?.supporterBadge ?? player.supporterBadge ?? null,
+    equippedTitle,
+    supporterLifetime,
+    adminRole === "super_admin"
+  );
+  const showSupporterFx =
+    supporterTier !== "none" &&
+    !(settings.hideMySupporterFx && player.isOwn === true);
+  const displaySupporterTier = showSupporterFx ? supporterTier : "none";
   const roleFallback = resolveChatAuthorRoleFallback(
     {
       equippedTitle,
@@ -269,7 +293,6 @@ export function ChatPlayerCard({
       player: t("rolePlayer"),
     }
   );
-  const isVirtual = detail?.isVirtual ?? player.isVirtual;
   const followableCreatorId = (() => {
     if (!isCreator) return null;
     const candidate = detail?.userId ?? (isVirtual ? null : player.userId);
@@ -299,11 +322,11 @@ export function ChatPlayerCard({
       <DialogContent
         overlayClassName="z-[70]"
         className={cn(
-          "z-[71] max-h-[min(82vh,720px)] w-[min(calc(100vw-1rem),40rem)] max-w-[calc(100vw-1rem)] overflow-y-auto",
-          "border-white/10 bg-zinc-950 p-4 text-center text-base text-zinc-100 sm:max-w-2xl sm:p-5"
+          "z-[71] flex max-h-[min(82vh,720px)] w-[min(calc(100vw-1rem),40rem)] max-w-[calc(100vw-1rem)] flex-col overflow-hidden",
+          "border-white/10 bg-zinc-950 p-0 text-center text-base text-zinc-100 sm:max-w-2xl"
         )}
       >
-        <DialogHeader className="items-center gap-1 text-center sm:pb-0">
+        <DialogHeader className="items-center gap-1 px-4 pt-4 text-center sm:px-5 sm:pt-5">
           <DialogTitle className="text-lg font-bold sm:text-xl">
             {t("playerCardTitle")}
           </DialogTitle>
@@ -312,90 +335,65 @@ export function ChatPlayerCard({
           </DialogDescription>
         </DialogHeader>
 
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-4 sm:px-5 sm:pb-5">
         <div className="flex flex-col gap-3 sm:gap-4">
           <div className="flex w-full flex-col items-center gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
             <div className="flex flex-col items-center gap-3 sm:flex-row sm:gap-5">
-              {/* 手機：VIP 排在頭像上方，避免蓋住標題 */}
+              {/* LEGEND／VIP 角標用正常排版，避免 Dialog overflow 裁切絕對定位 */}
               <div
                 className={cn(
-                  "relative flex shrink-0 flex-col items-center gap-1.5 pt-1 md:hidden",
-                  supporterTier === "none" && "pt-1"
+                  "relative flex shrink-0 flex-col items-center gap-1.5 overflow-visible px-4 pb-3",
+                  displaySupporterTier !== "none" ? "pt-2" : "pt-1"
                 )}
               >
-                {supporterTier !== "none" && (
+                {displaySupporterTier !== "none" && (
                   <SupporterAvatarInsignia
-                    tier={supporterTier}
+                    tier={displaySupporterTier}
                     size="md"
+                    supporterLifetime={supporterLifetime}
                     className="!static !left-auto !top-auto !z-auto !translate-x-0 !translate-y-0"
                   />
                 )}
-                <div className="relative">
+                <div className="relative overflow-visible p-4">
                   <div
                     className={cn(
-                      "relative size-20 rounded-full ring-2",
-                      isCreator
-                        ? "ring-violet-400/40"
-                        : supporterTier !== "none"
-                          ? supporterAvatarRingClassByTier[supporterTier]
-                          : "ring-white/10",
-                      avatarFrameClass
+                      "relative inline-flex",
+                      displaySupporterTier !== "none" &&
+                        supporterAvatarRingClassByTier[displaySupporterTier]
                     )}
                   >
-                    <div className="absolute inset-0 overflow-hidden rounded-full">
-                    {avatarUrl ? (
-                      <Image
-                        src={avatarUrl}
-                        alt={displayName}
-                        fill
-                        className="object-cover"
-                        unoptimized
-                      />
-                    ) : (
-                      <div className="flex size-full items-center justify-center bg-white/8 text-2xl font-semibold text-zinc-300">
-                        {displayName.slice(0, 1)}
+                    <div
+                      className={cn(
+                        "relative size-20 rounded-full",
+                        isCreator && displaySupporterTier === "none"
+                          ? "ring-2 ring-violet-400/40"
+                          : displaySupporterTier === "none"
+                            ? "ring-2 ring-white/10"
+                            : null,
+                        avatarFrameClass
+                      )}
+                    >
+                      <div className="absolute inset-0 overflow-hidden rounded-full">
+                        {avatarUrl ? (
+                          <Image
+                            src={avatarUrl}
+                            alt={displayName}
+                            fill
+                            className="object-cover"
+                            unoptimized
+                          />
+                        ) : (
+                          <div className="flex size-full items-center justify-center bg-white/8 text-2xl font-semibold text-zinc-300">
+                            {displayName.slice(0, 1)}
+                          </div>
+                        )}
                       </div>
-                    )}
                     </div>
                   </div>
                   {detail?.isOnline && (
-                    <span className="absolute bottom-0.5 right-0.5 size-3.5 rounded-full border-2 border-zinc-950 bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+                    <span className="absolute bottom-3 right-3 z-10 size-3.5 rounded-full border-2 border-zinc-950 bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
                   )}
                 </div>
-              </div>
-
-              {/* 電腦：還原原本 VIP 浮在頭像上方 */}
-              <div className="relative hidden shrink-0 md:block">
-                <SupporterAvatarInsignia tier={supporterTier} size="md" />
-                <div
-                  className={cn(
-                    "relative mt-1 size-20 rounded-full ring-2",
-                    isCreator
-                      ? "ring-violet-400/40"
-                      : supporterTier !== "none"
-                        ? supporterAvatarRingClassByTier[supporterTier]
-                        : "ring-white/10",
-                    avatarFrameClass
-                  )}
-                >
-                  <div className="absolute inset-0 overflow-hidden rounded-full">
-                  {avatarUrl ? (
-                    <Image
-                      src={avatarUrl}
-                      alt={displayName}
-                      fill
-                      className="object-cover"
-                      unoptimized
-                    />
-                  ) : (
-                    <div className="flex size-full items-center justify-center bg-white/8 text-2xl font-semibold text-zinc-300">
-                      {displayName.slice(0, 1)}
-                    </div>
-                  )}
-                  </div>
-                </div>
-                {detail?.isOnline && (
-                  <span className="absolute bottom-0.5 right-0.5 size-3.5 rounded-full border-2 border-zinc-950 bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-                )}
               </div>
 
               <div className="flex min-w-0 flex-col items-center sm:items-start sm:text-left">
@@ -405,8 +403,14 @@ export function ChatPlayerCard({
                     title={equippedTitle}
                     fallbackRoleLabel={roleFallback.label}
                     fallbackRoleRainbow={roleFallback.rainbow}
-                    isSupporter={detail?.isSupporter}
-                    supporterBadge={detail?.supporterBadge}
+                    isSupporter={
+                      showSupporterFx &&
+                      (detail?.isSupporter ?? player.isSupporter ?? false)
+                    }
+                    supporterBadge={
+                      detail?.supporterBadge ?? player.supporterBadge ?? null
+                    }
+                    supporterLifetime={showSupporterFx && supporterLifetime}
                     showSupporterBadge={false}
                     animateTitle={false}
                     nameColorClass={nameColorClass}
@@ -656,6 +660,7 @@ export function ChatPlayerCard({
               </Button>
             )}
           </div>
+        </div>
         </div>
       </DialogContent>
     </Dialog>

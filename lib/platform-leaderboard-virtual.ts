@@ -21,6 +21,7 @@ function virtualPlayerPresentation(playerId: string) {
     equippedTitle: getVirtualPlayerEquippedTitle(playerId),
     isSupporter: supporter?.isSupporter === true,
     supporterBadge: supporter?.badge ?? null,
+    supporterLifetime: supporter?.lifetime === true,
     avatarFrameClass: cosmetics?.avatarFrameClass ?? null,
     nameColorClass: cosmetics?.nameColorClass ?? null,
   };
@@ -249,6 +250,7 @@ function toEntries(
           : undefined,
         isSupporter: presentation.isSupporter,
         supporterBadge: presentation.supporterBadge,
+        supporterLifetime: presentation.supporterLifetime,
       };
     });
 }
@@ -296,6 +298,7 @@ function toDonationEntries(
         isDonationMasked: false,
         isSupporter: presentation.isSupporter,
         supporterBadge: presentation.supporterBadge,
+        supporterLifetime: presentation.supporterLifetime,
       };
     })
     .sort((a, b) => {

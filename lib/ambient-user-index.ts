@@ -1,6 +1,7 @@
 import { ambientEmailAliases } from "@/lib/ambient-local-email";
 import { listAuthAdminUsers } from "@/lib/auth-admin-users-cache";
 import { parseAmbientPlayerIdFromEmail } from "@/lib/virtual-players";
+import { AUTH_ADMIN_TIMEOUT_MS, withTimeout } from "@/lib/with-timeout";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 const ENTRY_TTL_MS = 10 * 60_000;
@@ -43,7 +44,11 @@ async function resolveAmbientPlayerIdForUser(
   }
 
   try {
-    const { data, error } = await supabase.auth.admin.getUserById(userId);
+    const { data, error } = await withTimeout(
+      supabase.auth.admin.getUserById(userId),
+      AUTH_ADMIN_TIMEOUT_MS,
+      "auth.admin.getUserById"
+    );
     if (error || !data.user) {
       rememberForward(userId, null);
       return null;
@@ -99,17 +104,26 @@ async function loadFullAmbientReverseMap(
   if (reverseFullInflight) return reverseFullInflight;
 
   reverseFullInflight = (async () => {
-    const users = await listAuthAdminUsers(supabase);
-    const map = new Map<string, string>();
-    for (const user of users) {
-      const playerId = readAmbientIdFromUser(user);
-      if (!playerId) continue;
-      map.set(user.id, playerId);
-      rememberForward(user.id, playerId);
+    try {
+      const users = await listAuthAdminUsers(supabase);
+      const map = new Map<string, string>();
+      for (const user of users) {
+        const playerId = readAmbientIdFromUser(user);
+        if (!playerId) continue;
+        map.set(user.id, playerId);
+        rememberForward(user.id, playerId);
+      }
+      // 僅在成功拿到資料時覆寫快取，避免 JWT 失敗洗成空 map
+      if (users.length > 0 || !reverseFullCache) {
+        reverseFullCache = map;
+        reverseFullCachedAt = Date.now();
+      }
+      return reverseFullCache ?? map;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn(`[ambient] reverse map load skipped: ${message}`);
+      return reverseFullCache ?? new Map<string, string>();
     }
-    reverseFullCache = map;
-    reverseFullCachedAt = Date.now();
-    return map;
   })();
 
   try {
@@ -125,45 +139,57 @@ export async function getAmbientUserIdForVirtualPlayer(
   virtualPlayerId: string,
   options?: { preferCreator?: boolean }
 ): Promise<string | null> {
-  for (const [userId, entry] of forwardCache.entries()) {
-    if (entry.expiresAt > Date.now() && entry.playerId === virtualPlayerId) {
-      if (!options?.preferCreator) return userId;
-    }
-  }
-
-  const full = await loadFullAmbientReverseMap(supabase);
-  const matches: string[] = [];
-  for (const [userId, playerId] of full.entries()) {
-    if (playerId === virtualPlayerId) matches.push(userId);
-  }
-  if (matches.length === 0) return null;
-  if (!options?.preferCreator) return matches[0] ?? null;
-
-  for (const userId of matches) {
-    const { data } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", userId)
-      .maybeSingle();
-    if (data?.role === "creator") return userId;
-  }
-
-  // 偏好創作者帳時，優先比對 email 前綴（與 ensureAmbientPlayer 一致）
-  const creatorEmails = new Set(
-    ambientEmailAliases(`ambient.creator.${virtualPlayerId}`)
-  );
-  for (const userId of matches) {
-    try {
-      const { data } = await supabase.auth.admin.getUserById(userId);
-      if (data.user?.email && creatorEmails.has(data.user.email)) {
-        return userId;
+  try {
+    for (const [userId, entry] of forwardCache.entries()) {
+      if (entry.expiresAt > Date.now() && entry.playerId === virtualPlayerId) {
+        if (!options?.preferCreator) return userId;
       }
-    } catch {
-      // ignore
     }
-  }
 
-  return matches[0] ?? null;
+    // 從既有 forward cache／listUsers 快取解析；JWT 失敗時回空不阻斷玩家卡
+    const full = await loadFullAmbientReverseMap(supabase);
+    const matches: string[] = [];
+    for (const [userId, playerId] of full.entries()) {
+      if (playerId === virtualPlayerId) matches.push(userId);
+    }
+    if (matches.length === 0) {
+      return null;
+    }
+    if (!options?.preferCreator) return matches[0] ?? null;
+
+    for (const userId of matches) {
+      const { data } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", userId)
+        .maybeSingle();
+      if (data?.role === "creator") return userId;
+    }
+
+    // 偏好創作者帳時，優先比對 email 前綴（與 ensureAmbientPlayer 一致）
+    const creatorEmails = new Set(
+      ambientEmailAliases(`ambient.creator.${virtualPlayerId}`)
+    );
+    for (const userId of matches) {
+      try {
+        const { data, error } = await supabase.auth.admin.getUserById(userId);
+        if (error) continue;
+        if (data.user?.email && creatorEmails.has(data.user.email)) {
+          return userId;
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    return matches[0] ?? null;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(
+      `[ambient] getAmbientUserIdForVirtualPlayer(${virtualPlayerId}) skipped: ${message}`
+    );
+    return null;
+  }
 }
 
 /** 快速判斷單一 user 是否為 ambient bot（私訊擋擋用） */

@@ -6,6 +6,11 @@ import {
 } from "@/lib/chat-player-profile-service";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
+import {
+  SERVER_QUERY_TIMEOUT_MS,
+  isTimeoutError,
+  withTimeout,
+} from "@/lib/with-timeout";
 
 export async function GET(request: Request) {
   try {
@@ -44,12 +49,16 @@ export async function GET(request: Request) {
       }
     }
 
-    const profile = await getChatPlayerPublicProfile(supabase, {
-      userId,
-      virtualPlayerId,
-      viewerUserId: user?.id,
-      viewerIsAdmin: await resolveAdminAccess(user),
-    });
+    const profile = await withTimeout(
+      getChatPlayerPublicProfile(supabase, {
+        userId,
+        virtualPlayerId,
+        viewerUserId: user?.id,
+        viewerIsAdmin: await resolveAdminAccess(user),
+      }),
+      SERVER_QUERY_TIMEOUT_MS,
+      "getChatPlayerPublicProfile"
+    );
 
     if (!profile) {
       return NextResponse.json({ error: "找不到此玩家" }, { status: 404 });
@@ -57,8 +66,26 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ profile });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "讀取玩家資料失敗";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const raw = error instanceof Error ? error.message : "讀取玩家資料失敗";
+    const lower = raw.toLowerCase();
+    const isAuthNoise =
+      lower.includes("invalid jwt") ||
+      lower.includes("jwt kid") ||
+      lower.includes("unrecognized jwt") ||
+      lower.includes("unable to parse or verify");
+    if (isTimeoutError(error)) {
+      return NextResponse.json(
+        { error: "暫時無法讀取玩家資料，請稍後再試" },
+        { status: 503 }
+      );
+    }
+    if (isAuthNoise) {
+      console.warn(`[chat/players/profile] auth noise suppressed: ${raw}`);
+      return NextResponse.json(
+        { error: "暫時無法讀取玩家資料，請稍後再試" },
+        { status: 503 }
+      );
+    }
+    return NextResponse.json({ error: raw }, { status: 500 });
   }
 }

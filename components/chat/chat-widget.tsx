@@ -39,6 +39,10 @@ import {
   getSupporterDisplayTierFromProfile,
   type SupporterDisplayTier,
 } from "@/lib/supporter-tier";
+import {
+  getVirtualPlayerEquippedTitle,
+  getVirtualPlayerSupporterFlags,
+} from "@/lib/virtual-player-supporter";
 
 type ChatTab = ChatChannel | "contacts";
 
@@ -183,11 +187,16 @@ export function ChatWidget() {
     avatarUrl?: string | null;
   }) {
     if (target.virtualPlayerId) {
+      const flags = getVirtualPlayerSupporterFlags(target.virtualPlayerId);
       setPlayerPreview(
         virtualPlayerToPlayerPreview({
           id: target.virtualPlayerId,
           displayName: target.displayName,
           avatarUrl: target.avatarUrl ?? null,
+          equippedTitle: getVirtualPlayerEquippedTitle(target.virtualPlayerId),
+          isSupporter: flags?.isSupporter === true,
+          supporterBadge: flags?.badge ?? null,
+          supporterLifetime: flags?.lifetime === true,
         })
       );
     } else if (target.userId) {
@@ -305,7 +314,7 @@ export function ChatWidget() {
               }}
               exit={{ opacity: 0, y: 16, scale: 0.96 }}
               transition={{ type: "spring", stiffness: 380, damping: 30 }}
-              className="pointer-events-auto flex h-[min(560px,calc(100dvh-7.5rem))] w-[min(100vw-1.25rem,400px)] flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/95 shadow-2xl shadow-black/50 backdrop-blur-xl"
+              className="pointer-events-auto flex h-[min(560px,calc(100dvh-7.5rem))] w-[min(100vw-1.25rem,400px)] max-w-[calc(100vw-1.25rem)] flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/95 shadow-2xl shadow-black/50 backdrop-blur-xl"
             >
               <div className="relative flex items-center justify-end border-b border-white/8 bg-gradient-to-r from-cyan-500/10 via-transparent to-violet-500/10 px-4 py-3">
                 <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-16">

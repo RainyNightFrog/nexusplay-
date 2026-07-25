@@ -1,9 +1,8 @@
 import { VIRTUAL_PLAYERS } from "@/lib/virtual-players";
 
 /**
- * 少數虛擬玩家裝備 AP 商店外觀。
- * 人選＝貢獻榜虛擬池（同 LEADERBOARD_VIRTUAL_DONATION_COUNT 邏輯）中打賞金額最高的若干位；
- * 稀有度依模擬貢獻金額分級。
+ * 少數虛擬玩家隨機裝備 AP 商店外觀（頭像框／名字色／氣泡）。
+ * 刻意只給一小撮，避免聊天看起來「人人都掛特效」像機器人。
  */
 
 export type VirtualPlayerCosmeticsCss = {
@@ -12,11 +11,8 @@ export type VirtualPlayerCosmeticsCss = {
   chatBubbleClass: string | null;
 };
 
-/** 與 platform-leaderboard-virtual 貢獻榜池一致 */
-const DONATION_POOL_COUNT = 20;
-const COSMETIC_PLAYER_COUNT = 8;
-const DONATION_MIN_USD = 1;
-const DONATION_MAX_USD = 160;
+/** 全體虛擬玩家中隨機抽取的人數（約 6–8%，看起來自然） */
+const COSMETIC_PLAYER_COUNT = 7;
 
 type ApRarity = "common" | "rare" | "epic" | "legendary" | "mythic";
 
@@ -99,43 +95,28 @@ function hashString(value: string, salt: number) {
   return Math.abs(hash);
 }
 
-/** 與貢獻榜 getVirtualDonationUsd 相同演算法 */
-function getVirtualDonationUsd(playerId: string): number {
-  const span = DONATION_MAX_USD - DONATION_MIN_USD + 1;
-  const dollars = DONATION_MIN_USD + (hashString(playerId, 241) % span);
-  const cents = hashString(playerId, 313) % 100;
-  return Math.round((dollars + cents / 100) * 100) / 100;
-}
-
-function rarityFromDonationUsd(amountUsd: number): ApRarity {
-  if (amountUsd >= 140) return "mythic";
-  if (amountUsd >= 110) return "legendary";
-  if (amountUsd >= 80) return "epic";
-  if (amountUsd >= 45) return "rare";
+function rarityFromSeed(playerId: string): ApRarity {
+  const roll = hashString(playerId, 419) % 100;
+  if (roll < 8) return "mythic";
+  if (roll < 22) return "legendary";
+  if (roll < 42) return "epic";
+  if (roll < 70) return "rare";
   return "common";
 }
 
-/** 貢獻榜虛擬池（hash 389 取前 20）中，打賞最高的 COSMETIC_PLAYER_COUNT 位 */
+/** 以穩定 hash 打亂後取前 N 位，每位玩家是否有外觀跨重啟不變 */
 function buildCosmeticAssignment(): Map<string, VirtualPlayerCosmeticsCss> {
-  const pool = [...VIRTUAL_PLAYERS]
-    .sort((a, b) => hashString(a.id, 389) - hashString(b.id, 389))
-    .slice(0, DONATION_POOL_COUNT)
-    .map((player) => ({
-      id: player.id,
-      donationUsd: getVirtualDonationUsd(player.id),
-    }))
-    .sort((a, b) => {
-      if (b.donationUsd !== a.donationUsd) return b.donationUsd - a.donationUsd;
-      return a.id.localeCompare(b.id);
-    })
-    .slice(0, COSMETIC_PLAYER_COUNT);
+  const shuffled = [...VIRTUAL_PLAYERS].sort(
+    (a, b) => hashString(a.id, 907) - hashString(b.id, 907)
+  );
+  const picked = shuffled.slice(0, COSMETIC_PLAYER_COUNT);
 
   const map = new Map<string, VirtualPlayerCosmeticsCss>();
-  for (const entry of pool) {
-    const rarity = rarityFromDonationUsd(entry.donationUsd);
+  for (const player of picked) {
+    const rarity = rarityFromSeed(player.id);
     const options = LOADOUTS[rarity];
-    const pick = options[hashString(entry.id, 557) % options.length]!;
-    map.set(entry.id, {
+    const pick = options[hashString(player.id, 557) % options.length]!;
+    map.set(player.id, {
       avatarFrameClass: pick.frame,
       nameColorClass: pick.name,
       chatBubbleClass: pick.bubble,

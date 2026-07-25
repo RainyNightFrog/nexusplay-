@@ -3,6 +3,10 @@ export type AppLanguage = "zh-HK" | "zh-CN" | "en";
 export type AppSettings = {
   language: AppLanguage;
   reduceMotion: boolean;
+  /** 本機關閉頭像框／支持者光環／稱號雷電等外觀特效（省電／效能） */
+  disableCosmeticFx: boolean;
+  /** 隱藏「自己」的支持者頭像特效（VIP／SVIP／LEGEND 光環與角標） */
+  hideMySupporterFx: boolean;
   forumEmailDigest: boolean;
   forumReplyNotify: boolean;
   gameAutoplay: boolean;
@@ -15,6 +19,8 @@ const LEGACY_APP_SETTINGS_STORAGE_KEY = "nexusplay-app-settings";
 export const DEFAULT_APP_SETTINGS: AppSettings = {
   language: "zh-HK",
   reduceMotion: false,
+  disableCosmeticFx: false,
+  hideMySupporterFx: false,
   forumEmailDigest: true,
   forumReplyNotify: true,
   gameAutoplay: false,
@@ -70,6 +76,7 @@ export function applyAppSettings(settings: AppSettings) {
 
   const root = document.documentElement;
   root.dataset.reduceMotion = settings.reduceMotion ? "true" : "false";
+  root.dataset.disableCosmeticFx = settings.disableCosmeticFx ? "true" : "false";
   root.lang = settings.language;
   root.classList.add("dark");
   root.classList.remove("light");

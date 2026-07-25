@@ -7,7 +7,10 @@ import type { ChatMessage } from "@/lib/chat";
 import { UserBadge } from "@/components/UserBadge";
 import { SupporterAvatarInsignia } from "@/components/supporter/supporter-avatar-insignia";
 import { RainbowSafeText } from "@/components/supporter/rainbow-safe-text";
+import { useAppSettings } from "@/components/settings/app-settings-provider";
 import {
+  isSvipLikeTier,
+  supporterAvatarRingClassByTier,
   supporterMessageContentClassByTier,
   type SupporterDisplayTier,
 } from "@/lib/supporter-tier";
@@ -55,6 +58,7 @@ export function ChatMessageList({
   viewerSupporterBadge = null,
 }: ChatMessageListProps) {
   const t = useTranslations("chat");
+  const { settings } = useAppSettings();
   const bottomRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const prevMessageCountRef = useRef(0);
@@ -120,7 +124,7 @@ export function ChatMessageList({
   return (
     <div
       ref={containerRef}
-      className="flex flex-1 flex-col gap-2 overflow-y-auto overscroll-contain px-3 py-3"
+      className="flex min-w-0 flex-1 flex-col gap-2 overflow-y-auto overflow-x-hidden overscroll-contain px-3 py-3"
     >
       {messages.map((message) => {
         const recalled = Boolean(message.recalled_at);
@@ -135,6 +139,10 @@ export function ChatMessageList({
             viewerSupporterTier,
             viewerSupporterBadge
           );
+        // 僅「隱藏我的特效」影響自己；關閉特效交給 CSS，避免聊天完全看不到光環
+        const showSupporterFx =
+          supporterTier !== "none" &&
+          !(settings.hideMySupporterFx && message.is_own === true);
         const isSupporterAuthor = supporterTier !== "none";
         const isSupporterMessage = isSupporterAuthor && !recalled;
         const authorRole = resolveChatAuthorRoleFallback(
@@ -156,7 +164,10 @@ export function ChatMessageList({
           const useRainbow =
             parsed.kind === "svip_online" ||
             parsed.kind === "lifetime_online";
-          const rainbowClass = supporterMessageContentClassByTier.premium;
+          const rainbowClass =
+            parsed.kind === "lifetime_online"
+              ? supporterMessageContentClassByTier.lifetime
+              : supporterMessageContentClassByTier.premium;
 
           return (
             <div
@@ -237,30 +248,43 @@ export function ChatMessageList({
           <div
             key={message.id}
             className={cn(
-              "group flex gap-2",
+              "group flex min-w-0 gap-2",
               message.is_own ? "flex-row-reverse" : "flex-row"
             )}
           >
-            <div className="relative shrink-0 pt-1.5">
-              <SupporterAvatarInsignia
-                tier={supporterTier}
-                size="xs"
-                className="scale-90"
-              />
+            <div
+              className={cn(
+                "relative w-8 shrink-0 overflow-visible",
+                showSupporterFx ? "pt-3.5" : "pt-1.5"
+              )}
+            >
+              {showSupporterFx && (
+                <SupporterAvatarInsignia
+                  tier={supporterTier}
+                  size="xs"
+                  supporterLifetime={supporterTier === "lifetime"}
+                  className="z-30 scale-[0.85]"
+                />
+              )}
+              <div
+                className={cn(
+                  "relative mx-auto inline-flex overflow-visible",
+                  supporterTier !== "none" &&
+                    showSupporterFx &&
+                    supporterAvatarRingClassByTier[supporterTier]
+                )}
+              >
               <button
                 type="button"
                 onClick={() => onAuthorClick?.(message)}
                 disabled={!onAuthorClick}
                 className={cn(
                   "relative flex size-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold uppercase transition-opacity",
-                  message.is_creator
+                  message.is_creator && !showSupporterFx
                     ? "bg-gradient-to-br from-violet-500/30 to-cyan-500/30 text-cyan-100 ring-1 ring-cyan-400/20"
-                    : supporterTier === "premium"
-                      ? "ring-1 ring-violet-300/40"
-                      : supporterTier === "basic"
-                        ? "ring-1 ring-amber-400/40"
-                        : "bg-white/8 text-zinc-300",
-                  message.author_avatar_frame_class,
+                    : !showSupporterFx && "bg-white/8 text-zinc-300",
+                  !settings.disableCosmeticFx &&
+                    message.author_avatar_frame_class,
                   onAuthorClick && "cursor-pointer hover:opacity-80"
                 )}
                 aria-label={message.author_name}
@@ -280,11 +304,12 @@ export function ChatMessageList({
                   )}
                 </span>
               </button>
+              </div>
             </div>
 
             <div
               className={cn(
-                "flex max-w-[78%] flex-col gap-1",
+                "flex min-w-0 max-w-[calc(100%-2.5rem)] flex-1 flex-col gap-1",
                 message.is_own ? "items-end" : "items-start"
               )}
             >
@@ -307,9 +332,14 @@ export function ChatMessageList({
                       fallbackRoleRainbow={authorRole.rainbow}
                       isSupporter={isSupporterAuthor}
                       supporterBadge={supporterBadge}
+                      supporterLifetime={supporterTier === "lifetime"}
                       showSupporterBadge={false}
                       animateTitle={false}
-                      nameColorClass={message.author_name_color_class}
+                      nameColorClass={
+                        settings.disableCosmeticFx
+                          ? null
+                          : message.author_name_color_class
+                      }
                       usernameClassName="text-zinc-400 hover:text-cyan-300"
                       titleClassName="text-[9px]"
                     />
@@ -322,9 +352,14 @@ export function ChatMessageList({
                     fallbackRoleRainbow={authorRole.rainbow}
                     isSupporter={isSupporterAuthor}
                     supporterBadge={supporterBadge}
+                    supporterLifetime={supporterTier === "lifetime"}
                     showSupporterBadge={false}
                     animateTitle={false}
-                    nameColorClass={message.author_name_color_class}
+                    nameColorClass={
+                      settings.disableCosmeticFx
+                        ? null
+                        : message.author_name_color_class
+                    }
                     usernameClassName="text-zinc-400"
                     titleClassName="text-[9px]"
                   />
@@ -345,11 +380,11 @@ export function ChatMessageList({
               >
                 {recalled ? (
                   <span>{t("recalled")}</span>
-                ) : isSupporterMessage && supporterTier === "premium" ? (
+                ) : isSupporterMessage && isSvipLikeTier(supporterTier) ? (
                   <RainbowSafeText
                     text={message.content}
                     rainbowClassName={
-                      supporterMessageContentClassByTier.premium
+                      supporterMessageContentClassByTier[supporterTier]
                     }
                   />
                 ) : (

@@ -55,6 +55,8 @@ export type PlatformLeaderboardEntry = {
   donationTier?: DonationPrivacyTier;
   isSupporter?: boolean;
   supporterBadge?: string | null;
+  /** 永久傳說支持者 */
+  supporterLifetime?: boolean;
   /** 真實用戶管理員角色：排行榜顯示「超級管理員」／「管理員」稱號 */
   adminRole?: import("@/lib/admin-display-role").AdminDisplayRole;
 };
