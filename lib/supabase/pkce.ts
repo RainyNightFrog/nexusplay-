@@ -256,6 +256,50 @@ export function clearStaleSupabaseSessionCookies() {
 
     document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax`;
   }
+
+  clearLegacyRootDomainAuthCookies();
+}
+
+/**
+ * 清掉舊版 Domain=.root 的 Supabase cookie，避免 session 繼續漏到 play 子網域。
+ */
+export function clearLegacyRootDomainAuthCookies() {
+  if (typeof document === "undefined") return;
+
+  const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN?.trim().toLowerCase();
+  if (!rootDomain) return;
+
+  const host = window.location.hostname.toLowerCase();
+  if (
+    host === "localhost" ||
+    host === "127.0.0.1" ||
+    host.endsWith(".localhost")
+  ) {
+    return;
+  }
+
+  const storageKey = getSupabaseAuthStorageKey();
+  const verifierKey = getPkceVerifierCookieKey();
+  const names = new Set<string>();
+
+  for (const part of document.cookie.split(";")) {
+    const name = part.trim().split("=")[0];
+    if (!name?.startsWith(storageKey)) continue;
+    if (isChunkLike(name, verifierKey)) continue;
+    names.add(name);
+  }
+
+  // 也清常見 chunk 名稱（即使目前 document.cookie 讀不到 Domain cookie）
+  names.add(storageKey);
+  for (let i = 0; i < 5; i += 1) {
+    names.add(`${storageKey}.${i}`);
+  }
+
+  for (const name of names) {
+    document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax; domain=.${rootDomain}`;
+    document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax; domain=${rootDomain}`;
+    document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax`;
+  }
 }
 
 type PkceExchangeResult =

@@ -1,3 +1,4 @@
+import { buildPlayEmbedUrl } from "@/lib/play-origin";
 import {
   enrichGameRecord,
   getPlatformGameMeta,
@@ -87,7 +88,7 @@ export function resolvePlayUrl(gameUrl: string, gameId?: number) {
     gameId &&
     gameUrl.includes("/storage/v1/object/public/game-files/builds/")
   ) {
-    return `/api/games/${gameId}/embed/index.html`;
+    return buildPlayEmbedUrl(gameId, "index.html");
   }
   return gameUrl;
 }

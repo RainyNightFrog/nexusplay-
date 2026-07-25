@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isAdminUser } from "@/lib/admin-auth";
+import { resolveAdminAccess } from "@/lib/admin-auth";
 import {
   gameRequiresPurchase,
   resolvePurchaseEntitlementForGame,
@@ -72,7 +72,7 @@ export async function GET(
     }
 
     const accessOptions = {
-      isAdmin: isAdminUser(user),
+      isAdmin: await resolveAdminAccess(user),
       hasPartnerAccess,
     };
 

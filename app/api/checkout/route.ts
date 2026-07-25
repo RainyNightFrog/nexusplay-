@@ -1,11 +1,18 @@
 import { NextResponse } from "next/server";
 import { resolveUserProfile } from "@/lib/auth-profile";
+import { assertTrustedBrowserOrigin } from "@/lib/request-origin";
 import {
   createGameCheckoutSession,
   getCheckoutPaymentsState,
   loadGameCheckoutInfo,
   recordPreviewCheckout,
 } from "@/lib/game-checkout-service";
+import { allowPlatformPreviewGrant } from "@/lib/platform-preview-mode";
+import {
+  checkRateLimit,
+  getClientIp,
+  rateLimitResponse,
+} from "@/lib/rate-limit";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
 
@@ -44,6 +51,15 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const originDenied = assertTrustedBrowserOrigin(request);
+    if (originDenied) return originDenied;
+
+    const ip = getClientIp(request);
+    const limit = checkRateLimit(`checkout:post:${ip}`, 20, 60_000);
+    if (!limit.allowed) {
+      return rateLimitResponse(limit.retryAfterSec);
+    }
+
     const authClient = await createAuthServerClient();
     const {
       data: { user },
@@ -51,6 +67,11 @@ export async function POST(request: Request) {
 
     if (!user?.email) {
       return NextResponse.json({ error: "請先登入才能購買" }, { status: 401 });
+    }
+
+    const userLimit = checkRateLimit(`checkout:user:${user.id}`, 10, 60_000);
+    if (!userLimit.allowed) {
+      return rateLimitResponse(userLimit.retryAfterSec);
     }
 
     const body = (await request.json()) as {
@@ -69,9 +90,19 @@ export async function POST(request: Request) {
 
     const profile = await resolveUserProfile(authClient, user);
     const payments = getCheckoutPaymentsState();
-    const requestOrigin = request.headers.get("origin") ?? new URL(request.url).origin;
+    const requestOrigin =
+      request.headers.get("origin") ?? new URL(request.url).origin;
 
     if (!payments.paymentsLive) {
+      if (!allowPlatformPreviewGrant()) {
+        return NextResponse.json(
+          {
+            error: "付款尚未開放，暫時無法購買遊戲。請稍後再試或聯絡平台。",
+          },
+          { status: 503 }
+        );
+      }
+
       const result = await recordPreviewCheckout({
         gameId,
         buyerId: user.id,

@@ -1,7 +1,7 @@
 import type { User } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { UserProfile, UserRole } from "@/lib/auth";
-import { isAdminUser } from "@/lib/admin-auth";
+import { isServiceAdminUser } from "@/lib/admin-auth";
 import {
   getEquippedCosmetics,
   resolveCosmeticCssByCodes,
@@ -104,8 +104,7 @@ export async function resolveUserProfile(
 
   if (!error && profile) {
     const dbIsAdmin = profile.is_admin === true;
-    const isAdmin =
-      isAdminUser(user) || metadataProfile.is_admin === true || dbIsAdmin;
+    const isAdmin = dbIsAdmin || isServiceAdminUser(user);
     const developingGames =
       metadataProfile.developing_games ||
       normalizeRole(profile.role) === "creator" ||
@@ -206,5 +205,5 @@ export function hasCreatorDashboardAccess(
   role: UserRole,
   isAdminFlag = false
 ): boolean {
-  return isAdminUser(user) || isAdminFlag === true || role === "creator";
+  return isAdminFlag === true || isServiceAdminUser(user) || role === "creator";
 }

@@ -8,12 +8,15 @@ import { ANALYTICS_SESSION_COOKIE } from "@/lib/analytics-service";
 import { getSupabaseCookieOptions } from "@/lib/supabase/cookie-options";
 import {
   buildSubdomainApexRedirectUrl,
-  buildSubdomainRedundantPathRedirect,
   buildSubdomainRewritePath,
   isSubdomainApexPath,
-  isSubdomainCanonicalPath,
   resolveSubdomainFromHost,
 } from "@/lib/subdomain";
+import {
+  getPlayOrigin,
+  isPlayEmbedHost,
+  isPlayEmbedPath,
+} from "@/lib/play-origin";
 import { resolveSubdomainRoute } from "@/lib/creator-username";
 import { routing } from "@/i18n/routing";
 import createIntlMiddleware from "next-intl/middleware";
@@ -53,63 +56,6 @@ function pathnameNeedsServerAuth(pathname: string) {
   }
 
   return pathname.includes("/forum");
-}
-
-function applySubdomainRewrite(request: NextRequest) {
-  const subdomain = resolveSubdomainFromHost(request.headers.get("host") ?? "");
-  if (!subdomain) {
-    return { request, rewriteUrl: null as URL | null };
-  }
-
-  const rewriteUrl = request.nextUrl.clone();
-  rewriteUrl.pathname = buildSubdomainRewritePath(
-    request.nextUrl.pathname,
-    subdomain,
-    "game"
-  );
-
-  const rewrittenRequest = new NextRequest(rewriteUrl, {
-    headers: request.headers,
-    method: request.method,
-  });
-
-  return { request: rewrittenRequest, rewriteUrl };
-}
-
-async function resolveSubdomainRewrite(
-  request: NextRequest,
-  supabase: ReturnType<typeof createServerClient>
-) {
-  const subdomain = resolveSubdomainFromHost(request.headers.get("host") ?? "");
-  if (!subdomain) {
-    return { request, rewriteUrl: null as URL | null };
-  }
-
-  let routeKind: "game" | "creator" = "game";
-  try {
-    const resolved = await resolveSubdomainRoute(supabase, subdomain);
-    if (resolved) routeKind = resolved;
-  } catch {
-    routeKind = "game";
-  }
-
-  if (isSubdomainCanonicalPath(request.nextUrl.pathname, subdomain, routeKind)) {
-    return { request, rewriteUrl: null as URL | null };
-  }
-
-  const rewriteUrl = request.nextUrl.clone();
-  rewriteUrl.pathname = buildSubdomainRewritePath(
-    request.nextUrl.pathname,
-    subdomain,
-    routeKind
-  );
-
-  const rewrittenRequest = new NextRequest(rewriteUrl, {
-    headers: request.headers,
-    method: request.method,
-  });
-
-  return { request: rewrittenRequest, rewriteUrl };
 }
 
 /**
@@ -239,7 +185,25 @@ function sanitizePathname(pathname: string) {
 }
 
 export async function middleware(request: NextRequest) {
-  // 舊語系別名 → 預設繁中（zh-HK，localePrefix as-needed 故去掉前綴）
+  const hostHeader = request.headers.get("host") ?? "";
+
+  // play.*：僅允許上傳遊戲 embed 資產，其餘導回主站
+  if (isPlayEmbedHost(hostHeader)) {
+    const pathname = request.nextUrl.pathname;
+    if (!isPlayEmbedPath(pathname)) {
+      const playOrigin = getPlayOrigin();
+      const siteUrl =
+        process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
+        buildSubdomainApexRedirectUrl(hostHeader, "/", "").replace(/\/$/, "");
+      if (playOrigin && siteUrl.startsWith(playOrigin)) {
+        return new NextResponse("Not Found", { status: 404 });
+      }
+      return NextResponse.redirect(siteUrl || "https://rainynightfrog.com", 307);
+    }
+    return NextResponse.next();
+  }
+
+  // 舊語系別名 → 預設繁中（zh-HK，localePrefix as-needed 會去掉前綴）
   if (
     request.nextUrl.pathname === "/zh-TW" ||
     request.nextUrl.pathname.startsWith("/zh-TW/") ||
@@ -259,20 +223,21 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  const subdomainLabel = resolveSubdomainFromHost(request.headers.get("host") ?? "");
+  const subdomainLabel = resolveSubdomainFromHost(hostHeader);
   let effectiveRequest = request;
   let rewriteUrl: URL | null = null;
 
-  // 子網域上的創作者後台／帳號路徑 → 導回主網域（避免 rewrite 成 /game/.../dashboard 而 404）
+  // 子網域上的帳號／後台路徑 → 導回主網域
   if (subdomainLabel && isSubdomainApexPath(request.nextUrl.pathname)) {
     const apex = buildSubdomainApexRedirectUrl(
-      request.headers.get("host") ?? "",
+      hostHeader,
       request.nextUrl.pathname,
       request.nextUrl.search
     );
     return NextResponse.redirect(apex, 307);
   }
 
+  // vanity 遊戲／創作者子網域 → 導回主站對應頁（host-only cookie）
   if (subdomainLabel) {
     const lookupClient = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -296,32 +261,20 @@ export async function middleware(request: NextRequest) {
       routeKind = "game";
     }
 
-    const redundantRedirect = buildSubdomainRedundantPathRedirect(
+    const apexPath = buildSubdomainRewritePath(
       request.nextUrl.pathname,
       subdomainLabel,
       routeKind
     );
-    if (
-      redundantRedirect &&
-      redundantRedirect !== request.nextUrl.pathname
-    ) {
-      const redirectUrl = request.nextUrl.clone();
-      redirectUrl.pathname = redundantRedirect;
-      return NextResponse.redirect(redirectUrl);
-    }
-
-    try {
-      const resolved = await resolveSubdomainRewrite(request, lookupClient);
-      effectiveRequest = resolved.request;
-      rewriteUrl = resolved.rewriteUrl;
-    } catch {
-      const fallback = applySubdomainRewrite(request);
-      effectiveRequest = fallback.request;
-      rewriteUrl = fallback.rewriteUrl;
-    }
+    const apex = buildSubdomainApexRedirectUrl(
+      hostHeader,
+      apexPath,
+      request.nextUrl.search
+    );
+    return NextResponse.redirect(apex, 307);
   }
 
-  const oauthCode = effectiveRequest.nextUrl.searchParams.get("code");
+const oauthCode = effectiveRequest.nextUrl.searchParams.get("code");
   const pathnameWithoutLocale = stripLocalePrefix(
     effectiveRequest.nextUrl.pathname
   );
@@ -525,5 +478,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api|auth/callback|_next|_vercel|feed/|.*\\..*).*)"],
+  matcher: ["/((?!api|auth/callback|_next|_vercel|feed/|.*\\..*).*)", "/api/games/:path*"],
 };

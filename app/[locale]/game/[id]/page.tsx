@@ -43,6 +43,8 @@ import { buildEmbedCode, sandboxForEmbedUrl } from "@/lib/iframe-sandbox";
 import { isSafeEmbedUrl } from "@/lib/embed-url";
 import { postShowGameMenu } from "@/lib/rainynightfrog-embed-sdk";
 import { TAG_COLORS, type Game } from "@/lib/games";
+import { buildGameHref } from "@/lib/game-path";
+import { isNumericGameId } from "@/lib/game-slug";
 import { useGameI18n } from "@/hooks/use-game-i18n";
 import { useAuth } from "@/hooks/use-auth";
 import { requestOpenPlayerDm } from "@/lib/open-player-dm";
@@ -212,6 +214,17 @@ function GamePageContent() {
           setLoading(false);
         }
 
+        if (
+          !cancelled &&
+          isNumericGameId(gameId) &&
+          typeof loadedGame.slug === "string" &&
+          loadedGame.slug.trim()
+        ) {
+          const query = window.location.search;
+          router.replace(`${buildGameHref(loadedGame)}${query}`);
+          return;
+        }
+
         if (userCanPlay && !isDirectlyPlayable(loadedGame.embedUrl)) {
           if (!cancelled) setMigrating(true);
 
@@ -250,7 +263,7 @@ function GamePageContent() {
     return () => {
       cancelled = true;
     };
-  }, [gameId, tc, translateApiError]);
+  }, [gameId, tc, translateApiError, router]);
 
   useEffect(() => {
     if (!game?.id) return;
@@ -287,7 +300,9 @@ function GamePageContent() {
     if (!game) return;
 
     if (!profile) {
-      router.push(`/auth?redirect=${encodeURIComponent(`/game/${game.id}`)}`);
+      router.push(
+        `/auth?redirect=${encodeURIComponent(buildGameHref(game))}`
+      );
       return;
     }
 
@@ -318,7 +333,9 @@ function GamePageContent() {
     if (!game) return;
 
     if (!profile) {
-      router.push(`/auth?redirect=${encodeURIComponent(`/game/${game.id}`)}`);
+      router.push(
+        `/auth?redirect=${encodeURIComponent(buildGameHref(game))}`
+      );
       return;
     }
 
@@ -400,9 +417,12 @@ function GamePageContent() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("tab") === "forum") {
-      router.replace(`/game/${gameId}/forum`);
+      const target = game
+        ? buildGameHref(game, "/forum")
+        : `/game/${gameId}/forum`;
+      router.replace(target);
     }
-  }, [gameId, router]);
+  }, [game, gameId, router]);
 
   const isUpcoming = game?.isUpcoming === true;
   const playable =
@@ -488,13 +508,23 @@ function GamePageContent() {
     const checkoutState = searchParams.get("checkout");
     if (checkoutState === "success") {
       showToast(t("checkoutSuccessLive"));
-      router.replace(`/game/${gameId}`, { scroll: false });
+      const target = game ? buildGameHref(game) : `/game/${gameId}`;
+      router.replace(target, { scroll: false });
       void refreshGameAfterPurchase();
     } else if (checkoutState === "cancelled") {
       showToast(t("checkoutCancelled"));
-      router.replace(`/game/${gameId}`, { scroll: false });
+      const target = game ? buildGameHref(game) : `/game/${gameId}`;
+      router.replace(target, { scroll: false });
     }
-  }, [searchParams, showToast, t, router, gameId, refreshGameAfterPurchase]);
+  }, [
+    searchParams,
+    showToast,
+    t,
+    router,
+    game,
+    gameId,
+    refreshGameAfterPurchase,
+  ]);
 
   const openCreatorProfile = useCallback(() => {
     if (!game?.creatorId) return;
@@ -637,7 +667,7 @@ function GamePageContent() {
             <LeaderboardNavButton />
             <LanguageSwitcher />
             <Link
-              href={`/game/${game.id}/forum`}
+              href={buildGameHref(game, "/forum")}
               className={cn(
                 buttonVariants({ variant: "outline", size: "sm" }),
                 "gap-1.5 border-violet-400/25 bg-violet-500/10 text-violet-200 hover:border-violet-400/40 hover:bg-violet-500/15"
@@ -1121,7 +1151,7 @@ function GamePageContent() {
               </p>
 
               <Link
-                href={`/game/${game.id}/forum`}
+                href={buildGameHref(game, "/forum")}
                 className={cn(
                   buttonVariants({ variant: "outline" }),
                   "mt-5 w-full justify-center gap-2 border-violet-400/25 bg-violet-500/10 text-violet-200 hover:border-violet-400/40 hover:bg-violet-500/15"
@@ -1209,6 +1239,7 @@ function GamePageContent() {
         {game && (
           <GameDetailSections
             gameId={game.id}
+            gameSlug={game.slug}
             description={localizedDescription(game.title, game.description)}
             detailsHtml={game.detailsHtml}
             creator={game.creator || tc("defaultCreator")}

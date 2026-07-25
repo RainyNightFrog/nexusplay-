@@ -119,12 +119,16 @@ export function virtualPlayerToPlayerPreview(player: {
   displayName: string;
   avatarUrl: string | null;
   equippedTitle?: EquippedTitle | null;
+  isSupporter?: boolean;
+  supporterBadge?: string | null;
 }): ChatPlayerPreview {
   return {
     userId: "",
     displayName: player.displayName,
     avatarUrl: player.avatarUrl,
     equippedTitle: player.equippedTitle ?? null,
+    isSupporter: player.isSupporter,
+    supporterBadge: player.supporterBadge,
     isCreator: false,
     isVirtual: true,
     virtualPlayerId: player.id,

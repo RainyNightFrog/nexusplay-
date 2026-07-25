@@ -26,6 +26,7 @@ import { FollowCreatorButton } from "@/components/creator/follow-creator-button"
 import type { SearchCreatorResult } from "@/lib/platform-search-service";
 import { addSearchHistory } from "@/lib/search-history";
 import type { Game } from "@/lib/games";
+import { buildGameHref } from "@/lib/game-path";
 import { useGameFavoriteActions } from "@/hooks/use-game-favorite-actions";
 import { useFormatCount } from "@/hooks/use-format-count";
 import { cn } from "@/lib/utils";
@@ -229,7 +230,7 @@ function SearchPageContent() {
                         transition={{ duration: 0.35, delay: index * 0.04 }}
                       >
                         <Link
-                          href={`/game/${game.id}`}
+                          href={buildGameHref(game)}
                           className="group block overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/60 shadow-lg transition hover:border-cyan-400/30"
                         >
                           <div className="relative aspect-[16/10] overflow-hidden">

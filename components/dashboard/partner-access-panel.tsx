@@ -7,14 +7,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { GameAccessCodeRecord } from "@/lib/partner-access-service";
+import { buildGameHref } from "@/lib/game-path";
 import { cn } from "@/lib/utils";
 
 type PartnerAccessPanelProps = {
   gameId: number;
+  gameSlug?: string | null;
   className?: string;
 };
 
-export function PartnerAccessPanel({ gameId, className }: PartnerAccessPanelProps) {
+export function PartnerAccessPanel({
+  gameId,
+  gameSlug,
+  className,
+}: PartnerAccessPanelProps) {
   const t = useTranslations("dashboard");
   const [codes, setCodes] = useState<GameAccessCodeRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -115,7 +121,7 @@ export function PartnerAccessPanel({ gameId, className }: PartnerAccessPanelProp
   function copyLink(code: GameAccessCodeRecord) {
     const origin =
       typeof window !== "undefined" ? window.location.origin : "";
-    const link = `${origin}/game/${gameId}?access=${encodeURIComponent(code.code)}`;
+    const link = `${origin}${buildGameHref({ id: gameId, slug: gameSlug })}?access=${encodeURIComponent(code.code)}`;
     void navigator.clipboard.writeText(link);
     setCopiedId(code.id);
     window.setTimeout(() => setCopiedId(null), 2000);

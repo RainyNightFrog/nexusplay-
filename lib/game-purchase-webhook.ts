@@ -1,5 +1,6 @@
 import type Stripe from "stripe";
 import { computeStripeConnectAmounts } from "@/lib/checkout-order";
+import { adjustCreatorBalanceUsd } from "@/lib/creator-balance";
 import { grantGameEntitlement } from "@/lib/game-entitlement-service";
 import {
   markOrderSucceeded,
@@ -45,31 +46,7 @@ async function creditCreatorGamePurchasePayout(params: {
     return;
   }
 
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("creator_balance_usd")
-    .eq("id", game.creator_id)
-    .maybeSingle();
-
-  if (profileError) {
-    throw new Error(profileError.message);
-  }
-
-  const current =
-    typeof profile?.creator_balance_usd === "number"
-      ? profile.creator_balance_usd
-      : Number.parseFloat(String(profile?.creator_balance_usd ?? 0)) || 0;
-
-  const nextBalance = roundUsd(current + payoutUsd);
-
-  const { error: updateError } = await supabase
-    .from("profiles")
-    .update({ creator_balance_usd: nextBalance })
-    .eq("id", game.creator_id);
-
-  if (updateError) {
-    throw new Error(updateError.message);
-  }
+  await adjustCreatorBalanceUsd(game.creator_id, payoutUsd);
 }
 
 function readMetadataCents(
@@ -94,8 +71,17 @@ export async function finalizeGamePurchaseCheckout(
     throw new Error("遊戲購買訂單缺少 game_id");
   }
 
+  if (session.payment_status !== "paid") {
+    throw new Error(
+      `遊戲購買付款尚未完成（payment_status=${session.payment_status ?? "unknown"}）`
+    );
+  }
+
   const paidCents = session.amount_total ?? 0;
-  if (paidCents > 0 && paidCents !== order.total_amount_cents) {
+  if (paidCents <= 0) {
+    throw new Error("遊戲購買付款金額無效");
+  }
+  if (paidCents !== order.total_amount_cents) {
     throw new Error("遊戲購買付款金額不符");
   }
 
@@ -105,7 +91,7 @@ export async function finalizeGamePurchaseCheckout(
   const platformTipCents = metaPlatformTip ?? order.platform_tip_cents;
   const totalAmountCents = gamePriceCents + platformTipCents;
 
-  if (totalAmountCents !== order.total_amount_cents && paidCents > 0) {
+  if (totalAmountCents !== order.total_amount_cents) {
     if (paidCents !== totalAmountCents) {
       throw new Error("遊戲購買金額明細不符");
     }

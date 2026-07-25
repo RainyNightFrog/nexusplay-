@@ -58,6 +58,13 @@ export function validateGameSlug(raw: string): GameSlugValidationResult {
   if (isReservedSubdomain(slug)) {
     return { ok: false, error: "此網址名稱為平台保留字，請改用其他名稱" };
   }
+  // 純數字會與 /game/123 的數字 ID 路由衝突，禁止作為 slug
+  if (/^\d+$/.test(slug)) {
+    return {
+      ok: false,
+      error: "專案網址不可為純數字（會與遊戲編號衝突）",
+    };
+  }
 
   return { ok: true, slug };
 }

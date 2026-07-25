@@ -24,6 +24,7 @@ import {
 } from "@/lib/search-history";
 import type { SearchCreatorResult } from "@/lib/platform-search-service";
 import type { Game } from "@/lib/games";
+import { buildGameHref } from "@/lib/game-path";
 import { cn } from "@/lib/utils";
 
 type SiteSearchProps = {
@@ -312,7 +313,7 @@ export function SiteSearch({
                       type="button"
                       onClick={() => {
                         setOpen(false);
-                        router.push(`/game/${game.id}`);
+                        router.push(buildGameHref(game));
                       }}
                       className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm hover:bg-white/5"
                     >
@@ -372,7 +373,7 @@ export function SiteSearch({
                       type="button"
                       onClick={() => {
                         setOpen(false);
-                        router.push(`/game/${game.id}`);
+                        router.push(buildGameHref(game));
                       }}
                       className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-white/5"
                     >

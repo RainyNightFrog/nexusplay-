@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
-import { isAdminUser } from "@/lib/admin-auth";
+﻿import { NextResponse } from "next/server";
+import { resolveAdminAccess } from "@/lib/admin-auth";
 import { resolveUserRole, hasCreatorDashboardAccess } from "@/lib/auth-profile";
 import { authorizeGameEdit } from "@/lib/game-auth";
 import {
@@ -20,7 +20,7 @@ async function authorizeCreatorForGame(gameId: number) {
   }
 
   const role = await resolveUserRole(authClient, user);
-  if (!hasCreatorDashboardAccess(user, role) && !isAdminUser(user)) {
+  if (!hasCreatorDashboardAccess(user, role) && !await resolveAdminAccess(user)) {
     return {
       error: NextResponse.json(
         { error: "需要創作者身分才能管理遷移碼" },

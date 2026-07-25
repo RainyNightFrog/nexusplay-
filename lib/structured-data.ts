@@ -1,5 +1,6 @@
 import type { Game } from "@/lib/games";
 import { absoluteUrl } from "@/lib/page-metadata";
+import { buildGameHref } from "@/lib/game-path";
 import { getSiteUrl } from "@/lib/site-url";
 
 type JsonLdObject = Record<string, unknown>;
@@ -41,7 +42,7 @@ export function buildVideoGameJsonLd({
     "@type": "VideoGame",
     name: game.title,
     description: game.description,
-    url: absoluteUrl(locale, `/game/${game.id}`),
+    url: absoluteUrl(locale, buildGameHref(game)),
     genre: game.genre,
     gamePlatform: "Web browser",
     applicationCategory: "Game",

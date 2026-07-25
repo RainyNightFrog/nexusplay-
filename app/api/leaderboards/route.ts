@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isAdminUser } from "@/lib/admin-auth";
+import { resolveAdminAccess } from "@/lib/admin-auth";
 import { getPlatformLeaderboards } from "@/lib/platform-leaderboard-service";
 import {
   checkRateLimit,
@@ -26,7 +26,7 @@ export async function GET(request: Request) {
         data: { user },
       } = await authClient.auth.getUser();
       currentUserId = user?.id ?? null;
-      viewerIsAdmin = isAdminUser(user);
+      viewerIsAdmin = await resolveAdminAccess(user);
     } catch {
       currentUserId = null;
     }

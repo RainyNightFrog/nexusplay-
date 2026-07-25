@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { Game } from "@/lib/games";
 import { defaultLocale, routing, type AppLocale } from "@/i18n/routing";
 import { feedAlternateTypes, type FeedAlternateUrls } from "@/lib/feed-discovery";
+import { buildGameHref } from "@/lib/game-path";
 import { getSiteUrl } from "@/lib/site-url";
 
 export function truncateMetaDescription(text: string, max = 160) {
@@ -142,7 +143,7 @@ export function buildGamePageMetadata({
   const description = truncateMetaDescription(
     game.description || descriptionTemplate.replace("{title}", game.title)
   );
-  const path = `/game/${game.id}`;
+  const path = buildGameHref(game);
 
   return buildOpenGraph({
     title,

@@ -67,6 +67,7 @@ import {
   type CreatorGameRecord,
 } from "@/lib/creator-games";
 import { deleteGame } from "@/lib/delete-game";
+import { buildGameHref } from "@/lib/game-path";
 import { useFormatCount } from "@/hooks/use-format-count";
 import { useApiError } from "@/hooks/use-api-error";
 import { resolveUserFacingError } from "@/lib/user-facing-error";
@@ -752,7 +753,7 @@ export default function CreatorDashboardPage() {
                               {t("viewAnalytics")}
                             </Button>
                             <Link
-                              href={`/game/${game.id}`}
+                              href={buildGameHref(game)}
                               className={cn(
                                 buttonVariants({
                                   variant: "outline",

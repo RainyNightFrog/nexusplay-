@@ -19,6 +19,7 @@ export type MarqueeGameItem = {
   kind: "game";
   id: string;
   gameId: number;
+  slug?: string | null;
   title: string;
   label: string;
   accent: HomeAnnouncementAccent;
@@ -83,6 +84,7 @@ export function buildGameMarqueeItems(
       kind: "game" as const,
       id: `game-${game.id}`,
       gameId: game.id,
+      slug: game.slug,
       title: game.title,
       label: formatLabel(templateKey, game.title),
       accent: resolveGameAccent(game.title, index),

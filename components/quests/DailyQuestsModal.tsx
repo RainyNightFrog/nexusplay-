@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   CalendarCheck,
   Flame,
@@ -21,10 +21,12 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/use-auth";
 import { useApiError } from "@/hooks/use-api-error";
+import { localeDateMap, type AppLocale } from "@/i18n/routing";
 import type {
   QuestProgressItem,
   QuestsDashboard,
 } from "@/lib/quests-service";
+import { requestRefreshApBalance } from "@/lib/refresh-ap-balance";
 import { cn } from "@/lib/utils";
 
 type DailyQuestsModalProps = {
@@ -40,6 +42,27 @@ function formatCountdown(targetIso: string, nowMs: number) {
   const m = Math.floor((totalSec % 3600) / 60);
   const s = totalSec % 60;
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+function addDaysIso(dateIso: string, delta: number): string {
+  const [y, m, d] = dateIso.split("-").map(Number);
+  const utc = Date.UTC(y!, m! - 1, d! + delta);
+  return new Date(utc).toISOString().slice(0, 10);
+}
+
+function resolveDateLocale(locale: string) {
+  return localeDateMap[locale as AppLocale] ?? locale;
+}
+
+function formatStreakWeekday(dayIso: string, locale: string) {
+  try {
+    return new Intl.DateTimeFormat(resolveDateLocale(locale), {
+      weekday: "short",
+      timeZone: "UTC",
+    }).format(new Date(`${dayIso}T12:00:00Z`));
+  } catch {
+    return dayIso.slice(5);
+  }
 }
 
 function QuestCard({
@@ -109,7 +132,8 @@ function QuestCard({
 
 export function DailyQuestsModal({ open, onOpenChange }: DailyQuestsModalProps) {
   const t = useTranslations("quests");
-  const { profile } = useAuth();
+  const locale = useLocale();
+  const { profile, refreshProfile } = useAuth();
   const { translateApiError } = useApiError();
   const [data, setData] = useState<QuestsDashboard | null>(null);
   const [loading, setLoading] = useState(false);
@@ -166,6 +190,8 @@ export function DailyQuestsModal({ open, onOpenChange }: DailyQuestsModalProps) 
         return;
       }
       setData(payload);
+      await refreshProfile();
+      requestRefreshApBalance();
     } catch {
       setError(t("claimFailed"));
     } finally {
@@ -181,6 +207,24 @@ export function DailyQuestsModal({ open, onOpenChange }: DailyQuestsModalProps) 
     () => (data ? formatCountdown(data.resetsAtWeekly, nowMs) : "--:--:--"),
     [data, nowMs]
   );
+
+  const streakDaysMeta = useMemo(() => {
+    if (!data) return [];
+    return data.streak.calendar.map((active, index) => {
+      const dayIso = addDaysIso(data.questDate, index - 6);
+      const dayOfMonth = Number(dayIso.slice(8, 10));
+      const isToday = index === 6;
+      return {
+        active,
+        dayIso,
+        dayOfMonth,
+        isToday,
+        weekday: formatStreakWeekday(dayIso, locale),
+      };
+    });
+  }, [data, locale]);
+
+  const busy = loading || claiming !== null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -215,10 +259,12 @@ export function DailyQuestsModal({ open, onOpenChange }: DailyQuestsModalProps) 
                 variant="ghost"
                 size="sm"
                 onClick={() => void load()}
-                disabled={loading}
+                disabled={busy}
                 className="gap-1.5 text-zinc-400"
               >
-                <RefreshCw className={cn("size-3.5", loading && "animate-spin")} />
+                <RefreshCw
+                  className={cn("size-3.5", loading && "animate-spin")}
+                />
                 {t("refresh")}
               </Button>
             </div>
@@ -243,25 +289,45 @@ export function DailyQuestsModal({ open, onOpenChange }: DailyQuestsModalProps) 
                       </p>
                     </div>
                   </div>
-                  <div className="mt-4 grid grid-cols-7 gap-2">
-                    {data.streak.calendar.map((active, index) => (
+                  <div className="mt-4 grid grid-cols-7 gap-1.5 sm:gap-2">
+                    {streakDaysMeta.map((day) => (
                       <div
-                        key={`streak-day-${index}`}
+                        key={day.dayIso}
                         className="flex flex-col items-center gap-1"
                       >
-                        <div
+                        <span
                           className={cn(
-                            "flex size-9 items-center justify-center rounded-full border text-xs font-semibold",
-                            active
-                              ? "border-amber-400/60 bg-amber-500/20 text-amber-200 shadow-[0_0_12px_rgba(251,191,36,0.35)]"
-                              : "border-white/10 bg-white/5 text-zinc-500"
+                            "text-[10px] font-medium",
+                            day.isToday ? "text-cyan-300" : "text-zinc-500"
                           )}
                         >
-                          {index + 1}
+                          {day.weekday}
+                        </span>
+                        <div
+                          className={cn(
+                            "relative flex size-9 items-center justify-center rounded-full border text-xs font-semibold tabular-nums",
+                            day.active
+                              ? "border-amber-400/60 bg-amber-500/20 text-amber-200 shadow-[0_0_12px_rgba(251,191,36,0.35)]"
+                              : "border-white/10 bg-white/5 text-zinc-500",
+                            day.isToday && "ring-2 ring-cyan-400/40"
+                          )}
+                          title={day.dayIso}
+                        >
+                          {day.dayOfMonth}
+                          {day.isToday && (
+                            <CalendarCheck className="absolute -bottom-1 -right-1 size-3 text-cyan-400" />
+                          )}
                         </div>
-                        {index === 6 && (
-                          <CalendarCheck className="size-3 text-cyan-400" />
-                        )}
+                        <span
+                          className={cn(
+                            "text-[10px]",
+                            day.isToday
+                              ? "font-medium text-cyan-300"
+                              : "text-transparent"
+                          )}
+                        >
+                          {day.isToday ? t("streakToday") : "·"}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -281,9 +347,7 @@ export function DailyQuestsModal({ open, onOpenChange }: DailyQuestsModalProps) 
                   </TabsList>
 
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-xs text-zinc-500">
-                      {t("resetHint")}
-                    </p>
+                    <p className="text-xs text-zinc-500">{t("resetHint")}</p>
                     <Button
                       type="button"
                       size="sm"

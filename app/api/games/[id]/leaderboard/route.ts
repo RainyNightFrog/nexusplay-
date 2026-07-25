@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { checkLeaderboardAchievements } from "@/lib/achievement-unlock-service";
-import { isAdminUser } from "@/lib/admin-auth";
+import { resolveAdminAccess } from "@/lib/admin-auth";
 import { resolveEquippedTitles } from "@/lib/equipped-title-service";
 import {
   getTopLeaderboard,
@@ -59,7 +59,7 @@ export async function GET(
 
     if (
       !canViewGame(record, user?.id, {
-        isAdmin: isAdminUser(user),
+        isAdmin: await resolveAdminAccess(user),
         hasPurchaseEntitlement,
       })
     ) {
@@ -123,7 +123,7 @@ export async function POST(
 
     if (
       !canViewGame(record, user.id, {
-        isAdmin: isAdminUser(user),
+        isAdmin: await resolveAdminAccess(user),
         hasPurchaseEntitlement,
       })
     ) {

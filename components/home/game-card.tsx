@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { Heart, Share2, Users } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { TAG_COLORS, type Game } from "@/lib/games";
+import { buildGameHref } from "@/lib/game-path";
 import { useGameI18n } from "@/hooks/use-game-i18n";
 import { useFormatCount } from "@/hooks/use-format-count";
 import { cn } from "@/lib/utils";
@@ -45,7 +46,7 @@ export function GameCard({
 
   return (
     <MotionLink
-      href={`/game/${game.id}`}
+      href={buildGameHref(game)}
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, delay: index * 0.05, ease: "easeOut" }}

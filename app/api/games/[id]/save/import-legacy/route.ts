@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
-import { isAdminUser } from "@/lib/admin-auth";
+﻿import { NextResponse } from "next/server";
+import { resolveAdminAccess } from "@/lib/admin-auth";
 import { canViewGame } from "@/lib/game-publish";
+import { assertTrustedBrowserOrigin } from "@/lib/request-origin";
 import {
   loadGameSave,
   upsertGameSave,
@@ -40,7 +41,7 @@ async function authorizePlayerForGame(gameId: number) {
     };
   }
 
-  if (!canViewGame(record, user.id, { isAdmin: isAdminUser(user) })) {
+  if (!canViewGame(record, user.id, { isAdmin: await resolveAdminAccess(user) })) {
     return {
       error: NextResponse.json({ error: "找不到此遊戲" }, { status: 404 }),
     };
@@ -54,6 +55,9 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const originDenied = assertTrustedBrowserOrigin(request);
+    if (originDenied) return originDenied;
+
     const { id } = await params;
     const gameId = Number.parseInt(id, 10);
     if (Number.isNaN(gameId)) {

@@ -28,6 +28,10 @@ import type {
   ApStoreDashboard,
   ApStoreItem,
 } from "@/lib/ap-store-service";
+import {
+  REFRESH_AP_BALANCE_EVENT,
+  requestRefreshApBalance,
+} from "@/lib/refresh-ap-balance";
 import { cn } from "@/lib/utils";
 
 type ApStoreModalProps = {
@@ -87,6 +91,17 @@ export function ApStoreModal({ open, onOpenChange }: ApStoreModalProps) {
     if (open && profile) void load();
   }, [open, profile, load]);
 
+  useEffect(() => {
+    if (!open || !profile) return;
+    function onRefreshRequest() {
+      void load();
+    }
+    window.addEventListener(REFRESH_AP_BALANCE_EVENT, onRefreshRequest);
+    return () => {
+      window.removeEventListener(REFRESH_AP_BALANCE_EVENT, onRefreshRequest);
+    };
+  }, [open, profile, load]);
+
   const previewTitle = useMemo(() => {
     if (!selected || selected.category !== "title") {
       return profile?.equipped_title ?? null;
@@ -125,6 +140,7 @@ export function ApStoreModal({ open, onOpenChange }: ApStoreModalProps) {
       setData(payload);
       setConfirmOpen(false);
       await refreshProfile();
+      requestRefreshApBalance();
     } catch {
       setError(t("buyFailed"));
     } finally {

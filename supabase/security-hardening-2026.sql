@@ -161,8 +161,9 @@ as $$
       from public.profiles p
       where p.id = auth.uid()
     ),
-    coalesce((auth.jwt() -> 'user_metadata' ->> 'role'), '') = 'admin'
-  );
+    false
+  )
+  or coalesce((auth.jwt() -> 'app_metadata' ->> 'role'), '') = 'admin';
 $$;
 
 -- is_admin 僅 service role 可寫

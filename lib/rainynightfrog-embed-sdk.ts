@@ -1,5 +1,9 @@
+import { getAllowedParentOrigins } from "@/lib/play-origin";
+
 /** 注入至 iframe 內 HTML 的 RainyNightFrog 平台 SDK（統一身份 + 雲端存檔） */
 export function buildRainyNightFrogEmbedSdkScript() {
+  const allowedParentsJson = JSON.stringify(getAllowedParentOrigins());
+
   return `<script id="rainynightfrog-embed-sdk">
 (function(){
   var AUTH_TYPES=['rainynightfrog:auth','nexusplay:auth'];
@@ -7,6 +11,7 @@ export function buildRainyNightFrogEmbedSdkScript() {
   var LEGACY_READY_TYPE='nexusplay:ready';
   var API_PROXY_REQUEST='rainynightfrog:api-proxy-request';
   var API_PROXY_RESPONSE='rainynightfrog:api-proxy-response';
+  var ALLOWED_PARENTS=${allowedParentsJson};
   var match=location.pathname.match(/\\/api\\/games\\/(\\d+)\\/embed/);
   var gameId=match?parseInt(match[1],10):null;
   if(!gameId){
@@ -23,13 +28,27 @@ export function buildRainyNightFrogEmbedSdkScript() {
     try{return window.self!==window.top;}catch(_e){return true;}
   }
 
+  function isAllowedParent(origin){
+    return ALLOWED_PARENTS.indexOf(origin)!==-1;
+  }
+
   function fromParent(e){
     if(e.source!==window.parent)return false;
-    return e.origin===location.origin;
+    return isAllowedParent(e.origin);
   }
 
   function parentTargetOrigin(){
-    return location.origin;
+    try{
+      if(document.referrer){
+        var refOrigin=new URL(document.referrer).origin;
+        if(isAllowedParent(refOrigin))return refOrigin;
+      }
+    }catch(_e){}
+    return ALLOWED_PARENTS[0]||location.origin;
+  }
+
+  function isCrossOriginEmbed(){
+    return isEmbedded() && !isAllowedParent(location.origin);
   }
 
   function resolveAuth(){
@@ -39,6 +58,9 @@ export function buildRainyNightFrogEmbedSdkScript() {
   }
 
   function directFetch(method,path,body){
+    if(isCrossOriginEmbed()){
+      return Promise.reject(new Error('RainyNightFrog: use parent api proxy'));
+    }
     return fetch(path,{
       method:method,
       credentials:'same-origin',
@@ -117,7 +139,6 @@ export function buildRainyNightFrogEmbedSdkScript() {
       document.documentElement.style.setProperty('--np-embed-height',(d.height||0)+'px');
       document.documentElement.classList.toggle('np-embed-expanded',!!d.expanded);
     }
-    /* 勿再 dispatch resize：會與 boot 的 __voidRnfSyncExpandGate 互相回撞造成堆疊溢位 */
   });
 
   function waitForAuth(ms){
@@ -213,8 +234,9 @@ export function buildRainyNightFrogEmbedSdkScript() {
   window.NexusPlay=api;
 
   try{
-    window.parent.postMessage({type:READY_TYPE,gameId:gameId},location.origin);
-    window.parent.postMessage({type:LEGACY_READY_TYPE,gameId:gameId},location.origin);
+    var target=parentTargetOrigin();
+    window.parent.postMessage({type:READY_TYPE,gameId:gameId},target);
+    window.parent.postMessage({type:LEGACY_READY_TYPE,gameId:gameId},target);
   }catch(_e){}
 })();
 </script>`;

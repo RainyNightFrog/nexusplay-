@@ -265,10 +265,7 @@ async function loadRealUserProfile(
       avatarUrl: resolvedAvatarUrl,
       equippedTitle,
       isCreator: profile.role === "creator",
-      adminRole: resolveAdminDisplayRole(
-        profile.is_admin === true,
-        metadata.role === "admin"
-      ),
+      adminRole: resolveAdminDisplayRole(profile.is_admin === true, false),
       isVirtual: false,
       isOnline: lastActiveAt ? isUserOnline(lastActiveAt) : false,
       bio,

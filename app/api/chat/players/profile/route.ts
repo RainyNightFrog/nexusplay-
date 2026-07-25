@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isAdminUser } from "@/lib/admin-auth";
+import { resolveAdminAccess } from "@/lib/admin-auth";
 import {
   getChatPlayerPublicProfile,
   syncUserCountryFromRequest,
@@ -48,7 +48,7 @@ export async function GET(request: Request) {
       userId,
       virtualPlayerId,
       viewerUserId: user?.id,
-      viewerIsAdmin: isAdminUser(user),
+      viewerIsAdmin: await resolveAdminAccess(user),
     });
 
     if (!profile) {

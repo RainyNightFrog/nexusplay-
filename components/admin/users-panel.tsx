@@ -4,11 +4,14 @@ import { useCallback, useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import {
   Ban,
+  Check,
+  Copy,
   Loader2,
   MessageSquare,
   MessageSquareOff,
   RefreshCw,
   Search,
+  Shield,
   ShieldOff,
   Sparkles,
   User,
@@ -41,17 +44,56 @@ import {
   adminPanelCenteredCardsClass,
 } from "@/components/admin/admin-panel-header";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
+import { localeDateMap, type AppLocale } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
 
-function formatDate(value: string, locale: string) {
+function resolveDateLocale(locale: string) {
+  return localeDateMap[locale as AppLocale] ?? locale;
+}
+
+function formatDate(value: string | null | undefined, locale: string) {
+  if (!value) return null;
   try {
-    return new Intl.DateTimeFormat(locale, {
+    return new Intl.DateTimeFormat(resolveDateLocale(locale), {
       dateStyle: "medium",
       timeStyle: "short",
+      timeZone: "Asia/Hong_Kong",
     }).format(new Date(value));
   } catch {
     return value;
   }
+}
+
+function formatDateOrDash(
+  value: string | null | undefined,
+  locale: string,
+  emptyLabel: string
+) {
+  return formatDate(value, locale) ?? emptyLabel;
+}
+
+function InfoRow({
+  label,
+  value,
+  mono,
+}: {
+  label: string;
+  value: React.ReactNode;
+  mono?: boolean;
+}) {
+  return (
+    <div className="min-w-0 rounded-lg border border-white/8 bg-black/20 px-3 py-2">
+      <p className="text-[11px] text-zinc-500">{label}</p>
+      <div
+        className={cn(
+          "mt-0.5 break-all text-sm text-zinc-100",
+          mono && "font-mono text-xs text-zinc-300"
+        )}
+      >
+        {value}
+      </div>
+    </div>
+  );
 }
 
 function accountStatusClass(status: string) {
@@ -131,6 +173,19 @@ export function AdminUsersPanel() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<UserAction | null>(null);
   const [reason, setReason] = useState("");
+  const [copiedId, setCopiedId] = useState(false);
+
+  const neverLabel = t("usersNever");
+
+  async function copyUserId(userId: string) {
+    try {
+      await navigator.clipboard.writeText(userId);
+      setCopiedId(true);
+      window.setTimeout(() => setCopiedId(false), 1600);
+    } catch {
+      /* ignore clipboard errors */
+    }
+  }
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
@@ -322,7 +377,12 @@ export function AdminUsersPanel() {
               {t("usersEmpty")}
             </p>
           ) : (
-            users.map((user) => (
+            users.map((user) => {
+              const mutedActive =
+                Boolean(user.chatMutedUntil) &&
+                new Date(user.chatMutedUntil!).getTime() > Date.now();
+
+              return (
               <button
                 key={user.id}
                 type="button"
@@ -330,21 +390,49 @@ export function AdminUsersPanel() {
                   setSelectedId(selectedId === user.id ? null : user.id)
                 }
                 className={cn(
-                  "flex w-full flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-colors",
+                  "flex w-full flex-col gap-2 rounded-xl border px-4 py-3 text-left transition-colors sm:flex-row sm:items-start sm:justify-between",
                   selectedId === user.id
                     ? "border-cyan-400/30 bg-cyan-500/10"
                     : "border-white/8 bg-black/20 hover:border-white/15"
                 )}
               >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-white">
-                    {user.displayName}
-                  </p>
-                  <p className="mt-0.5 truncate text-xs text-zinc-500">
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="truncate text-sm font-medium text-white">
+                      {user.displayName}
+                    </p>
+                    {user.isAdmin && (
+                      <Badge className="border border-cyan-400/30 bg-cyan-500/10 text-cyan-200">
+                        <Shield className="mr-1 size-3" />
+                        {t("usersAdminBadge")}
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="truncate text-xs text-zinc-400">
                     {user.email ?? user.id}
+                    {user.username ? ` · @${user.username}` : ""}
+                    {user.playerNumber != null
+                      ? ` · #${user.playerNumber}`
+                      : ""}
                   </p>
+                  <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-zinc-500">
+                    <span>
+                      {t("usersJoined")}:{" "}
+                      {formatDateOrDash(user.createdAt, locale, neverLabel)}
+                    </span>
+                    <span>
+                      {t("usersLastSignIn")}:{" "}
+                      {formatDateOrDash(user.lastSignInAt, locale, neverLabel)}
+                    </span>
+                    {user.authProviders.length > 0 && (
+                      <span>
+                        {t("usersAuthProviders")}:{" "}
+                        {user.authProviders.join(", ")}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                   <Badge
                     className={cn("border", accountStatusClass(user.accountStatus))}
                   >
@@ -369,10 +457,10 @@ export function AdminUsersPanel() {
                       {user.supporterBadge === "supporter_v2"
                         ? t("usersBadgeSvip")
                         : t("usersBadgeVip")}
+                      {user.supporterLifetime ? " · ∞" : ""}
                     </Badge>
                   )}
-                  {user.chatMutedUntil &&
-                    new Date(user.chatMutedUntil).getTime() > Date.now() && (
+                  {mutedActive && (
                       <Badge className="border border-violet-400/30 bg-violet-500/10 text-violet-200">
                         {t("usersMuted")}
                       </Badge>
@@ -384,7 +472,8 @@ export function AdminUsersPanel() {
                   )}
                 </div>
               </button>
-            ))
+              );
+            })
           )}
         </CardContent>
       </Card>
@@ -402,7 +491,164 @@ export function AdminUsersPanel() {
               <AdminLoadingState spinnerClassName="text-cyan-400" minHeightClassName="min-h-0" />
             ) : detail ? (
               <>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div>
+                  <h3 className="mb-2 text-sm font-medium text-zinc-300">
+                    {t("usersProfileSection")}
+                  </h3>
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    <InfoRow label={t("usersDisplayName")} value={detail.displayName} />
+                    <InfoRow
+                      label="Email"
+                      value={detail.email ?? neverLabel}
+                    />
+                    <InfoRow
+                      label={t("usersUsername")}
+                      value={detail.username ? `@${detail.username}` : neverLabel}
+                    />
+                    <InfoRow
+                      label={t("usersPlayerNumber")}
+                      value={
+                        detail.playerNumber != null
+                          ? `#${detail.playerNumber}`
+                          : neverLabel
+                      }
+                    />
+                    <InfoRow
+                      label={t("usersRoleLabel")}
+                      value={
+                        detail.role === "creator"
+                          ? t("usersRoleCreator")
+                          : detail.role === "player"
+                            ? t("usersRolePlayer")
+                            : detail.role ?? neverLabel
+                      }
+                    />
+                    <InfoRow
+                      label={t("usersAuthProviders")}
+                      value={
+                        detail.authProviders.length > 0
+                          ? detail.authProviders.join(", ")
+                          : neverLabel
+                      }
+                    />
+                    <div className="min-w-0 rounded-lg border border-white/8 bg-black/20 px-3 py-2 sm:col-span-2 lg:col-span-3">
+                      <p className="text-[11px] text-zinc-500">
+                        {t("usersUserId")}
+                      </p>
+                      <div className="mt-1 flex flex-wrap items-center gap-2">
+                        <code className="break-all font-mono text-xs text-zinc-300">
+                          {detail.id}
+                        </code>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => void copyUserId(detail.id)}
+                          className="h-7 gap-1 border-white/10 px-2 text-xs text-zinc-300"
+                        >
+                          {copiedId ? (
+                            <>
+                              <Check className="size-3" />
+                              {t("usersCopied")}
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="size-3" />
+                              {t("usersCopyId")}
+                            </>
+                          )}
+                        </Button>
+                        {detail.isAdmin && (
+                          <Badge className="border border-cyan-400/30 bg-cyan-500/10 text-cyan-200">
+                            {t("usersAdminBadge")}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="mb-2 text-sm font-medium text-zinc-300">
+                    {t("usersModerationSection")}
+                  </h3>
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    <InfoRow
+                      label={t("usersJoined")}
+                      value={formatDateOrDash(detail.createdAt, locale, neverLabel)}
+                    />
+                    <InfoRow
+                      label={t("usersLastSignIn")}
+                      value={formatDateOrDash(
+                        detail.lastSignInAt,
+                        locale,
+                        neverLabel
+                      )}
+                    />
+                    <InfoRow
+                      label={t("usersEmailConfirmed")}
+                      value={
+                        detail.emailConfirmedAt
+                          ? `${t("usersConfirmed")} · ${formatDate(
+                              detail.emailConfirmedAt,
+                              locale
+                            )}`
+                          : t("usersNotConfirmed")
+                      }
+                    />
+                    <InfoRow
+                      label={t("usersSuspendedUntil")}
+                      value={formatDateOrDash(
+                        detail.suspendedUntil,
+                        locale,
+                        neverLabel
+                      )}
+                    />
+                    <InfoRow
+                      label={t("usersMutedUntil")}
+                      value={formatDateOrDash(
+                        detail.chatMutedUntil,
+                        locale,
+                        neverLabel
+                      )}
+                    />
+                    <InfoRow
+                      label={t("usersBanReason")}
+                      value={detail.banReason?.trim() || neverLabel}
+                    />
+                    {detail.isSupporter && (
+                      <>
+                        <InfoRow
+                          label={t("usersSupporterSince")}
+                          value={formatDateOrDash(
+                            detail.supporterSince,
+                            locale,
+                            neverLabel
+                          )}
+                        />
+                        <InfoRow
+                          label={t("usersLifetimeSupporter")}
+                          value={detail.supporterLifetime ? "✓" : "—"}
+                        />
+                      </>
+                    )}
+                    {detail.role === "creator" && (
+                      <>
+                        <InfoRow
+                          label={t("usersPayoutStatus")}
+                          value={detail.payoutStatus ?? neverLabel}
+                        />
+                        <InfoRow
+                          label={t("usersStripeConnect")}
+                          value={detail.stripeConnectAccountId ?? neverLabel}
+                          mono
+                        />
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                   <div className="rounded-lg border border-white/8 bg-black/20 px-3 py-2">
                     <p className="text-xs text-zinc-500">{t("usersStatGames")}</p>
                     <p className="text-lg font-semibold text-white">
@@ -419,6 +665,12 @@ export function AdminUsersPanel() {
                     <p className="text-xs text-zinc-500">{t("usersStatOrders")}</p>
                     <p className="text-lg font-semibold text-white">
                       {detail.ordersCount}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-white/8 bg-black/20 px-3 py-2">
+                    <p className="text-xs text-zinc-500">{t("usersStatForum")}</p>
+                    <p className="text-lg font-semibold text-white">
+                      {detail.forumPostsCount}
                     </p>
                   </div>
                   <div className="rounded-lg border border-white/8 bg-black/20 px-3 py-2">
@@ -660,10 +912,15 @@ export function AdminUsersPanel() {
                       {detail.recentTips.map((tip) => (
                         <div
                           key={tip.id}
-                          className="flex items-center justify-between rounded-lg border border-white/8 bg-black/20 px-3 py-2 text-sm"
+                          className="flex flex-col gap-1 rounded-lg border border-white/8 bg-black/20 px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between"
                         >
-                          <span className="text-zinc-300">{tip.gameTitle}</span>
-                          <span className="font-mono text-fuchsia-200">
+                          <div className="min-w-0">
+                            <p className="truncate text-zinc-300">{tip.gameTitle}</p>
+                            <p className="text-[11px] text-zinc-500">
+                              {formatDateOrDash(tip.createdAt, locale, neverLabel)}
+                            </p>
+                          </div>
+                          <span className="shrink-0 font-mono text-fuchsia-200">
                             ${tip.amountUsd.toFixed(2)} · {orderStatusLabel(tip.status, t)}
                           </span>
                         </div>
@@ -683,12 +940,17 @@ export function AdminUsersPanel() {
                       {detail.recentOrders.map((order) => (
                         <div
                           key={order.id}
-                          className="flex items-center justify-between rounded-lg border border-white/8 bg-black/20 px-3 py-2 text-sm"
+                          className="flex flex-col gap-1 rounded-lg border border-white/8 bg-black/20 px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between"
                         >
-                          <span className="text-zinc-300">
-                            {order.gameTitle ?? orderTypeLabel(order.orderType, t)}
-                          </span>
-                          <span className="font-mono text-cyan-200">
+                          <div className="min-w-0">
+                            <p className="truncate text-zinc-300">
+                              {order.gameTitle ?? orderTypeLabel(order.orderType, t)}
+                            </p>
+                            <p className="text-[11px] text-zinc-500">
+                              {formatDateOrDash(order.createdAt, locale, neverLabel)}
+                            </p>
+                          </div>
+                          <span className="shrink-0 font-mono text-cyan-200">
                             ${(order.totalAmountCents / 100).toFixed(2)} ·{" "}
                             {orderStatusLabel(order.status, t)}
                           </span>
@@ -697,12 +959,6 @@ export function AdminUsersPanel() {
                     </div>
                   )}
                 </div>
-
-                {detail.createdAt && (
-                  <p className="text-xs text-zinc-500">
-                    {t("usersJoined")}: {formatDate(detail.createdAt, locale)}
-                  </p>
-                )}
               </>
             ) : (
               <p className="text-sm text-zinc-500">{t("usersDetailFailed")}</p>

@@ -1,4 +1,5 @@
 import type Stripe from "stripe";
+import { adjustCreatorBalanceUsd } from "@/lib/creator-balance";
 import { createServerSupabase } from "@/lib/supabase-server";
 
 function roundUsd(value: number) {
@@ -52,35 +53,6 @@ export async function markTipPaymentFailed(paymentIntentId: string) {
   return { handled: true as const, tipId: tip.id, status: "failed" };
 }
 
-async function adjustCreatorBalance(creatorId: string, deltaUsd: number) {
-  const supabase = createServerSupabase();
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("creator_balance_usd")
-    .eq("id", creatorId)
-    .maybeSingle();
-
-  if (profileError) {
-    throw new Error(profileError.message);
-  }
-
-  const current =
-    typeof profile?.creator_balance_usd === "number"
-      ? profile.creator_balance_usd
-      : Number.parseFloat(String(profile?.creator_balance_usd ?? 0)) || 0;
-
-  const nextBalance = roundUsd(Math.max(0, current + deltaUsd));
-
-  const { error: updateError } = await supabase
-    .from("profiles")
-    .update({ creator_balance_usd: nextBalance })
-    .eq("id", creatorId);
-
-  if (updateError) {
-    throw new Error(updateError.message);
-  }
-}
-
 export async function handleTipRefund(charge: Stripe.Charge) {
   const paymentIntentId = resolvePaymentIntentId(charge.payment_intent);
   if (!paymentIntentId) {
@@ -122,7 +94,7 @@ export async function handleTipRefund(charge: Stripe.Charge) {
   const delta = roundUsd(targetRefundNet - alreadyRefunded);
 
   if (delta > 0) {
-    await adjustCreatorBalance(tip.creator_id as string, -delta);
+    await adjustCreatorBalanceUsd(tip.creator_id as string, -delta);
   }
 
   const fullyRefunded = totalRefunded >= chargeTotal;
@@ -172,7 +144,7 @@ export async function handleTipDisputeCreated(dispute: Stripe.Dispute) {
   const delta = roundUsd(netUsd - alreadyRefunded);
 
   if (delta > 0) {
-    await adjustCreatorBalance(tip.creator_id as string, -delta);
+    await adjustCreatorBalanceUsd(tip.creator_id as string, -delta);
     await supabase
       .from("game_tips")
       .update({
@@ -212,12 +184,11 @@ export async function handleTipDisputeClosed(dispute: Stripe.Dispute) {
     return { handled: false as const };
   }
 
-  const netUsd = roundUsd(Number(tip.creator_net_usd));
-  const alreadyRefunded = roundUsd(Number(tip.creator_refunded_usd ?? 0));
-  const restoreUsd = roundUsd(netUsd - alreadyRefunded);
+  // 爭議建立時已把 creator_refunded_usd 設為 netUsd；勝訴應還原已扣回的金額
+  const restoreUsd = roundUsd(Number(tip.creator_refunded_usd ?? 0));
 
   if (restoreUsd > 0) {
-    await adjustCreatorBalance(tip.creator_id as string, restoreUsd);
+    await adjustCreatorBalanceUsd(tip.creator_id as string, restoreUsd);
   }
 
   await supabase

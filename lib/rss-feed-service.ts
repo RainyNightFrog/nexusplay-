@@ -3,6 +3,10 @@ import { createServerSupabase } from "@/lib/supabase-server";
 import { loadPublicCreatorProfile } from "@/lib/creator-public-service";
 import { resolveDevlogEntries } from "@/lib/game-page-content";
 import { getPublicGameById } from "@/lib/games-service";
+import {
+  buildAbsoluteGameUrl,
+  type GamePathRef,
+} from "@/lib/game-path";
 import { getSiteUrl } from "@/lib/site-url";
 import { getWebSubHubUrl } from "@/lib/websub-service";
 
@@ -111,7 +115,7 @@ export async function listGameRssFeedItems(limit = 30): Promise<RssFeedItem[]> {
   const supabase = createServerSupabase();
   const { data, error } = await supabase
     .from("games")
-    .select("id, title, description, created_at")
+    .select("id, title, description, slug, created_at")
     .eq("publish_status", "public")
     .eq("status", "approved")
     .order("created_at", { ascending: false })
@@ -125,7 +129,10 @@ export async function listGameRssFeedItems(limit = 30): Promise<RssFeedItem[]> {
     id: row.id as number,
     title: row.title as string,
     description: truncate((row.description as string) ?? ""),
-    url: `${baseUrl}/game/${row.id}`,
+    url: buildAbsoluteGameUrl(baseUrl, {
+      id: row.id as number,
+      slug: (row.slug as string | null) ?? null,
+    }),
     publishedAt: row.created_at as string,
   }));
 }
@@ -147,31 +154,41 @@ export async function listForumRssFeedItems(limit = 30): Promise<RssFeedItem[]> 
   const gameIds = [...new Set(posts.map((row) => row.game_id as number))];
   const { data: games, error: gamesError } = await supabase
     .from("games")
-    .select("id, title")
+    .select("id, title, slug")
     .in("id", gameIds)
     .eq("publish_status", "public")
     .eq("status", "approved");
 
   if (gamesError) throw new Error(gamesError.message);
 
-  const gameTitleById = new Map(
-    (games ?? []).map((game) => [game.id as number, game.title as string])
+  const gameById = new Map(
+    (games ?? []).map((game) => [
+      game.id as number,
+      {
+        title: game.title as string,
+        slug: (game.slug as string | null) ?? null,
+      },
+    ])
   );
   const baseUrl = getSiteUrl();
 
   return posts
-    .filter((row) => gameTitleById.has(row.game_id as number))
+    .filter((row) => gameById.has(row.game_id as number))
     .slice(0, limit)
     .map((row) => {
-      const gameTitle = gameTitleById.get(row.game_id as number);
+      const game = gameById.get(row.game_id as number)!;
       const postTitle = row.title as string;
-      const title = gameTitle ? `${postTitle} · ${gameTitle}` : postTitle;
+      const title = game.title ? `${postTitle} · ${game.title}` : postTitle;
 
       return {
         id: row.id as number,
         title,
         description: truncate((row.content as string) ?? ""),
-        url: `${baseUrl}/game/${row.game_id}/forum?post=${row.id}`,
+        url: buildAbsoluteGameUrl(
+          baseUrl,
+          { id: row.game_id as number, slug: game.slug },
+          `/forum?post=${row.id}`
+        ),
         publishedAt: row.created_at as string,
       };
     });
@@ -187,7 +204,7 @@ export async function listCreatorRssFeedItems(
   const supabase = createServerSupabase();
   const { data: games, error } = await supabase
     .from("games")
-    .select("id, title, description, created_at")
+    .select("id, title, description, slug, created_at")
     .eq("creator_id", creatorId)
     .eq("publish_status", "public")
     .eq("status", "approved")
@@ -201,7 +218,10 @@ export async function listCreatorRssFeedItems(
     id: game.id as number,
     title: game.title as string,
     description: truncate((game.description as string) ?? ""),
-    url: `${baseUrl}/game/${game.id}`,
+    url: buildAbsoluteGameUrl(baseUrl, {
+      id: game.id as number,
+      slug: (game.slug as string | null) ?? null,
+    }),
     publishedAt: game.created_at as string,
   }));
 
@@ -249,22 +269,26 @@ export function creatorAtomFeedPath(creatorId: string) {
   return `${creatorFeedPath(creatorId)}?format=atom`;
 }
 
-export function singleGameFeedChannel(gameTitle: string, gameId: number): RssChannelConfig {
+export function singleGameFeedChannel(
+  gameTitle: string,
+  game: GamePathRef
+): RssChannelConfig {
   const baseUrl = getSiteUrl();
   return {
     title: `${gameTitle} — RainyNightFrog Updates`,
     description: `Devlogs and forum discussions for ${gameTitle}.`,
-    link: `${baseUrl}/game/${gameId}`,
+    link: buildAbsoluteGameUrl(baseUrl, game),
   };
 }
 
 export async function listSingleGameFeedItems(
   gameId: number,
   limit = 40
-): Promise<{ items: RssFeedItem[]; gameTitle: string } | null> {
+): Promise<{ items: RssFeedItem[]; gameTitle: string; game: GamePathRef } | null> {
   const game = await getPublicGameById(gameId);
   if (!game) return null;
 
+  const gameRef: GamePathRef = { id: game.id, slug: game.slug };
   const supabase = createServerSupabase();
   const baseUrl = getSiteUrl();
   const items: RssFeedItem[] = [];
@@ -281,7 +305,7 @@ export async function listSingleGameFeedItems(
         id: devlog.id,
         title: `Devlog: ${devlog.title}`,
         description: truncate(devlog.content),
-        url: `${baseUrl}/game/${gameId}`,
+        url: buildAbsoluteGameUrl(baseUrl, gameRef),
         publishedAt: devlog.createdAt,
       });
     }
@@ -301,7 +325,11 @@ export async function listSingleGameFeedItems(
       id: post.id as number,
       title: post.title as string,
       description: truncate((post.content as string) ?? ""),
-      url: `${baseUrl}/game/${gameId}/forum?post=${post.id}`,
+      url: buildAbsoluteGameUrl(
+        baseUrl,
+        gameRef,
+        `/forum?post=${post.id}`
+      ),
       publishedAt: post.created_at as string,
     });
   }
@@ -313,6 +341,7 @@ export async function listSingleGameFeedItems(
   return {
     items: items.slice(0, limit),
     gameTitle: game.title,
+    game: gameRef,
   };
 }
 
@@ -335,7 +364,7 @@ export async function listCategoryGameFeedItems(
   const supabase = createServerSupabase();
   const { data, error } = await supabase
     .from("games")
-    .select("id, title, description, created_at")
+    .select("id, title, description, slug, created_at")
     .eq("category", category)
     .eq("publish_status", "public")
     .eq("status", "approved")
@@ -350,7 +379,10 @@ export async function listCategoryGameFeedItems(
     id: row.id as number,
     title: row.title as string,
     description: truncate((row.description as string) ?? ""),
-    url: `${baseUrl}/game/${row.id}`,
+    url: buildAbsoluteGameUrl(baseUrl, {
+      id: row.id as number,
+      slug: (row.slug as string | null) ?? null,
+    }),
     publishedAt: row.created_at as string,
   }));
 }

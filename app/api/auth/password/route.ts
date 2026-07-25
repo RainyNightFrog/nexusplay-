@@ -1,24 +1,33 @@
 import { NextResponse } from "next/server";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
+import { assertTrustedBrowserOrigin } from "@/lib/request-origin";
 import {
   buildPasswordResetCallbackUrl,
   PRODUCTION_SITE_URL,
 } from "@/lib/auth-redirect-urls";
+import { sanitizePasswordResetRedirectUrl } from "@/lib/safe-redirect";
 import { createClient } from "@supabase/supabase-js";
+import {
+  checkRateLimit,
+  getClientIp,
+  rateLimitResponse,
+} from "@/lib/rate-limit";
 
 function getPasswordResetRedirectUrl(request: Request) {
-  const redirectTo = new URL(request.url).searchParams.get("redirectTo");
-  if (redirectTo) return redirectTo;
-
-  const baseUrl =
+  const fallbackBase =
     process.env.NEXT_PUBLIC_SITE_URL ??
     new URL(request.url).origin ??
     PRODUCTION_SITE_URL;
-  return buildPasswordResetCallbackUrl(baseUrl);
+  const fallback = buildPasswordResetCallbackUrl(fallbackBase);
+  const redirectTo = new URL(request.url).searchParams.get("redirectTo");
+  return sanitizePasswordResetRedirectUrl(redirectTo, fallback);
 }
 
 export async function POST(request: Request) {
   try {
+    const originDenied = assertTrustedBrowserOrigin(request);
+    if (originDenied) return originDenied;
+
     const supabase = await createAuthServerClient();
     const {
       data: { user },
@@ -91,6 +100,15 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
   try {
+    const originDenied = assertTrustedBrowserOrigin(request);
+    if (originDenied) return originDenied;
+
+    const ip = getClientIp(request);
+    const limit = checkRateLimit(`password:reset:${ip}`, 5, 60_000);
+    if (!limit.allowed) {
+      return rateLimitResponse(limit.retryAfterSec);
+    }
+
     const supabase = await createAuthServerClient();
     const {
       data: { user },
@@ -117,6 +135,15 @@ export async function PUT(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
+    const originDenied = assertTrustedBrowserOrigin(request);
+    if (originDenied) return originDenied;
+
+    const ip = getClientIp(request);
+    const limit = checkRateLimit(`password:forgot:${ip}`, 5, 60_000);
+    if (!limit.allowed) {
+      return rateLimitResponse(limit.retryAfterSec);
+    }
+
     const body = (await request.json()) as { email?: string };
     const email = body.email?.trim() ?? "";
 

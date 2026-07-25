@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Coins } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { ApStoreModal } from "@/components/ap-store/ApStoreModal";
 import { useAuth } from "@/hooks/use-auth";
 import { useVisibleInterval } from "@/hooks/use-visible-interval";
+import { REFRESH_AP_BALANCE_EVENT } from "@/lib/refresh-ap-balance";
 import { cn } from "@/lib/utils";
 
 export function ApStoreNavButton() {
@@ -20,7 +21,9 @@ export function ApStoreNavButton() {
       return;
     }
     try {
-      const response = await fetch("/api/ap/store", { credentials: "same-origin" });
+      const response = await fetch("/api/ap/store", {
+        credentials: "same-origin",
+      });
       if (!response.ok) return;
       const data = (await response.json()) as { balance?: number };
       if (typeof data.balance === "number") setBalance(data.balance);
@@ -35,6 +38,17 @@ export function ApStoreNavButton() {
     },
     profile ? 180_000 : null
   );
+
+  useEffect(() => {
+    if (!profile) return;
+    function onRefreshRequest() {
+      void refreshBalance();
+    }
+    window.addEventListener(REFRESH_AP_BALANCE_EVENT, onRefreshRequest);
+    return () => {
+      window.removeEventListener(REFRESH_AP_BALANCE_EVENT, onRefreshRequest);
+    };
+  }, [profile, refreshBalance]);
 
   if (!profile) return null;
 

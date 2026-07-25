@@ -196,10 +196,7 @@ export async function PATCH(request: Request) {
         ? normalizeProfileShowcaseTags(parseProfileShowcaseTags(body.profile_showcase_tags))
         : currentProfile.profile_showcase_tags;
 
-    const isAdmin = user.user_metadata?.role === "admin";
-    const role = isAdmin
-      ? "admin"
-      : resolveRoleFromPreferences(developingGames);
+    const role = resolveRoleFromPreferences(developingGames);
 
     const metadata = {
       display_name: displayName,
@@ -239,7 +236,7 @@ export async function PATCH(request: Request) {
     }
 
     // role 需由 service role 同步，供 RLS（profiles.role = creator）使用
-    if (!isAdmin && !isMissingProfilesRelation(profileError)) {
+    if (!isMissingProfilesRelation(profileError)) {
       const admin = createServerSupabase();
       const { error: roleError } = await admin
         .from("profiles")

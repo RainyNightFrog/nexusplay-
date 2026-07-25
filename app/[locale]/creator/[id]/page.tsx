@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { useGameFavoriteActions } from "@/hooks/use-game-favorite-actions";
 import { useFormatCount } from "@/hooks/use-format-count";
 import type { PublicCreatorProfile } from "@/lib/creator-public-service";
+import { buildGameHref } from "@/lib/game-path";
 import { normalizeWebsite } from "@/lib/profile-settings";
 import { cn } from "@/lib/utils";
 
@@ -152,7 +153,7 @@ export default function CreatorPublicPage() {
               {creator.games.map((game) => (
                 <Link
                   key={game.id}
-                  href={`/game/${game.id}`}
+                  href={buildGameHref(game)}
                   className={cn(
                     "overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/60",
                     "transition hover:border-violet-400/30 hover:shadow-lg hover:shadow-violet-500/10"

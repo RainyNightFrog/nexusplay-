@@ -164,6 +164,8 @@ export async function refundAdminTip(tipId: string, adminId: string) {
   const stripe = getStripeClient();
   const refund = await stripe.refunds.create({
     payment_intent: tip.stripe_payment_intent_id,
+    reverse_transfer: true,
+    refund_application_fee: true,
     metadata: {
       nexusplay_tip_id: tip.id,
       nexusplay_refunded_by: adminId,

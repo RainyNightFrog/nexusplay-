@@ -201,6 +201,8 @@ export async function refundAdminOrder(orderId: string, adminId: string) {
     try {
       const refund = await stripe.refunds.create({
         payment_intent: paymentIntent,
+        reverse_transfer: true,
+        refund_application_fee: true,
         metadata: {
           nexusplay_order_id: order.id as string,
           nexusplay_refunded_by: adminId,
@@ -224,6 +226,14 @@ export async function refundAdminOrder(orderId: string, adminId: string) {
     }
 
     if (order.order_type === "game_purchase" && order.game_id) {
+      const { debitCreatorGamePurchasePayout } = await import(
+        "@/lib/game-purchase-refund"
+      );
+      await debitCreatorGamePurchasePayout({
+        gameId: order.game_id as number,
+        gamePriceCents: Number(order.game_price_cents) || 0,
+        platformTipCents: Number(order.platform_tip_cents) || 0,
+      });
       await revokeGameEntitlement({
         userId: order.buyer_id as string,
         gameId: order.game_id as number,

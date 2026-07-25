@@ -5,13 +5,16 @@ export type AdminDisplayRole = "none" | "admin" | "super_admin";
 export const adminRoleRainbowTextClass =
   "supporter-username supporter-username-premium font-semibold";
 
-/** profiles.is_admin 為超級管理員；僅 JWT metadata role=admin 為一般管理員 */
+/**
+ * profiles.is_admin = 超級管理員；
+ * app_metadata.role=admin = 服務層管理員（不可信 user_metadata）。
+ */
 export function resolveAdminDisplayRole(
   isAdminInDb: boolean,
-  metadataRoleAdmin: boolean
+  serviceRoleAdmin = false
 ): AdminDisplayRole {
   if (isAdminInDb) return "super_admin";
-  if (metadataRoleAdmin) return "admin";
+  if (serviceRoleAdmin) return "admin";
   return "none";
 }
 

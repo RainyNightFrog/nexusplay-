@@ -1,4 +1,5 @@
 import { createServerSupabase } from "@/lib/supabase-server";
+import { buildAbsoluteGameUrl } from "@/lib/game-path";
 import { getSiteUrl } from "@/lib/site-url";
 import {
   resolveForumDigestEmailCopy,
@@ -106,27 +107,37 @@ export async function buildForumDigestPreview(
   const gameIds = [...new Set(filteredPosts.map((row) => row.game_id as number))];
   const { data: games, error: gamesError } = await supabase
     .from("games")
-    .select("id, title")
+    .select("id, title, slug")
     .in("id", gameIds)
     .eq("publish_status", "public")
     .eq("status", "approved");
 
   if (gamesError) throw new Error(gamesError.message);
 
-  const gameTitleById = new Map(
-    (games ?? []).map((game) => [game.id as number, game.title as string])
+  const gameById = new Map(
+    (games ?? []).map((game) => [
+      game.id as number,
+      {
+        title: game.title as string,
+        slug: (game.slug as string | null) ?? null,
+      },
+    ])
   );
 
   const digestPosts: ForumDigestPost[] = filteredPosts
-    .filter((row) => gameTitleById.has(row.game_id as number))
+    .filter((row) => gameById.has(row.game_id as number))
     .slice(0, DIGEST_LIMIT)
     .map((row) => {
       const gameId = row.game_id as number;
-      const gameTitle = gameTitleById.get(gameId) ?? "Game";
+      const game = gameById.get(gameId)!;
       return {
         title: row.title as string,
-        gameTitle,
-        url: `${baseUrl}/game/${gameId}/forum?post=${row.id}`,
+        gameTitle: game.title,
+        url: buildAbsoluteGameUrl(
+          baseUrl,
+          { id: gameId, slug: game.slug },
+          `/forum?post=${row.id}`
+        ),
         excerpt: truncate((row.content as string) ?? ""),
         createdAt: row.created_at as string,
       };

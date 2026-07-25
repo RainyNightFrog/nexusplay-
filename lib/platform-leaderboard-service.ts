@@ -95,7 +95,7 @@ async function loadAuthUserFlags(supabase: SupabaseClient): Promise<{
     if (isAmbientLocalEmail(user.email)) {
       ambientBotIds.add(user.id);
     }
-    if (user.user_metadata?.role === "admin") {
+    if (user.app_metadata?.role === "admin") {
       metadataAdminIds.add(user.id);
     }
   }

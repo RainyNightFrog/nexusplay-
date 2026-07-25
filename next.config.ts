@@ -9,10 +9,26 @@ const supabaseHostname = process.env.NEXT_PUBLIC_SUPABASE_URL
   ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
   : "*.supabase.co";
 
+function resolvePlayOriginForCsp() {
+  const configured = process.env.NEXT_PUBLIC_PLAY_ORIGIN?.trim().replace(
+    /\/$/,
+    ""
+  );
+  if (configured) return configured;
+  const root =
+    process.env.NEXT_PUBLIC_ROOT_DOMAIN?.trim().toLowerCase() ||
+    "rainynightfrog.com";
+  if (process.env.NODE_ENV === "development") {
+    return "http://play.localhost:3000";
+  }
+  return `https://play.${root}`;
+}
+
 function buildContentSecurityPolicy() {
   const supabaseOrigin = process.env.NEXT_PUBLIC_SUPABASE_URL
     ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).origin
     : "https://*.supabase.co";
+  const playOrigin = resolvePlayOriginForCsp();
 
   const directives = [
     "default-src 'self'",
@@ -25,7 +41,7 @@ function buildContentSecurityPolicy() {
     `connect-src 'self' ${supabaseOrigin} wss://${supabaseHostname} https://api.stripe.com https://www.google-analytics.com https://region1.google-analytics.com https://void-gacha.com https://*.void-gacha.com`,
     "font-src 'self' data:",
     "object-src 'none'",
-    `frame-src 'self' ${supabaseOrigin} https://js.stripe.com https://hooks.stripe.com`,
+    `frame-src 'self' ${playOrigin} ${supabaseOrigin} https://js.stripe.com https://hooks.stripe.com`,
     "worker-src 'self' blob:",
     "manifest-src 'self'",
   ];
@@ -61,8 +77,16 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      // embed 必須可被主站跨子網域 iframe；不設 X-Frame-Options
       {
-        source: "/(.*)",
+        source: "/api/games/:id/embed/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+        ],
+      },
+      {
+        source: "/((?!api/games/.*/embed).*)",
         headers: [
           { key: "X-Frame-Options", value: "SAMEORIGIN" },
           { key: "X-Content-Type-Options", value: "nosniff" },

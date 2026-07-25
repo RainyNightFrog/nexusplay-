@@ -18,11 +18,11 @@ function readOptionalString(value: unknown): string | null {
 /** Build a UserProfile from Supabase auth user_metadata (client-safe). */
 export function profileFromUserMetadata(user: User): UserProfile {
   const metadata = user.user_metadata ?? {};
-  const isAdmin = metadata.role === "admin";
-  const role = isAdmin ? "player" : normalizeRole(metadata.role);
+  // 絕不從可被客戶端寫入的 user_metadata 推導管理員身份
+  const role = normalizeRole(metadata.role);
   const developingGames = readBoolean(
     metadata.developing_games,
-    role === "creator" || isAdmin
+    role === "creator"
   );
 
   return {
@@ -35,8 +35,8 @@ export function profileFromUserMetadata(user: User): UserProfile {
     username: null,
     avatar_url:
       typeof metadata.avatar_url === "string" ? metadata.avatar_url : null,
-    role: isAdmin ? "player" : resolveRoleFromPreferences(developingGames),
-    is_admin: isAdmin,
+    role: resolveRoleFromPreferences(developingGames),
+    is_admin: false,
     created_at: user.created_at,
     bio: readOptionalString(metadata.bio),
     website: readOptionalString(metadata.website),

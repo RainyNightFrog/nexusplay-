@@ -1,11 +1,12 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { accountIntentToProfile } from "@/lib/account-intent";
 import { resolveUserProfile } from "@/lib/auth-profile";
-import { isAdminUser } from "@/lib/admin-auth";
+import { resolveAdminAccess } from "@/lib/admin-auth";
 import { resolveRoleFromPreferences } from "@/lib/profile-settings";
 import { isMissingProfilesRelation } from "@/lib/profiles-access";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
+import { assertTrustedBrowserOrigin } from "@/lib/request-origin";
 import type { UserRole } from "@/lib/auth";
 
 function parseIntent(value: unknown): UserRole | null {
@@ -14,6 +15,9 @@ function parseIntent(value: unknown): UserRole | null {
 
 export async function POST(request: Request) {
   try {
+    const originDenied = assertTrustedBrowserOrigin(request);
+    if (originDenied) return originDenied;
+
     const supabase = await createAuthServerClient();
     const {
       data: { user },
@@ -23,7 +27,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "請先登入" }, { status: 401 });
     }
 
-    if (isAdminUser(user)) {
+    if (await resolveAdminAccess(user)) {
       const profile = await resolveUserProfile(supabase, user);
       return NextResponse.json({ profile, skipped: true });
     }

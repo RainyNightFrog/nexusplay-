@@ -71,6 +71,7 @@ import {
 } from "@/lib/upload-limits";
 import { isZipFileAsync, validateGameZipFile, ZIP_FILE_ACCEPT } from "@/lib/zip-file-validation";
 import { suggestGameSlugFromTitle } from "@/lib/game-slug";
+import { buildGameHref } from "@/lib/game-path";
 import { cn } from "@/lib/utils";
 import { PublishAssistantSidebar } from "@/components/creator-tools/publish-assistant-sidebar";
 import { ZipInspectorPanel } from "@/components/creator-tools/zip-inspector-panel";
@@ -457,15 +458,11 @@ export default function UploadPage() {
       clearPersistedGameUploadDraft();
 
       const isDraft = monetization.publishStatus === "draft";
-      const gamePathSegment =
-        typeof game.slug === "string" && game.slug.trim()
-          ? game.slug.trim()
-          : String(game.id);
 
       if (isDraft) {
         const previewPath = getPathname({
           locale,
-          href: `/game/${gamePathSegment}`,
+          href: buildGameHref(game),
         });
         window.location.replace(`${previewPath}?draftSaved=1`);
         return;
@@ -482,7 +479,7 @@ export default function UploadPage() {
 
       const livePath = getPathname({
         locale,
-        href: `/game/${gamePathSegment}`,
+        href: buildGameHref(game),
       });
       window.setTimeout(() => {
         window.location.replace(`${livePath}?published=1`);

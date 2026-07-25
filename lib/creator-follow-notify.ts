@@ -1,6 +1,7 @@
 import { sendEmail, isEmailConfigured } from "@/lib/email-service";
 import { readNotificationPrefs, shouldCreateInAppNotification } from "@/lib/notification-prefs-service";
 import { createUserNotification } from "@/lib/user-notifications-service";
+import { buildGameHref } from "@/lib/game-path";
 import { createServerSupabase } from "@/lib/supabase-server";
 
 function escapeHtml(value: string) {
@@ -15,6 +16,7 @@ export async function notifyFollowersOfNewGame(params: {
   creatorId: string;
   gameTitle: string;
   creatorName: string;
+  gameSlug?: string | null;
 }) {
   const supabase = createServerSupabase();
 
@@ -30,8 +32,18 @@ export async function notifyFollowersOfNewGame(params: {
 
   if (!follows?.length) return;
 
+  let gameSlug = params.gameSlug ?? null;
+  if (gameSlug === null) {
+    const { data: gameRow } = await supabase
+      .from("games")
+      .select("slug")
+      .eq("id", params.gameId)
+      .maybeSingle();
+    gameSlug = (gameRow?.slug as string | null) ?? null;
+  }
+
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "").replace(/\/$/, "");
-  const gamePath = `/game/${params.gameId}`;
+  const gamePath = buildGameHref({ id: params.gameId, slug: gameSlug });
   const gameUrl = siteUrl ? `${siteUrl}${gamePath}` : gamePath;
   const creatorPath = `/creator/${params.creatorId}`;
   const creatorUrl = siteUrl ? `${siteUrl}${creatorPath}` : creatorPath;

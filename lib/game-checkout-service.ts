@@ -23,6 +23,7 @@ import {
 } from "@/lib/stripe-connect";
 import { createServerSupabase } from "@/lib/supabase-server";
 import type { GameRecord } from "@/lib/supabase";
+import { buildGameHref } from "@/lib/game-path";
 
 export type GameCheckoutContext = {
   game: GameRecord;
@@ -373,7 +374,7 @@ export async function createGameCheckoutSession(params: {
   const stripe = getStripeClient();
   const currency = (game.currency ?? "USD").trim().toLowerCase() || "usd";
   const siteUrl = resolveSiteUrl(params.requestOrigin);
-  const gamePath = params.localePath ?? `/game/${game.id}`;
+  const gamePath = params.localePath ?? buildGameHref(game);
 
   const session = await stripe.checkout.sessions.create({
     mode: "payment",

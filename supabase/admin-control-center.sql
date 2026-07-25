@@ -14,7 +14,15 @@ stable
 security invoker
 set search_path = public
 as $$
-  select coalesce((auth.jwt() -> 'user_metadata' ->> 'role'), '') = 'admin';
+  select coalesce(
+    (
+      select p.is_admin
+      from public.profiles p
+      where p.id = auth.uid()
+    ),
+    false
+  )
+  or coalesce((auth.jwt() -> 'app_metadata' ->> 'role'), '') = 'admin';
 $$;
 
 -- ================================================================

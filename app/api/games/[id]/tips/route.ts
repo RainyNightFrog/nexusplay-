@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { resolveUserProfile } from "@/lib/auth-profile";
+import { assertTrustedBrowserOrigin } from "@/lib/request-origin";
 import {
   checkRateLimit,
   getClientIp,
@@ -12,6 +13,7 @@ import {
   parseTipAmount,
   recordPreviewTip,
 } from "@/lib/tip-checkout-service";
+import { allowPlatformPreviewGrant } from "@/lib/platform-preview-mode";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
 
@@ -88,6 +90,9 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const originDenied = assertTrustedBrowserOrigin(request);
+    if (originDenied) return originDenied;
+
     const limit = enforceTipsRateLimit(request);
     if (!limit.allowed) {
       return rateLimitResponse(limit.retryAfterSec);
@@ -127,6 +132,15 @@ export async function POST(
     const payments = getTipPaymentsState();
 
     if (!payments.paymentsLive) {
+      if (!allowPlatformPreviewGrant()) {
+        return NextResponse.json(
+          {
+            error: "付款尚未開放，暫時無法打賞。請稍後再試或聯絡平台。",
+          },
+          { status: 503 }
+        );
+      }
+
       const result = await recordPreviewTip({
         gameId,
         payerId: user.id,

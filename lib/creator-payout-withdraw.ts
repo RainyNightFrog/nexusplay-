@@ -133,10 +133,8 @@ export async function requestCreatorWithdrawal(userId: string) {
 
     if (insertError) throw new Error(insertError.message);
 
-    await supabase
-      .from("profiles")
-      .update({ creator_balance_usd: roundUsd(ledgerBalance - amount) })
-      .eq("id", userId);
+    const { adjustCreatorBalanceUsd } = await import("@/lib/creator-balance");
+    await adjustCreatorBalanceUsd(userId, -amount);
 
     return {
       payout: payoutRow as CreatorPayoutRecord,
@@ -189,10 +187,8 @@ export async function requestCreatorWithdrawal(userId: string) {
       })
       .eq("id", payoutRow.id);
 
-    await supabase
-      .from("profiles")
-      .update({ creator_balance_usd: roundUsd(ledgerBalance - amount) })
-      .eq("id", userId);
+    const { adjustCreatorBalanceUsd } = await import("@/lib/creator-balance");
+    await adjustCreatorBalanceUsd(userId, -amount);
 
     const { data: updated } = await supabase
       .from("creator_payouts")

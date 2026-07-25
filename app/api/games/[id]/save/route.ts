@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
-import { isAdminUser } from "@/lib/admin-auth";
+﻿import { NextResponse } from "next/server";
+import { resolveAdminAccess } from "@/lib/admin-auth";
+import { assertTrustedBrowserOrigin } from "@/lib/request-origin";
 import {
   loadGameSave,
   upsertGameSave,
@@ -47,7 +48,7 @@ async function authorizePlayerForGame(gameId: number) {
 
   if (
     !canViewGame(record, user.id, {
-      isAdmin: isAdminUser(user),
+      isAdmin: await resolveAdminAccess(user),
       hasPurchaseEntitlement,
     })
   ) {
@@ -60,10 +61,13 @@ async function authorizePlayerForGame(gameId: number) {
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const originDenied = assertTrustedBrowserOrigin(request);
+    if (originDenied) return originDenied;
+
     const { id } = await params;
     const gameId = Number.parseInt(id, 10);
 
@@ -97,6 +101,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const originDenied = assertTrustedBrowserOrigin(request);
+    if (originDenied) return originDenied;
+
     const { id } = await params;
     const gameId = Number.parseInt(id, 10);
 

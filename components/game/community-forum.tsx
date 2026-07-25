@@ -55,6 +55,7 @@ import {
 import { getVirtualPlayerById } from "@/lib/virtual-players";
 import { resolveVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
 import { isForumContentEmpty, stripHtmlForPreview } from "@/lib/forum-content";
+import { buildGameHref } from "@/lib/game-path";
 import { cn } from "@/lib/utils";
 
 type GameOption = { id: number; title: string };
@@ -725,7 +726,7 @@ export function CommunityForum({
                   <CategoryBadge category={selectedPost.category} />
                   {isHub && selectedPost.game_title && (
                     <Link
-                      href={`/game/${selectedPost.game_id}/forum`}
+                      href={buildGameHref({ id: selectedPost.game_id }, "/forum")}
                       className="inline-flex items-center gap-1 rounded-md border border-violet-400/25 bg-violet-500/10 px-2 py-0.5 text-[11px] font-medium text-violet-300 transition-colors hover:bg-violet-500/20"
                     >
                       <Gamepad2 className="size-3" />

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { resolveUserProfile } from "@/lib/auth-profile";
+import { allowPlatformPreviewGrant } from "@/lib/platform-preview-mode";
+import { assertTrustedBrowserOrigin } from "@/lib/request-origin";
 import {
   createSupporterPassCheckoutSession,
   getCheckoutPaymentsState,
@@ -12,17 +14,6 @@ import {
   SUPPORTER_PASS_TIERS,
 } from "@/lib/supporter-pass";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
-
-/** 正式站禁止免費預覽發放；僅本機／明確預覽模式可測 */
-function allowSupporterPreviewGrant() {
-  if (process.env.VERCEL_ENV === "production") {
-    return false;
-  }
-  const previewFlag = process.env.PLATFORM_PREVIEW_MODE?.trim().toLowerCase();
-  if (previewFlag === "true") return true;
-  if (previewFlag === "false") return false;
-  return process.env.NODE_ENV !== "production";
-}
 
 export async function GET() {
   return NextResponse.json({
@@ -44,6 +35,9 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const originDenied = assertTrustedBrowserOrigin(request);
+    if (originDenied) return originDenied;
+
     const authClient = await createAuthServerClient();
     const {
       data: { user },
@@ -73,11 +67,11 @@ export async function POST(request: Request) {
     const tierId = body.tierId.trim();
 
     if (!payments.paymentsLive) {
-      if (!allowSupporterPreviewGrant()) {
+      if (!allowPlatformPreviewGrant()) {
         return NextResponse.json(
           {
             error:
-              "金流尚未正式開放，暫時無法購買支持者通行證。請稍後再試或聯絡平台。",
+              "付款尚未開放，暫時無法購買支持者通行證。請稍後再試或聯絡平台。",
           },
           { status: 503 }
         );

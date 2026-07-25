@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { GameComment, GameDevlogEntry } from "@/lib/game-page-content";
 import { isSupabaseImage } from "@/lib/games";
+import { buildGameHref } from "@/lib/game-path";
 import { useApiError } from "@/hooks/use-api-error";
 import { UserBadge } from "@/components/UserBadge";
 import { sanitizeRichHtmlForRender } from "@/lib/sanitize-rich-html";
@@ -24,6 +25,7 @@ type ApiDevlog = {
 
 type GameDetailSectionsProps = {
   gameId: number;
+  gameSlug?: string | null;
   description: string;
   detailsHtml?: string;
   creator: string;
@@ -74,6 +76,7 @@ function SectionCard({
 
 export function GameDetailSections({
   gameId,
+  gameSlug,
   description,
   detailsHtml,
   creator,
@@ -306,7 +309,7 @@ export function GameDetailSections({
                     {tg("communityForum")}
                   </p>
                   <Link
-                    href={`/game/${gameId}/forum`}
+                    href={buildGameHref({ id: gameId, slug: gameSlug }, "/forum")}
                     className="mt-1 inline-block text-sm text-violet-300 transition-colors hover:text-violet-200"
                   >
                     {tc("threads", { count: forumPostCount })}

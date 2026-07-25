@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServerSupabase } from "@/lib/supabase-server";
+import { buildGameHref } from "@/lib/game-path";
 import { sanitizePlainText } from "@/lib/sanitize-plain";
 import { sanitizeRichHtml } from "@/lib/sanitize-rich-html";
 import { createUserNotification } from "@/lib/user-notifications-service";
@@ -74,7 +75,7 @@ export async function createGameDevlog(
 
   const { data: game, error: gameError } = await client
     .from("games")
-    .select("id, title, creator_id")
+    .select("id, title, slug, creator_id")
     .eq("id", input.gameId)
     .maybeSingle();
 
@@ -106,6 +107,7 @@ export async function createGameDevlog(
 
   void notifyWishlistUsersOfDevlog({
     gameId: input.gameId,
+    gameSlug: (game.slug as string | null) ?? null,
     gameTitle,
     creatorId: input.creatorId,
     devlogTitle: title,
@@ -134,6 +136,7 @@ export async function deleteGameDevlog(
 
 async function notifyWishlistUsersOfDevlog(input: {
   gameId: number;
+  gameSlug?: string | null;
   gameTitle: string;
   creatorId: string;
   devlogTitle: string;
@@ -141,6 +144,7 @@ async function notifyWishlistUsersOfDevlog(input: {
 }) {
   const userIds = await listWishlistUserIdsForGame(input.gameId);
   const recipients = userIds.filter((id) => id !== input.creatorId);
+  const href = buildGameHref({ id: input.gameId, slug: input.gameSlug });
 
   await Promise.all(
     recipients.map((userId) =>
@@ -150,7 +154,7 @@ async function notifyWishlistUsersOfDevlog(input: {
           kind: "wishlist_devlog",
           title: `${input.gameTitle} 發布了開發日誌`,
           body: input.devlogTitle,
-          href: `/game/${input.gameId}`,
+          href,
         },
         input.supabase
       )

@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Gamepad2, Megaphone, Zap } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import type { Game } from "@/lib/games";
+import { buildGameHref } from "@/lib/game-path";
 import {
   HOME_ANNOUNCEMENT_ACCENT_CLASS,
   type HomeAnnouncementAccent,
@@ -258,7 +259,7 @@ function MarqueeFeedEntry({ item }: { item: MarqueeFeedItem }) {
     return (
       <MarqueeText
         label={item.label}
-        href={`/game/${item.gameId}`}
+        href={buildGameHref({ id: item.gameId, slug: item.slug })}
         accent={item.accent}
         gameIcon
       />

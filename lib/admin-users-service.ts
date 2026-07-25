@@ -13,6 +13,8 @@ export type AdminUserRecord = {
   isAdmin: boolean;
   isSupporter: boolean;
   supporterBadge: string | null;
+  supporterSince: string | null;
+  supporterLifetime: boolean;
   accountStatus: AccountStatus;
   suspendedUntil: string | null;
   banReason: string | null;
@@ -20,6 +22,9 @@ export type AdminUserRecord = {
   forumPostingDisabled: boolean;
   creatorBalanceUsd: number;
   createdAt: string | null;
+  lastSignInAt: string | null;
+  emailConfirmedAt: string | null;
+  authProviders: string[];
   gamesCount: number;
   tipsCount: number;
   ordersCount: number;
@@ -54,6 +59,26 @@ function roundUsd(value: unknown) {
   return Math.round(numeric * 100) / 100;
 }
 
+function readAuthMeta(user: {
+  last_sign_in_at?: string | null;
+  email_confirmed_at?: string | null;
+  identities?: Array<{ provider?: string | null }> | null;
+} | null | undefined) {
+  const providers = [
+    ...new Set(
+      (user?.identities ?? [])
+        .map((identity) => identity.provider?.trim())
+        .filter((provider): provider is string => Boolean(provider))
+    ),
+  ];
+
+  return {
+    lastSignInAt: user?.last_sign_in_at ?? null,
+    emailConfirmedAt: user?.email_confirmed_at ?? null,
+    authProviders: providers,
+  };
+}
+
 function countByKey(
   rows: Array<Record<string, unknown>> | null | undefined,
   key: string
@@ -76,14 +101,12 @@ export async function listAdminUsers(params: {
   const query = params.query?.trim().toLowerCase() ?? "";
 
   const authUsers = await listAuthAdminUsers(supabase);
-  const emailById = new Map(
-    authUsers.map((user) => [user.id, user.email ?? null] as const)
-  );
+  const authById = new Map(authUsers.map((user) => [user.id, user] as const));
 
   let profileQuery = supabase
     .from("profiles")
     .select(
-      "id, display_name, username, role, player_number, is_admin, is_supporter, supporter_badge, account_status, suspended_until, ban_reason, chat_muted_until, forum_posting_disabled, creator_balance_usd, created_at"
+      "id, display_name, username, role, player_number, is_admin, is_supporter, supporter_badge, supporter_since, supporter_lifetime, account_status, suspended_until, ban_reason, chat_muted_until, forum_posting_disabled, creator_balance_usd, created_at"
     )
     .order("created_at", { ascending: false });
 
@@ -144,16 +167,20 @@ export async function listAdminUsers(params: {
   return profileRows.map((profile) => {
     const id = profile.id as string;
     const counts = countsById.get(id);
+    const authUser = authById.get(id);
+    const authMeta = readAuthMeta(authUser);
     return {
       id,
       displayName: (profile.display_name as string) ?? id.slice(0, 8),
       username: (profile.username as string | null) ?? null,
-      email: emailById.get(id) ?? null,
+      email: authUser?.email ?? null,
       role: (profile.role as string | null) ?? null,
       playerNumber: (profile.player_number as number | null) ?? null,
       isAdmin: profile.is_admin === true,
       isSupporter: profile.is_supporter === true,
       supporterBadge: (profile.supporter_badge as string | null) ?? null,
+      supporterSince: (profile.supporter_since as string | null) ?? null,
+      supporterLifetime: profile.supporter_lifetime === true,
       accountStatus: (profile.account_status as AccountStatus) ?? "active",
       suspendedUntil: (profile.suspended_until as string | null) ?? null,
       banReason: (profile.ban_reason as string | null) ?? null,
@@ -161,6 +188,9 @@ export async function listAdminUsers(params: {
       forumPostingDisabled: profile.forum_posting_disabled === true,
       creatorBalanceUsd: roundUsd(profile.creator_balance_usd),
       createdAt: (profile.created_at as string | null) ?? null,
+      lastSignInAt: authMeta.lastSignInAt,
+      emailConfirmedAt: authMeta.emailConfirmedAt,
+      authProviders: authMeta.authProviders,
       gamesCount: counts?.gamesCount ?? 0,
       tipsCount: counts?.tipsCount ?? 0,
       ordersCount: counts?.ordersCount ?? 0,
@@ -173,7 +203,7 @@ export async function getAdminUserDetail(userId: string): Promise<AdminUserDetai
   const { data: profile, error } = await supabase
     .from("profiles")
     .select(
-      "id, display_name, username, role, player_number, is_admin, is_supporter, supporter_badge, account_status, suspended_until, ban_reason, chat_muted_until, forum_posting_disabled, creator_balance_usd, created_at, stripe_connect_account_id, payout_status"
+      "id, display_name, username, role, player_number, is_admin, is_supporter, supporter_badge, supporter_since, supporter_lifetime, account_status, suspended_until, ban_reason, chat_muted_until, forum_posting_disabled, creator_balance_usd, created_at, stripe_connect_account_id, payout_status"
     )
     .eq("id", userId)
     .maybeSingle();
@@ -183,6 +213,7 @@ export async function getAdminUserDetail(userId: string): Promise<AdminUserDetai
 
   const { data: authUser } = await supabase.auth.admin.getUserById(userId);
   const email = authUser.user?.email ?? null;
+  const authMeta = readAuthMeta(authUser.user);
 
   const [gamesCount, tipsCount, ordersCount, forumPostsCount, tips, orders] =
     await Promise.all([
@@ -244,6 +275,8 @@ export async function getAdminUserDetail(userId: string): Promise<AdminUserDetai
     isAdmin: profile.is_admin === true,
     isSupporter: profile.is_supporter === true,
     supporterBadge: (profile.supporter_badge as string | null) ?? null,
+    supporterSince: (profile.supporter_since as string | null) ?? null,
+    supporterLifetime: profile.supporter_lifetime === true,
     accountStatus: (profile.account_status as AccountStatus) ?? "active",
     suspendedUntil: (profile.suspended_until as string | null) ?? null,
     banReason: (profile.ban_reason as string | null) ?? null,
@@ -251,6 +284,9 @@ export async function getAdminUserDetail(userId: string): Promise<AdminUserDetai
     forumPostingDisabled: profile.forum_posting_disabled === true,
     creatorBalanceUsd: roundUsd(profile.creator_balance_usd),
     createdAt: (profile.created_at as string | null) ?? null,
+    lastSignInAt: authMeta.lastSignInAt,
+    emailConfirmedAt: authMeta.emailConfirmedAt,
+    authProviders: authMeta.authProviders,
     gamesCount: gamesCount.count ?? 0,
     tipsCount: tipsCount.count ?? 0,
     ordersCount: ordersCount.count ?? 0,
@@ -386,15 +422,32 @@ export async function setAdminFlag(params: {
   if (authError) throw new Error(authError.message);
   if (!authUser.user) throw new Error("找不到此用戶");
 
-  const nextMetadata = {
-    ...(authUser.user.user_metadata ?? {}),
-    role: params.isAdmin ? "admin" : "player",
-    ...(params.isAdmin ? { developing_games: true } : {}),
+  const nextAppMetadata = {
+    ...(authUser.user.app_metadata ?? {}),
   };
+  if (params.isAdmin) {
+    nextAppMetadata.role = "admin";
+  } else {
+    delete nextAppMetadata.role;
+  }
+
+  // 清掉可被客戶端偽造的 user_metadata.role=admin，避免殘留誤導
+  const nextUserMetadata = {
+    ...(authUser.user.user_metadata ?? {}),
+  };
+  if (nextUserMetadata.role === "admin") {
+    nextUserMetadata.role = "player";
+  }
+  if (params.isAdmin) {
+    nextUserMetadata.developing_games = true;
+  }
 
   const { error: updateError } = await supabase.auth.admin.updateUserById(
     params.userId,
-    { user_metadata: nextMetadata }
+    {
+      app_metadata: nextAppMetadata,
+      user_metadata: nextUserMetadata,
+    }
   );
 
   if (updateError) throw new Error(updateError.message);
@@ -426,7 +479,7 @@ export async function listAdminAccounts() {
       displayName: (profile.display_name as string) ?? "",
       username: (profile.username as string | null) ?? null,
       email: authUser.user?.email ?? null,
-      metadataAdmin: authUser.user?.user_metadata?.role === "admin",
+      metadataAdmin: authUser.user?.app_metadata?.role === "admin",
       createdAt: (profile.created_at as string | null) ?? null,
     });
   }

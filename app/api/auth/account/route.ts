@@ -1,10 +1,14 @@
-import { NextResponse } from "next/server";
-import { isAdminUser } from "@/lib/admin-auth";
+﻿import { NextResponse } from "next/server";
+import { resolveAdminAccess } from "@/lib/admin-auth";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
+import { assertTrustedBrowserOrigin } from "@/lib/request-origin";
 
 export async function DELETE(request: Request) {
   try {
+    const originDenied = assertTrustedBrowserOrigin(request);
+    if (originDenied) return originDenied;
+
     const authClient = await createAuthServerClient();
     const {
       data: { user },
@@ -14,7 +18,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: "請先登入" }, { status: 401 });
     }
 
-    if (isAdminUser(user)) {
+    if (await resolveAdminAccess(user)) {
       return NextResponse.json(
         { error: "管理員帳戶無法自行刪除，請聯絡平台營運" },
         { status: 403 }

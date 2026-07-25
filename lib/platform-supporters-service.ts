@@ -1,8 +1,16 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { VIRTUAL_LEADERBOARD_USER_PREFIX } from "@/lib/platform-leaderboard-virtual";
 import {
   getSupporterDisplayTier,
   type SupporterDisplayTier,
 } from "@/lib/supporter-tier";
+import { resolveVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
+import {
+  VIRTUAL_SVIP_PLAYER_IDS,
+  VIRTUAL_VIP_PLAYER_IDS,
+  getVirtualPlayerSupporterBadge,
+} from "@/lib/virtual-player-supporter";
+import { getVirtualPlayerById } from "@/lib/virtual-players";
 
 export type PlatformSupporterPublic = {
   id: string;
@@ -12,6 +20,8 @@ export type PlatformSupporterPublic = {
   supporterLifetime: boolean;
   supporterSince: string | null;
   tier: SupporterDisplayTier;
+  /** 僅內部辨識用，前端不顯示「虛擬」 */
+  virtualPlayerId?: string | null;
 };
 
 export type PlatformSupportersResponse = {
@@ -74,7 +84,51 @@ function mapRow(row: ProfileRow): PlatformSupporterPublic {
     supporterLifetime,
     supporterSince: row.supporter_since,
     tier,
+    virtualPlayerId: null,
   };
+}
+
+function hashString(value: string, salt: number) {
+  let hash = salt;
+  for (const char of value) {
+    hash = Math.imul(31, hash) + char.charCodeAt(0);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+/** 穩定假「加入日」，避免每次刷新順序亂跳 */
+function virtualSupporterSince(playerId: string): string {
+  const daysAgo = 45 + (hashString(playerId, 59) % 420);
+  const base = Date.UTC(2026, 0, 15);
+  return new Date(base - daysAgo * 86_400_000).toISOString();
+}
+
+function buildVirtualSupporterEntries(): PlatformSupporterPublic[] {
+  const ids = [...VIRTUAL_SVIP_PLAYER_IDS, ...VIRTUAL_VIP_PLAYER_IDS];
+  const entries: PlatformSupporterPublic[] = [];
+
+  for (const playerId of ids) {
+    const player = getVirtualPlayerById(playerId);
+    if (!player) continue;
+
+    const supporterBadge = getVirtualPlayerSupporterBadge(playerId);
+    if (!supporterBadge) continue;
+
+    const tier = getSupporterDisplayTier(true, supporterBadge);
+    entries.push({
+      id: `${VIRTUAL_LEADERBOARD_USER_PREFIX}${playerId}`,
+      displayName: player.displayName,
+      avatarUrl: resolveVirtualPlayerAvatarUrl(playerId),
+      supporterBadge,
+      supporterLifetime: false,
+      supporterSince: virtualSupporterSince(playerId),
+      tier,
+      virtualPlayerId: playerId,
+    });
+  }
+
+  return entries;
 }
 
 export async function listPlatformSupporters(
@@ -96,7 +150,17 @@ export async function listPlatformSupporters(
     throw new Error(`讀取平台支持者失敗：${error.message}`);
   }
 
-  const all = (data as ProfileRow[] | null ?? []).map(mapRow).sort(sortSupporters);
+  const real = (data as ProfileRow[] | null ?? []).map(mapRow);
+  const realNames = new Set(
+    real.map((item) => item.displayName.trim().toLowerCase())
+  );
+
+  // 若真實會員已用同名，略過虛擬條目，避免牆上看起來像重複帳號
+  const virtual = buildVirtualSupporterEntries().filter(
+    (item) => !realNames.has(item.displayName.trim().toLowerCase())
+  );
+
+  const all = [...real, ...virtual].sort(sortSupporters);
   const payload: PlatformSupportersResponse = {
     supporters: all.slice(0, DISPLAY_LIMIT),
     total: all.length,

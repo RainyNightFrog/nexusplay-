@@ -410,7 +410,7 @@ export async function finalizeTipPayment(
 
   const { data: creatorProfile } = await supabase
     .from("profiles")
-    .select("stripe_connect_account_id, creator_balance_usd")
+    .select("stripe_connect_account_id")
     .eq("id", tip.creator_id)
     .maybeSingle();
 
@@ -455,19 +455,11 @@ export async function finalizeTipPayment(
     return { ok: false, reason: "claim_failed" as const };
   }
 
-  const currentBalance =
-    typeof creatorProfile?.creator_balance_usd === "number"
-      ? creatorProfile.creator_balance_usd
-      : Number.parseFloat(String(creatorProfile?.creator_balance_usd ?? 0)) ||
-        0;
-
-  const newBalance =
-    Math.round((currentBalance + Number(tip.creator_net_usd)) * 100) / 100;
-
-  await supabase
-    .from("profiles")
-    .update({ creator_balance_usd: newBalance })
-    .eq("id", tip.creator_id);
+  const { adjustCreatorBalanceUsd } = await import("@/lib/creator-balance");
+  await adjustCreatorBalanceUsd(
+    tip.creator_id as string,
+    Number(tip.creator_net_usd) || 0
+  );
 
   const receipt = await loadTipReceiptForPayer(supabase, tip.id, tip.payer_id);
 

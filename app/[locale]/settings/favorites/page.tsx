@@ -9,6 +9,7 @@ import { AccountSettingsPageHeader } from "@/components/settings/account-setting
 import { accountCardClassName } from "@/components/settings/account-shell";
 import { Badge } from "@/components/ui/badge";
 import type { Game } from "@/lib/games";
+import { buildGameHref } from "@/lib/game-path";
 import { cn } from "@/lib/utils";
 
 export default function FavoritesSettingsPage() {
@@ -64,7 +65,7 @@ export default function FavoritesSettingsPage() {
             {games.map((game) => (
               <Link
                 key={game.id}
-                href={`/game/${game.id}`}
+                href={buildGameHref(game)}
                 className={cn(
                   "overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/40",
                   "transition hover:border-rose-400/30 hover:shadow-lg hover:shadow-rose-500/10"

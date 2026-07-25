@@ -2,6 +2,7 @@ import { createServerSupabase } from "@/lib/supabase-server";
 
 export type SitemapGameEntry = {
   id: number;
+  slug: string | null;
   updatedAt: string | null;
 };
 
@@ -9,7 +10,7 @@ export async function listPublicSitemapGames(): Promise<SitemapGameEntry[]> {
   const supabase = createServerSupabase();
   const { data, error } = await supabase
     .from("games")
-    .select("id, created_at")
+    .select("id, slug, created_at")
     .eq("publish_status", "public")
     .eq("status", "approved")
     .order("created_at", { ascending: false })
@@ -19,6 +20,7 @@ export async function listPublicSitemapGames(): Promise<SitemapGameEntry[]> {
 
   return (data ?? []).map((row) => ({
     id: row.id as number,
+    slug: (row.slug as string | null) ?? null,
     updatedAt: (row.created_at as string | null) ?? null,
   }));
 }

@@ -84,6 +84,7 @@ import {
   PRODUCTION_UPLOAD_BYTES,
 } from "@/lib/upload-limits";
 import { isZipFileAsync, validateGameZipFile, ZIP_FILE_ACCEPT } from "@/lib/zip-file-validation";
+import { buildGameHref } from "@/lib/game-path";
 import { cn } from "@/lib/utils";
 import { PublishAssistantSidebar } from "@/components/creator-tools/publish-assistant-sidebar";
 import { ZipInspectorPanel } from "@/components/creator-tools/zip-inspector-panel";
@@ -592,7 +593,7 @@ export default function EditGamePage() {
       if (isDraftSave) {
         const previewPath = getPathname({
           locale,
-          href: `/game/${game.id}`,
+          href: buildGameHref(game),
         });
         window.location.replace(`${previewPath}?draftSaved=1`);
         return;
@@ -608,7 +609,7 @@ export default function EditGamePage() {
 
       const livePath = getPathname({
         locale,
-        href: `/game/${game.id}`,
+        href: buildGameHref(game),
       });
       window.setTimeout(() => {
         window.location.replace(`${livePath}?published=1`);
@@ -986,7 +987,7 @@ export default function EditGamePage() {
             )}
 
             {monetization.publishStatus === "draft" && !Number.isNaN(gameId) && (
-              <PartnerAccessPanel gameId={gameId} />
+              <PartnerAccessPanel gameId={gameId} gameSlug={form.slug} />
             )}
 
             <PlatformAuthNotice />

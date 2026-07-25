@@ -1,6 +1,5 @@
 import type Stripe from "stripe";
 import {
-  isOrderAlreadyProcessed,
   resolveCheckoutOrder,
   resolveCheckoutOrderType,
   type CheckoutSessionWebhookResult,
@@ -17,21 +16,16 @@ export async function handleCheckoutSessionCompleted(
     return { handled: false, duplicate: false };
   }
 
-  if (isOrderAlreadyProcessed(order)) {
-    return {
-      handled: true,
-      duplicate: true,
-      orderType: order.order_type,
-    };
-  }
-
   const orderType = resolveCheckoutOrderType(session, order);
   if (!orderType) {
     return { handled: false, duplicate: false };
   }
 
+  const alreadySucceeded = order.status === "succeeded";
+
   switch (orderType) {
     case "game_purchase":
+      // 即使訂單已 succeeded，仍補發權益（grant 為冪等），避免崩潰後永久缺權益
       await finalizeGamePurchaseCheckout(session, order);
       break;
     case "supporter_pass":
@@ -43,7 +37,7 @@ export async function handleCheckoutSessionCompleted(
 
   return {
     handled: true,
-    duplicate: false,
+    duplicate: alreadySucceeded,
     orderType,
   };
 }

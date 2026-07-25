@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { motion, useReducedMotion } from "framer-motion";
@@ -12,12 +12,20 @@ import {
   Users,
 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
+import {
+  ChatPlayerCard,
+  forumAuthorToPlayerPreview,
+  virtualPlayerToPlayerPreview,
+  type ChatPlayerPreview,
+} from "@/components/chat/chat-player-card";
 import { UserBadge } from "@/components/UserBadge";
 import { SupporterAvatarInsignia } from "@/components/supporter/supporter-avatar-insignia";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { getInitials } from "@/lib/auth";
 import { deferClientTask } from "@/lib/defer-client";
+import { getVirtualPlayerEquippedTitle } from "@/lib/virtual-player-supporter";
+import { requestOpenPlayerDm } from "@/lib/open-player-dm";
 import type { PlatformSupporterPublic } from "@/lib/platform-supporters-service";
 import {
   getSupporterDisplayTierFromProfile,
@@ -27,6 +35,33 @@ import { cn } from "@/lib/utils";
 
 const PERK_ICONS = [Sparkles, Palette, HeartHandshake] as const;
 
+function supporterToPlayerPreview(
+  supporter: PlatformSupporterPublic
+): ChatPlayerPreview {
+  if (supporter.virtualPlayerId) {
+    return virtualPlayerToPlayerPreview({
+      id: supporter.virtualPlayerId,
+      displayName: supporter.displayName,
+      avatarUrl: supporter.avatarUrl,
+      equippedTitle: getVirtualPlayerEquippedTitle(supporter.virtualPlayerId),
+      isSupporter: true,
+      supporterBadge: supporter.supporterBadge,
+    });
+  }
+
+  return {
+    ...forumAuthorToPlayerPreview(
+      supporter.displayName,
+      supporter.id,
+      null,
+      { isOwn: false }
+    ),
+    avatarUrl: supporter.avatarUrl,
+    isSupporter: true,
+    supporterBadge: supporter.supporterBadge,
+  };
+}
+
 export function HomeSupporterSection() {
   const t = useTranslations("home");
   const { profile } = useAuth();
@@ -34,6 +69,10 @@ export function HomeSupporterSection() {
   const [supporters, setSupporters] = useState<PlatformSupporterPublic[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [playerPreview, setPlayerPreview] = useState<ChatPlayerPreview | null>(
+    null
+  );
+  const [playerCardOpen, setPlayerCardOpen] = useState(false);
 
   const isMember =
     profile?.is_supporter === true ||
@@ -59,6 +98,14 @@ export function HomeSupporterSection() {
         .finally(() => setLoading(false));
     });
   }, []);
+
+  const openSupporterProfile = useCallback(
+    (supporter: PlatformSupporterPublic) => {
+      setPlayerPreview(supporterToPlayerPreview(supporter));
+      setPlayerCardOpen(true);
+    },
+    []
+  );
 
   const perks = [
     t("supporterPerkBadge"),
@@ -171,56 +218,75 @@ export function HomeSupporterSection() {
                       ? 0
                       : Math.min(index * 0.03, 0.36),
                   }}
-                  className="flex min-w-0 flex-col items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-2 py-3 sm:gap-2 sm:px-2.5"
                 >
-                  {/* pt 預留 VIP/SVIP 角標空間，避免被裁切或壓到隔壁列 */}
-                  <div className="relative pt-5">
-                    <div
-                      className={cn(
-                        "relative size-11 overflow-hidden rounded-full sm:size-12",
-                        supporter.tier !== "none" &&
-                          supporterAvatarRingClassByTier[supporter.tier]
-                      )}
-                    >
-                      {supporter.avatarUrl ? (
-                        <Image
-                          src={supporter.avatarUrl}
-                          alt={supporter.displayName}
-                          fill
-                          className="object-cover"
-                          sizes="48px"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-amber-500/30 to-violet-600/35 text-sm font-bold text-white">
-                          {getInitials(supporter.displayName)}
-                        </div>
-                      )}
+                  <button
+                    type="button"
+                    onClick={() => openSupporterProfile(supporter)}
+                    className={cn(
+                      "flex min-w-0 w-full cursor-pointer flex-col items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-2 py-3 text-left sm:gap-2 sm:px-2.5",
+                      "transition-colors hover:border-amber-400/35 hover:bg-amber-500/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/40"
+                    )}
+                  >
+                    {/* pt 預留 VIP/SVIP 角標空間，避免被裁切或壓到隔壁列 */}
+                    <div className="relative pt-5">
+                      <div
+                        className={cn(
+                          "relative size-11 overflow-hidden rounded-full sm:size-12",
+                          supporter.tier !== "none" &&
+                            supporterAvatarRingClassByTier[supporter.tier]
+                        )}
+                      >
+                        {supporter.avatarUrl ? (
+                          <Image
+                            src={supporter.avatarUrl}
+                            alt={supporter.displayName}
+                            fill
+                            className="object-cover"
+                            sizes="48px"
+                            unoptimized={Boolean(supporter.virtualPlayerId)}
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-amber-500/30 to-violet-600/35 text-sm font-bold text-white">
+                            {getInitials(supporter.displayName)}
+                          </div>
+                        )}
+                      </div>
+                      <SupporterAvatarInsignia
+                        isSupporter
+                        supporterBadge={supporter.supporterBadge}
+                        tier={supporter.tier}
+                        size="xs"
+                      />
                     </div>
-                    <SupporterAvatarInsignia
-                      isSupporter
-                      supporterBadge={supporter.supporterBadge}
-                      tier={supporter.tier}
-                      size="xs"
-                    />
-                  </div>
-                  <div className="w-full min-w-0 overflow-hidden [&_.supporter-username-premium]:max-md:[filter:none]">
-                    <UserBadge
-                      username={supporter.displayName}
-                      isSupporter
-                      supporterBadge={supporter.supporterBadge}
-                      supporterLifetime={supporter.supporterLifetime}
-                      layout="stacked"
-                      showSupporterBadge={false}
-                      usernameClassName="max-w-full truncate text-center text-[11px] sm:text-xs"
-                      className="w-full max-w-full items-center"
-                    />
-                  </div>
+                    <div className="w-full min-w-0 overflow-hidden [&_.supporter-username-premium]:max-md:[filter:none]">
+                      <UserBadge
+                        username={supporter.displayName}
+                        isSupporter
+                        supporterBadge={supporter.supporterBadge}
+                        supporterLifetime={supporter.supporterLifetime}
+                        layout="stacked"
+                        showSupporterBadge={false}
+                        usernameClassName="max-w-full truncate text-center text-[11px] sm:text-xs"
+                        className="w-full max-w-full items-center"
+                      />
+                    </div>
+                  </button>
                 </motion.li>
               ))}
             </ul>
           )}
         </div>
       </motion.div>
+
+      <ChatPlayerCard
+        player={playerPreview}
+        open={playerCardOpen}
+        onOpenChange={setPlayerCardOpen}
+        canDirectMessage={Boolean(profile)}
+        onDirectMessage={
+          profile ? (target) => requestOpenPlayerDm(target) : undefined
+        }
+      />
     </section>
   );
 }

@@ -3,6 +3,7 @@ import {
   listPublicSitemapCreatorIds,
   listPublicSitemapGames,
 } from "@/lib/sitemap-service";
+import { buildGameHref } from "@/lib/game-path";
 import { getSiteUrl } from "@/lib/site-url";
 
 const STATIC_PATHS = [
@@ -31,7 +32,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     for (const game of games) {
       entries.push({
-        url: `${baseUrl}/game/${game.id}`,
+        url: `${baseUrl}${buildGameHref(game)}`,
         lastModified: game.updatedAt ? new Date(game.updatedAt) : now,
         changeFrequency: "weekly",
         priority: 0.7,

@@ -14,7 +14,7 @@ import {
   MessagesSquare,
   Play,
 } from "lucide-react";
-import { Link } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import {
   CommunityForum,
@@ -25,6 +25,8 @@ import { LeaderboardNavButton } from "@/components/LeaderboardModal";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { SiteHeader } from "@/components/layout/site-header";
 import { isSupabaseImage, type Game } from "@/lib/games";
+import { buildGameHref } from "@/lib/game-path";
+import { isNumericGameId } from "@/lib/game-slug";
 import { useGameI18n } from "@/hooks/use-game-i18n";
 import { cn } from "@/lib/utils";
 
@@ -53,6 +55,7 @@ function GameForumContent() {
   const tCommon = useTranslations("common");
   const { localizedDescription } = useGameI18n();
   const params = useParams();
+  const router = useRouter();
   const gameId = params.id as string;
 
   const [game, setGame] = useState<Game | null>(null);
@@ -79,7 +82,17 @@ function GameForumContent() {
         };
 
         if (!cancelled) {
-          setGame(response.ok ? (data.game ?? null) : null);
+          const loaded = response.ok ? (data.game ?? null) : null;
+          setGame(loaded);
+          if (
+            loaded &&
+            isNumericGameId(gameId) &&
+            typeof loaded.slug === "string" &&
+            loaded.slug.trim()
+          ) {
+            const query = window.location.search;
+            router.replace(`${buildGameHref(loaded, "/forum")}${query}`);
+          }
         }
       } catch {
         if (!cancelled) setGame(null);
@@ -92,7 +105,7 @@ function GameForumContent() {
     return () => {
       cancelled = true;
     };
-  }, [gameId]);
+  }, [gameId, router]);
 
   if (loading) {
     return <ForumPageFallback />;
@@ -155,7 +168,7 @@ function GameForumContent() {
           </div>
 
           <Link
-            href={`/game/${game.id}`}
+            href={buildGameHref(game)}
             className={cn(
               buttonVariants({ variant: "outline", size: "sm" }),
               "hidden gap-1.5 border-white/10 bg-white/5 text-zinc-300 hover:border-cyan-400/30 sm:inline-flex"
@@ -199,7 +212,7 @@ function GameForumContent() {
               <GameFeedSubscribeSection gameId={game.id} />
             </div>
             <Link
-              href={`/game/${game.id}`}
+              href={buildGameHref(game)}
               className={cn(
                 buttonVariants({ variant: "outline", size: "sm" }),
                 "shrink-0 gap-1.5 border-cyan-400/25 bg-cyan-500/10 text-cyan-200 hover:border-cyan-400/40 sm:hidden"

@@ -13,6 +13,7 @@ import {
 } from "@/lib/tip-payment-webhook";
 import { handleSupporterSubscriptionDeleted } from "@/lib/supporter-subscription-webhook";
 import { handleSupporterInvoicePaid } from "@/lib/supporter-invoice-webhook";
+import { handleGamePurchaseRefund } from "@/lib/game-purchase-refund";
 import {
   handleSupporterPassDisputeLost,
   handleSupporterPassRefund,
@@ -51,10 +52,16 @@ export async function POST(request: Request) {
 
   const claim = await claimStripeWebhookEventDetailed(event.id, event.type);
   if (!claim.claimed) {
+    // in_flight：回 409 讓 Stripe 稍後重試，避免事件被當成成功而永遠不重送
+    if (claim.reason === "in_flight") {
+      return NextResponse.json(
+        { error: "webhook still processing", inFlight: true },
+        { status: 409 }
+      );
+    }
     return NextResponse.json({
       received: true,
-      duplicate: claim.reason === "duplicate",
-      inFlight: claim.reason === "in_flight",
+      duplicate: true,
     });
   }
 
@@ -93,9 +100,10 @@ export async function POST(request: Request) {
       case "charge.refunded": {
         const charge = event.data.object as Stripe.Charge;
         const tipResult = await handleTipRefund(charge);
-        if (!tipResult.handled) {
-          await handleSupporterPassRefund(charge);
-        }
+        if (tipResult.handled) break;
+        const gameResult = await handleGamePurchaseRefund(charge);
+        if (gameResult.handled) break;
+        await handleSupporterPassRefund(charge);
         break;
       }
       case "charge.dispute.created": {

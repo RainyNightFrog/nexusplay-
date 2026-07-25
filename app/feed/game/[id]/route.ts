@@ -27,7 +27,7 @@ export async function GET(request: Request, { params }: Props) {
 
     const format = parseFeedFormat(request);
     const channel = {
-      ...singleGameFeedChannel(result.gameTitle, gameId),
+      ...singleGameFeedChannel(result.gameTitle, result.game),
       ...(format === "atom"
         ? atomChannelSelfUrl(`/feed/game/${gameId}?format=atom`)
         : {}),

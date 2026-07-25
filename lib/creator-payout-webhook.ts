@@ -48,32 +48,8 @@ async function findPayoutRow(payout: Stripe.Payout) {
 }
 
 async function restoreCreatorBalance(creatorId: string, amountUsd: number) {
-  const supabase = createServerSupabase();
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("creator_balance_usd")
-    .eq("id", creatorId)
-    .maybeSingle();
-
-  if (profileError) {
-    throw new Error(profileError.message);
-  }
-
-  const current =
-    typeof profile?.creator_balance_usd === "number"
-      ? profile.creator_balance_usd
-      : Number.parseFloat(String(profile?.creator_balance_usd ?? 0)) || 0;
-
-  const nextBalance = roundUsd(current + amountUsd);
-
-  const { error: updateError } = await supabase
-    .from("profiles")
-    .update({ creator_balance_usd: nextBalance })
-    .eq("id", creatorId);
-
-  if (updateError) {
-    throw new Error(updateError.message);
-  }
+  const { adjustCreatorBalanceUsd } = await import("@/lib/creator-balance");
+  await adjustCreatorBalanceUsd(creatorId, amountUsd);
 }
 
 export async function syncCreatorPayoutFromStripeEvent(

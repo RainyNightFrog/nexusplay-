@@ -1,5 +1,6 @@
 import { sendEmail, isEmailConfigured } from "@/lib/email-service";
 import { stripHtmlForPreview } from "@/lib/forum-content";
+import { buildGameHref } from "@/lib/game-path";
 import { readNotificationPrefs, shouldCreateInAppNotification } from "@/lib/notification-prefs-service";
 import { createUserNotification } from "@/lib/user-notifications-service";
 import { createServerSupabase } from "@/lib/supabase-server";
@@ -90,12 +91,15 @@ export async function notifyForumPostAuthorOfReply(params: {
 
   const { data: game } = await supabase
     .from("games")
-    .select("title")
+    .select("title, slug")
     .eq("id", params.gameId)
     .maybeSingle();
 
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "").replace(/\/$/, "");
-  const forumPath = `/game/${params.gameId}/forum?post=${params.postId}`;
+  const forumPath = buildGameHref(
+    { id: params.gameId, slug: (game?.slug as string | null) ?? null },
+    `/forum?post=${params.postId}`
+  );
   const forumUrl = siteUrl ? `${siteUrl}${forumPath}` : forumPath;
 
   try {

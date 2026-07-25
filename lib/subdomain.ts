@@ -32,7 +32,13 @@ export const RESERVED_SUBDOMAINS = new Set([
   "preview",
   "game",
   "games",
+  "play",
 ]);
+
+/** Host 是否為上傳遊戲 embed 隔離子網域（play.*） */
+export function isPlaySubdomainLabel(label: string | null | undefined) {
+  return (label ?? "").trim().toLowerCase() === "play";
+}
 
 /**
  * 帳號／後台等平台路徑：在遊戲／創作者子網域上不可 rewrite 成 `/game/{slug}/...`，

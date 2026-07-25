@@ -6,6 +6,7 @@ import { Link } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
 import type { Game } from "@/lib/games";
+import { buildGameHref } from "@/lib/game-path";
 import { useFormatCount } from "@/hooks/use-format-count";
 import { cn } from "@/lib/utils";
 
@@ -79,7 +80,7 @@ export function HomeGameRow({
             className="w-[220px] shrink-0 sm:w-[240px]"
           >
             <Link
-              href={`/game/${game.id}`}
+              href={buildGameHref(game)}
               className={cn(
                 "group block overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/60",
                 "shadow-lg shadow-black/30 transition-all duration-300 hover:shadow-xl",

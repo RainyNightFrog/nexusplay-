@@ -26,6 +26,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { extractAndUploadGameBuild } from "../lib/extract-game-zip";
+import { buildGameHref } from "../lib/game-path";
 import { removeBuildFolder } from "../lib/game-storage";
 import { VOID_GACHA_TITLE } from "../lib/platform-catalog";
 
@@ -255,7 +256,7 @@ async function main() {
   console.log(`  playUrl：${build.playUrl}`);
   console.log(`  buildId：${build.buildId}`);
   console.log(`  embed 路徑：/api/games/${game.id}/embed/index.html`);
-  console.log(`  試玩：https://rainynightfrog.com/game/${game.id}`);
+  console.log(`  試玩：https://rainynightfrog.com${buildGameHref(game)}`);
   if (currentlyPreview) {
     console.log(
       `  備註：靜態檔 public/demos/${PREVIEW_URL_MARKER} 仍保留作離線預覽，但 DB 已不再指向它`

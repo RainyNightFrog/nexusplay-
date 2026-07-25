@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { Crown, Heart, Share2, Star, Users } from "lucide-react";
 import { PLATFORM_STAR_GAMES } from "@/lib/platform-catalog";
 import { TAG_COLORS, type Game } from "@/lib/games";
+import { buildGameHref } from "@/lib/game-path";
 import { useGameI18n } from "@/hooks/use-game-i18n";
 import { useFormatCount } from "@/hooks/use-format-count";
 import { cn } from "@/lib/utils";
@@ -108,7 +109,17 @@ export function FeaturedGames({
 
       <div className="grid gap-5 lg:grid-cols-3">
         {featuredEntries.map(({ catalog, game, accent, styles }, index) => {
-          const href = game.id > 0 ? `/game/${game.id}/forum` : "#";
+          const href =
+            game.id > 0
+              ? buildGameHref(
+                  {
+                    id: game.id,
+                    slug:
+                      ("slug" in game ? game.slug : null) ?? catalog.slug,
+                  },
+                  "/forum"
+                )
+              : "#";
           const isClickable = game.id > 0 && !loading;
           const favoriteCount =
             game.id > 0

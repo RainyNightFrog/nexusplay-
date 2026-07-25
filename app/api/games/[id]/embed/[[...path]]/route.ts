@@ -1,10 +1,16 @@
-import { NextResponse } from "next/server";
-import { isAdminUser } from "@/lib/admin-auth";
+﻿import { NextResponse } from "next/server";
+import { resolveAdminAccess } from "@/lib/admin-auth";
 import { extractBuildPrefixFromPlayUrl } from "@/lib/game-storage";
 import { guessContentType } from "@/lib/game-mime";
 import { patchHtmlForPlatformEmbed } from "@/lib/embed-html-patch";
 import { canViewGame } from "@/lib/game-publish";
 import { resolvePurchaseEntitlementForGame } from "@/lib/game-entitlement-service";
+import {
+  buildPlayEmbedUrl,
+  getAllowedParentOrigins,
+  getPlayOrigin,
+  isPlayEmbedHost,
+} from "@/lib/play-origin";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
 
@@ -26,8 +32,14 @@ function isSafeAssetPath(assetPath: string) {
   );
 }
 
+function buildFrameAncestorsCsp() {
+  const parents = getAllowedParentOrigins();
+  const list = parents.length > 0 ? parents.join(" ") : "'self'";
+  return `frame-ancestors ${list}; base-uri 'none'; object-src 'none'; form-action 'self'`;
+}
+
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string; path?: string[] }> }
 ) {
   try {
@@ -41,6 +53,17 @@ export async function GET(
     const assetPath = normalizeAssetPath(path);
     if (!isSafeAssetPath(assetPath)) {
       return NextResponse.json({ error: "無效的資源路徑" }, { status: 400 });
+    }
+
+    const host = request.headers.get("host");
+    const playOrigin = getPlayOrigin();
+
+    // 主站舊相對路徑 → 強制導向 play origin
+    if (playOrigin && !isPlayEmbedHost(host)) {
+      return NextResponse.redirect(
+        buildPlayEmbedUrl(numericId, assetPath),
+        307
+      );
     }
 
     const supabase = createServerSupabase();
@@ -71,7 +94,7 @@ export async function GET(
 
     if (
       !canViewGame(record, user?.id, {
-        isAdmin: isAdminUser(user),
+        isAdmin: await resolveAdminAccess(user),
         hasPurchaseEntitlement,
       })
     ) {
@@ -81,7 +104,7 @@ export async function GET(
     const buildPrefix = extractBuildPrefixFromPlayUrl(record.game_url ?? "");
     if (!buildPrefix) {
       return NextResponse.json(
-        { error: "此遊戲尚未解壓部署，請重新上傳 zip" },
+        { error: "此遊戲尚未完成建置，請重新上傳 zip" },
         { status: 404 }
       );
     }
@@ -112,6 +135,7 @@ export async function GET(
           "Content-Type": contentType,
           "Cache-Control": "no-store",
           "X-Content-Type-Options": "nosniff",
+          "Content-Security-Policy": buildFrameAncestorsCsp(),
         },
       });
     }
@@ -122,6 +146,7 @@ export async function GET(
         "Content-Type": contentType,
         "Cache-Control": "public, max-age=3600",
         "X-Content-Type-Options": "nosniff",
+        "Content-Security-Policy": buildFrameAncestorsCsp(),
       },
     });
   } catch (error) {

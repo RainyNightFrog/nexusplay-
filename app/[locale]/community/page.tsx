@@ -25,6 +25,7 @@ import {
 import { RssFeedLink } from "@/components/feeds/rss-feed-link";
 import { FEATURED_GAMES } from "@/lib/platform-catalog";
 import { isSupabaseImage, type Game } from "@/lib/games";
+import { buildGameHref } from "@/lib/game-path";
 import type { ForumPostWithGame } from "@/lib/forum";
 import { useGameI18n } from "@/hooks/use-game-i18n";
 import { useFormatCount } from "@/hooks/use-format-count";
@@ -208,7 +209,7 @@ export default function CommunityPage() {
                   transition={{ delay: index * 0.05 }}
                 >
                   <Link
-                    href={`/game/${game.id}/forum`}
+                    href={buildGameHref(game, "/forum")}
                     className={cn(
                       "group flex flex-col items-center gap-4 rounded-2xl border border-white/10 bg-zinc-900/60 p-4 text-center",
                       "transition-all duration-200 hover:border-violet-400/30 hover:bg-zinc-900/80",
@@ -270,7 +271,7 @@ export default function CommunityPage() {
                 <span key={g.slug}>
                   {i > 0 && " · "}
                   <Link
-                    href={`/game/${matched.id}/forum`}
+                    href={buildGameHref(matched, "/forum")}
                     className="text-violet-400/80 hover:text-violet-300"
                   >
                     {g.title}

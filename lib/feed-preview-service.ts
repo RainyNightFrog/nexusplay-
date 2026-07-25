@@ -96,7 +96,7 @@ export async function buildFeedPreview(input: {
     return {
       feed,
       format: "json",
-      channel: singleGameFeedChannel(payload.gameTitle, gameId),
+      channel: singleGameFeedChannel(payload.gameTitle, payload.game),
       items: payload.items,
       updatedAt: latestUpdatedAt(payload.items),
       gameId,

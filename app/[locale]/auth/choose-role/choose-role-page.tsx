@@ -21,6 +21,7 @@ import {
   readAccountIntentFromMetadata,
   shouldSkipAccountIntent,
 } from "@/lib/account-intent";
+import { sanitizeInternalRedirect } from "@/lib/safe-redirect";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -28,7 +29,10 @@ export default function ChooseRolePage() {
   const t = useTranslations("auth.chooseRole");
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirect") ?? "/";
+  const redirectTo = sanitizeInternalRedirect(
+    searchParams.get("redirect"),
+    "/"
+  );
 
   const [intent, setIntent] = useState<UserRole>("player");
   const [loading, setLoading] = useState(true);

@@ -10,9 +10,11 @@ export function buildChooseRolePath(redirectTo: string) {
 
 export function shouldSkipAccountIntent(user: {
   user_metadata?: Record<string, unknown>;
+  app_metadata?: Record<string, unknown>;
 }): boolean {
+  // 不可再信 user_metadata.role=admin（可偽造）；僅 service app_metadata 或已選過意圖
+  if (user.app_metadata?.role === "admin") return true;
   const metadata = user.user_metadata ?? {};
-  if (metadata.role === "admin") return true;
   return (
     typeof metadata.account_intent_at === "string" &&
     metadata.account_intent_at.length > 0
