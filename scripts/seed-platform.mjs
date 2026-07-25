@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+﻿import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import pg from "pg";
@@ -22,7 +22,7 @@ const NEW_GAMES = [
     description:
       "建立你的重工業採礦帝國，拉起鋼鐵防禦陣線！利用精密的輸送帶與全自動化工廠供應鏈，抵禦無窮無盡的異星機械狂潮。當核心裂變點燃，唯有鋼鐵與全自動砲塔能為你贏得最後尊嚴。",
     category: "策略",
-    cover_url: "/covers/core-defense-cover.png",
+    cover_url: "/covers/core-defense-cover.webp",
     game_url: "/demos/core-defense-preview.html",
     plays_count: 16580,
     rating_avg: 4.91,
@@ -33,7 +33,7 @@ const NEW_GAMES = [
     description:
       "這是一場融合了未來大數據統計與博弈策略的頭腦風暴。在霓虹交織的賽博夜城中，利用獨創的 012 矩陣與全餐對戰策略，精準推算對手的下一步。在概率的世界裡，你就是唯一的王。",
     category: "益智",
-    cover_url: "/covers/cyber-fortune-cover.png",
+    cover_url: "/covers/cyber-fortune-cover.webp",
     game_url: "/demos/cyber-fortune-preview.html",
     plays_count: 12430,
     rating_avg: 4.76,
@@ -44,7 +44,7 @@ const NEW_GAMES = [
     description:
       "在霓虹深淵中疾馳穿越三線虛空航道！閃避脈衝雷射與浮游地雷，蓄力虛空衝刺突破死局，收集能量核心疊加連擊倍率。每五波深淵領主降臨——唯有最頂尖的駕駛員能衝破虛無。",
     category: "動作",
-    cover_url: "/covers/neon-abyss-runner-cover.png",
+    cover_url: "/covers/neon-abyss-runner-cover.webp",
     game_url: "/demos/neon-abyss-runner-preview.html",
     plays_count: 9870,
     rating_avg: 4.88,
@@ -55,7 +55,7 @@ const NEW_GAMES = [
     description:
       "潛入企業主機的 8×8 訊號節點網路，在 ICE 安全程式巡邏的夾縊中，規劃滲透路徑直達資料核心。十二層防火牆關卡、倒數計時與連鎖破解加成。",
     category: "益智",
-    cover_url: "/covers/signal-breach-cover.png",
+    cover_url: "/covers/signal-breach-cover.webp",
     game_url: "/demos/signal-breach-preview.html",
     plays_count: 7650,
     rating_avg: 4.84,
@@ -66,7 +66,7 @@ const NEW_GAMES = [
     description:
       "墜入虛空深淵的 Roguelike 卡牌征途！20 種虛空卡牌、敵人意圖預判、每層三選一強化卡組。第五層深淵領主守關，一路廝殺至第十五層深淵之底。",
     category: "卡牌對戰",
-    cover_url: "/covers/void-relay-cover.png",
+    cover_url: "/covers/void-relay-cover.webp",
     game_url: "/demos/void-relay-preview.html",
     plays_count: 14920,
     rating_avg: 4.91,
@@ -77,7 +77,7 @@ const NEW_GAMES = [
     description:
       "四軌霓虹節拍戰場！在脈衝協議的賽博律動中精準敲擊 Perfect / Great 判定，疊加連擊倍率衝入 Fever 狂熱模式。三首原創電子曲目 × 三種難度。",
     category: "音樂節奏",
-    cover_url: "/covers/pulse-protocol-cover.png",
+    cover_url: "/covers/pulse-protocol-cover.webp",
     game_url: "/demos/pulse-protocol-preview.html",
     plays_count: 6340,
     rating_avg: 4.79,
@@ -88,7 +88,7 @@ const NEW_GAMES = [
     description:
       "在環形軌道上部署脈衝、電磁、新星、冰霜與回收五系砲塔，攔截沿螺旋軌道殺向核心反應爐的敵潮。20 波攻防、環形升級槽位、BOSS 每五波來襲。",
     category: "塔防",
-    cover_url: "/covers/orbital-salvage-cover.png",
+    cover_url: "/covers/orbital-salvage-cover.webp",
     game_url: "/demos/orbital-salvage-preview.html",
     plays_count: 5180,
     rating_avg: 4.86,

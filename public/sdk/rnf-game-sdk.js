@@ -11,9 +11,22 @@
     bgmVolume: 0.45,
     screenShake: true,
     quality: "high",
+    qualityUserChosen: false,
     sensitivity: 1,
     gameSpeed: 1,
   };
+
+  function preferLowQuality() {
+    try {
+      if (navigator.connection && navigator.connection.saveData) return true;
+      return (
+        matchMedia("(pointer: coarse)").matches ||
+        matchMedia("(hover: none)").matches
+      );
+    } catch (_e) {
+      return false;
+    }
+  }
 
   function detectSlug() {
     var parts = location.pathname.split("/").filter(Boolean);
@@ -24,13 +37,25 @@
     return file.replace(/\.html$/, "") || "game";
   }
 
+  function getDefaultSettings() {
+    return Object.assign({}, DEFAULT_SETTINGS, {
+      quality: preferLowQuality() ? "low" : "high",
+    });
+  }
+
   function loadSettings() {
     try {
+      var base = getDefaultSettings();
       var raw = localStorage.getItem(SETTINGS_KEY);
-      if (!raw) return Object.assign({}, DEFAULT_SETTINGS);
-      return Object.assign({}, DEFAULT_SETTINGS, JSON.parse(raw));
+      if (!raw) return base;
+      var merged = Object.assign({}, base, JSON.parse(raw));
+      // 觸控／省流量裝置：若使用者未手動選過畫質，強制 low
+      if (preferLowQuality() && !merged.qualityUserChosen) {
+        merged.quality = "low";
+      }
+      return merged;
     } catch (_e) {
-      return Object.assign({}, DEFAULT_SETTINGS);
+      return getDefaultSettings();
     }
   }
 
@@ -60,6 +85,10 @@
       ".rnf-glow{position:absolute;border-radius:50%;filter:blur(90px);opacity:.28;pointer-events:none}" +
       ".rnf-glow-a{width:420px;height:420px;background:#22d3ee;top:-120px;left:-80px}" +
       ".rnf-glow-b{width:360px;height:360px;background:#a78bfa;bottom:-100px;right:-60px}" +
+      "@media (hover:none),(pointer:coarse){" +
+      ".rnf-grid-bg{animation:none!important}" +
+      ".rnf-glow{display:none!important}" +
+      "}" +
       ".rnf-screen{display:none;position:relative;z-index:2;width:100%;height:100%;flex-direction:column;align-items:center;justify-content:center;padding:.75rem}" +
       ".rnf-screen.active{display:flex}" +
       ".rnf-panel{text-align:center;padding:1.6rem 1.4rem;max-width:640px;width:min(92%,640px);max-height:calc(100dvh - 1.5rem);overflow-y:auto;background:linear-gradient(165deg,rgba(12,18,32,.96),rgba(6,10,18,.92));border:1px solid rgba(34,211,238,.35);border-radius:16px;box-shadow:0 0 70px rgba(34,211,238,.1),inset 0 0 50px rgba(34,211,238,.02)}" +
@@ -1645,8 +1674,8 @@
         setSettings({ screenShake: !settings.screenShake });
         renderSettings();
       };
-      settingsPanel.querySelector("#rnf-q-h").onclick = function () { SFX.click(); setSettings({ quality: "high" }); renderSettings(); };
-      settingsPanel.querySelector("#rnf-q-l").onclick = function () { SFX.click(); setSettings({ quality: "low" }); renderSettings(); };
+      settingsPanel.querySelector("#rnf-q-h").onclick = function () { SFX.click(); setSettings({ quality: "high", qualityUserChosen: true }); renderSettings(); };
+      settingsPanel.querySelector("#rnf-q-l").onclick = function () { SFX.click(); setSettings({ quality: "low", qualityUserChosen: true }); renderSettings(); };
       settingsPanel.querySelector("#rnf-settings-back").onclick = function () { SFX.click(); show("rnf-menu"); };
     }
 

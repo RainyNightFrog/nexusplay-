@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 import type { PlayerDmContact } from "@/lib/player-dm";
 import type { CreatorAdminContactSummary } from "@/lib/support-chat";
+import { useVisibleInterval } from "@/hooks/use-visible-interval";
 
-const POLL_MS = 20_000;
+const POLL_MS = 45_000;
 
 /** 背景輪詢通訊錄未讀（真實私訊＋管理員對話），供右下聊天按鈕紅點使用 */
 export function useChatContactsUnread(enabled: boolean) {
@@ -50,26 +51,10 @@ export function useChatContactsUnread(enabled: boolean) {
   useEffect(() => {
     if (!enabled) {
       setUnreadCount(0);
-      return;
     }
+  }, [enabled]);
 
-    void load();
-    const timer = window.setInterval(() => {
-      void load();
-    }, POLL_MS);
-    return () => window.clearInterval(timer);
-  }, [enabled, load]);
-
-  useEffect(() => {
-    if (!enabled) return;
-
-    function onVisible() {
-      if (document.visibilityState === "visible") void load();
-    }
-
-    document.addEventListener("visibilitychange", onVisible);
-    return () => document.removeEventListener("visibilitychange", onVisible);
-  }, [enabled, load]);
+  useVisibleInterval(load, enabled ? POLL_MS : null);
 
   return { unreadCount, reload: load };
 }

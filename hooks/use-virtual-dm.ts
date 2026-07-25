@@ -4,6 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { VirtualContactSummary, VirtualDmMessage } from "@/lib/virtual-dm";
 import { useApiError } from "@/hooks/use-api-error";
+import { useVisibleInterval } from "@/hooks/use-visible-interval";
+
+const VIRTUAL_DM_POLL_MS = 30_000;
 
 export function useVirtualContacts(enabled: boolean) {
   const t = useTranslations("chat");
@@ -88,14 +91,13 @@ export function useVirtualDm(playerId: string | null, enabled: boolean) {
   useEffect(() => {
     if (!enabled || !playerId) {
       setMessages([]);
-      return;
     }
-    void loadMessages();
-    const timer = window.setInterval(() => {
-      void loadMessages();
-    }, 30_000);
-    return () => window.clearInterval(timer);
-  }, [enabled, loadMessages, playerId]);
+  }, [enabled, playerId]);
+
+  useVisibleInterval(
+    loadMessages,
+    enabled && playerId ? VIRTUAL_DM_POLL_MS : null
+  );
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });

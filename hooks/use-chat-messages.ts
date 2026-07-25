@@ -7,6 +7,7 @@ import type { ChatChannel, ChatMessage } from "@/lib/chat";
 import { CHAT_LIMITS } from "@/lib/chat";
 import { createClient } from "@/lib/supabase/client";
 import { useApiError } from "@/hooks/use-api-error";
+import { useVisibleInterval } from "@/hooks/use-visible-interval";
 
 /** 輪詢間隔：本機開發時觸發 maintainAmbientChat；亦作 Realtime 後備 */
 export const CHAT_POLL_INTERVAL_MS = 60_000;
@@ -24,19 +25,18 @@ export function useAmbientChatBackgroundPoll(
 ) {
   const channelsKey = channels.join(",");
 
-  useEffect(() => {
-    if (!enabled || !channelsKey) return;
-
+  const poll = useCallback(() => {
+    if (!channelsKey) return;
     const targetChannels = channelsKey.split(",") as ChatChannel[];
-    const poll = () => {
-      for (const channel of targetChannels) {
-        void fetch(`/api/chat/messages?channel=${encodeURIComponent(channel)}`);
-      }
-    };
+    for (const channel of targetChannels) {
+      void fetch(`/api/chat/messages?channel=${encodeURIComponent(channel)}`);
+    }
+  }, [channelsKey]);
 
-    const timer = window.setInterval(poll, CHAT_POLL_INTERVAL_MS);
-    return () => window.clearInterval(timer);
-  }, [channelsKey, enabled]);
+  useVisibleInterval(
+    poll,
+    enabled && channelsKey ? CHAT_POLL_INTERVAL_MS : null
+  );
 }
 
 async function parseJsonResponse<T>(response: Response): Promise<T> {
@@ -164,15 +164,12 @@ export function useChatMessages(channel: ChatChannel, enabled: boolean) {
     void loadMessages();
   }, [channel, enabled, loadMessages]);
 
-  useEffect(() => {
-    if (!enabled) return;
-
-    const timer = window.setInterval(() => {
+  useVisibleInterval(
+    () => {
       void loadMessages({ silent: true });
-    }, CHAT_POLL_INTERVAL_MS);
-
-    return () => window.clearInterval(timer);
-  }, [enabled, loadMessages]);
+    },
+    enabled ? CHAT_POLL_INTERVAL_MS : null
+  );
 
   useEffect(() => {
     if (!enabled) return;

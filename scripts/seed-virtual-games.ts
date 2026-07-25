@@ -230,7 +230,7 @@ async function main() {
         title: game.title,
         description: game.description,
         category: game.category,
-        cover_url: `/covers/${game.slug}-cover.png`,
+        cover_url: `/covers/${game.slug}-cover.webp`,
         game_url: `/games/${game.slug}/index.html`,
         creator_id: creatorId,
         created_at: createdAt,

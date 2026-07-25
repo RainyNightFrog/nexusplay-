@@ -8,6 +8,10 @@ import type {
   PlayerDmThreadSummary,
 } from "@/lib/player-dm";
 import { useApiError } from "@/hooks/use-api-error";
+import { useVisibleInterval } from "@/hooks/use-visible-interval";
+
+const DM_CONTACTS_POLL_MS = 45_000;
+const DM_MESSAGES_POLL_MS = 12_000;
 
 export function usePlayerDmContacts(enabled: boolean) {
   const t = useTranslations("chat");
@@ -48,14 +52,10 @@ export function usePlayerDmContacts(enabled: boolean) {
   useEffect(() => {
     if (!enabled) {
       setContacts([]);
-      return;
     }
-    void load();
-    const timer = window.setInterval(() => {
-      void load();
-    }, 20_000);
-    return () => window.clearInterval(timer);
-  }, [enabled, load]);
+  }, [enabled]);
+
+  useVisibleInterval(load, enabled ? DM_CONTACTS_POLL_MS : null);
 
   return { contacts, loading, error, reload: load };
 }
@@ -132,14 +132,13 @@ export function usePlayerDmChat(threadId: string | null, enabled: boolean) {
     if (!enabled || !threadId) {
       setThread(null);
       setMessages([]);
-      return;
     }
-    void loadMessages();
-    const timer = window.setInterval(() => {
-      void loadMessages();
-    }, 8000);
-    return () => window.clearInterval(timer);
-  }, [enabled, threadId, loadMessages]);
+  }, [enabled, threadId]);
+
+  useVisibleInterval(
+    loadMessages,
+    enabled && threadId ? DM_MESSAGES_POLL_MS : null
+  );
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });

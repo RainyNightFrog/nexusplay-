@@ -6,6 +6,9 @@ import type {
   CreatorAdminContactSummary,
   SupportMessage,
 } from "@/lib/support-chat";
+import { useVisibleInterval } from "@/hooks/use-visible-interval";
+
+const SUPPORT_CHAT_POLL_MS = 12_000;
 
 export function useAdminSupportContact(enabled: boolean) {
   const t = useTranslations("chat");
@@ -94,14 +97,10 @@ export function useAdminSupportChat(enabled: boolean) {
   useEffect(() => {
     if (!enabled) {
       setMessages([]);
-      return;
     }
-    void loadMessages();
-    const timer = window.setInterval(() => {
-      void loadMessages();
-    }, 8000);
-    return () => window.clearInterval(timer);
-  }, [enabled, loadMessages]);
+  }, [enabled]);
+
+  useVisibleInterval(loadMessages, enabled ? SUPPORT_CHAT_POLL_MS : null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });

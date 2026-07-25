@@ -12,9 +12,32 @@
   }
 
 
-  var MAX_DPR = 2;
+  var isCoarsePointer = false;
+  try {
+    isCoarsePointer =
+      matchMedia("(pointer: coarse)").matches ||
+      matchMedia("(hover: none)").matches ||
+      !!(navigator.connection && navigator.connection.saveData);
+  } catch (_e) {}
+
+  var MAX_DPR = isCoarsePointer ? 1 : 2;
   var MAX_DELTA = 32;
-  var MAX_PARTICLES = 120;
+  var MAX_PARTICLES = isCoarsePointer ? 48 : 120;
+
+  function injectMobilePerfStyles() {
+    if (document.getElementById("rnf-demo-mobile-perf")) return;
+    var style = document.createElement("style");
+    style.id = "rnf-demo-mobile-perf";
+    style.textContent =
+      "@media (hover:none),(pointer:coarse){" +
+      ".glow{display:none!important;}" +
+      ".panel,.hud,.overlay,.modal,.card,.menu,.topbar,.bar{" +
+      "backdrop-filter:none!important;-webkit-backdrop-filter:none!important;" +
+      "}" +
+      "}";
+    (document.head || document.documentElement).appendChild(style);
+  }
+  injectMobilePerfStyles();
 
   function clamp(n, min, max) {
     return Math.max(min, Math.min(max, n));

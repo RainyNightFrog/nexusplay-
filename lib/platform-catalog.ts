@@ -37,7 +37,7 @@ const VIRTUAL_PLATFORM_GAMES: PlatformGameMeta[] = VIRTUAL_GAMES_SEED.map((game)
   creator: game.creatorName,
   categories: [game.category],
   description: game.description,
-  coverPath: `/covers/${game.slug}-cover.png`,
+  coverPath: `/covers/${game.slug}-cover.webp`,
   playsCount: game.playsCount,
   likesCount: game.likesCount,
   sharesCount: game.sharesCount,
@@ -76,7 +76,7 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
     categories: ["策略", "3D"],
     description:
       "建立你的重工業採礦帝國，拉起鋼鐵防禦陣線！利用精密的輸送帶與全自動化工廠供應鏈，抵禦無窮無盡的異星機械狂潮。當核心裂變點燃，唯有鋼鐵與全自動砲塔能為你贏得最後尊嚴。",
-    coverPath: "/covers/core-defense-cover.png",
+    coverPath: "/covers/core-defense-cover.webp",
     playsCount: 16_580,
     likesCount: 956,
     sharesCount: 872,
@@ -89,9 +89,9 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
     viewportWidth: 960,
     viewportHeight: 700,
     galleryImages: [
-      "/covers/core-defense-cover.png",
-      "/covers/core-defense-screenshot-1.png",
-      "/covers/core-defense-screenshot-2.png",
+      "/covers/core-defense-cover.webp",
+      "/covers/core-defense-screenshot-1.webp",
+      "/covers/core-defense-screenshot-2.webp",
     ],
     devlogs: [
       {
@@ -114,7 +114,7 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
     categories: ["益智", "動作"],
     description:
       "這是一場融合了未來大數據統計與博弈策略的頭腦風暴。在霓虹交織的賽博夜城中，利用獨創的 012 矩陣與全餐對戰策略，精準推算對手的下一步。在概率的世界裡，你就是唯一的王。",
-    coverPath: "/covers/cyber-fortune-cover.png",
+    coverPath: "/covers/cyber-fortune-cover.webp",
     playsCount: 12_430,
     likesCount: 712,
     sharesCount: 534,
@@ -127,9 +127,9 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
     viewportWidth: 960,
     viewportHeight: 760,
     galleryImages: [
-      "/covers/cyber-fortune-cover.png",
-      "/covers/cyber-fortune-screenshot-1.png",
-      "/covers/cyber-fortune-screenshot-2.png",
+      "/covers/cyber-fortune-cover.webp",
+      "/covers/cyber-fortune-screenshot-1.webp",
+      "/covers/cyber-fortune-screenshot-2.webp",
     ],
     devlogs: [
       {
@@ -146,7 +146,7 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
     categories: ["動作", "平台跳躍"],
     description:
       "在霓虹深淵中疾馳穿越三線虛空航道！閃避脈衝雷射與浮游地雷，蓄力虛空衝刺突破死局，收集能量核心疊加連擊倍率。每五波深淵領主降臨——唯有最頂尖的駕駛員能衝破虛無，刷新排行榜傳說。",
-    coverPath: "/covers/neon-abyss-runner-cover.png",
+    coverPath: "/covers/neon-abyss-runner-cover.webp",
     playsCount: 9_870,
     likesCount: 498,
     sharesCount: 367,
@@ -171,7 +171,7 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
     categories: ["益智", "解謎"],
     description:
       "潛入企業主機的 8×8 訊號節點網路，在 ICE 安全程式巡邏的夾縊中，規劃滲透路徑直達資料核心。十二層防火牆關卡、倒數計時與連鎖破解加成——一場考驗邏輯與膽識的賽博駭客攻防戰。",
-    coverPath: "/covers/signal-breach-cover.png",
+    coverPath: "/covers/signal-breach-cover.webp",
     playsCount: 7_650,
     likesCount: 287,
     sharesCount: 198,
@@ -196,7 +196,7 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
     categories: ["卡牌對戰", "益智"],
     description:
       "墜入虛空深淵的 Roguelike 卡牌征途！20 種虛空卡牌、敵人意圖預判、每層三選一強化卡組。第五層深淵領主守關，一路廝殺至第十五層深淵之底——每次下墜都是全新命運。",
-    coverPath: "/covers/void-relay-cover.png",
+    coverPath: "/covers/void-relay-cover.webp",
     playsCount: 14_920,
     likesCount: 876,
     sharesCount: 689,
@@ -221,7 +221,7 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
     categories: ["音樂節奏", "休閒"],
     description:
       "四軌霓虹節拍戰場！在脈衝協議的賽博律動中精準敲擊 Perfect / Great 判定，疊加連擊倍率衝入 Fever 狂熱模式。三首原創電子曲目 × 三種難度——指尖與心跳同步的極限挑戰。",
-    coverPath: "/covers/pulse-protocol-cover.png",
+    coverPath: "/covers/pulse-protocol-cover.webp",
     playsCount: 6_340,
     likesCount: 423,
     sharesCount: 312,
@@ -246,7 +246,7 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
     categories: ["塔防", "策略"],
     description:
       "在環形軌道上部署脈衝、電磁、新星、冰霜與回收五系砲塔，攔截沿螺旋軌道殺向核心反應爐的敵潮。20 波攻防、環形升級槽位、BOSS 每五波來襲——工業科幻塔防的全新維度。",
-    coverPath: "/covers/orbital-salvage-cover.png",
+    coverPath: "/covers/orbital-salvage-cover.webp",
     playsCount: 5_180,
     likesCount: 356,
     sharesCount: 267,

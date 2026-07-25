@@ -57,6 +57,15 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: projectRoot,
   },
+  async rewrites() {
+    // 舊資料庫／快取仍指向 .png 時，導向已壓縮的 .webp
+    return [
+      {
+        source: "/covers/:name.png",
+        destination: "/covers/:name.webp",
+      },
+    ];
+  },
   async headers() {
     return [
       {
@@ -64,7 +73,7 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: "Cache-Control",
-            value: "public, max-age=0, must-revalidate",
+            value: "public, max-age=3600, stale-while-revalidate=86400",
           },
         ],
       },
@@ -73,7 +82,25 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: "Cache-Control",
-            value: "public, max-age=0, must-revalidate",
+            value: "public, max-age=3600, stale-while-revalidate=86400",
+          },
+        ],
+      },
+      {
+        source: "/demos/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=3600, stale-while-revalidate=86400",
+          },
+        ],
+      },
+      {
+        source: "/covers/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=604800, stale-while-revalidate=86400",
           },
         ],
       },
@@ -113,6 +140,7 @@ const nextConfig: NextConfig = {
     ];
   },
   images: {
+    formats: ["image/avif", "image/webp"],
     remotePatterns: [
       {
         protocol: "https",

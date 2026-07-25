@@ -1,6 +1,6 @@
-/**
+﻿/**
  * 同步 10 款虛擬遊戲 AI 生成 PNG 封面的 cover_url 至資料庫
- * 封面檔案需已放置於 public/covers/[slug]-cover.png
+ * 封面檔案需已放置於 public/covers/[slug]-cover.webp
  * 用法：node scripts/generate-virtual-game-covers.mjs
  */
 import { readFileSync, existsSync } from "node:fs";
@@ -39,9 +39,9 @@ async function main() {
   let missing = 0;
 
   for (const slug of SLUGS) {
-    const filepath = join(coversDir, `${slug}-cover.png`);
+    const filepath = join(coversDir, `${slug}-cover.webp`);
     if (existsSync(filepath)) {
-      console.log(`✓ 封面檔案：${slug}-cover.png`);
+      console.log(`✓ 封面檔案：${slug}-cover.webp`);
     } else {
       console.error(`✗ 缺少封面：${filepath}`);
       missing++;
@@ -49,7 +49,7 @@ async function main() {
   }
 
   if (missing > 0) {
-    console.error(`\n⚠ 缺少 ${missing} 張封面 PNG，請先放入 public/covers/`);
+    console.error(`\n⚠ 缺少 ${missing} 張封面 WebP，請先放入 public/covers/`);
     process.exit(1);
   }
 
@@ -66,7 +66,7 @@ async function main() {
   });
 
   for (const slug of SLUGS) {
-    const coverUrl = `/covers/${slug}-cover.png`;
+    const coverUrl = `/covers/${slug}-cover.webp`;
     const { error } = await admin.from("games").update({ cover_url: coverUrl }).eq("slug", slug);
     if (error) console.error(`✗ 更新 ${slug} 失敗：`, error.message);
     else console.log(`✓ DB cover_url → ${coverUrl}`);
