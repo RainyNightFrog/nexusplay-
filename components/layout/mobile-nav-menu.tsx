@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import {
+  Download,
   HeartHandshake,
   Menu,
   MessagesSquare,
@@ -17,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
+import { usePwaInstallOptional } from "@/components/pwa/PwaInstallPrompt";
 import { useAuth } from "@/hooks/use-auth";
 import { getCreatorDashboardHref } from "@/lib/creator-nav";
 import { requestOpenLeaderboard } from "@/lib/open-leaderboard";
@@ -26,26 +28,35 @@ type MobileNavMenuProps = {
   className?: string;
   /** 是否顯示社群／支持者（首頁需要；其他頁可關） */
   showExploreLinks?: boolean;
+  /** 遊戲頁：收進選單的討論區連結 */
+  forumHref?: string;
+  forumLabel?: string;
+  forumCount?: number;
 };
 
 export function MobileNavMenu({
   className,
   showExploreLinks = true,
+  forumHref,
+  forumLabel,
+  forumCount = 0,
 }: MobileNavMenuProps) {
   const tNav = useTranslations("nav");
   const tLang = useTranslations("language");
   const tHome = useTranslations("home");
   const tLeaderboard = useTranslations("leaderboard");
+  const tPwa = useTranslations("pwa");
   const router = useRouter();
   const { profile, isCreator } = useAuth();
+  const pwa = usePwaInstallOptional();
   const creatorHref = getCreatorDashboardHref(profile, isCreator);
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         className={cn(
-          "inline-flex size-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5",
-          "text-zinc-200 outline-none transition",
+          "inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5",
+          "text-zinc-200 outline-none transition touch-manipulation",
           "hover:border-cyan-400/35 hover:bg-cyan-500/10 hover:text-white",
           "focus-visible:ring-2 focus-visible:ring-cyan-500/30",
           "data-popup-open:border-cyan-400/40 data-popup-open:bg-cyan-500/10",
@@ -54,7 +65,7 @@ export function MobileNavMenu({
         )}
         aria-label={tNav("moreMenu")}
       >
-        <Menu className="size-4" />
+        <Menu className="size-5" />
       </DropdownMenuTrigger>
 
       <DropdownMenuContent
@@ -93,6 +104,21 @@ export function MobileNavMenu({
           </>
         )}
 
+        {forumHref && forumLabel && (
+          <DropdownMenuItem
+            onClick={() => router.push(forumHref)}
+            className="cursor-pointer gap-2 rounded-lg px-2.5 py-2.5 text-sm text-zinc-300"
+          >
+            <MessagesSquare className="size-4 text-violet-300" />
+            <span className="min-w-0 flex-1 truncate">{forumLabel}</span>
+            {forumCount > 0 && (
+              <span className="rounded-full bg-violet-500/25 px-1.5 py-0.5 text-[10px] font-bold text-violet-100">
+                {forumCount}
+              </span>
+            )}
+          </DropdownMenuItem>
+        )}
+
         <DropdownMenuItem
           onClick={() => requestOpenLeaderboard()}
           className="cursor-pointer gap-2 rounded-lg px-2.5 py-2.5 text-sm text-zinc-300"
@@ -109,6 +135,16 @@ export function MobileNavMenu({
             {tNav("creatorDashboard")}
           </DropdownMenuItem>
         )}
+
+        {pwa?.showInstallEntry ? (
+          <DropdownMenuItem
+            onClick={() => void pwa.promptInstall()}
+            className="cursor-pointer gap-2 rounded-lg px-2.5 py-2.5 text-sm text-zinc-300"
+          >
+            <Download className="size-4 text-cyan-400" />
+            {tPwa("menu_install")}
+          </DropdownMenuItem>
+        ) : null}
 
         <DropdownMenuSeparator className="my-1 bg-white/10" />
 

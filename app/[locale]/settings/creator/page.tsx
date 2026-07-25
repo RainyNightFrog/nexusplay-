@@ -7,6 +7,7 @@ import { Check, Coins, Loader2, Mail, Save, Bell } from "lucide-react";
 import { Link, useRouter } from "@/i18n/navigation";
 import { PlatformFeeLockBadge } from "@/components/dashboard/platform-fee-lock-badge";
 import { AccountSettingsPageHeader } from "@/components/settings/account-settings-layout";
+import { AccountContentSkeleton } from "@/components/account/account-content-skeleton";
 import {
   accountCardClassName,
   accountFieldClassName,
@@ -208,11 +209,7 @@ export default function CreatorSettingsPage() {
   }
 
   if (loading || !profile || !isCreator) {
-    return (
-      <div className="flex min-h-[40vh] items-center justify-center">
-        <Loader2 className="size-8 animate-spin text-violet-400" />
-      </div>
-    );
+    return <AccountContentSkeleton />;
   }
 
   return (

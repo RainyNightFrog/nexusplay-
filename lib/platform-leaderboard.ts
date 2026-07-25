@@ -44,6 +44,8 @@ export type PlatformLeaderboardEntry = {
   displayName: string;
   avatarUrl: string | null;
   equippedTitle: import("@/lib/titles").EquippedTitle | null;
+  avatarFrameClass?: string | null;
+  nameColorClass?: string | null;
   value: number;
   lastActiveAt: string;
   isOnline: boolean;

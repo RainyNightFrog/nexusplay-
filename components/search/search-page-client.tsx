@@ -104,11 +104,12 @@ function SearchPageContent() {
           href="/"
           className={cn(
             buttonVariants({ variant: "ghost", size: "sm" }),
-            "gap-1.5 text-zinc-400 hover:text-white"
+            "min-h-10 min-w-10 shrink-0 gap-1.5 px-2 text-zinc-400 hover:text-white touch-manipulation sm:min-h-0 sm:min-w-0"
           )}
+          aria-label={tNav("backHome")}
         >
           <ArrowLeft className="size-4" />
-          {tNav("backHome")}
+          <span className="hidden sm:inline">{tNav("backHome")}</span>
         </Link>
         <div className="mx-auto hidden max-w-md flex-1 px-4 md:block">
           <SiteSearch defaultQuery={query} />

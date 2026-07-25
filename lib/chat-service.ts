@@ -8,7 +8,6 @@ import {
 } from "@/lib/chat";
 import { assertNoChatUrls } from "@/lib/chat-content-policy";
 import { getAmbientUserPlayerMap } from "@/lib/ambient-user-index";
-import { listAuthAdminUsers } from "@/lib/auth-admin-users-cache";
 import { resolveVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
 import { resolveEquippedTitles } from "@/lib/equipped-title-service";
 import { buildCosmeticsCssMap } from "@/lib/cosmetics-resolve";
@@ -16,6 +15,7 @@ import { formatForumAuthor } from "@/lib/forum";
 import { resolveAdminDisplayRole } from "@/lib/admin-display-role";
 import { resolveUserAvatarUrl } from "@/lib/resolve-user-avatar";
 import { resolveSupporterProfiles } from "@/lib/supporter-profile";
+import { getVirtualPlayerCosmeticsCss } from "@/lib/virtual-player-cosmetics";
 import { getVirtualPlayerSupporterFlags } from "@/lib/virtual-player-supporter";
 import { createServerSupabase } from "@/lib/supabase-server";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -60,15 +60,22 @@ async function resolveAuthorProfiles(userIds: string[]) {
 
   if (missingAvatarIds.length > 0) {
     try {
-      const authUsers = await listAuthAdminUsers(supabase);
-      const byId = new Map(authUsers.map((user) => [user.id, user]));
-      for (const userId of missingAvatarIds) {
-        const authUser = byId.get(userId);
+      const avatarResults = await Promise.all(
+        missingAvatarIds.slice(0, 40).map(async (userId) => {
+          try {
+            const { data } = await supabase.auth.admin.getUserById(userId);
+            return { userId, user: data.user ?? null };
+          } catch {
+            return { userId, user: null };
+          }
+        })
+      );
+      for (const { userId, user } of avatarResults) {
         const current = profileMap.get(userId);
-        if (!current) continue;
+        if (!current || !user) continue;
         const resolved = resolveUserAvatarUrl(
           current.avatar_url,
-          (authUser?.user_metadata ?? {}) as Record<string, unknown>
+          (user.user_metadata ?? {}) as Record<string, unknown>
         );
         if (resolved) {
           profileMap.set(userId, { ...current, avatar_url: resolved });
@@ -79,7 +86,7 @@ async function resolveAuthorProfiles(userIds: string[]) {
         }
       }
     } catch {
-      // Auth 列表失敗時維持 profiles 結果
+      // Auth admin 失敗時略過頭像補齊
     }
   }
 
@@ -110,6 +117,9 @@ function mapChatMessage(
     ? getVirtualPlayerSupporterFlags(virtualPlayerId)
     : null;
   const cosmetics = cosmeticsCssMap.get(record.user_id);
+  const virtualCosmetics = virtualPlayerId
+    ? getVirtualPlayerCosmeticsCss(virtualPlayerId)
+    : null;
 
   return {
     ...record,
@@ -118,9 +128,16 @@ function mapChatMessage(
       ? resolveVirtualPlayerAvatarUrl(virtualPlayerId)
       : (profile?.avatar_url ?? null),
     author_equipped_title: titleMap.get(record.user_id) ?? null,
-    author_avatar_frame_class: cosmetics?.avatar_frame_class ?? null,
-    author_name_color_class: cosmetics?.name_color_class ?? null,
-    author_chat_bubble_class: cosmetics?.chat_bubble_class ?? null,
+    author_avatar_frame_class:
+      cosmetics?.avatar_frame_class ??
+      virtualCosmetics?.avatarFrameClass ??
+      null,
+    author_name_color_class:
+      cosmetics?.name_color_class ?? virtualCosmetics?.nameColorClass ?? null,
+    author_chat_bubble_class:
+      cosmetics?.chat_bubble_class ??
+      virtualCosmetics?.chatBubbleClass ??
+      null,
     author_is_supporter:
       virtualSupporter?.isSupporter === true || supporter?.isSupporter === true,
     author_supporter_badge:
@@ -164,7 +181,7 @@ export async function listChatMessages(
       resolveAuthorProfiles(userIds),
       resolveEquippedTitles(supabase, userIds),
       resolveSupporterProfiles(supabase, userIds),
-      getAmbientUserPlayerMap(supabase),
+      getAmbientUserPlayerMap(supabase, userIds),
       buildCosmeticsCssMap(supabase, userIds),
     ]);
 
@@ -309,7 +326,7 @@ export async function createChatMessage(
       resolveAuthorProfiles([record.user_id]),
       resolveEquippedTitles(serverSupabase, [record.user_id]),
       resolveSupporterProfiles(serverSupabase, [record.user_id]),
-      getAmbientUserPlayerMap(serverSupabase),
+      getAmbientUserPlayerMap(serverSupabase, [record.user_id]),
       buildCosmeticsCssMap(serverSupabase, [record.user_id]),
     ]);
   return mapChatMessage(
@@ -361,7 +378,7 @@ export async function recallChatMessage(
       resolveAuthorProfiles([record.user_id]),
       resolveEquippedTitles(serverSupabase, [record.user_id]),
       resolveSupporterProfiles(serverSupabase, [record.user_id]),
-      getAmbientUserPlayerMap(serverSupabase),
+      getAmbientUserPlayerMap(serverSupabase, [record.user_id]),
       buildCosmeticsCssMap(serverSupabase, [record.user_id]),
     ]);
   return mapChatMessage(

@@ -11,6 +11,8 @@ type SiteHeaderProps = {
   zIndex?: "40" | "50";
   className?: string;
   innerClassName?: string;
+  /** 遊戲頁等已有返回鈕時，手機隱藏品牌 Logo 以釋放頂欄空間 */
+  hideBrandOnMobile?: boolean;
 };
 
 const maxWidthClass = {
@@ -26,6 +28,7 @@ export function SiteHeader({
   zIndex = "40",
   className,
   innerClassName,
+  hideBrandOnMobile = false,
 }: SiteHeaderProps) {
   return (
     <header
@@ -34,20 +37,25 @@ export function SiteHeader({
         zIndex === "50" ? "z-50" : "z-40",
         className
       )}
+      style={{
+        paddingTop: "env(safe-area-inset-top, 0px)",
+      }}
     >
       <div
         className={cn(
-          "mx-auto flex h-14 items-center gap-2 px-3",
+          "mx-auto flex h-14 items-center gap-1.5 px-2.5",
           "md:h-[72px] md:gap-4 md:px-6 lg:px-8",
           maxWidthClass[maxWidth],
           innerClassName
         )}
       >
-        <SiteBrand />
-        <div className="flex min-w-0 flex-1 items-center gap-2 md:gap-4">
+        <SiteBrand
+          className={hideBrandOnMobile ? "hidden md:flex" : undefined}
+        />
+        <div className="flex min-w-0 flex-1 items-center gap-1.5 md:gap-4">
           {children}
         </div>
-        <div className="flex shrink-0 items-center gap-1 pl-1 md:gap-2 md:pl-3">
+        <div className="flex shrink-0 items-center gap-1 pl-0.5 md:gap-2 md:pl-3">
           <ApStoreNavButton />
           <DailyQuestsNavButton />
           <UserNav />

@@ -26,11 +26,11 @@
     },
     {
       "path": "/api/cron/chat-ambient-world",
-      "schedule": "0 4 * * *"
+      "schedule": "*/5 * * * *"
     },
     {
       "path": "/api/cron/chat-ambient-creator",
-      "schedule": "0 5 * * *"
+      "schedule": "*/15 * * * *"
     }
   ]
 }

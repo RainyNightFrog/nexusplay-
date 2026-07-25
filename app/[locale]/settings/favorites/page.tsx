@@ -3,9 +3,10 @@
 import { GameCoverImage } from "@/components/ui/game-cover-image";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Heart, Loader2 } from "lucide-react";
+import { Heart } from "lucide-react";
 import { Link, useRouter } from "@/i18n/navigation";
 import { AccountSettingsPageHeader } from "@/components/settings/account-settings-layout";
+import { AccountContentSkeleton } from "@/components/account/account-content-skeleton";
 import { accountCardClassName } from "@/components/settings/account-shell";
 import { Badge } from "@/components/ui/badge";
 import type { Game } from "@/lib/games";
@@ -35,9 +36,13 @@ export default function FavoritesSettingsPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[40vh] items-center justify-center">
-        <Loader2 className="size-8 animate-spin text-rose-400" />
-      </div>
+      <>
+        <AccountSettingsPageHeader
+          title={t("favoritesTitle")}
+          description={t("favoritesDesc")}
+        />
+        <AccountContentSkeleton />
+      </>
     );
   }
 

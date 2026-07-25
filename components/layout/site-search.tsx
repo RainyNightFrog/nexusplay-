@@ -213,10 +213,11 @@ export function SiteSearch({
           aria-expanded={showDropdown}
           aria-haspopup="listbox"
           className={cn(
-            "h-10 w-full rounded-xl border border-white/10 bg-white/5 pl-10 pr-4 text-sm",
+            "h-11 w-full rounded-xl border border-white/10 bg-white/5 pl-10 pr-4 text-base",
             "text-zinc-100 placeholder:text-zinc-500 backdrop-blur-md",
             "outline-none transition-all duration-200",
             "focus:border-cyan-400/40 focus:bg-white/8 focus:ring-2 focus:ring-cyan-500/20",
+            "md:h-10 md:text-sm",
             inputClassName
           )}
         />

@@ -13,6 +13,7 @@ import {
   TrendingUp,
   SlidersHorizontal,
   ArrowUpDown,
+  Search,
 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -341,7 +342,19 @@ export function HomePageClient({ initialGames }: HomePageClientProps) {
           <LeaderboardNavButton />
           <CreatorDashboardLink />
         </div>
-        <div className="ml-auto flex items-center md:hidden">
+        <div className="ml-auto flex items-center gap-1.5 md:hidden">
+          <Link
+            href="/search"
+            className={cn(
+              "inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5",
+              "text-zinc-200 outline-none transition touch-manipulation",
+              "hover:border-cyan-400/35 hover:bg-cyan-500/10 hover:text-white",
+              "focus-visible:ring-2 focus-visible:ring-cyan-500/30"
+            )}
+            aria-label={tNav("searchOpen")}
+          >
+            <Search className="size-5" />
+          </Link>
           <MobileNavMenu showExploreLinks />
         </div>
       </SiteHeader>

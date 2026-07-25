@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
-import { Loader2, LogOut, Heart, Palette, Settings, Shield, UserRound, Bell, Trophy, Sparkles } from "lucide-react";
+import { Loader2, LogOut, Heart, Palette, Settings, Shield, UserRound, Bell, Trophy, Sparkles, Download } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { AchievementsModal } from "@/components/AchievementsModal";
@@ -12,6 +12,7 @@ import { getInitials } from "@/lib/auth";
 import { getCreatorDashboardHref } from "@/lib/creator-nav";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { useAuth } from "@/hooks/use-auth";
+import { usePwaInstallOptional } from "@/components/pwa/PwaInstallPrompt";
 import {
   getSupporterDisplayTierFromProfile,
   supporterUsernameClassByTier,
@@ -20,7 +21,9 @@ import { cn } from "@/lib/utils";
 
 export function UserNav() {
   const t = useTranslations("nav");
+  const tPwa = useTranslations("pwa");
   const { profile, loading, signOut, isCreator, isAdmin } = useAuth();
+  const pwa = usePwaInstallOptional();
   const [open, setOpen] = useState(false);
   const [achievementsOpen, setAchievementsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -79,9 +82,10 @@ export function UserNav() {
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         className={cn(
-          "relative flex size-9 items-center justify-center rounded-full",
+          "relative flex size-10 items-center justify-center rounded-full touch-manipulation",
           "border border-cyan-400/30 bg-gradient-to-br from-cyan-500/30 to-violet-600/40",
           "shadow-md shadow-cyan-500/20 transition-transform hover:scale-105",
+          "md:size-9",
           profile.equipped_avatar_frame_class
         )}
         aria-label={t("userMenu")}
@@ -214,6 +218,20 @@ export function UserNav() {
             <Settings className="size-4 text-violet-400" />
             {t("settings")}
           </Link>
+
+          {pwa?.showInstallEntry ? (
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                void pwa.promptInstall();
+              }}
+              className="flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-cyan-200"
+            >
+              <Download className="size-4 text-cyan-400" />
+              {tPwa("menu_install")}
+            </button>
+          ) : null}
 
           <button
             type="button"

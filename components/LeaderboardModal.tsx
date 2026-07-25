@@ -89,10 +89,12 @@ function PlayerAvatar({
   displayName,
   avatarUrl,
   rank,
+  avatarFrameClass,
 }: {
   displayName: string;
   avatarUrl: string | null;
   rank: number;
+  avatarFrameClass?: string | null;
 }) {
   const isTopThree = rank <= 3;
   const initials = getInitials(displayName);
@@ -100,24 +102,32 @@ function PlayerAvatar({
   return (
     <div
       className={cn(
-        "relative shrink-0 overflow-hidden rounded-full",
-        isTopThree ? "size-14 ring-2 ring-white/20" : "size-10"
+        "relative shrink-0 rounded-full",
+        isTopThree ? "size-14 ring-2 ring-white/20" : "size-10",
+        avatarFrameClass
       )}
     >
-      {avatarUrl ? (
-        <Image src={avatarUrl} alt={displayName} fill className="object-cover" />
-      ) : (
-        <div
-          className={cn(
-            "flex h-full w-full items-center justify-center bg-gradient-to-br font-bold text-white",
-            isTopThree
-              ? "from-cyan-500/40 via-violet-500/40 to-fuchsia-500/40 text-lg"
-              : "from-cyan-500/25 to-violet-600/30 text-base"
-          )}
-        >
-          {initials}
-        </div>
-      )}
+      <div className="absolute inset-0 overflow-hidden rounded-full">
+        {avatarUrl ? (
+          <Image
+            src={avatarUrl}
+            alt={displayName}
+            fill
+            className="object-cover"
+          />
+        ) : (
+          <div
+            className={cn(
+              "flex h-full w-full items-center justify-center bg-gradient-to-br font-bold text-white",
+              isTopThree
+                ? "from-cyan-500/40 via-violet-500/40 to-fuchsia-500/40 text-lg"
+                : "from-cyan-500/25 to-violet-600/30 text-base"
+            )}
+          >
+            {initials}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -185,6 +195,7 @@ function LeaderboardCard({
         displayName={entry.displayName}
         avatarUrl={entry.avatarUrl}
         rank={entry.rank}
+        avatarFrameClass={entry.avatarFrameClass}
       />
 
       <div className="min-w-0 flex-1">
@@ -197,6 +208,7 @@ function LeaderboardCard({
             isSupporter={entry.isSupporter}
             supporterBadge={entry.supporterBadge}
             showSupporterBadge
+            nameColorClass={entry.nameColorClass}
             layout="compact"
             animateTitle={false}
             maxTitleWidth="max-w-[7.5rem] sm:max-w-[9rem]"

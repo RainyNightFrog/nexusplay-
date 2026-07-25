@@ -111,7 +111,7 @@ export function ChatInput({
             rows={1}
             placeholder={t("placeholder")}
             className={cn(
-              "max-h-24 min-h-9 w-full resize-none border-0 bg-transparent px-3 py-2 pr-12 text-sm leading-[1.375rem] focus:outline-none disabled:opacity-50",
+              "max-h-24 min-h-10 w-full resize-none border-0 bg-transparent px-3 py-2 pr-12 text-base leading-[1.375rem] focus:outline-none disabled:opacity-50 md:min-h-9 md:text-sm",
               isSupporterComposer
                 ? cn(
                     supporterComposerTextClassByTier[supporterTier],

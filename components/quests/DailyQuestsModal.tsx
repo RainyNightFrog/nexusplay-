@@ -228,7 +228,7 @@ export function DailyQuestsModal({ open, onOpenChange }: DailyQuestsModalProps) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto border-white/10 bg-zinc-950 text-zinc-100 sm:max-w-xl">
+      <DialogContent className="max-h-[min(90dvh,90vh)] max-w-lg overflow-y-auto border-white/10 bg-zinc-950 text-zinc-100 sm:max-w-xl">
         <DialogHeader className="text-center sm:text-center">
           <DialogTitle className="flex items-center justify-center gap-2 text-xl">
             <Target className="size-5 text-cyan-400" />

@@ -3,7 +3,7 @@ import {
   getAccountStatusRecord,
   isAccountRestricted,
 } from "@/lib/account-status";
-import { getAmbientUserPlayerMap } from "@/lib/ambient-user-index";
+import { isAmbientBotUserId } from "@/lib/ambient-user-index";
 import { assertNoChatUrls } from "@/lib/chat-content-policy";
 import { buildCosmeticsCssMap } from "@/lib/cosmetics-resolve";
 import {
@@ -129,8 +129,11 @@ async function assertCanDmPeer(
     throw new Error("不能私訊自己");
   }
 
-  const ambientMap = await getAmbientUserPlayerMap(supabase);
-  if (ambientMap.has(peerUserId) || ambientMap.has(viewerId)) {
+  const [peerIsAmbient, viewerIsAmbient] = await Promise.all([
+    isAmbientBotUserId(supabase, peerUserId),
+    isAmbientBotUserId(supabase, viewerId),
+  ]);
+  if (peerIsAmbient || viewerIsAmbient) {
     throw new Error("無法與此玩家私訊");
   }
 

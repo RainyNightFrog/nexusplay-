@@ -2,37 +2,43 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "RainyNightFrog",
+    name: "RainyNightFrog · 霓虹網頁遊戲宇宙",
     short_name: "RainyNightFrog",
-    description: "Web game platform for play and upload",
+    description:
+      "RainyNightFrog — 霓虹網頁遊戲宇宙。遊玩、投稿、社群與排行榜一站體驗。",
     start_url: "/",
+    scope: "/",
     display: "standalone",
-    background_color: "#09090b",
-    theme_color: "#22d3ee",
+    orientation: "any",
+    background_color: "#0a0a10",
+    theme_color: "#0a0a10",
     lang: "zh-HK",
+    categories: ["games", "entertainment"],
     icons: [
       {
-        src: "/icon",
-        sizes: "32x32",
+        src: "/brand/icon-192.png",
+        sizes: "192x192",
         type: "image/png",
+        purpose: "any",
       },
       {
-        src: "/apple-icon",
-        sizes: "180x180",
+        src: "/brand/icon-192.png",
+        sizes: "192x192",
         type: "image/png",
+        purpose: "maskable",
       },
       {
-        src: "/brand/rainynightfrog-icon-256.png",
-        sizes: "256x256",
-        type: "image/png",
-      },
-      {
-        src: "/brand/rainynightfrog-icon-512.png",
+        src: "/brand/icon-512.png",
         sizes: "512x512",
         type: "image/png",
         purpose: "any",
       },
+      {
+        src: "/brand/icon-512.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "maskable",
+      },
     ],
-    scope: "/",
   };
 }

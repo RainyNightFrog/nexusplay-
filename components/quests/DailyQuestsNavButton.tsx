@@ -47,8 +47,8 @@ export function DailyQuestsNavButton() {
           void refreshBadge();
         }}
         className={cn(
-          "relative inline-flex size-9 items-center justify-center rounded-full border border-cyan-400/30",
-          "bg-cyan-500/10 text-cyan-100",
+          "relative inline-flex size-10 items-center justify-center rounded-full border border-cyan-400/30",
+          "bg-cyan-500/10 text-cyan-100 touch-manipulation",
           "shadow-[0_0_12px_rgba(34,211,238,0.12)] transition hover:border-cyan-400/50 hover:bg-cyan-500/15",
           "md:size-auto md:gap-1.5 md:px-3 md:py-1.5 md:text-sm"
         )}

@@ -48,9 +48,11 @@ export async function loadPublicCreatorProfile(
   const { data: authData, error: authError } =
     await supabase.auth.admin.getUserById(creatorId);
 
-  if (authError) throw new Error(authError.message);
-
-  const metadata = authData.user?.user_metadata ?? {};
+  // Auth Admin 偶發失敗時仍可顯示公開資料（用 profiles + 預設隱私）
+  const metadata =
+    !authError && authData.user?.user_metadata
+      ? authData.user.user_metadata
+      : {};
   const profilePublic = metadata.profile_public !== false;
   const developingGames =
     metadata.developing_games === true || profile.role === "creator";

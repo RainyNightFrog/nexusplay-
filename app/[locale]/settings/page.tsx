@@ -6,10 +6,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Bell,
   Check,
+  Download,
   Gamepad2,
   Globe,
   Loader2,
   RotateCcw,
+  Smartphone,
   Sparkles,
   Zap,
 } from "lucide-react";
@@ -30,6 +32,7 @@ import { useAppSettings } from "@/components/settings/app-settings-provider";
 import {
   AccountSettingsPageHeader,
 } from "@/components/settings/account-settings-layout";
+import { AccountContentSkeleton } from "@/components/account/account-content-skeleton";
 import {
   accountCardClassName,
   accountFieldClassName,
@@ -45,6 +48,7 @@ import { PushNotificationSettings } from "@/components/notifications/push-notifi
 import { PushCategorySettings } from "@/components/notifications/push-category-settings";
 import { ForumDigestPreviewPanel } from "@/components/feeds/forum-digest-preview-panel";
 import { ForumDigestHistoryPanel } from "@/components/feeds/forum-digest-history-panel";
+import { usePwaInstallOptional } from "@/components/pwa/PwaInstallPrompt";
 
 function SettingsToggle({
   id,
@@ -81,11 +85,13 @@ function SettingsToggle({
 export default function SettingsPage() {
   const t = useTranslations("settings");
   const tLang = useTranslations("language");
+  const tPwa = useTranslations("pwa");
   const locale = useLocale() as AppLocale;
   const pathname = usePathname();
   const router = useRouter();
   const { profile, loading } = useAuth();
   const { settings, updateSettings, resetSettings } = useAppSettings();
+  const pwa = usePwaInstallOptional();
   const [toast, setToast] = useState<string | null>(null);
   const [forumNotifySaving, setForumNotifySaving] = useState(false);
   const [forumReplyInApp, setForumReplyInApp] = useState(true);
@@ -275,11 +281,7 @@ export default function SettingsPage() {
   }
 
   if (loading || !profile) {
-    return (
-      <div className="flex min-h-[40vh] items-center justify-center">
-        <Loader2 className="size-8 animate-spin text-violet-400" />
-      </div>
-    );
+    return <AccountContentSkeleton />;
   }
 
   return (
@@ -322,6 +324,40 @@ export default function SettingsPage() {
             </div>
           </section>
         </div>
+
+        {pwa?.showInstallEntry ? (
+          <div className={accountCardClassName}>
+            <section className={accountSectionCompactClassName}>
+              <h2 className={accountSectionTitleClassName}>
+                <Smartphone className="size-4 text-cyan-400" />
+                {tPwa("settings_title")}
+              </h2>
+              <p className="text-xs leading-relaxed text-zinc-500">
+                {tPwa("settings_desc")}
+              </p>
+              <Button
+                type="button"
+                onClick={() => void pwa.promptInstall()}
+                className="mt-1 w-full gap-2 border-0 bg-gradient-to-r from-cyan-500 to-violet-600 text-white shadow-md shadow-cyan-500/20 hover:from-cyan-400 hover:to-violet-500 sm:w-auto"
+              >
+                <Download className="size-4" />
+                {tPwa("menu_install")}
+              </Button>
+            </section>
+          </div>
+        ) : pwa?.isStandalone ? (
+          <div className={accountCardClassName}>
+            <section className={accountSectionCompactClassName}>
+              <h2 className={accountSectionTitleClassName}>
+                <Smartphone className="size-4 text-emerald-400" />
+                {tPwa("settings_title")}
+              </h2>
+              <p className="text-xs leading-relaxed text-emerald-400/90">
+                {tPwa("installed")}
+              </p>
+            </section>
+          </div>
+        ) : null}
 
         <div className={accountCardClassName}>
           <section className={accountSectionCompactClassName}>

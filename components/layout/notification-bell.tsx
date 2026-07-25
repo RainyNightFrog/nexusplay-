@@ -141,9 +141,10 @@ export function NotificationBell() {
         type="button"
         onClick={() => void handleOpen()}
         className={cn(
-          "relative flex size-9 items-center justify-center rounded-full",
+          "relative flex size-10 items-center justify-center rounded-full touch-manipulation",
           "border border-white/10 bg-white/5 text-zinc-300",
-          "transition-colors hover:border-cyan-400/30 hover:bg-white/10 hover:text-white"
+          "transition-colors hover:border-cyan-400/30 hover:bg-white/10 hover:text-white",
+          "md:size-9"
         )}
         aria-label={t("bellLabel")}
       >

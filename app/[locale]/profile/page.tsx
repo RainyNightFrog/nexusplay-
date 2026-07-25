@@ -31,6 +31,7 @@ import { getInitials } from "@/lib/auth";
 import { useAuth } from "@/hooks/use-auth";
 import { useApiError } from "@/hooks/use-api-error";
 import { AccountSettingsPageHeader } from "@/components/settings/account-settings-layout";
+import { AccountContentSkeleton } from "@/components/account/account-content-skeleton";
 import {
   accountCardClassName,
   accountFieldClassName,
@@ -261,9 +262,13 @@ export default function ProfilePage() {
 
   if (loading || !profile) {
     return (
-      <div className="flex min-h-[40vh] items-center justify-center">
-        <Loader2 className="size-8 animate-spin text-cyan-400" />
-      </div>
+      <>
+        <AccountSettingsPageHeader
+          title={t("title")}
+          description={t("description")}
+        />
+        <AccountContentSkeleton rows={6} />
+      </>
     );
   }
 

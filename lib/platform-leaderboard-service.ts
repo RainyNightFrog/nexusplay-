@@ -11,6 +11,10 @@ import {
 import { resolveAdminDisplayRole } from "@/lib/admin-display-role";
 import { maskDonationAmount } from "@/lib/activity-stats-masking";
 import { resolveEquippedTitles } from "@/lib/equipped-title-service";
+import {
+  buildCosmeticsCssMap,
+  type CosmeticsCssClasses,
+} from "@/lib/cosmetics-resolve";
 import { isAmbientLocalEmail } from "@/lib/ambient-local-email";
 import { listAuthAdminUsers } from "@/lib/auth-admin-users-cache";
 import {
@@ -41,6 +45,7 @@ type LeaderboardCoreCache = {
   donatedRows: ActivityStatsRow[];
   profiles: Map<string, ProfileRow>;
   titleMap: Map<string, import("@/lib/titles").EquippedTitle | null>;
+  cosmeticsMap: Map<string, CosmeticsCssClasses>;
   metadataAdminIds: Set<string>;
 };
 
@@ -286,6 +291,7 @@ function mapEntries(
   rows: ActivityStatsRow[],
   profiles: Map<string, ProfileRow>,
   titleMap: Map<string, import("@/lib/titles").EquippedTitle | null>,
+  cosmeticsMap: Map<string, CosmeticsCssClasses>,
   valueKey: "total_online_time" | "total_play_time" | "total_donated",
   currentUserId?: string | null,
   viewerIsAdmin = false,
@@ -319,6 +325,7 @@ function mapEntries(
       profile?.is_admin === true,
       metadataAdminIds.has(row.user_id)
     );
+    const cos = cosmeticsMap.get(row.user_id);
 
     return {
       rank: index + 1,
@@ -326,6 +333,8 @@ function mapEntries(
       displayName: profile?.display_name?.trim() || "匿名玩家",
       avatarUrl: profile?.avatar_url ?? null,
       equippedTitle: titleMap.get(row.user_id) ?? null,
+      avatarFrameClass: cos?.avatar_frame_class ?? null,
+      nameColorClass: cos?.name_color_class ?? null,
       value,
       lastActiveAt: row.last_active_at,
       isOnline: isUserOnline(row.last_active_at, now),
@@ -389,9 +398,10 @@ async function loadLeaderboardCore(
     ...donatedRows.map((row) => row.user_id),
   ];
 
-  const [profiles, titleMap] = await Promise.all([
+  const [profiles, titleMap, cosmeticsMap] = await Promise.all([
     loadProfiles(supabase, userIds),
     resolveEquippedTitles(supabase, userIds),
+    buildCosmeticsCssMap(supabase, userIds),
   ]);
 
   leaderboardCoreCache = {
@@ -401,6 +411,7 @@ async function loadLeaderboardCore(
     donatedRows,
     profiles,
     titleMap,
+    cosmeticsMap,
     metadataAdminIds: authFlags.metadataAdminIds,
   };
   return leaderboardCoreCache;
@@ -418,6 +429,7 @@ export async function getPlatformLeaderboards(
     core.onlineRows,
     core.profiles,
     core.titleMap,
+    core.cosmeticsMap,
     "total_online_time",
     currentUserId,
     viewerIsAdmin,
@@ -427,6 +439,7 @@ export async function getPlatformLeaderboards(
     core.playRows,
     core.profiles,
     core.titleMap,
+    core.cosmeticsMap,
     "total_play_time",
     currentUserId,
     viewerIsAdmin,
@@ -436,6 +449,7 @@ export async function getPlatformLeaderboards(
     core.donatedRows,
     core.profiles,
     core.titleMap,
+    core.cosmeticsMap,
     "total_donated",
     currentUserId,
     viewerIsAdmin,

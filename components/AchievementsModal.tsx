@@ -817,7 +817,7 @@ export function AchievementsModal({ open, onOpenChange }: AchievementsModalProps
       <DialogContent
         showCloseButton
         className={cn(
-          "!flex max-h-[92vh] w-[min(calc(100vw-1rem),1120px)] max-w-[min(calc(100vw-1rem),1120px)] flex-col gap-0 overflow-hidden",
+          "!flex max-h-[min(92dvh,92vh)] w-[min(calc(100vw-1rem),1120px)] max-w-[min(calc(100vw-1rem),1120px)] flex-col gap-0 overflow-hidden",
           "sm:max-w-[1120px]",
           "border-amber-400/15 bg-zinc-950/95 p-0 text-base text-zinc-100",
           "shadow-2xl shadow-amber-500/10 backdrop-blur-xl"

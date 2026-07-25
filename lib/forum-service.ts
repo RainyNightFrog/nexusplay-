@@ -16,7 +16,7 @@ import {
   parseSeedForumPostId,
   seedForumPostStableKey,
 } from "@/lib/forum-seed-builder";
-import { getAmbientUserPlayerMap } from "@/lib/ambient-user-index";
+import { getAmbientUserIdForVirtualPlayer } from "@/lib/ambient-user-index";
 import { resolveEquippedTitles } from "@/lib/equipped-title-service";
 import { resolveSupporterProfiles, type SupporterProfileFlags } from "@/lib/supporter-profile";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
@@ -69,11 +69,7 @@ async function resolveAmbientUserIdForVirtualPlayer(
   virtualPlayerId: string | null | undefined
 ): Promise<string | null> {
   if (!virtualPlayerId) return null;
-  const map = await getAmbientUserPlayerMap(supabase);
-  for (const [userId, playerId] of map.entries()) {
-    if (playerId === virtualPlayerId) return userId;
-  }
-  return null;
+  return getAmbientUserIdForVirtualPlayer(supabase, virtualPlayerId);
 }
 
 async function resolveMaterializedAuthorUserId(

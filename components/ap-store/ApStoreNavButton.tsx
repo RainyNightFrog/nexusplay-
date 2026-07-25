@@ -61,10 +61,10 @@ export function ApStoreNavButton() {
           void refreshBalance();
         }}
         className={cn(
-          "relative inline-flex items-center gap-1 rounded-full border border-amber-400/35",
-          "bg-amber-500/10 px-2 py-1.5 text-xs font-semibold text-amber-100",
+          "relative inline-flex min-h-10 items-center gap-1 rounded-full border border-amber-400/35",
+          "bg-amber-500/10 px-2.5 py-2 text-xs font-semibold text-amber-100 touch-manipulation",
           "shadow-[0_0_12px_rgba(251,191,36,0.15)] transition hover:border-amber-400/55 hover:bg-amber-500/15",
-          "md:gap-1.5 md:px-3 md:text-sm md:shadow-[0_0_16px_rgba(251,191,36,0.2)]"
+          "md:min-h-0 md:gap-1.5 md:px-3 md:py-1.5 md:text-sm md:shadow-[0_0_16px_rgba(251,191,36,0.2)]"
         )}
         aria-label={t("navLabel")}
       >

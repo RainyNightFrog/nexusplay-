@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { Loader2, UserRound, UserX } from "lucide-react";
 import { Link, useRouter } from "@/i18n/navigation";
 import { AccountSettingsPageHeader } from "@/components/settings/account-settings-layout";
+import { AccountContentSkeleton } from "@/components/account/account-content-skeleton";
 import { UserBadge } from "@/components/UserBadge";
 import { accountCardClassName, settingsListRowClassName } from "@/components/settings/account-shell";
 import { Button } from "@/components/ui/button";
@@ -49,9 +50,13 @@ export default function FollowingSettingsPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[40vh] items-center justify-center">
-        <Loader2 className="size-8 animate-spin text-violet-400" />
-      </div>
+      <>
+        <AccountSettingsPageHeader
+          title={t("followingTitle")}
+          description={t("followingDesc")}
+        />
+        <AccountContentSkeleton />
+      </>
     );
   }
 

@@ -124,10 +124,8 @@ export default function CommunityPage() {
           </div>
         )}
 
-        {/* 電腦還原完整導覽；手機省略以免擠爆 */}
-        <div className="ml-auto hidden md:block">
-          <NavActions />
-        </div>
+        {/* 桌面完整導覽；手機用漢堡選單（搜尋／排行榜／語系） */}
+        <NavActions className="ml-auto" />
       </SiteHeader>
 
       <main className="relative mx-auto max-w-5xl px-4 py-8 text-center sm:px-6 sm:py-10">

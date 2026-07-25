@@ -6,7 +6,6 @@ import { useTranslations } from "next-intl";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   HeartHandshake,
-  Loader2,
   Palette,
   Sparkles,
   Users,
@@ -68,7 +67,7 @@ export function HomeSupporterSection() {
   const reduceMotion = useReducedMotion();
   const [supporters, setSupporters] = useState<PlatformSupporterPublic[]>([]);
   const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [hydrated, setHydrated] = useState(false);
   const [playerPreview, setPlayerPreview] = useState<ChatPlayerPreview | null>(
     null
   );
@@ -95,7 +94,7 @@ export function HomeSupporterSection() {
           setSupporters([]);
           setTotal(0);
         })
-        .finally(() => setLoading(false));
+        .finally(() => setHydrated(true));
     });
   }, []);
 
@@ -186,18 +185,22 @@ export function HomeSupporterSection() {
               <Users className="size-4 shrink-0 text-cyan-400" />
               {t("supporterWallTitle")}
             </div>
-            {!loading && total > 0 ? (
+            {!hydrated || total <= 0 ? null : (
               <p className="text-xs text-zinc-500">
                 {t("supporterCount", { count: total })}
               </p>
-            ) : null}
+            )}
           </div>
 
-          {loading ? (
-            <div className="flex items-center justify-center gap-2 py-10 text-sm text-zinc-500">
-              <Loader2 className="size-4 animate-spin" />
-              {t("supporterWallLoading")}
-            </div>
+          {!hydrated ? (
+            <ul className="grid grid-cols-2 gap-2 min-[400px]:gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <li
+                  key={index}
+                  className="h-28 animate-pulse rounded-xl bg-white/[0.04]"
+                />
+              ))}
+            </ul>
           ) : supporters.length === 0 ? (
             <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.02] px-4 py-10 text-center">
               <p className="text-sm text-zinc-400">{t("supporterWallEmpty")}</p>

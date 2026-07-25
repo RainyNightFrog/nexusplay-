@@ -5,6 +5,7 @@ import {
   postAmbientWorldChat,
 } from "@/lib/chat-ambient-service";
 import {
+  AMBIENT_CATCH_UP_MAX_ROUNDS,
   AMBIENT_POST_INTERVAL_MS,
   AMBIENT_SEED_COOLDOWN_MS,
 } from "@/lib/chat-ambient-schedule";
@@ -76,9 +77,20 @@ export async function maintainAmbientChat(channel: ChatChannel) {
   const age = await latestMessageAgeMs(channel);
   if (age < interval) return;
 
-  if (channel === "world") {
-    await postAmbientWorldChat();
-  } else {
-    await postAmbientCreatorChat();
+  // 閒置越久補越多輪，時間戳錯開，頻道看起來更持續有人說話
+  const maxRounds = AMBIENT_CATCH_UP_MAX_ROUNDS[channel];
+  const rounds = Math.min(
+    maxRounds,
+    Math.max(1, Math.floor(age / interval))
+  );
+  const staggerMs = Math.max(25_000, Math.floor(interval * 0.4));
+
+  for (let i = 0; i < rounds; i += 1) {
+    const at = new Date(Date.now() - (rounds - 1 - i) * staggerMs);
+    if (channel === "world") {
+      await postAmbientWorldChat({ at });
+    } else {
+      await postAmbientCreatorChat({ at });
+    }
   }
 }

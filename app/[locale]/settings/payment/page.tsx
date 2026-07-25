@@ -7,6 +7,7 @@ import { AddPaymentMethodForm } from "@/components/settings/add-payment-method-f
 import { useRouter } from "@/i18n/navigation";
 import { Link } from "@/i18n/navigation";
 import { AccountSettingsPageHeader } from "@/components/settings/account-settings-layout";
+import { AccountContentSkeleton } from "@/components/account/account-content-skeleton";
 import {
   accountCardClassName,
   accountSectionCompactClassName,
@@ -146,11 +147,7 @@ export default function PaymentSettingsPage() {
   }
 
   if (loading || !profile) {
-    return (
-      <div className="flex min-h-[40vh] items-center justify-center">
-        <Loader2 className="size-8 animate-spin text-violet-400" />
-      </div>
-    );
+    return <AccountContentSkeleton />;
   }
 
   return (

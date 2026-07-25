@@ -184,7 +184,7 @@ export function ApStoreModal({ open, onOpenChange }: ApStoreModalProps) {
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-h-[92vh] max-w-4xl overflow-hidden border-white/10 bg-zinc-950 text-zinc-100 sm:max-w-5xl">
+        <DialogContent className="max-h-[min(92dvh,92vh)] max-w-4xl overflow-hidden border-white/10 bg-zinc-950 text-zinc-100 sm:max-w-5xl">
           <DialogHeader className="text-center sm:text-center">
             <DialogTitle className="flex items-center justify-center gap-2 text-xl">
               <ShoppingBag className="size-5 text-amber-300" />
@@ -309,7 +309,7 @@ export function ApStoreModal({ open, onOpenChange }: ApStoreModalProps) {
                       <TabsContent
                         key={category}
                         value={category}
-                        className="max-h-[42vh] space-y-2 overflow-y-auto pr-1 sm:max-h-[52vh]"
+                        className="max-h-[min(42dvh,42vh)] space-y-2 overflow-y-auto overscroll-contain pr-1 sm:max-h-[min(52dvh,52vh)]"
                       >
                         {data.items
                           .filter((item) => item.category === category)

@@ -153,18 +153,30 @@ export async function getPublicGameById(id: number): Promise<Game | null> {
 export async function getPublicGameByRouteParam(
   param: string
 ): Promise<Game | null> {
-  const supabase = createServerSupabase();
-  const { record } = await resolveGameRecordByRouteParam(supabase, param);
+  const normalized = param.trim();
+  if (!normalized) return null;
 
-  if (
-    !record ||
-    record.publish_status !== "public" ||
-    record.status !== "approved"
-  ) {
-    return null;
-  }
+  return unstable_cache(
+    async () => {
+      const supabase = createServerSupabase();
+      const { record } = await resolveGameRecordByRouteParam(
+        supabase,
+        normalized
+      );
 
-  return mapRecordToGame(record);
+      if (
+        !record ||
+        record.publish_status !== "public" ||
+        record.status !== "approved"
+      ) {
+        return null;
+      }
+
+      return mapRecordToGame(record);
+    },
+    ["public-game-by-route", normalized],
+    { revalidate: 60 }
+  )();
 }
 
 export async function getGameById(id: number): Promise<Game | null> {

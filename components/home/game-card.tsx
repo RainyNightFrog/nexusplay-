@@ -132,7 +132,7 @@ export function GameCard({
                   onFavoriteClick?.(event);
                 }}
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-md transition",
+                  "inline-flex min-h-10 min-w-10 items-center justify-center gap-1.5 rounded-md px-2 transition touch-manipulation",
                   "hover:text-rose-300 disabled:opacity-50",
                   onFavoriteClick && "cursor-pointer"
                 )}
@@ -140,7 +140,7 @@ export function GameCard({
               >
                 <Heart
                   className={cn(
-                    "size-3.5",
+                    "size-4",
                     favorited ? "fill-rose-400 text-rose-400" : "text-rose-400/80"
                   )}
                 />

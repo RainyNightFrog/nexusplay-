@@ -108,6 +108,8 @@ export function leaderboardEntryToPlayerPreview(
     displayName: entry.displayName,
     avatarUrl: entry.avatarUrl,
     equippedTitle: entry.equippedTitle,
+    avatarFrameClass: entry.avatarFrameClass ?? null,
+    nameColorClass: entry.nameColorClass ?? null,
     isCreator: false,
     adminRole: entry.adminRole ?? "none",
     isVirtual: Boolean(virtualPlayerId),

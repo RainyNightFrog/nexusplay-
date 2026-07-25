@@ -3,6 +3,7 @@ import {
   type PlatformLeaderboardEntry,
 } from "@/lib/platform-leaderboard";
 import { resolveVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
+import { getVirtualPlayerCosmeticsCss } from "@/lib/virtual-player-cosmetics";
 import {
   getVirtualPlayerEquippedTitle,
   getVirtualPlayerSupporterFlags,
@@ -15,10 +16,13 @@ import {
 
 function virtualPlayerPresentation(playerId: string) {
   const supporter = getVirtualPlayerSupporterFlags(playerId);
+  const cosmetics = getVirtualPlayerCosmeticsCss(playerId);
   return {
     equippedTitle: getVirtualPlayerEquippedTitle(playerId),
     isSupporter: supporter?.isSupporter === true,
     supporterBadge: supporter?.badge ?? null,
+    avatarFrameClass: cosmetics?.avatarFrameClass ?? null,
+    nameColorClass: cosmetics?.nameColorClass ?? null,
   };
 }
 
@@ -235,6 +239,8 @@ function toEntries(
         displayName: row.displayName,
         avatarUrl: resolveVirtualPlayerAvatarUrl(row.playerId),
         equippedTitle: presentation.equippedTitle,
+        avatarFrameClass: presentation.avatarFrameClass,
+        nameColorClass: presentation.nameColorClass,
         value: row[valueKey],
         lastActiveAt: row.lastActiveAt,
         isOnline: isUserOnline(row.lastActiveAt, now),
@@ -282,6 +288,8 @@ function toDonationEntries(
         displayName: player.displayName,
         avatarUrl: resolveVirtualPlayerAvatarUrl(player.id),
         equippedTitle: presentation.equippedTitle,
+        avatarFrameClass: presentation.avatarFrameClass,
+        nameColorClass: presentation.nameColorClass,
         value: amountUsd,
         lastActiveAt: activity.lastActiveAt,
         isOnline: isUserOnline(activity.lastActiveAt, now),

@@ -23,6 +23,7 @@ import {
 import { resolveEquippedTitleForUser } from "@/lib/equipped-title-service";
 import { buildCosmeticsCssMap } from "@/lib/cosmetics-resolve";
 import { resolveVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
+import { getVirtualPlayerCosmeticsCss } from "@/lib/virtual-player-cosmetics";
 import { getVirtualPlayerSocialStats } from "@/lib/virtual-player-public-profile";
 import {
   getCountryCodeFromHeaders,
@@ -334,22 +335,25 @@ async function loadVirtualPlayerProfile(
   const social = getVirtualPlayerSocialStats(virtualPlayerId);
   if (!activity || !social) return null;
 
-  const ambientMap = await getAmbientUserPlayerMap(supabase);
+  const ambientUserId = await getAmbientUserIdForVirtualPlayer(
+    supabase,
+    virtualPlayerId,
+    { preferCreator: true }
+  );
   let isCreator = social.isCreator;
-  for (const [userId, playerId] of ambientMap.entries()) {
-    if (playerId !== virtualPlayerId) continue;
+  if (ambientUserId) {
     const { data: row } = await supabase
       .from("profiles")
       .select("role")
-      .eq("id", userId)
+      .eq("id", ambientUserId)
       .maybeSingle();
     if (row?.role === "creator") {
       isCreator = true;
-      break;
     }
   }
 
   const virtualSupporterFlags = getVirtualPlayerSupporterFlags(virtualPlayerId);
+  const virtualCosmetics = getVirtualPlayerCosmeticsCss(virtualPlayerId);
 
   return {
     userId: null,
@@ -358,8 +362,8 @@ async function loadVirtualPlayerProfile(
     displayName: player.displayName,
     avatarUrl: resolveVirtualPlayerAvatarUrl(virtualPlayerId),
     equippedTitle: getVirtualPlayerEquippedTitle(virtualPlayerId),
-    avatarFrameClass: null,
-    nameColorClass: null,
+    avatarFrameClass: virtualCosmetics?.avatarFrameClass ?? null,
+    nameColorClass: virtualCosmetics?.nameColorClass ?? null,
     isCreator,
     adminRole: "none",
     isVirtual: true,
@@ -497,7 +501,7 @@ export async function getChatPlayerPublicProfile(
   }
 
   if (userId) {
-    const ambientMap = await getAmbientUserPlayerMap(supabase);
+    const ambientMap = await getAmbientUserPlayerMap(supabase, [userId]);
     const mappedVirtualId = ambientMap.get(userId);
     if (mappedVirtualId) {
       const [virtualProfile, realLoaded] = await Promise.all([

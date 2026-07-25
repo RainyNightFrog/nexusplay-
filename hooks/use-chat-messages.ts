@@ -11,7 +11,7 @@ import { useApiError } from "@/hooks/use-api-error";
 /** 輪詢間隔：本機開發時觸發 maintainAmbientChat；亦作 Realtime 後備 */
 export const CHAT_POLL_INTERVAL_MS = 60_000;
 
-const CHAT_FETCH_TIMEOUT_MS = 15_000;
+const CHAT_FETCH_TIMEOUT_MS = 8_000;
 const REALTIME_RELOAD_DEBOUNCE_MS = 400;
 
 /** 開發熱更新時保留聊天內容，避免每次改程式都清空並轉圈 */

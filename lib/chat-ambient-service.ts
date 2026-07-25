@@ -20,6 +20,7 @@ import {
   ambientCreatorBotEmail,
   VIRTUAL_PLAYERS,
   VIRTUAL_PLAYERS_BY_LOCALE,
+  getVirtualPlayerById,
   type VirtualPlayer,
   type VirtualPlayerLocale,
 } from "@/lib/virtual-players";
@@ -27,10 +28,10 @@ import { resolveVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
 import { upsertBotProfile } from "@/lib/profile-player-number";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-const WORLD_DIALOGUE_CHANCE = 0.5;
-const CREATOR_DIALOGUE_CHANCE = 0.38;
-const REPLY_GAP_MS_MIN = 18_000;
-const REPLY_GAP_MS_MAX = 75_000;
+const WORLD_DIALOGUE_CHANCE = 0.58;
+const CREATOR_DIALOGUE_CHANCE = 0.45;
+const REPLY_GAP_MS_MIN = 12_000;
+const REPLY_GAP_MS_MAX = 48_000;
 const RECENT_CONTENT_LIMIT = 200;
 
 type AmbientPostResult = {
@@ -143,26 +144,32 @@ function pickPlayer(locale: VirtualPlayerLocale, excludeId?: string): VirtualPla
 }
 
 async function listAmbientBotUsers(supabase: SupabaseClient) {
-  const { data, error } = await supabase.auth.admin.listUsers({
-    page: 1,
-    perPage: 1000,
-  });
-  if (error) throw new Error(error.message);
-
-  const byEmail = new Map<string, string>();
-  for (const user of data.users ?? []) {
-    if (user.email && isAmbientLocalEmail(user.email)) {
-      byEmail.set(user.email, user.id);
+  let lastMessage = "listUsers failed";
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const { data, error } = await supabase.auth.admin.listUsers({
+      page: 1,
+      perPage: 1000,
+    });
+    if (!error) {
+      const byEmail = new Map<string, string>();
+      for (const user of data.users ?? []) {
+        if (user.email && isAmbientLocalEmail(user.email)) {
+          byEmail.set(user.email, user.id);
+        }
+      }
+      return byEmail;
     }
+    lastMessage = error.message;
+    await new Promise((resolve) => setTimeout(resolve, 350 * (attempt + 1)));
   }
-  return byEmail;
+  throw new Error(lastMessage);
 }
 
 async function syncAmbientPlayerProfile(
   supabase: SupabaseClient,
   userId: string,
   player: VirtualPlayer,
-  options?: { asCreator?: boolean }
+  options?: { asCreator?: boolean; skipAuthMetadata?: boolean }
 ) {
   const role = options?.asCreator ? "creator" : "player";
   await upsertBotProfile(supabase, {
@@ -172,6 +179,8 @@ async function syncAmbientPlayerProfile(
     role,
   });
 
+  if (options?.skipAuthMetadata) return;
+
   const { error: authError } = await supabase.auth.admin.updateUserById(userId, {
     user_metadata: {
       display_name: player.displayName,
@@ -180,7 +189,12 @@ async function syncAmbientPlayerProfile(
       ambient_id: player.id,
     },
   });
-  if (authError) throw new Error(authError.message);
+  // Auth Admin 偶發 JWT 驗簽失敗時，profile 已足夠供聊天顯示
+  if (authError) {
+    console.warn(
+      `[ambient] skip auth metadata sync for ${player.id}: ${authError.message}`
+    );
+  }
 }
 
 async function ensureAmbientPlayer(
@@ -430,6 +444,90 @@ export async function ensureAllAmbientPlayers() {
   }
 
   return { total: VIRTUAL_PLAYERS.length * 2, created, synced };
+}
+
+const COSMETIC_SHOWCASE_LINES: Record<string, string[]> = {
+  "zh-HK": [
+    "剛換咗個新頭像框，感覺勁晒～",
+    "呢個名色靚唔靚？我覺得幾岩氣氛",
+    "氣泡特效開咗，世界頻道即刻唔同晒",
+    "AP 商店掃咗一輪，決定用呢套外觀",
+  ],
+  "zh-CN": [
+    "刚换了新头像框，感觉很炫～",
+    "这个名字颜色好看吗？我挺喜欢的",
+    "气泡特效开了，聊天区马上不一样",
+    "AP 商店逛了一圈，决定用这套外观",
+  ],
+  en: [
+    "Just equipped a new avatar frame — looking sharp.",
+    "Trying this name color — vibe check?",
+    "Bubble effect on. World chat feels different now.",
+    "Picked a fresh look from the AP store.",
+  ],
+};
+
+/**
+ * 讓已裝備 AP 外觀的虛擬玩家各在世界頻道發言一次（方便預覽特效）。
+ */
+export async function postVirtualCosmeticShowcaseMessages(): Promise<{
+  posted: number;
+  players: string[];
+  messages: { playerId: string; displayName: string; content: string }[];
+}> {
+  const { listVirtualPlayerIdsWithCosmetics } = await import(
+    "@/lib/virtual-player-cosmetics"
+  );
+  const playerIds = listVirtualPlayerIdsWithCosmetics();
+  const supabase = createServerSupabase();
+  const botCache = await listAmbientBotUsers(supabase);
+  const results: { playerId: string; displayName: string; content: string }[] =
+    [];
+
+  let offsetMs = 0;
+  for (const playerId of playerIds) {
+    const player = getVirtualPlayerById(playerId);
+    if (!player) continue;
+
+    const pool =
+      COSMETIC_SHOWCASE_LINES[player.locale] ?? COSMETIC_SHOWCASE_LINES.en!;
+    const content =
+      pool[hashShowcaseIndex(playerId) % pool.length] ?? pool[0]!;
+
+    const localPart = `ambient.${player.id}`;
+    const [email, legacyEmail] = ambientEmailAliases(localPart);
+    let userId = botCache.get(email) ?? botCache.get(legacyEmail) ?? null;
+    if (!userId) {
+      userId = await ensureAmbientPlayer(supabase, player, botCache);
+    } else {
+      await syncAmbientPlayerProfile(supabase, userId, player, {
+        skipAuthMetadata: true,
+      });
+    }
+    const createdAt = new Date(Date.now() - (playerIds.length - offsetMs) * 1500);
+    await insertAmbientMessage(supabase, "world", userId, content, createdAt);
+    results.push({
+      playerId,
+      displayName: player.displayName,
+      content,
+    });
+    offsetMs += 1;
+  }
+
+  return {
+    posted: results.length,
+    players: results.map((row) => row.displayName),
+    messages: results,
+  };
+}
+
+function hashShowcaseIndex(playerId: string) {
+  let hash = 421;
+  for (const char of playerId) {
+    hash = Math.imul(31, hash) + char.charCodeAt(0);
+    hash |= 0;
+  }
+  return Math.abs(hash);
 }
 
 /** 灌入近期聊天記錄，讓世界頻道一打開就有對話感 */

@@ -93,7 +93,7 @@ export function TagFilterBar({ selectedTags, onChange }: TagFilterBarProps) {
       {!expanded && (
         <div
           ref={scrollRef}
-          className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="flex gap-2 overflow-x-auto overscroll-x-contain scroll-smooth pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {HOT_TAGS.map((tag) => {
             const active = selectedSet.has(tag);
@@ -103,12 +103,12 @@ export function TagFilterBar({ selectedTags, onChange }: TagFilterBarProps) {
                 type="button"
                 whileTap={{ scale: 0.96 }}
                 onClick={() => toggleTag(tag)}
-                className="shrink-0"
+                className="shrink-0 touch-manipulation"
               >
                 <Badge
                   variant={active ? "default" : "outline"}
                   className={cn(
-                    "h-8 cursor-pointer whitespace-nowrap px-3 text-xs transition-all",
+                    "h-9 cursor-pointer whitespace-nowrap px-3.5 text-xs transition-all",
                     active
                       ? "border-transparent bg-gradient-to-r from-fuchsia-500 to-violet-600 text-white shadow-md shadow-fuchsia-500/20"
                       : cn(
