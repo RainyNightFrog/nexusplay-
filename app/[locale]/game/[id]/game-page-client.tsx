@@ -774,22 +774,22 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
               }}
             >
               {showFullscreen && iframeSrc && (
-                <div className="flex shrink-0 items-center justify-between gap-2 border-b border-white/10 px-2 py-2 sm:gap-3 sm:px-4 sm:py-3">
+                <div className="flex shrink-0 items-center justify-between gap-1.5 border-b border-white/10 px-1.5 py-1.5 sm:gap-3 sm:px-4 sm:py-3">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-white">
+                    <p className="truncate text-xs font-semibold text-white sm:text-sm">
                       {game.title}
                     </p>
                     <p className="hidden text-xs text-zinc-500 sm:block">
                       {tc("fullscreenHint")}
                     </p>
                   </div>
-                  <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+                  <div className="flex shrink-0 items-center gap-0.5 sm:gap-2">
                     {showGameMenuButton && (
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={handleBackToGameMenu}
-                        className="min-h-10 gap-1.5 border-white/10 bg-white/5 px-2.5 text-zinc-300 hover:border-emerald-400/30 hover:text-white touch-manipulation sm:min-h-0 sm:px-3"
+                        className="size-9 gap-1.5 border-white/10 bg-white/5 p-0 text-zinc-300 hover:border-emerald-400/30 hover:text-white touch-manipulation sm:size-auto sm:min-h-0 sm:px-3"
                       >
                         <Gamepad2 className="size-3.5" />
                         <span className="hidden sm:inline">
@@ -802,7 +802,7 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
                         variant="outline"
                         size="sm"
                         onClick={handleScrollToTip}
-                        className="min-h-10 gap-1.5 border-fuchsia-400/30 bg-fuchsia-500/10 px-2.5 text-fuchsia-100 hover:border-fuchsia-400/50 hover:bg-fuchsia-500/15 touch-manipulation sm:min-h-0 sm:px-3"
+                        className="size-9 gap-1.5 border-fuchsia-400/30 bg-fuchsia-500/10 p-0 text-fuchsia-100 hover:border-fuchsia-400/50 hover:bg-fuchsia-500/15 touch-manipulation sm:size-auto sm:min-h-0 sm:px-3"
                       >
                         <Coins className="size-3.5" />
                         <span className="hidden sm:inline">
@@ -814,7 +814,7 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
                       variant="outline"
                       size="sm"
                       onClick={handleShare}
-                      className="min-h-10 gap-1.5 border-white/10 bg-white/5 px-2.5 text-zinc-300 hover:border-cyan-400/30 hover:text-white touch-manipulation sm:min-h-0 sm:px-3"
+                      className="size-9 gap-1.5 border-white/10 bg-white/5 p-0 text-zinc-300 hover:border-cyan-400/30 hover:text-white touch-manipulation sm:size-auto sm:min-h-0 sm:px-3"
                     >
                       <Share2 className="size-3.5" />
                       <span className="hidden sm:inline">{tc("share")}</span>
@@ -823,7 +823,7 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
                       variant="ghost"
                       size="icon-sm"
                       onClick={closeFullscreen}
-                      className="size-10 shrink-0 text-zinc-400 hover:text-white touch-manipulation sm:size-7"
+                      className="size-9 shrink-0 text-zinc-400 hover:text-white touch-manipulation sm:size-7"
                       aria-label={tc("fullscreenHint")}
                     >
                       <X className="size-5 sm:size-4" />
@@ -832,11 +832,12 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
                 </div>
               )}
 
+              {/* 全螢幕：外層舞台 + 內層等比 letterbox；非全螢幕維持桌面比例框 */}
               <div
                 className={cn(
                   "relative w-full bg-black",
                   showFullscreen && iframeSrc
-                    ? "min-h-0 flex-1"
+                    ? "flex min-h-0 flex-1 items-center justify-center overflow-hidden [container-type:size]"
                     : "mx-auto max-h-[min(70dvh,80vh)]"
                 )}
                 style={
@@ -850,6 +851,23 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
                       : undefined
                 }
               >
+                <div
+                  className={cn(
+                    "relative bg-black",
+                    showFullscreen && iframeSrc
+                      ? "max-h-full max-w-full"
+                      : "absolute inset-0 size-full"
+                  )}
+                  style={
+                    showFullscreen && iframeSrc
+                      ? {
+                          aspectRatio: `${viewportWidth} / ${viewportHeight}`,
+                          width: `min(100cqw, calc(100cqh * ${viewportWidth} / ${viewportHeight}))`,
+                          maxHeight: "100cqh",
+                        }
+                      : undefined
+                  }
+                >
                 {isUpcoming ? (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 bg-zinc-950/90 px-6 py-10 text-center">
                     <div
@@ -981,6 +999,7 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
                     </Link>
                   </div>
                 )}
+                </div>
               </div>
 
               {!showFullscreen && (

@@ -67,7 +67,7 @@ for (const slug of arcade) {
     path.join(root, `public/games/${slug}/index.html`),
     "utf8"
   );
-  assert(html.includes("rnf-game-sdk.js?v=20260725a"), `${slug} sdk cache bust`);
+  assert(html.includes("rnf-game-sdk.js?v=20260725b"), `${slug} sdk cache bust`);
   assert(
     fs.existsSync(path.join(root, `public/covers/${slug}-cover.webp`)),
     `${slug} cover exists`

@@ -204,11 +204,7 @@ function PwaInstallPrompt({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 32 }}
             transition={{ type: "spring", stiffness: 380, damping: 28 }}
-            className={cn(
-              "fixed inset-x-3 z-[60] mx-auto max-w-md",
-              "bottom-[max(0.75rem,env(safe-area-inset-bottom))]",
-              "pointer-events-auto md:hidden"
-            )}
+            className="pwa-install-banner fixed inset-x-3 z-[60] mx-auto max-w-md bottom-[max(0.75rem,env(safe-area-inset-bottom))] pointer-events-auto md:hidden"
           >
             <div
               className={cn(

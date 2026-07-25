@@ -332,6 +332,11 @@
     display: none !important;
   }
 
+  html[data-game-modal-open] .pwa-install-banner {
+    display: none !important;
+    pointer-events: none !important;
+  }
+
   @media (hover: none), (pointer: coarse) {
     button,
     a,

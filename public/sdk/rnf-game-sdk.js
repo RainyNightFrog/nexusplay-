@@ -111,14 +111,15 @@
       ".rnf-toggle.on{background:rgba(34,211,238,.25);color:#fff;border-color:#22d3ee}" +
       ".rnf-game-wrap{display:flex;flex-direction:column;width:100%;height:100%;max-width:960px;max-height:600px;min-height:0;padding:.25rem .35rem .4rem;position:relative}" +
       "html.rnf-embed-mode,html.rnf-embed-mode body{height:100%;min-height:0;overflow:hidden}" +
-      "html.rnf-embed-mode .rnf-root{min-height:0;max-height:100%}" +
-      "html.rnf-embed-mode .rnf-game-wrap{max-width:none;max-height:none;height:100%}" +
-      "html.rnf-embed-mode .rnf-screen{padding:.35rem}" +
+      "html.rnf-embed-mode .rnf-root{min-height:0;max-height:100%;display:flex;flex-direction:column;align-items:stretch;justify-content:stretch}" +
+      "html.rnf-embed-mode .rnf-game-wrap{max-width:100%;max-height:100%;width:100%;height:100%;margin:0 auto}" +
+      "html.rnf-embed-mode .rnf-screen{padding:.35rem;width:100%;height:100%;max-width:100%;max-height:100%;box-sizing:border-box}" +
+      "html.rnf-embed-mode .rnf-screen.active{align-items:center;justify-content:center}" +
       ".rnf-hud{display:grid;grid-template-columns:repeat(auto-fit,minmax(70px,1fr));gap:.25rem;padding:.38rem .5rem;background:rgba(0,0,0,.65);border:1px solid rgba(34,211,238,.25);border-radius:8px;margin-bottom:.3rem;font-size:.68rem;flex-shrink:0}" +
       ".rnf-hud span{display:block;color:#64748b;font-size:.56rem;letter-spacing:.08em}" +
       ".rnf-hud b{color:#22d3ee;font-size:.92rem;font-variant-numeric:tabular-nums}" +
-      ".rnf-canvas-wrap{flex:1;min-height:0;position:relative;border:1px solid rgba(34,211,238,.3);border-radius:10px;overflow:hidden;background:#060a12;box-shadow:0 0 30px rgba(34,211,238,.08)}" +
-      ".rnf-canvas-wrap canvas{display:block;width:100%;height:100%}" +
+      ".rnf-canvas-wrap{flex:1;min-height:0;position:relative;border:1px solid rgba(34,211,238,.3);border-radius:10px;overflow:hidden;background:#060a12;box-shadow:0 0 30px rgba(34,211,238,.08);display:flex;align-items:center;justify-content:center}" +
+      ".rnf-canvas-wrap canvas{display:block;width:auto;height:auto;max-width:100%;max-height:100%;object-fit:contain}" +
       ".rnf-score-big{font-size:clamp(2rem,6vw,3rem);font-weight:900;color:#22d3ee;margin:.5rem 0;font-variant-numeric:tabular-nums;text-shadow:0 0 24px rgba(34,211,238,.5)}" +
       ".rnf-hint{font-size:.72rem;color:#64748b;margin-top:.35rem}" +
       ".rnf-diff-label{font-size:.72rem;color:#64748b;letter-spacing:.12em;margin:.65rem 0 .35rem}" +
