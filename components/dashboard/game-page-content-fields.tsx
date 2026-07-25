@@ -4,7 +4,11 @@ import { useRef, useState, type ChangeEvent } from "react";
 import Image from "next/image";
 import { ImageIcon, X } from "lucide-react";
 import { MAX_GALLERY_IMAGES, isValidGalleryImage } from "@/lib/game-page-content";
-import { MAX_COVER_BYTES, formatMaxSize } from "@/lib/upload-limits";
+import {
+  MAX_COVER_BYTES,
+  PRODUCTION_FORMDATA_SAFE_BYTES,
+  formatMaxSize,
+} from "@/lib/upload-limits";
 import { cn } from "@/lib/utils";
 
 type GalleryUploadFieldsProps = {
@@ -39,6 +43,7 @@ export function GalleryUploadFields({
   const totalCount = existingUrls.length + newFiles.length;
   const canAddMore = totalCount < MAX_GALLERY_IMAGES;
   const maxSizeLabel = formatMaxSize(MAX_COVER_BYTES);
+  const batchMaxLabel = formatMaxSize(PRODUCTION_FORMDATA_SAFE_BYTES);
 
   const handleSelect = (event: ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(event.target.files ?? []);
@@ -95,7 +100,8 @@ export function GalleryUploadFields({
         </p>
         <p className="mt-1 text-xs text-zinc-500">{hint}</p>
         <p className="mt-1 text-xs text-zinc-600">
-          單張最大 {maxSizeLabel} · 選好後請按「儲存變更」才會正式上傳
+          單張最大 {maxSizeLabel} · 本次新增合計建議不超過約 {batchMaxLabel} ·
+          選好後請按「儲存變更」才會正式上傳
         </p>
       </div>
 
