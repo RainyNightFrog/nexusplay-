@@ -1,8 +1,12 @@
 export const MAX_COVER_BYTES = 5 * 1024 * 1024; // 5 MB
 export const MAX_ZIP_BYTES = 50 * 1024 * 1024; // 50 MB（Supabase Free 方案上限）
 
-/** Vercel 正式站單次請求上限約 4.5 MB；留安全邊界供表單欄位與 multipart 開銷。 */
+/** Vercel 正式站若仍走 FormData 轉傳，單次請求上限約 4.5 MB。
+ * 現已改為客戶端直傳 Storage，一般流程不再套用此上限；僅保留給舊轉傳路徑防呆。 */
 export const PRODUCTION_UPLOAD_BYTES = 4 * 1024 * 1024; // 4 MB
+
+/** 仍走 FormData 的圖庫／Devlog 安全總量（留 multipart 開銷） */
+export const PRODUCTION_FORMDATA_SAFE_BYTES = 3.5 * 1024 * 1024;
 
 /** Zip bomb / DoS guards applied during server-side extraction */
 export const MAX_ZIP_ENTRIES = 500;

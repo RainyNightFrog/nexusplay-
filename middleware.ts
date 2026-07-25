@@ -1,6 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, NextRequest } from "next/server";
-import { shouldSkipAccountIntent } from "@/lib/account-intent";
+import {
+  isChooseRoleSwitchRequested,
+  shouldSkipAccountIntent,
+} from "@/lib/account-intent";
 import { resolveUserProfile, hasCreatorDashboardAccess } from "@/lib/auth-profile";
 import { resolveAdminAccess } from "@/lib/admin-auth";
 import { getAccountStatusRecord, isAccountRestricted } from "@/lib/account-status";
@@ -203,6 +206,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // matcher 含 /api/games/* 只為 play.* 閘道；主站 API 不可經 next-intl
+  // 改寫成 /zh-HK/api/...，否則會 404，遊戲頁會誤顯示「找不到遊戲」
+  if (request.nextUrl.pathname.startsWith("/api/")) {
+    return NextResponse.next();
+  }
+
   // 舊語系別名 → 預設繁中（zh-HK，localePrefix as-needed 會去掉前綴）
   if (
     request.nextUrl.pathname === "/zh-TW" ||
@@ -401,16 +410,16 @@ const oauthCode = effectiveRequest.nextUrl.searchParams.get("code");
   }
 
   if (pathnameWithoutLocale.startsWith("/dashboard")) {
-    const redirectUrl = effectiveRequest.nextUrl.clone();
-    redirectUrl.pathname = "/auth";
-    redirectUrl.searchParams.set(
-      "redirect",
+    const dashboardTarget =
       pathnameWithoutLocale === "/dashboard"
         ? "/dashboard"
-        : pathnameWithoutLocale
-    );
+        : pathnameWithoutLocale;
 
     if (!user) {
+      const redirectUrl = effectiveRequest.nextUrl.clone();
+      redirectUrl.pathname = "/auth";
+      redirectUrl.searchParams.set("redirect", dashboardTarget);
+      redirectUrl.searchParams.set("hint", "creator");
       return finalizeMiddlewareResponse(
         request,
         NextResponse.redirect(redirectUrl),
@@ -421,10 +430,15 @@ const oauthCode = effectiveRequest.nextUrl.searchParams.get("code");
     const profile = await resolveUserProfile(supabase, user);
 
     if (!hasCreatorDashboardAccess(user, profile.role, profile.is_admin)) {
-      redirectUrl.searchParams.set("hint", "creator");
+      // 已登入玩家改走身分選擇（switch=1），避免 auth↔dashboard 迴圈
+      const chooseRoleUrl = effectiveRequest.nextUrl.clone();
+      chooseRoleUrl.pathname = "/auth/choose-role";
+      chooseRoleUrl.search = "";
+      chooseRoleUrl.searchParams.set("redirect", dashboardTarget);
+      chooseRoleUrl.searchParams.set("switch", "1");
       return finalizeMiddlewareResponse(
         request,
-        NextResponse.redirect(redirectUrl),
+        NextResponse.redirect(chooseRoleUrl),
         rewriteUrl
       );
     }
@@ -463,6 +477,18 @@ const oauthCode = effectiveRequest.nextUrl.searchParams.get("code");
     }
 
     if (shouldSkipAccountIntent(user)) {
+      const allowSwitch = isChooseRoleSwitchRequested(
+        effectiveRequest.nextUrl.searchParams
+      );
+
+      if (allowSwitch) {
+        const profile = await resolveUserProfile(supabase, user);
+        // 已是創作者才略過；玩家可重選身分升級為創作者
+        if (!hasCreatorDashboardAccess(user, profile.role, profile.is_admin)) {
+          return finalizeMiddlewareResponse(request, response, rewriteUrl);
+        }
+      }
+
       const redirectUrl = effectiveRequest.nextUrl.clone();
       redirectUrl.pathname = sanitizeInternalRedirect(redirectTarget);
       redirectUrl.search = "";

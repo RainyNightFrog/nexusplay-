@@ -11,6 +11,27 @@ export function buildStoragePath(fileName: string) {
   return `${crypto.randomUUID()}-${sanitizeFileName(fileName)}`;
 }
 
+/** 瀏覽器直傳封面：covers/{userId}/{uuid}-name */
+export function buildCreatorCoverPath(userId: string, fileName: string) {
+  return `covers/${userId}/${crypto.randomUUID()}-${sanitizeFileName(fileName)}`;
+}
+
+export function isCreatorOwnedCoverPath(userId: string, path: string) {
+  const normalized = path.replace(/^\/+/, "");
+  return normalized.startsWith(`covers/${userId}/`);
+}
+
+export async function removeStoragePrefix(
+  supabase: SupabaseClient,
+  bucket: string,
+  prefix: string
+) {
+  const normalized = prefix.replace(/\/$/, "");
+  if (!normalized) return;
+  const paths = await listStorageFilesRecursive(supabase, bucket, normalized);
+  await removeStoragePaths(supabase, bucket, paths);
+}
+
 export function extractPublicStoragePath(publicUrl: string, bucket: string) {
   const marker = `/storage/v1/object/public/${bucket}/`;
   const index = publicUrl.indexOf(marker);
@@ -22,8 +43,23 @@ export function extractBuildPrefixFromPlayUrl(playUrl: string) {
   const path = extractPublicStoragePath(playUrl, FILES_BUCKET);
   if (!path) return null;
 
-  const match = path.match(/^builds\/([^/]+)\//);
-  return match ? `builds/${match[1]}` : null;
+  const parts = path.split("/").filter(Boolean);
+  if (parts[0] !== "builds" || parts.length < 2) return null;
+
+  const uuidRe =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+  // 新格式：builds/{userId}/{buildId}/...
+  if (parts.length >= 3 && uuidRe.test(parts[1]) && uuidRe.test(parts[2])) {
+    return `builds/${parts[1]}/${parts[2]}`;
+  }
+
+  // 舊格式：builds/{buildId}/...
+  if (uuidRe.test(parts[1])) {
+    return `builds/${parts[1]}`;
+  }
+
+  return null;
 }
 
 async function listStorageFilesRecursive(

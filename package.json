@@ -49,6 +49,7 @@
     "db:phase-m-platform": "node scripts/run-phase-m-platform.mjs",
     "db:daily-quests": "node scripts/run-daily-quests.mjs",
     "db:devlog-wishlist": "node scripts/run-devlog-wishlist.mjs",
+    "db:game-reject-notify": "node scripts/run-game-reject-notify.mjs",
     "db:new-ap-system": "node scripts/run-new-ap-system.mjs",
     "db:ap-store-expand": "node scripts/run-ap-store-expand.mjs",
     "db:phase-n-platform": "node scripts/run-phase-n-platform.mjs",

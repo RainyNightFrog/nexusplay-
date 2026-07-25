@@ -91,12 +91,14 @@ create policy "Public read game files"
   using (bucket_id = 'game-files');
 
 -- 已登入創作者可上傳（伺服器端 API 仍使用 service role，此政策防禦直接 REST 濫用）
+-- 直傳路徑必須綁定本人：covers/{uid}/…、builds/{uid}/…
 create policy "Creators upload game covers"
   on storage.objects
   for insert
   to authenticated
   with check (
     bucket_id = 'game-covers'
+    and name like ('covers/' || auth.uid()::text || '/%')
     and exists (
       select 1 from public.profiles
       where profiles.id = auth.uid() and profiles.role = 'creator'
@@ -109,32 +111,69 @@ create policy "Creators upload game files"
   to authenticated
   with check (
     bucket_id = 'game-files'
+    and name like ('builds/' || auth.uid()::text || '/%')
     and exists (
       select 1 from public.profiles
       where profiles.id = auth.uid() and profiles.role = 'creator'
     )
   );
 
--- 創作者可更新/刪除自己 bucket 內的物件（依 owner 欄位）
+-- 創作者可更新/刪除：本人路徑，或舊版上傳（僅 owner 相符）
 create policy "Creators update own game covers"
   on storage.objects
   for update
   to authenticated
-  using (bucket_id = 'game-covers' and owner = auth.uid())
-  with check (bucket_id = 'game-covers' and owner = auth.uid());
+  using (
+    bucket_id = 'game-covers'
+    and (
+      name like ('covers/' || auth.uid()::text || '/%')
+      or owner = auth.uid()
+    )
+  )
+  with check (
+    bucket_id = 'game-covers'
+    and (
+      name like ('covers/' || auth.uid()::text || '/%')
+      or owner = auth.uid()
+    )
+  );
 
 create policy "Creators update own game files"
   on storage.objects
   for update
   to authenticated
-  using (bucket_id = 'game-files' and owner = auth.uid())
-  with check (bucket_id = 'game-files' and owner = auth.uid());
+  using (
+    bucket_id = 'game-files'
+    and (
+      name like ('builds/' || auth.uid()::text || '/%')
+      or owner = auth.uid()
+    )
+  )
+  with check (
+    bucket_id = 'game-files'
+    and (
+      name like ('builds/' || auth.uid()::text || '/%')
+      or owner = auth.uid()
+    )
+  );
 
 create policy "Creators delete own game files"
   on storage.objects
   for delete
   to authenticated
   using (
-    bucket_id in ('game-files', 'game-covers')
-    and owner = auth.uid()
+    (
+      bucket_id = 'game-covers'
+      and (
+        name like ('covers/' || auth.uid()::text || '/%')
+        or owner = auth.uid()
+      )
+    )
+    or (
+      bucket_id = 'game-files'
+      and (
+        name like ('builds/' || auth.uid()::text || '/%')
+        or owner = auth.uid()
+      )
+    )
   );

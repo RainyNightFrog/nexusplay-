@@ -100,6 +100,9 @@ export async function shouldCreateInAppNotification(
   userId: string,
   kind: UserNotificationKind
 ) {
+  // 審核結果為平台重要狀態，預設必送
+  if (kind === "game_rejected") return true;
+
   const prefs = await readNotificationPrefs(userId);
 
   if (kind === "tip_received") return prefs.tipNotifyInApp;
@@ -111,6 +114,12 @@ export async function shouldSendPushNotification(
   userId: string,
   kind: UserNotificationKind
 ) {
+  // 審核結果預設跟隨總開關，不另設可關閉細項
+  if (kind === "game_rejected") {
+    const prefs = await readNotificationPrefs(userId);
+    return prefs.pushNotifyEnabled;
+  }
+
   const prefs = await readNotificationPrefs(userId);
   if (!prefs.pushNotifyEnabled) return false;
 

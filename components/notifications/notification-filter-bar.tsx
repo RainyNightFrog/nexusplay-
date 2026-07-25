@@ -15,6 +15,7 @@ type NotificationFilterBarProps = {
     forum: string;
     newGame: string;
     wishlistDevlog: string;
+    rejected: string;
   };
   className?: string;
   size?: "sm" | "md";
@@ -26,6 +27,7 @@ const FILTERS: NotificationFilter[] = [
   "forum_reply",
   "followed_new_game",
   "wishlist_devlog",
+  "game_rejected",
 ];
 
 export function NotificationFilterBar({
@@ -41,6 +43,7 @@ export function NotificationFilterBar({
     if (filter === "tip_received") return labels.tip;
     if (filter === "forum_reply") return labels.forum;
     if (filter === "wishlist_devlog") return labels.wishlistDevlog;
+    if (filter === "game_rejected") return labels.rejected;
     return labels.newGame;
   }
 

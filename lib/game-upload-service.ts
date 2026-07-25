@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { extractAndUploadGameBuild } from "@/lib/extract-game-zip";
+import { resolveDirectBuildUpload, resolveDirectCoverUpload } from "@/lib/direct-upload-resolve";
 import { parseMonetizationFromFormData, parsePublishStatus } from "@/lib/game-publish";
 import { parsePricingFromFormData } from "@/lib/game-pricing";
 import {
@@ -35,44 +36,11 @@ import {
 import { resolveGameSlugForSave } from "@/lib/game-slug";
 import { resolvePlatformFeePercentForSave } from "@/lib/tip-fee-policy";
 import { isZipBuffer, isZipFile } from "@/lib/zip-file-validation";
-
-const COVERS_BUCKET = "game-covers";
-const FILES_BUCKET = "game-files";
+import { COVERS_BUCKET, FILES_BUCKET, uploadBuffer, removeStoragePaths, removeStoragePrefix } from "@/lib/game-storage";
 
 export type GameUploadResult =
   | { ok: true; game: Record<string, unknown> }
   | { ok: false; status: number; error: string };
-
-function sanitizeFileName(name: string) {
-  return name.replace(/[^\w.\-()]/g, "_");
-}
-
-function buildStoragePath(fileName: string) {
-  return `${crypto.randomUUID()}-${sanitizeFileName(fileName)}`;
-}
-
-async function uploadBuffer(
-  supabase: SupabaseClient,
-  bucket: string,
-  fileName: string,
-  buffer: ArrayBuffer,
-  contentType: string
-) {
-  const path = buildStoragePath(fileName);
-
-  const { error } = await supabase.storage.from(bucket).upload(path, buffer, {
-    cacheControl: "3600",
-    upsert: false,
-    contentType,
-  });
-
-  if (error) {
-    throw new Error(`Storage 上傳失敗（${bucket}）：${error.message}`);
-  }
-
-  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-  return { path, publicUrl: data.publicUrl };
-}
 
 function mapUploadError(error: unknown): GameUploadResult {
   const message =
@@ -125,13 +93,20 @@ export async function uploadCreatorGameFromFormData(params: {
   );
   const coverFile = formData.get("cover");
   const gameZipFile = formData.get("gameZip");
+  const directBuildId = String(formData.get("directBuildId") ?? "").trim();
+  const directBuildToken = String(formData.get("directBuildToken") ?? "").trim();
+  const directIndexPath = String(formData.get("directIndexPath") ?? "").trim();
+  const directCoverPath = String(formData.get("directCoverPath") ?? "").trim();
+  const useDirectBuild = Boolean(
+    directBuildId && directBuildToken && directIndexPath
+  );
   const publishStatus = parsePublishStatus(formData.get("publishStatus"));
   const isPublic = publishStatus === "public";
 
   if (!title) {
     return { ok: false, status: 400, error: "請輸入遊戲名稱" };
   }
-  if (!(gameZipFile instanceof File)) {
+  if (!useDirectBuild && !(gameZipFile instanceof File)) {
     return { ok: false, status: 400, error: "請上傳遊戲壓縮檔" };
   }
 
@@ -151,7 +126,7 @@ export async function uploadCreatorGameFromFormData(params: {
     if (!finalCategory) {
       return { ok: false, status: 400, error: "請選擇遊戲分類" };
     }
-    if (!(coverFile instanceof File)) {
+    if (!directCoverPath && !(coverFile instanceof File)) {
       return { ok: false, status: 400, error: "請上傳遊戲封面圖" };
     }
   }
@@ -176,25 +151,27 @@ export async function uploadCreatorGameFromFormData(params: {
     }
   }
 
-  if (!isZipFile(gameZipFile)) {
-    return { ok: false, status: 400, error: "遊戲檔案僅支援 .zip 壓縮檔" };
-  }
-  if (gameZipFile.size > MAX_ZIP_BYTES) {
-    return {
-      ok: false,
-      status: 400,
-      error: `遊戲 zip 不可超過 ${formatMaxSize(MAX_ZIP_BYTES)}（目前 ${formatMaxSize(gameZipFile.size)}）`,
-    };
-  }
-  if (
-    process.env.VERCEL &&
-    gameZipFile.size > PRODUCTION_UPLOAD_BYTES
-  ) {
-    return {
-      ok: false,
-      status: 413,
-      error: `正式站上傳 zip 請小於 ${formatMaxSize(PRODUCTION_UPLOAD_BYTES)}（目前 ${formatMaxSize(gameZipFile.size)}）。請壓縮後再試。`,
-    };
+  if (!useDirectBuild) {
+    if (!isZipFile(gameZipFile as File)) {
+      return { ok: false, status: 400, error: "遊戲檔案僅支援 .zip 壓縮檔" };
+    }
+    if ((gameZipFile as File).size > MAX_ZIP_BYTES) {
+      return {
+        ok: false,
+        status: 400,
+        error: `遊戲 zip 不可超過 ${formatMaxSize(MAX_ZIP_BYTES)}（目前 ${formatMaxSize((gameZipFile as File).size)}）`,
+      };
+    }
+    if (
+      process.env.VERCEL &&
+      (gameZipFile as File).size > PRODUCTION_UPLOAD_BYTES
+    ) {
+      return {
+        ok: false,
+        status: 413,
+        error: `正式站請使用直傳模式（ZIP 上限 ${formatMaxSize(MAX_ZIP_BYTES)}）。目前經由伺服器轉傳的上限為 ${formatMaxSize(PRODUCTION_UPLOAD_BYTES)}。`,
+      };
+    }
   }
 
   const monetization = parseMonetizationFromFormData(formData);
@@ -228,6 +205,13 @@ export async function uploadCreatorGameFromFormData(params: {
   const metadataResult = parsePublishMetadataFromFormData(formData);
   if (!metadataResult.ok) {
     return { ok: false, status: 400, error: metadataResult.error };
+  }
+  if (isPublic && metadataResult.data.aiDisclosed === null) {
+    return {
+      ok: false,
+      status: 400,
+      error: "公開發布前請完成 AI 內容申報",
+    };
   }
 
   const slugResult = resolveGameSlugForSave({
@@ -265,26 +249,80 @@ export async function uploadCreatorGameFromFormData(params: {
   const supabase = params.supabase ?? createServerSupabase();
   let coverPath: string | null = null;
   let buildPaths: string[] = [];
+  let directBuildPrefix: string | null = null;
+  /** 直傳封面失敗回滾時要刪；伺服器轉傳封面同理 */
+  let shouldCleanupCover = false;
+
+  const cleanupPartialUpload = async () => {
+    if (coverPath && shouldCleanupCover) {
+      await removeStoragePaths(supabase, COVERS_BUCKET, [coverPath]);
+    }
+    if (buildPaths.length > 0) {
+      await removeStoragePaths(supabase, FILES_BUCKET, buildPaths);
+    }
+    if (directBuildPrefix) {
+      await removeStoragePrefix(supabase, FILES_BUCKET, directBuildPrefix);
+    }
+  };
 
   try {
-    const coverBuffer = hasCoverFile
-      ? await coverFile.arrayBuffer()
-      : createDraftPlaceholderCoverBuffer();
-    const coverUpload = await uploadBuffer(
-      supabase,
-      COVERS_BUCKET,
-      hasCoverFile ? coverFile.name : "draft-placeholder.png",
-      coverBuffer,
-      hasCoverFile ? coverFile.type || "image/jpeg" : "image/png"
-    );
-    coverPath = coverUpload.path;
+    let coverPublicUrl: string;
 
-    const zipBuffer = await gameZipFile.arrayBuffer();
-    if (!isZipBuffer(zipBuffer)) {
-      return { ok: false, status: 400, error: "遊戲檔案僅支援 .zip 壓縮檔" };
+    if (directCoverPath) {
+      const resolvedCover = await resolveDirectCoverUpload(
+        supabase,
+        directCoverPath,
+        params.creatorId
+      );
+      if (!resolvedCover.ok) {
+        return { ok: false, status: 400, error: resolvedCover.error };
+      }
+      coverPath = resolvedCover.path;
+      coverPublicUrl = resolvedCover.publicUrl;
+      shouldCleanupCover = true;
+    } else {
+      const coverBuffer = hasCoverFile
+        ? await (coverFile as File).arrayBuffer()
+        : createDraftPlaceholderCoverBuffer();
+      const coverUpload = await uploadBuffer(
+        supabase,
+        COVERS_BUCKET,
+        hasCoverFile ? (coverFile as File).name : "draft-placeholder.png",
+        coverBuffer,
+        hasCoverFile
+          ? (coverFile as File).type || "image/jpeg"
+          : "image/png"
+      );
+      coverPath = coverUpload.path;
+      coverPublicUrl = coverUpload.publicUrl;
+      shouldCleanupCover = true;
     }
-    const buildUpload = await extractAndUploadGameBuild(supabase, zipBuffer);
-    buildPaths = buildUpload.uploadedPaths;
+
+    let playUrl: string;
+
+    if (useDirectBuild) {
+      const resolvedBuild = await resolveDirectBuildUpload(supabase, {
+        userId: params.creatorId,
+        buildId: directBuildId,
+        indexPath: directIndexPath,
+        token: directBuildToken,
+      });
+      if (!resolvedBuild.ok) {
+        await cleanupPartialUpload();
+        return { ok: false, status: 400, error: resolvedBuild.error };
+      }
+      playUrl = resolvedBuild.playUrl;
+      directBuildPrefix = resolvedBuild.prefix;
+    } else {
+      const zipBuffer = await (gameZipFile as File).arrayBuffer();
+      if (!isZipBuffer(zipBuffer)) {
+        await cleanupPartialUpload();
+        return { ok: false, status: 400, error: "遊戲檔案僅支援 .zip 壓縮檔" };
+      }
+      const buildUpload = await extractAndUploadGameBuild(supabase, zipBuffer);
+      buildPaths = buildUpload.uploadedPaths;
+      playUrl = buildUpload.playUrl;
+    }
 
     let galleryUrls: string[] = [];
     try {
@@ -294,6 +332,7 @@ export async function uploadCreatorGameFromFormData(params: {
         contentError instanceof Error
           ? contentError.message
           : "處理遊戲介紹圖片失敗";
+      await cleanupPartialUpload();
       return { ok: false, status: 400, error: message };
     }
 
@@ -304,8 +343,8 @@ export async function uploadCreatorGameFromFormData(params: {
         slug: slugResult.slug,
         description: finalDescription,
         category: finalCategory,
-        cover_url: coverUpload.publicUrl,
-        game_url: buildUpload.playUrl,
+        cover_url: coverPublicUrl,
+        game_url: playUrl,
         creator_id: params.creatorId,
         publish_status: monetization.data.publish_status,
         tips_enabled: monetization.data.tips_enabled,
@@ -329,6 +368,7 @@ export async function uploadCreatorGameFromFormData(params: {
 
     if (error) {
       if (error.message.includes("games_slug_unique_idx") || error.code === "23505") {
+        await cleanupPartialUpload();
         return {
           ok: false,
           status: 409,
@@ -340,19 +380,7 @@ export async function uploadCreatorGameFromFormData(params: {
 
     return { ok: true, game: data as Record<string, unknown> };
   } catch (error) {
-    if (coverPath) {
-      await supabase.storage
-        .from(COVERS_BUCKET)
-        .remove([coverPath])
-        .catch(() => undefined);
-    }
-    if (buildPaths.length > 0) {
-      await supabase.storage
-        .from(FILES_BUCKET)
-        .remove(buildPaths)
-        .catch(() => undefined);
-    }
-
+    await cleanupPartialUpload();
     return mapUploadError(error);
   }
 }

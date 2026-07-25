@@ -15,6 +15,7 @@ export type AdminGameRecord = {
   created_at: string;
   publish_status: "draft" | "public";
   status: GameApprovalStatus;
+  rejection_reason?: string | null;
 };
 
 export type FeedbackCategory =
@@ -54,7 +55,7 @@ export async function listAdminGames(
   let query = supabase
     .from("games")
     .select(
-      "id, title, description, category, cover_url, creator_id, created_at, publish_status, status"
+      "id, title, description, category, cover_url, creator_id, created_at, publish_status, status, rejection_reason"
     )
     .order("created_at", { ascending: false });
 
@@ -80,6 +81,9 @@ export async function updateGameApproval(
 
   if (status === "rejected") {
     updates.publish_status = "draft";
+    updates.rejection_reason = details?.trim() || null;
+  } else {
+    updates.rejection_reason = null;
   }
 
   const { data, error } = await supabase
@@ -87,7 +91,7 @@ export async function updateGameApproval(
     .update(updates)
     .eq("id", gameId)
     .select(
-      "id, title, description, category, cover_url, creator_id, created_at, publish_status, status"
+      "id, title, description, category, cover_url, creator_id, created_at, publish_status, status, rejection_reason"
     )
     .maybeSingle();
 

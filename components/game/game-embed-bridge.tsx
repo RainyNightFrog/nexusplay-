@@ -166,10 +166,28 @@ export function GameEmbedBridge({
       const requestId = data.requestId;
       if (!requestId || !data.path || !data.method) return;
 
+      // 必須用數字遊戲 id（與 iframe ?gid=／embed 路徑一致）；路由 slug 不可拿來比對
+      const numericGameId = String(gameId).trim();
+      if (!/^\d+$/.test(numericGameId)) {
+        respondApiProxy(requestId, {
+          ok: false,
+          status: 403,
+          error: "不允許的 API 路徑",
+        });
+        return;
+      }
+
+      let pathname = data.path;
+      try {
+        pathname = new URL(data.path, "https://rainynightfrog.local").pathname;
+      } catch {
+        pathname = data.path.split("?")[0] || data.path;
+      }
+
       const allowedPath = new RegExp(
-        `^/api/games/${gameId}/(?:save(?:/import-legacy)?|leaderboard(?:\\?.*)?)$`
+        `^/api/games/${numericGameId}/(?:save(?:/import-legacy)?|leaderboard)$`
       );
-      if (!allowedPath.test(data.path)) {
+      if (!allowedPath.test(pathname)) {
         respondApiProxy(requestId, {
           ok: false,
           status: 403,

@@ -34,6 +34,7 @@ import {
 import { sanitizePlainText } from "@/lib/sanitize-plain";
 import { sanitizeRichHtml } from "@/lib/sanitize-rich-html";
 import { createServerSupabase } from "@/lib/supabase-server";
+import { resolveDirectBuildUpload, resolveDirectCoverUpload } from "@/lib/direct-upload-resolve";
 import {
   formatMaxSize,
   MAX_CATEGORY_LENGTH,
@@ -110,6 +111,9 @@ function buildCreatorUpdatePayload(
 
   if (nextApprovalStatus) {
     payload.status = nextApprovalStatus;
+    if (nextApprovalStatus === "pending") {
+      payload.rejection_reason = null;
+    }
   }
 
   return payload;
@@ -233,12 +237,20 @@ export async function patchCreatorGame(input: {
 
   const hasCover = coverFile instanceof File && coverFile.size > 0;
   const hasZip = gameZipFile instanceof File && gameZipFile.size > 0;
+  const directBuildId = String(formData.get("directBuildId") ?? "").trim();
+  const directBuildToken = String(formData.get("directBuildToken") ?? "").trim();
+  const directIndexPath = String(formData.get("directIndexPath") ?? "").trim();
+  const directCoverPath = String(formData.get("directCoverPath") ?? "").trim();
+  const useDirectBuild = Boolean(
+    directBuildId && directBuildToken && directIndexPath
+  );
+  const useDirectCover = Boolean(directCoverPath);
 
-  if (isPublic && !hasCover && !record.cover_url) {
+  if (isPublic && !hasCover && !useDirectCover && !record.cover_url) {
     return NextResponse.json({ error: "請上傳遊戲封面圖" }, { status: 400 });
   }
 
-  if (publishVersion && !hasZip) {
+  if (publishVersion && !hasZip && !useDirectBuild) {
     return NextResponse.json(
       { error: "發布新版本需上傳新的 .zip 遊戲包" },
       { status: 400 }
@@ -281,7 +293,7 @@ export async function patchCreatorGame(input: {
     if (process.env.VERCEL && gameZipFile.size > PRODUCTION_UPLOAD_BYTES) {
       return NextResponse.json(
         {
-          error: `正式站上傳 zip 請小於 ${formatMaxSize(PRODUCTION_UPLOAD_BYTES)}（目前 ${formatMaxSize(gameZipFile.size)}）。請壓縮後再試。`,
+          error: `正式站請使用直傳模式（ZIP 上限 ${formatMaxSize(MAX_ZIP_BYTES)}）。目前經由伺服器轉傳的上限為 ${formatMaxSize(PRODUCTION_UPLOAD_BYTES)}。`,
         },
         { status: 413 }
       );
@@ -291,6 +303,12 @@ export async function patchCreatorGame(input: {
   const metadataResult = parsePublishMetadataFromFormData(formData);
   if (!metadataResult.ok) {
     return NextResponse.json({ error: metadataResult.error }, { status: 400 });
+  }
+  if (isPublic && metadataResult.data.aiDisclosed === null) {
+    return NextResponse.json(
+      { error: "公開發布前請完成 AI 內容申報" },
+      { status: 400 }
+    );
   }
 
   const metadataPayload: Record<string, unknown> = {
@@ -314,9 +332,24 @@ export async function patchCreatorGame(input: {
   let newCoverUrl = record.cover_url;
   let newGameUrl = record.game_url;
   let newBuildPaths: string[] = [];
+  let directBuildPrefix: string | null = null;
 
   try {
-    if (hasCover) {
+    if (useDirectCover) {
+      const resolvedCover = await resolveDirectCoverUpload(
+        supabase,
+        directCoverPath,
+        user.id
+      );
+      if (!resolvedCover.ok) {
+        return NextResponse.json(
+          { error: resolvedCover.error },
+          { status: 400 }
+        );
+      }
+      newCoverPath = resolvedCover.path;
+      newCoverUrl = resolvedCover.publicUrl;
+    } else if (hasCover) {
       const coverBuffer = await coverFile.arrayBuffer();
       const coverUpload = await uploadBuffer(
         supabase,
@@ -329,9 +362,30 @@ export async function patchCreatorGame(input: {
       newCoverUrl = coverUpload.publicUrl;
     }
 
-    if (hasZip) {
+    if (useDirectBuild) {
+      const resolvedBuild = await resolveDirectBuildUpload(supabase, {
+        userId: user.id,
+        buildId: directBuildId,
+        indexPath: directIndexPath,
+        token: directBuildToken,
+      });
+      if (!resolvedBuild.ok) {
+        if (newCoverPath) {
+          await removeStoragePaths(supabase, COVERS_BUCKET, [newCoverPath]);
+        }
+        return NextResponse.json(
+          { error: resolvedBuild.error },
+          { status: 400 }
+        );
+      }
+      newGameUrl = resolvedBuild.playUrl;
+      directBuildPrefix = resolvedBuild.prefix;
+    } else if (hasZip) {
       const zipBuffer = await gameZipFile.arrayBuffer();
       if (!isZipBuffer(zipBuffer)) {
+        if (newCoverPath) {
+          await removeStoragePaths(supabase, COVERS_BUCKET, [newCoverPath]);
+        }
         return NextResponse.json(
           { error: "遊戲檔案僅支援 .zip 壓縮檔" },
           { status: 400 }
@@ -365,6 +419,16 @@ export async function patchCreatorGame(input: {
         contentError instanceof Error
           ? contentError.message
           : "處理遊戲介紹圖片失敗";
+      if (newCoverPath) {
+        await removeStoragePaths(supabase, COVERS_BUCKET, [newCoverPath]);
+      }
+      if (newBuildPaths.length > 0) {
+        await removeStoragePaths(supabase, FILES_BUCKET, newBuildPaths);
+      }
+      if (directBuildPrefix) {
+        const { removeStoragePrefix } = await import("@/lib/game-storage");
+        await removeStoragePrefix(supabase, FILES_BUCKET, directBuildPrefix);
+      }
       return NextResponse.json({ error: message }, { status: 400 });
     }
 
@@ -428,11 +492,19 @@ export async function patchCreatorGame(input: {
       throw new Error(`資料庫更新失敗：${updateError.message}${hint}`);
     }
 
-    if (hasCover && oldCoverPath && oldCoverPath !== newCoverPath) {
+    if (
+      (hasCover || useDirectCover) &&
+      oldCoverPath &&
+      oldCoverPath !== newCoverPath
+    ) {
       await removeStoragePaths(supabase, COVERS_BUCKET, [oldCoverPath]);
     }
 
-    if (hasZip && oldGameUrl && oldGameUrl !== newGameUrl) {
+    if (
+      (hasZip || useDirectBuild) &&
+      oldGameUrl &&
+      oldGameUrl !== newGameUrl
+    ) {
       const oldZipPath = extractPublicStoragePath(oldGameUrl, FILES_BUCKET);
       if (oldZipPath?.toLowerCase().endsWith(".zip")) {
         await removeStoragePaths(supabase, FILES_BUCKET, [oldZipPath]);
@@ -463,6 +535,10 @@ export async function patchCreatorGame(input: {
     }
     if (newBuildPaths.length > 0) {
       await removeStoragePaths(supabase, FILES_BUCKET, newBuildPaths);
+    }
+    if (directBuildPrefix) {
+      const { removeStoragePrefix } = await import("@/lib/game-storage");
+      await removeStoragePrefix(supabase, FILES_BUCKET, directBuildPrefix);
     }
     throw error;
   }

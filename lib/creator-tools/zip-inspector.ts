@@ -2,7 +2,7 @@ import JSZip from "jszip";
 import {
   MAX_ZIP_ENTRIES,
   MAX_UNCOMPRESSED_TOTAL_BYTES,
-  PRODUCTION_UPLOAD_BYTES,
+  MAX_ZIP_BYTES,
 } from "@/lib/upload-limits";
 import {
   findGameEntryPath,
@@ -123,10 +123,10 @@ export async function inspectGameZipFile(file: File): Promise<ZipInspectorReport
     const warnings: ZipInspectorWarning[] = [];
     const entryPath = validation.entryPath;
 
-    if (file.size > PRODUCTION_UPLOAD_BYTES * 0.85) {
+    if (file.size > MAX_ZIP_BYTES * 0.85) {
       warnings.push({
         id: "nearProductionLimit",
-        severity: file.size > PRODUCTION_UPLOAD_BYTES ? "critical" : "warning",
+        severity: file.size > MAX_ZIP_BYTES ? "critical" : "warning",
         meta: { sizeMb: Math.round((file.size / (1024 * 1024)) * 10) / 10 },
       });
     }

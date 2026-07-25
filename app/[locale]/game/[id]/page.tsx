@@ -376,18 +376,22 @@ function GamePageContent() {
 
     const draftSaved = searchParams.get("draftSaved") === "1";
     const published = searchParams.get("published") === "1";
+    const submitted = searchParams.get("submitted") === "1";
 
-    if (!draftSaved && !published) return;
+    if (!draftSaved && !published && !submitted) return;
 
     showToast(
       draftSaved
         ? td("draftSavedSuccessDesc", { title: game.title })
-        : td("publicLiveSuccessDesc", { title: game.title, id: game.id })
+        : submitted
+          ? td("publicLiveSuccessDesc", { title: game.title, id: game.id })
+          : td("publicAlreadyLiveDesc", { title: game.title })
     );
 
     const url = new URL(window.location.href);
     url.searchParams.delete("draftSaved");
     url.searchParams.delete("published");
+    url.searchParams.delete("submitted");
     window.history.replaceState({}, "", url.toString());
   }, [game?.title, game?.id, searchParams, showToast, td]);
 
@@ -918,7 +922,7 @@ function GamePageContent() {
                     )}
                     <GameEmbedBridge
                       iframeRef={iframeRef}
-                      gameId={gameId}
+                      gameId={String(game.id)}
                       expanded={showFullscreen}
                       creatorId={game.creatorId}
                       onExpandRequest={() => setShowFullscreen(true)}

@@ -3,9 +3,23 @@ import { sanitizeInternalRedirect } from "@/lib/safe-redirect";
 
 export type AccountIntent = UserRole;
 
-export function buildChooseRolePath(redirectTo: string) {
+export function buildChooseRolePath(
+  redirectTo: string,
+  options?: { allowSwitch?: boolean }
+) {
   const safeRedirect = sanitizeInternalRedirect(redirectTo);
-  return `/auth/choose-role?redirect=${encodeURIComponent(safeRedirect)}`;
+  const params = new URLSearchParams({ redirect: safeRedirect });
+  if (options?.allowSwitch) {
+    params.set("switch", "1");
+  }
+  return `/auth/choose-role?${params.toString()}`;
+}
+
+/** 已登入玩家要轉成創作者／進入後台時，允許重開身分選擇頁 */
+export function isChooseRoleSwitchRequested(
+  searchParams: URLSearchParams | { get(name: string): string | null }
+) {
+  return searchParams.get("switch") === "1";
 }
 
 export function shouldSkipAccountIntent(user: {

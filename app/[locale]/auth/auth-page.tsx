@@ -134,14 +134,21 @@ export default function AuthPage() {
       void supabase.auth.getSession().then(({ data: { session } }) => {
         if (window.sessionStorage.getItem(OAUTH_IN_FLIGHT_KEY) === "1") return;
         if (session?.user) {
-          router.replace(redirectTo);
+          // hint=creator：改走可升級身分頁，避免已登入玩家在 auth↔dashboard 之間迴圈
+          if (hint === "creator") {
+            router.replace(
+              buildChooseRolePath(redirectTo, { allowSwitch: true })
+            );
+          } else {
+            router.replace(redirectTo);
+          }
           router.refresh();
         }
       });
     }, 800);
 
     return () => window.clearTimeout(timeout);
-  }, [callbackError, redirectTo, router, urlMode]);
+  }, [callbackError, hint, redirectTo, router, urlMode]);
 
   useEffect(() => {
     const remembered = readRememberedCredentials();
@@ -196,7 +203,9 @@ export default function AuthPage() {
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (user && shouldSkipAccountIntent(user)) {
+    if (hint === "creator") {
+      router.push(buildChooseRolePath(redirectTo, { allowSwitch: true }));
+    } else if (user && shouldSkipAccountIntent(user)) {
       router.push(redirectTo);
     } else {
       router.push(buildChooseRolePath(redirectTo));

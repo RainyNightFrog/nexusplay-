@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/card";
 import type { UserRole } from "@/lib/auth";
 import {
+  isChooseRoleSwitchRequested,
   readAccountIntentFromMetadata,
   shouldSkipAccountIntent,
 } from "@/lib/account-intent";
@@ -33,6 +34,7 @@ export default function ChooseRolePage() {
     searchParams.get("redirect"),
     "/"
   );
+  const allowSwitch = isChooseRoleSwitchRequested(searchParams);
 
   const [intent, setIntent] = useState<UserRole>("player");
   const [loading, setLoading] = useState(true);
@@ -51,16 +53,39 @@ export default function ChooseRolePage() {
       if (cancelled) return;
 
       if (!user) {
-        router.replace(`/auth?redirect=${encodeURIComponent(redirectTo)}`);
+        router.replace(
+          `/auth?redirect=${encodeURIComponent(redirectTo)}&hint=creator`
+        );
         return;
       }
 
       if (shouldSkipAccountIntent(user)) {
-        router.replace(redirectTo);
+        if (!allowSwitch) {
+          router.replace(redirectTo);
+          return;
+        }
+
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role, is_admin")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (cancelled) return;
+
+        const alreadyCreator =
+          profile?.is_admin === true || profile?.role === "creator";
+        if (alreadyCreator) {
+          router.replace(redirectTo);
+          return;
+        }
+
+        setIntent("creator");
+        setLoading(false);
         return;
       }
 
-      setIntent(readAccountIntentFromMetadata(user));
+      setIntent(allowSwitch ? "creator" : readAccountIntentFromMetadata(user));
       setLoading(false);
     }
 
@@ -74,7 +99,7 @@ export default function ChooseRolePage() {
     return () => {
       cancelled = true;
     };
-  }, [redirectTo, router, t]);
+  }, [allowSwitch, redirectTo, router, t]);
 
   async function handleContinue() {
     setSubmitting(true);
@@ -115,10 +140,9 @@ export default function ChooseRolePage() {
   const options: Array<{
     value: UserRole;
     icon: typeof Gamepad2;
-    accent: "cyan" | "violet";
   }> = [
-    { value: "player", icon: Gamepad2, accent: "cyan" },
-    { value: "creator", icon: Wand2, accent: "violet" },
+    { value: "player", icon: Gamepad2 },
+    { value: "creator", icon: Wand2 },
   ];
 
   return (
@@ -141,22 +165,26 @@ export default function ChooseRolePage() {
               {t("badge")}
             </div>
             <h1 className="text-3xl font-bold tracking-tight text-white">
-              {t("title")}
+              {allowSwitch ? t("switchTitle") : t("title")}
             </h1>
             <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-              {t("description")}
+              {allowSwitch ? t("switchDescription") : t("description")}
             </p>
           </div>
 
           <Card className="border-white/10 bg-zinc-900/80 py-0 shadow-2xl backdrop-blur-xl">
             <CardHeader className="gap-2 px-6 pt-6 pb-0 text-center">
-              <CardTitle className="text-lg text-white">{t("cardTitle")}</CardTitle>
-              <CardDescription>{t("cardDesc")}</CardDescription>
+              <CardTitle className="text-lg text-white">
+                {allowSwitch ? t("switchCardTitle") : t("cardTitle")}
+              </CardTitle>
+              <CardDescription>
+                {allowSwitch ? t("switchCardDesc") : t("cardDesc")}
+              </CardDescription>
             </CardHeader>
 
             <CardContent className="space-y-4 px-6 pt-5 pb-6">
               <div className="grid gap-3 sm:grid-cols-2">
-                {options.map(({ value, icon: Icon, accent }) => {
+                {options.map(({ value, icon: Icon }) => {
                   const selected = intent === value;
                   const isCreator = value === "creator";
 
@@ -228,7 +256,9 @@ export default function ChooseRolePage() {
                 )}
               </Button>
 
-              <p className="text-center text-xs text-zinc-500">{t("footnote")}</p>
+              <p className="text-center text-xs text-zinc-500">
+                {allowSwitch ? t("switchFootnote") : t("footnote")}
+              </p>
             </CardContent>
           </Card>
         </motion.div>

@@ -1,14 +1,23 @@
 import type { GamePublishStatus } from "@/lib/game-publish";
 import type { GamePublishMetadata } from "@/lib/game-metadata";
 import { appendPublishMetadataToFormData } from "@/lib/game-metadata";
+import { appendPricingToFormData, type GamePricingValues } from "@/lib/game-pricing";
+import { readApiJson } from "@/lib/fetch-api-json";
+import {
+  createDirectUploadSession,
+  uploadCoverDirect,
+  uploadZipBuildDirect,
+} from "@/lib/client-direct-upload";
 
 import {
   MAX_DEVLOG_CONTENT_LENGTH,
   MAX_DEVLOG_TITLE_LENGTH,
   MAX_GALLERY_IMAGES,
 } from "@/lib/game-page-content";
-import { appendPricingToFormData, type GamePricingValues } from "@/lib/game-pricing";
-import { readApiJson } from "@/lib/fetch-api-json";
+import {
+  formatMaxSize,
+  PRODUCTION_FORMDATA_SAFE_BYTES,
+} from "@/lib/upload-limits";
 
 export type UpdateGameInput = {
   title: string;
@@ -40,6 +49,7 @@ export type UpdateGameResult = {
     creator_id: string | null;
     created_at: string;
     publish_status: GamePublishStatus;
+    status?: "pending" | "approved" | "rejected";
     tips_enabled: boolean;
     suggested_tip_amount: number | null;
     gallery_urls?: unknown;
@@ -65,6 +75,7 @@ export type ManageGameRecord = UpdateGameResult["game"] & {
   isOrphan?: boolean;
   platform_fee_percent?: number | null;
   is_upcoming?: boolean;
+  rejection_reason?: string | null;
 };
 
 function appendMonetizationFields(
@@ -111,6 +122,69 @@ export async function updateGame(
 ): Promise<UpdateGameResult> {
   onProgress?.("正在準備更新...");
 
+  const formDataBytes =
+    (input.galleryFiles ?? []).reduce((sum, file) => sum + file.size, 0) +
+    (input.devlogImageFiles ?? []).reduce((sum, file) => sum + file.size, 0);
+
+  if (formDataBytes > PRODUCTION_FORMDATA_SAFE_BYTES) {
+    throw new Error(
+      `圖庫／更新配圖合計不可超過約 ${formatMaxSize(PRODUCTION_FORMDATA_SAFE_BYTES)}（目前 ${formatMaxSize(formDataBytes)}）。請減少張數或壓縮後再試。`
+    );
+  }
+
+  const needsDirectAssets = Boolean(input.coverFile || input.gameZipFile);
+  let directCoverPath: string | undefined;
+  let directBuildId: string | undefined;
+  let directBuildToken: string | undefined;
+  let directIndexPath: string | undefined;
+
+  if (needsDirectAssets) {
+    onProgress?.("正在準備直傳…");
+    const session = await createDirectUploadSession();
+
+    let uploadedCoverPath: string | undefined;
+    try {
+      const [cover, build] = await Promise.all([
+        input.coverFile
+          ? uploadCoverDirect(input.coverFile, session.userId, onProgress).then(
+              (result) => {
+                uploadedCoverPath = result.path;
+                return result;
+              }
+            )
+          : Promise.resolve(undefined),
+        input.gameZipFile
+          ? uploadZipBuildDirect({
+              file: input.gameZipFile,
+              userId: session.userId,
+              buildId: session.buildId,
+              onProgress,
+            })
+          : Promise.resolve(undefined),
+      ]);
+
+      if (cover?.path) {
+        directCoverPath = cover.path;
+      }
+      if (build) {
+        directBuildId = session.buildId;
+        directBuildToken = session.token;
+        directIndexPath = build.indexPath;
+      }
+    } catch (error) {
+      if (uploadedCoverPath) {
+        const { createClient } = await import("@/lib/supabase/client");
+        const { COVERS_BUCKET, removeStoragePaths } = await import(
+          "@/lib/game-storage"
+        );
+        await removeStoragePaths(createClient(), COVERS_BUCKET, [
+          uploadedCoverPath,
+        ]);
+      }
+      throw error;
+    }
+  }
+
   const formData = new FormData();
   formData.append("title", input.title);
   formData.append("description", input.description);
@@ -119,11 +193,13 @@ export async function updateGame(
   appendMonetizationFields(formData, input);
   appendPublishMetadataToFormData(formData, input.metadata);
 
-  if (input.coverFile) {
-    formData.append("cover", input.coverFile);
+  if (directCoverPath) {
+    formData.append("directCoverPath", directCoverPath);
   }
-  if (input.gameZipFile) {
-    formData.append("gameZip", input.gameZipFile);
+  if (directBuildId && directBuildToken && directIndexPath) {
+    formData.append("directBuildId", directBuildId);
+    formData.append("directBuildToken", directBuildToken);
+    formData.append("directIndexPath", directIndexPath);
   }
 
   formData.append(
@@ -136,12 +212,21 @@ export async function updateGame(
 
   if (input.publishVersion) {
     if (input.devlogTitle?.trim()) {
-      formData.append("devlogTitle", input.devlogTitle.trim());
+      formData.append(
+        "devlogTitle",
+        input.devlogTitle.trim().slice(0, MAX_DEVLOG_TITLE_LENGTH)
+      );
     }
     if (input.devlogContent?.trim()) {
-      formData.append("devlogContent", input.devlogContent.trim());
+      formData.append(
+        "devlogContent",
+        input.devlogContent.trim().slice(0, MAX_DEVLOG_CONTENT_LENGTH)
+      );
     }
-    for (const file of input.devlogImageFiles ?? []) {
+    for (const file of (input.devlogImageFiles ?? []).slice(
+      0,
+      MAX_GALLERY_IMAGES
+    )) {
       formData.append("devlogImages", file);
     }
   }

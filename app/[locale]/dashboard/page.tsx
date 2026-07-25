@@ -674,6 +674,7 @@ export default function CreatorDashboardPage() {
                     const isPendingReview =
                       game.publish_status === "public" &&
                       (game.status ?? "approved") === "pending";
+                    const isRejected = game.status === "rejected";
                     const isSelected = analyticsScope === game.id;
 
                     return (
@@ -714,7 +715,24 @@ export default function CreatorDashboardPage() {
                                   {t("statusReview")}
                                 </span>
                               )}
+                              {isRejected && (
+                                <span
+                                  className="rounded-md bg-rose-500/15 px-2 py-0.5 text-[11px] font-medium text-rose-300 ring-1 ring-inset ring-rose-400/25"
+                                  title={
+                                    game.rejection_reason?.trim() ||
+                                    t("rejectedReviewHint")
+                                  }
+                                >
+                                  {t("statusRejected")}
+                                </span>
+                              )}
                             </div>
+                            {isRejected && game.rejection_reason?.trim() && (
+                              <p className="mt-1 text-xs text-rose-300/90">
+                                {t("rejectionReasonLabel")}
+                                {game.rejection_reason.trim()}
+                              </p>
+                            )}
                             <p className="mt-1 text-sm text-zinc-500">
                               {t("uploadedAt", {
                                 date: formatUploadDate(

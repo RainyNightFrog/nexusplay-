@@ -618,7 +618,7 @@ export function HomePageClient({ initialGames }: HomePageClientProps) {
                   </div>
                 )}
                 <Link
-                  href="/dashboard/upload"
+                  href={uploadHref}
                   className={cn(buttonVariants(), "mt-6 inline-flex")}
                 >
                   {t("uploadNewGame")}

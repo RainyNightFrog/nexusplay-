@@ -81,7 +81,6 @@ import {
   MAX_DESCRIPTION_LENGTH,
   MAX_TITLE_LENGTH,
   MAX_ZIP_BYTES,
-  PRODUCTION_UPLOAD_BYTES,
 } from "@/lib/upload-limits";
 import { isZipFileAsync, validateGameZipFile, ZIP_FILE_ACCEPT } from "@/lib/zip-file-validation";
 import { buildGameHref } from "@/lib/game-path";
@@ -278,7 +277,6 @@ export default function EditGamePage() {
   const { translateApiError } = useApiError();
   const coverMaxSize = formatMaxSize(MAX_COVER_BYTES);
   const zipMaxSize = formatMaxSize(MAX_ZIP_BYTES);
-  const zipProductionSize = formatMaxSize(PRODUCTION_UPLOAD_BYTES);
   const locale = useLocale();
   const params = useParams();
   const gameId = Number.parseInt(String(params.id), 10);
@@ -476,17 +474,6 @@ export default function EditGamePage() {
       );
       return;
     }
-    if (file.size > PRODUCTION_UPLOAD_BYTES) {
-      showToast(
-        "error",
-        tErrors("fileTooLarge"),
-        tErrors("zipProductionTooLarge", {
-          size: zipProductionSize,
-          current: formatMaxSize(file.size),
-        })
-      );
-      return;
-    }
 
     const structure = await validateGameZipFile(file);
     if (!structure.ok) {
@@ -599,21 +586,16 @@ export default function EditGamePage() {
         return;
       }
 
-      showToast(
-        "success",
-        publishVersion ? t("versionPublished") : t("changesSaved"),
-        publishVersion
-          ? t("versionLiveDesc", { title: game.title })
-          : t("infoUpdatedDesc", { title: game.title })
-      );
+      const needsReview = (game.status ?? "approved") === "pending";
 
+      // 成功提示改由遊戲頁依 query 顯示，避免雙重 toast
       const livePath = getPathname({
         locale,
         href: buildGameHref(game),
       });
-      window.setTimeout(() => {
-        window.location.replace(`${livePath}?published=1`);
-      }, 900);
+      window.location.replace(
+        `${livePath}?${needsReview ? "submitted=1" : "published=1"}`
+      );
     } catch (error) {
       const raw = error instanceof Error ? error.message : null;
       const message = translateApiError(raw) ?? raw ?? t("updateFailed");
@@ -863,7 +845,7 @@ export default function EditGamePage() {
               <div id="field-game-zip">
               <DropZone
                 label={t("versionUpdate")}
-                hint={t("zipHint", { productionSize: zipProductionSize })}
+                hint={t("zipHint", { maxSize: zipMaxSize })}
                 dragDropText={tCommon("dragDrop")}
                 previewAlt={tCommon("coverPreview")}
                 currentCoverAlt={tCommon("currentCover")}
@@ -1002,6 +984,11 @@ export default function EditGamePage() {
                 disabled={isSubmitting}
                 className="mb-6"
               />
+              <p className="mb-4 text-center text-xs text-zinc-600">
+                {monetization.publishStatus === "public"
+                  ? t("submitReviewNote")
+                  : t("publishStatusNote")}
+              </p>
             <div className="flex flex-col gap-3 sm:flex-row">
               <motion.div
                 whileHover={{ scale: 1.02 }}
@@ -1021,9 +1008,10 @@ export default function EditGamePage() {
                 >
                   {isSubmitting && !gameZip ? (
                     <>
-                      <Loader2 className="size-5 animate-spin" />
-                      {submitStatus ||
-                        (isDraftEdit ? t("savingDraft") : tCommon("saving"))}
+                      <Loader2 className="size-5 shrink-0 animate-spin" />
+                      <span className="truncate">
+                        {isDraftEdit ? t("savingDraft") : tCommon("saving")}
+                      </span>
                     </>
                   ) : (
                     <>
@@ -1054,8 +1042,8 @@ export default function EditGamePage() {
                 >
                   {isSubmitting && gameZip ? (
                     <>
-                      <Loader2 className="size-5 animate-spin" />
-                      {submitStatus || tCommon("publishing")}
+                      <Loader2 className="size-5 shrink-0 animate-spin" />
+                      <span className="truncate">{tCommon("publishing")}</span>
                     </>
                   ) : (
                     <>
@@ -1066,6 +1054,11 @@ export default function EditGamePage() {
                 </Button>
               </motion.div>
             </div>
+            {isSubmitting && submitStatus ? (
+              <p className="mt-2 text-center text-xs text-cyan-300/90">
+                {submitStatus}
+              </p>
+            ) : null}
             </div>
           </form>
         </motion.div>

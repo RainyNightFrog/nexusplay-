@@ -6,6 +6,7 @@ import {
   writeAdminLog,
 } from "@/lib/admin-service";
 import { triggerNewGameFollowerNotify } from "@/lib/creator-follow-notify";
+import { notifyCreatorOfGameRejection } from "@/lib/game-reject-notify";
 import { onCreatorGameWentLive } from "@/lib/achievement-unlock-service";
 import { triggerWebSubFeedPing } from "@/lib/websub-service";
 import { createServerSupabase } from "@/lib/supabase-server";
@@ -62,6 +63,19 @@ export async function PATCH(
       });
       void onCreatorGameWentLive(supabase, game.creator_id);
       triggerWebSubFeedPing();
+    }
+
+    if (
+      body.status === "rejected" &&
+      before?.status !== "rejected" &&
+      game.creator_id
+    ) {
+      void notifyCreatorOfGameRejection({
+        creatorId: game.creator_id,
+        gameId: game.id,
+        gameTitle: game.title,
+        reason: typeof body.details === "string" ? body.details : null,
+      });
     }
 
     await writeAdminLog(

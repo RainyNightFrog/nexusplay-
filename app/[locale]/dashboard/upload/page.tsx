@@ -67,7 +67,6 @@ import {
   MAX_DESCRIPTION_LENGTH,
   MAX_TITLE_LENGTH,
   MAX_ZIP_BYTES,
-  PRODUCTION_UPLOAD_BYTES,
 } from "@/lib/upload-limits";
 import { isZipFileAsync, validateGameZipFile, ZIP_FILE_ACCEPT } from "@/lib/zip-file-validation";
 import { suggestGameSlugFromTitle } from "@/lib/game-slug";
@@ -262,7 +261,6 @@ export default function UploadPage() {
   const locale = useLocale();
   const coverMaxSize = formatMaxSize(MAX_COVER_BYTES);
   const zipMaxSize = formatMaxSize(MAX_ZIP_BYTES);
-  const zipProductionSize = formatMaxSize(PRODUCTION_UPLOAD_BYTES);
   const [form, setForm] = useState<FormState>({
     title: "",
     slug: "",
@@ -369,17 +367,6 @@ export default function UploadPage() {
       );
       return;
     }
-    if (file.size > PRODUCTION_UPLOAD_BYTES) {
-      showToast(
-        "error",
-        tErrors("fileTooLarge"),
-        tErrors("zipProductionTooLarge", {
-          size: zipProductionSize,
-          current: formatMaxSize(file.size),
-        })
-      );
-      return;
-    }
 
     const structure = await validateGameZipFile(file);
     if (!structure.ok) {
@@ -468,22 +455,15 @@ export default function UploadPage() {
         return;
       }
 
-      showToast(
-        "success",
-        t("publicLiveSuccess"),
-        t("publicLiveSuccessDesc", { title: game.title, id: game.id })
-      );
-
       handleCoverClear();
       setGameZip(null);
 
+      // 成功提示改由遊戲頁依 ?submitted=1 顯示，避免雙重 toast
       const livePath = getPathname({
         locale,
         href: buildGameHref(game),
       });
-      window.setTimeout(() => {
-        window.location.replace(`${livePath}?published=1`);
-      }, 900);
+      window.location.replace(`${livePath}?submitted=1`);
     } catch (error) {
       const raw = error instanceof Error ? error.message : null;
       const message = translateApiError(raw) ?? raw ?? t("uploadFailed");
@@ -736,7 +716,7 @@ export default function UploadPage() {
               <div id="field-game-zip">
               <DropZone
                 label={t("gameZip")}
-                hint={t("zipHint", { productionSize: zipProductionSize })}
+                hint={t("zipHint", { maxSize: zipMaxSize })}
                 dragDropText={tCommon("dragDrop")}
                 previewAlt={tCommon("coverPreview")}
                 accept={ZIP_FILE_ACCEPT}
@@ -825,9 +805,10 @@ export default function UploadPage() {
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="size-5 animate-spin" />
-                    {submitStatus ||
-                      (isDraftUpload ? t("savingDraft") : tCommon("publishing"))}
+                    <Loader2 className="size-5 shrink-0 animate-spin" />
+                    <span className="truncate">
+                      {isDraftUpload ? t("savingDraft") : tCommon("publishing")}
+                    </span>
                   </>
                 ) : (
                   <>
@@ -836,8 +817,13 @@ export default function UploadPage() {
                   </>
                 )}
               </Button>
+              {isSubmitting && submitStatus ? (
+                <p className="mt-2 text-center text-xs text-cyan-300/90">
+                  {submitStatus}
+                </p>
+              ) : null}
               <p className="mt-3 text-center text-xs text-zinc-600">
-                {t("publishStatusNote")}
+                {isPublicUpload ? t("submitReviewNote") : t("publishStatusNote")}
               </p>
             </div>
           </form>

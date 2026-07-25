@@ -7,7 +7,8 @@ export type UserNotificationKind =
   | "tip_received"
   | "forum_reply"
   | "followed_new_game"
-  | "wishlist_devlog";
+  | "wishlist_devlog"
+  | "game_rejected";
 
 export type UserNotification = {
   id: string;
@@ -120,6 +121,7 @@ export async function readUserUnreadNotificationCountsByKind(userId: string) {
     forum_reply: 0,
     followed_new_game: 0,
     wishlist_devlog: 0,
+    game_rejected: 0,
   };
 
   for (const row of data ?? []) {

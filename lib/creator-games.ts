@@ -12,6 +12,7 @@ export type CreatorGameRecord = {
   isUnclaimed?: boolean;
   publish_status: "draft" | "public";
   status?: "pending" | "approved" | "rejected";
+  rejection_reason?: string | null;
   tips_enabled: boolean;
   suggested_tip_amount: number | null;
 };

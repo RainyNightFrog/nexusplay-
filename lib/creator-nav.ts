@@ -1,3 +1,4 @@
+import { buildChooseRolePath } from "@/lib/account-intent";
 import type { UserProfile } from "@/lib/auth";
 
 export function getCreatorDashboardHref(
@@ -11,5 +12,6 @@ export function getCreatorDashboardHref(
   if (isCreator) {
     return target;
   }
-  return `/auth/choose-role?redirect=${encodeURIComponent(target)}`;
+  // 已選過玩家身分者仍可透過 switch=1 升級為創作者，避免 dashboard↔auth 迴圈
+  return buildChooseRolePath(target, { allowSwitch: true });
 }
