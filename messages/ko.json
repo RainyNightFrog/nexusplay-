@@ -942,7 +942,7 @@
     "title": "프로필",
     "description": "공개 프로필, 계정 정보, 플랫폼 아이덴티티를 관리하세요—공개 정보는 포럼과 사이트 전체에 표시됩니다",
     "avatarHint": "아바타를 클릭하여 업로드 · PNG / JPG / WebP · 최대 2 MB",
-    "presetAvatarsTitle": "가상 플레이어 아바타",
+    "presetAvatarsTitle": "기본 아바타",
     "presetAvatarsHint": "재미있는 프리셋 {count}개 · 탭하면 적용",
     "presetAvatarsPrev": "이전",
     "presetAvatarsNext": "다음",

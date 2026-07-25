@@ -942,7 +942,7 @@
     "title": "Perfil",
     "description": "Gestiona tu perfil público, información de cuenta e identidad en la plataforma—tu información pública se muestra en el foro y en todo el sitio",
     "avatarHint": "Haz clic en el avatar para subir · PNG / JPG / WebP · Máx. 2 MB",
-    "presetAvatarsTitle": "Avatares de jugadores virtuales",
+    "presetAvatarsTitle": "Avatares predefinidos",
     "presetAvatarsHint": "{count} presets divertidos — toca uno para aplicar",
     "presetAvatarsPrev": "Anterior",
     "presetAvatarsNext": "Siguiente",

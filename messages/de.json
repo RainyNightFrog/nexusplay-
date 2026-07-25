@@ -942,7 +942,7 @@
     "title": "Profil",
     "description": "Öffentliches Profil, Kontoinformationen und Plattform-Identität verwalten—deine öffentlichen Infos werden im Forum und auf der Seite angezeigt",
     "avatarHint": "Avatar klicken zum Hochladen · PNG / JPG / WebP · Max. 2 MB",
-    "presetAvatarsTitle": "Avatare virtueller Spieler",
+    "presetAvatarsTitle": "Preset-Avatare",
     "presetAvatarsHint": "{count} lustige Presets — tippen zum Übernehmen",
     "presetAvatarsPrev": "Zurück",
     "presetAvatarsNext": "Weiter",

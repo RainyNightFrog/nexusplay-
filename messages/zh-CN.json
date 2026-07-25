@@ -934,7 +934,7 @@
     "title": "个人资料",
     "description": "管理公开形象、账户信息与平台身份——讨论区与全站将显示你的公开资料",
     "avatarHint": "点击头像上传 · PNG / JPG / WebP · 最大 2 MB",
-    "presetAvatarsTitle": "虚拟玩家头像（可选）",
+    "presetAvatarsTitle": "预设头像（可选）",
     "presetAvatarsHint": "共 {count} 款搞笑预设头像，点一下即可套用",
     "presetAvatarsPrev": "上一页",
     "presetAvatarsNext": "下一页",

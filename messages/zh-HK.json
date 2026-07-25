@@ -1156,7 +1156,7 @@
     "title": "個人資料",
     "description": "管理公開形象、帳戶資訊與平台身份——討論區與全站將顯示你的公開資料",
     "avatarHint": "點擊頭像上傳 · PNG / JPG / WebP · 最大 2 MB",
-    "presetAvatarsTitle": "虛擬玩家頭像（可選）",
+    "presetAvatarsTitle": "預設頭像（可選）",
     "presetAvatarsHint": "共 {count} 款搞笑預設頭像，點一下即可套用",
     "presetAvatarsPrev": "上一頁",
     "presetAvatarsNext": "下一頁",
