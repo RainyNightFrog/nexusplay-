@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Coins,
   Loader2,
@@ -23,6 +23,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserBadge } from "@/components/UserBadge";
 import { useAuth } from "@/hooks/use-auth";
 import { useApiError } from "@/hooks/use-api-error";
+import { localizeApStoreItem } from "@/lib/ap-store-i18n";
 import type {
   ApStoreCategory,
   ApStoreDashboard,
@@ -32,6 +33,7 @@ import {
   REFRESH_AP_BALANCE_EVENT,
   requestRefreshApBalance,
 } from "@/lib/refresh-ap-balance";
+import { localizeEquippedTitle } from "@/lib/title-i18n";
 import { cn } from "@/lib/utils";
 
 type ApStoreModalProps = {
@@ -57,6 +59,7 @@ const RARITY_CLASS: Record<string, string> = {
 
 export function ApStoreModal({ open, onOpenChange }: ApStoreModalProps) {
   const t = useTranslations("apStore");
+  const locale = useLocale();
   const { profile, refreshProfile } = useAuth();
   const { translateApiError } = useApiError();
   const [data, setData] = useState<ApStoreDashboard | null>(null);
@@ -65,6 +68,14 @@ export function ApStoreModal({ open, onOpenChange }: ApStoreModalProps) {
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<ApStoreItem | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const selectedLocalized = useMemo(() => {
+    if (!selected) return null;
+    return localizeApStoreItem(selected.key, locale, {
+      name: selected.name,
+      description: selected.description,
+    });
+  }, [selected, locale]);
 
   const load = useCallback(async () => {
     if (!profile) return;
@@ -104,15 +115,20 @@ export function ApStoreModal({ open, onOpenChange }: ApStoreModalProps) {
 
   const previewTitle = useMemo(() => {
     if (!selected || selected.category !== "title") {
-      return profile?.equipped_title ?? null;
+      return localizeEquippedTitle(profile?.equipped_title, locale);
     }
     return {
       id: selected.unlockTitleId ?? selected.id,
-      name: selected.name,
+      name: selectedLocalized?.name ?? selected.name,
       css_class: selected.cssClass,
       rarity_tier: selected.rarity,
     };
-  }, [selected, profile?.equipped_title]);
+  }, [
+    selected,
+    selectedLocalized?.name,
+    profile?.equipped_title,
+    locale,
+  ]);
 
   const previewNameColor =
     selected?.category === "name_color"
@@ -284,9 +300,9 @@ export function ApStoreModal({ open, onOpenChange }: ApStoreModalProps) {
                           {t("badgePreviewSample")}
                         </div>
                       )}
-                      {selected && (
+                      {selected && selectedLocalized && (
                         <p className="text-center text-[11px] text-zinc-500">
-                          {t("previewHint", { name: selected.name })}
+                          {t("previewHint", { name: selectedLocalized.name })}
                         </p>
                       )}
                     </div>
@@ -313,7 +329,16 @@ export function ApStoreModal({ open, onOpenChange }: ApStoreModalProps) {
                       >
                         {data.items
                           .filter((item) => item.category === category)
-                          .map((item) => (
+                          .map((item) => {
+                            const localized = localizeApStoreItem(
+                              item.key,
+                              locale,
+                              {
+                                name: item.name,
+                                description: item.description,
+                              }
+                            );
+                            return (
                             <button
                               key={item.id}
                               type="button"
@@ -328,10 +353,10 @@ export function ApStoreModal({ open, onOpenChange }: ApStoreModalProps) {
                               <div className="flex flex-wrap items-start justify-between gap-2">
                                 <div className="min-w-0 flex-1">
                                   <p className="text-sm font-semibold text-white">
-                                    {item.name}
+                                    {localized.name}
                                   </p>
                                   <p className="mt-1 text-xs text-zinc-400">
-                                    {item.description}
+                                    {localized.description}
                                   </p>
                                 </div>
                                 <div className="shrink-0 text-right">
@@ -406,7 +431,8 @@ export function ApStoreModal({ open, onOpenChange }: ApStoreModalProps) {
                                 )}
                               </div>
                             </button>
-                          ))}
+                            );
+                          })}
                       </TabsContent>
                     ))}
                   </Tabs>
@@ -422,9 +448,9 @@ export function ApStoreModal({ open, onOpenChange }: ApStoreModalProps) {
           <DialogHeader>
             <DialogTitle>{t("confirmTitle")}</DialogTitle>
             <DialogDescription>
-              {selected
+              {selected && selectedLocalized
                 ? t("confirmDesc", {
-                    name: selected.name,
+                    name: selectedLocalized.name,
                     cost: selected.costAp,
                     remain: Math.max(
                       0,

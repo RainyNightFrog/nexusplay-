@@ -110,6 +110,7 @@ export function PwaInstallProvider({ children }: PwaInstallProviderProps) {
     if (isStandaloneDisplay()) return;
 
     if (isIosDevice()) {
+      setBannerVisible(false);
       setIosGuideOpen(true);
       return;
     }
@@ -127,7 +128,7 @@ export function PwaInstallProvider({ children }: PwaInstallProviderProps) {
       return;
     }
 
-    /* 桌機／無 prompt：仍開 iOS 風格引導無用；改開通用說明（以 iOS modal 結構顯示 Android 手動步驟較少） */
+    setBannerVisible(false);
     setIosGuideOpen(true);
   }, [deferredPrompt]);
 
@@ -229,7 +230,7 @@ function PwaInstallPrompt({
                 type="button"
                 onClick={onDismiss}
                 className="absolute right-2 top-2 rounded-lg p-1.5 text-zinc-500 transition hover:bg-white/5 hover:text-zinc-200"
-                aria-label={t("install_later")}
+                aria-label={t("banner_close")}
               >
                 <X className="size-4" />
               </button>
@@ -293,7 +294,7 @@ function PwaInstallPrompt({
             <button
               type="button"
               className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-              aria-label={t("ios_got_it")}
+              aria-label={t("banner_close")}
               onClick={onCloseIosGuide}
             />
             <motion.div
@@ -334,7 +335,7 @@ function PwaInstallPrompt({
                   type="button"
                   onClick={onCloseIosGuide}
                   className="rounded-lg p-1.5 text-zinc-500 hover:bg-white/5 hover:text-zinc-200"
-                  aria-label={t("ios_got_it")}
+                  aria-label={t("banner_close")}
                 >
                   <X className="size-4" />
                 </button>

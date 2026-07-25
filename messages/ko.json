@@ -1336,7 +1336,23 @@
       "creatorStripeNotConnected": "The creator has not connected Stripe yet.",
       "loginRequiredTip": "Please sign in to send a tip",
       "selfTipNotAllowed": "You cannot tip your own game",
-      "chatUrlNotAllowed": "메시지에 URL이나 링크를 포함할 수 없습니다"
+      "chatUrlNotAllowed": "메시지에 URL이나 링크를 포함할 수 없습니다",
+      "apInsufficientBalance": "Not enough AP",
+      "apAlreadyOwned": "You already own this item",
+      "apOutOfStock": "This item is sold out",
+      "apItemNotFound": "Item not found",
+      "apPurchaseFailed": "Purchase failed",
+      "apNotOwned": "You do not own this item",
+      "apEquipFailed": "Failed to equip",
+      "apItemIdRequired": "Please provide an item ID",
+      "apStoreLoadFailed": "Failed to load the AP Store",
+      "questIdRequired": "Please provide a quest ID",
+      "questsLoadFailed": "Failed to load daily quests",
+      "questClaimFailed": "Failed to claim reward",
+      "questNotFound": "Quest not found",
+      "questAlreadyClaimed": "Reward already claimed",
+      "questNotCompleted": "Quest is not completed yet",
+      "questClaimError": "Claim failed"
     },
     "zipProductionTooLarge": "ZIP must be under {size} (hard production limit; current: {current}). Compress or trim assets and try again."
   },
@@ -2714,6 +2730,7 @@
     "installed": "이미 설치됨 — 전체 화면 앱 모드입니다",
     "settings_title": "데스크톱 앱 설치",
     "settings_desc": "홈 화면에 추가해 주소창 없이 전체 화면으로 플레이",
-    "unavailable": "원탭 설치를 지원하지 않습니다. Chrome 또는 Safari를 사용하세요."
+    "unavailable": "원탭 설치를 지원하지 않습니다. Chrome 또는 Safari를 사용하세요.",
+    "banner_close": "닫기"
   }
 }

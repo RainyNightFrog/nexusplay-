@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { Flame, Loader2 } from "lucide-react";
+import { useGameI18n } from "@/hooks/use-game-i18n";
 import { GAME_GENRES, GAME_TAGS } from "@/lib/game-metadata";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +16,7 @@ type SearchShortcutsProps = {
 
 export function SearchShortcuts({ className }: SearchShortcutsProps) {
   const t = useTranslations("search");
+  const { localizedTag } = useGameI18n();
   const router = useRouter();
   const [terms, setTerms] = useState<string[]>(FALLBACK_SHORTCUTS);
   const [loading, setLoading] = useState(true);
@@ -39,14 +41,14 @@ export function SearchShortcuts({ className }: SearchShortcutsProps) {
         {loading && <Loader2 className="size-3.5 animate-spin text-zinc-500" aria-hidden />}
       </div>
       <div className="flex flex-wrap justify-center gap-2">
-        {terms.map((label) => (
+        {terms.map((term) => (
           <button
-            key={label}
+            key={term}
             type="button"
-            onClick={() => router.push(`/search?q=${encodeURIComponent(label)}`)}
+            onClick={() => router.push(`/search?q=${encodeURIComponent(term)}`)}
             className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-zinc-300 transition hover:border-cyan-400/30 hover:text-cyan-200"
           >
-            {label}
+            {localizedTag(term)}
           </button>
         ))}
       </div>

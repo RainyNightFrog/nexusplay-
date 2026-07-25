@@ -58,6 +58,9 @@ export const metadata: Metadata = {
   },
   other: {
     "mobile-web-app-capable": "yes",
+    // Next 16 的 appleWebApp.capable 目前輸出為 mobile-web-app-capable；
+    // iOS Safari 仍仰賴 apple- 前綴，故明確補上。
+    "apple-mobile-web-app-capable": "yes",
   },
   alternates: {
     types: feedAlternateTypes(platformGamesFeedAlternates()),

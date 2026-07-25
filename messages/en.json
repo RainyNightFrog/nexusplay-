@@ -1772,7 +1772,23 @@
       "creatorStripeNotConnected": "The creator has not connected Stripe yet.",
       "loginRequiredTip": "Please sign in to send a tip",
       "selfTipNotAllowed": "You cannot tip your own game",
-      "chatUrlNotAllowed": "Messages cannot contain URLs or links"
+      "chatUrlNotAllowed": "Messages cannot contain URLs or links",
+      "apInsufficientBalance": "Not enough AP",
+      "apAlreadyOwned": "You already own this item",
+      "apOutOfStock": "This item is sold out",
+      "apItemNotFound": "Item not found",
+      "apPurchaseFailed": "Purchase failed",
+      "apNotOwned": "You do not own this item",
+      "apEquipFailed": "Failed to equip",
+      "apItemIdRequired": "Please provide an item ID",
+      "apStoreLoadFailed": "Failed to load the AP Store",
+      "questIdRequired": "Please provide a quest ID",
+      "questsLoadFailed": "Failed to load daily quests",
+      "questClaimFailed": "Failed to claim reward",
+      "questNotFound": "Quest not found",
+      "questAlreadyClaimed": "Reward already claimed",
+      "questNotCompleted": "Quest is not completed yet",
+      "questClaimError": "Claim failed"
     }
   },
   "admin": {
@@ -2702,6 +2718,7 @@
     "installed": "Already installed — you are in fullscreen app mode",
     "settings_title": "Install desktop App",
     "settings_desc": "Add RainyNightFrog to your home screen for fullscreen play without the browser chrome",
-    "unavailable": "One-tap install is unavailable here. Use Chrome or Safari “Add to Home Screen”."
+    "unavailable": "One-tap install is unavailable here. Use Chrome or Safari “Add to Home Screen”.",
+    "banner_close": "Close"
   }
 }

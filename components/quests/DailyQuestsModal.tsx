@@ -22,6 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/use-auth";
 import { useApiError } from "@/hooks/use-api-error";
 import { localeDateMap, type AppLocale } from "@/i18n/routing";
+import { localizeQuestByCode } from "@/lib/quest-i18n";
 import type {
   QuestProgressItem,
   QuestsDashboard,
@@ -69,24 +70,30 @@ function QuestCard({
   quest,
   claiming,
   onClaim,
+  locale,
   t,
 }: {
   quest: QuestProgressItem;
   claiming: string | null;
   onClaim: (id: string) => void;
+  locale: string;
   t: ReturnType<typeof useTranslations<"quests">>;
 }) {
   const percent = Math.min(
     100,
     Math.round((quest.progress / quest.targetCount) * 100)
   );
+  const localized = localizeQuestByCode(quest.code, locale, {
+    title: quest.title,
+    description: quest.description,
+  });
 
   return (
     <div className="rounded-xl border border-white/10 bg-zinc-900/70 p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <p className="text-sm font-medium text-white">{quest.title}</p>
-          <p className="mt-1 text-xs text-zinc-400">{quest.description}</p>
+          <p className="text-sm font-medium text-white">{localized.title}</p>
+          <p className="mt-1 text-xs text-zinc-400">{localized.description}</p>
         </div>
         <span className="rounded-md bg-cyan-500/15 px-2 py-0.5 text-[11px] font-semibold text-cyan-200">
           +{quest.rewardAp} AP
@@ -375,6 +382,7 @@ export function DailyQuestsModal({ open, onOpenChange }: DailyQuestsModalProps) 
                         quest={quest}
                         claiming={claiming}
                         onClaim={(id) => void claim({ questId: id }, id)}
+                        locale={locale}
                         t={t}
                       />
                     ))}
@@ -390,6 +398,7 @@ export function DailyQuestsModal({ open, onOpenChange }: DailyQuestsModalProps) 
                         quest={quest}
                         claiming={claiming}
                         onClaim={(id) => void claim({ questId: id }, id)}
+                        locale={locale}
                         t={t}
                       />
                     ))}

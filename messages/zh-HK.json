@@ -1772,7 +1772,23 @@
       "creatorStripeNotConnected": "創作者尚未連結 Stripe",
       "loginRequiredTip": "請先登入才能打賞",
       "selfTipNotAllowed": "不能打賞自己的遊戲",
-      "chatUrlNotAllowed": "訊息不可包含網址或連結"
+      "chatUrlNotAllowed": "訊息不可包含網址或連結",
+      "apInsufficientBalance": "AP 餘額不足",
+      "apAlreadyOwned": "已擁有此商品",
+      "apOutOfStock": "商品已售罄",
+      "apItemNotFound": "找不到此商品",
+      "apPurchaseFailed": "購買失敗",
+      "apNotOwned": "尚未擁有此商品",
+      "apEquipFailed": "裝備失敗",
+      "apItemIdRequired": "請提供商品 ID",
+      "apStoreLoadFailed": "讀取 AP 商店失敗",
+      "questIdRequired": "請提供任務 ID",
+      "questsLoadFailed": "讀取每日任務失敗",
+      "questClaimFailed": "領取獎勵失敗",
+      "questNotFound": "找不到此任務",
+      "questAlreadyClaimed": "獎勵已領取",
+      "questNotCompleted": "任務尚未完成，無法領取",
+      "questClaimError": "領取失敗"
     }
   },
   "admin": {
@@ -2702,6 +2718,7 @@
     "installed": "已安裝為 App，正在以全螢幕模式使用",
     "settings_title": "安裝桌面 App",
     "settings_desc": "將 RainyNightFrog 加到手機主畫面，隱藏網址列、全螢幕遊玩",
-    "unavailable": "目前瀏覽器暫不支援一鍵安裝，請改用 Chrome 或 Safari 的「加至主畫面」"
+    "unavailable": "目前瀏覽器暫不支援一鍵安裝，請改用 Chrome 或 Safari 的「加至主畫面」",
+    "banner_close": "關閉"
   }
 }

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { GAME_GENRES } from "@/lib/game-metadata";
 import { UserBadge } from "@/components/UserBadge";
+import { useGameI18n } from "@/hooks/use-game-i18n";
 import {
   addSearchHistory,
   clearSearchHistory,
@@ -46,6 +47,7 @@ export function SiteSearch({
 }: SiteSearchProps) {
   const t = useTranslations("nav");
   const ts = useTranslations("search");
+  const { localizedTag } = useGameI18n();
   const router = useRouter();
   const [query, setQuery] = useState(defaultQuery);
   const [open, setOpen] = useState(false);
@@ -295,7 +297,7 @@ export function SiteSearch({
                         className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-zinc-300 transition hover:border-cyan-400/30 hover:text-cyan-200"
                       >
                         <Hash className="size-3 text-zinc-500" />
-                        {term}
+                        {localizedTag(term)}
                       </button>
                     ))}
                   </div>
@@ -324,7 +326,7 @@ export function SiteSearch({
                       </span>
                       {game.genre && (
                         <span className="shrink-0 text-[10px] text-zinc-500">
-                          {game.genre}
+                          {localizedTag(game.genre)}
                         </span>
                       )}
                     </button>
