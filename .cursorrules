@@ -9,8 +9,8 @@
 
 ## 1. 引擎與渲染標準 (Engine & Performance)
 
-- **強制使用 Phaser 3**，經由 CDN 載入：
-  `https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.min.js`
+- **強制使用 Phaser 3**，經由本站 SDK 載入（勿用外部 CDN，以免 CSP 擋下造成黑屏）：
+  `/sdk/phaser.min.js`
 - **禁止**撰寫手動 `requestAnimationFrame` 刷新的原生 Vanilla Canvas 遊戲邏輯（新建／重寫時）。
 - **物理與移動解耦**：所有物體位移必須基於 **Delta Time (dt)** 或 **Phaser Arcade Physics**，確保 60FPS～144FPS 螢幕皆能滿幀平滑運行。
   - 範例：`sprite.x += speed * (delta / 1000)` 或 `physics.add.velocityFromRotation(...)`

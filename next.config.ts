@@ -35,7 +35,7 @@ function buildContentSecurityPolicy() {
     "base-uri 'self'",
     "form-action 'self'",
     "frame-ancestors 'self'",
-    `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.googletagmanager.com https://www.google-analytics.com`,
+    `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.googletagmanager.com https://www.google-analytics.com https://cdn.jsdelivr.net`,
     "style-src 'self' 'unsafe-inline'",
     `img-src 'self' data: blob: https: https://images.unsplash.com https://api.dicebear.com https://lh3.googleusercontent.com ${supabaseOrigin}`,
     `connect-src 'self' ${supabaseOrigin} wss://${supabaseHostname} https://api.stripe.com https://www.google-analytics.com https://region1.google-analytics.com https://void-gacha.com https://*.void-gacha.com`,
