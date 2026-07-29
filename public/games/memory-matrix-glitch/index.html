@@ -4,384 +4,1042 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Memory Matrix Glitch · 駭客矩陣記憶翻牌</title>
-
-  <script src="/sdk/rnf-i18n.js?v=20260725a"></script>
-  <script src="/sdk/rnf-game-packs.js?v=20260725a"></script>
-  <script src="/sdk/rnf-game-sdk.js?v=20260725b"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%; height: 100%;
+      background: #04060c; overflow: hidden;
+      font-family: "Segoe UI", "Microsoft JhengHei", system-ui, sans-serif;
+      touch-action: none; user-select: none;
+    }
+    #game-host { width: 100%; height: 100%; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.min.js"></script>
+  <script src="/sdk/rnf-i18n.js?v=20260730h"></script>
+  <script src="/sdk/rnf-game-packs.js?v=20260730h"></script>
+  <script src="/sdk/rnf-game-sdk.js?v=20260730h"></script>
 </head>
 <body>
+  <div id="game-host"></div>
 <script>
-RNF.init();
-var shell = RNF.buildShell({
-  title: "Memory Matrix Glitch",
-  creator: "NeuralMind",
-  subtitle: "限時配對 · Glitch 翻轉 · 連擊倍率 · 炸彈懲罰 · 觸控翻牌",
-  width: 960,
-  height: 520,
-  bgmStyle: "ambient",
-  highlights: ["Glitch 特效", "連擊音階", "限時關卡", "炸彈卡", "觸控翻牌"],
-  help: {
-    about: "駭客風格的記憶翻牌。限時內配對相同圖案，連續配對可累積 Combo 與分數倍率。配對錯誤或翻到炸彈會受到懲罰。",
-    features: [
-      "四段難度調整卡片數、限時與炸彈機率",
-      "極限模式強化 Glitch 故障翻轉與掃描線",
-      "連續配對觸發音階遞升與連擊加成",
-      "炸彈卡扣時並重置連擊；錯配扣秒（困難以上）",
-      "通關加時並進入下一階段，清空全部配對即過關"
-    ],
-    controls: [
-      "滑鼠／觸控：點擊卡片翻開",
-      "Enter：快速翻開第一張未配對卡",
-      "手機可直接點擊卡片，無需虛擬鍵"
-    ],
-    tips: [
-      "記住已翻開位置，維持連擊可大幅加分",
-      "炸彈卡標有 ⚠，翻到會損失時間",
-      "完美通關（零錯配）有額外獎勵",
-      "越後面的關卡卡片越多、時間越緊"
-    ]
-  },
-  onStop: cleanup,
-  onStart: startGame
-});
+/**
+ * Memory Matrix Glitch — Phaser 3 商業級電競重構
+ * Boot → MainMenu → Difficulty → Game → GameOverModal (+ Settings)
+ * Juice：3D 翻牌／配對星塵／失敗 Glitch
+ * Casual 4×4 · Standard 4×6 Combo · Extreme 6×6 + Glitch Overload
+ */
+(function () {
+  "use strict";
 
-var W = 960, H = 520;
-var ctx, particles, running, loopId, lastT, keys = {};
-var cards, selected, matched, combo, maxCombo, score, timeLeft, stage, flipLock;
-var speedScale = 1, diffId = "normal", animT = 0;
-var matrixDrops = [], scanGlitch = 0, perfectStage = true, streakBonus = 0;
-var floaters = [], peekTimer = 0, peekDone = false;
+  if (typeof RNF !== "undefined" && RNF.init) RNF.init();
 
-var ICONS = ["◆", "★", "▲", "●", "■", "♦", "✦", "⬡", "◎", "✚", "▼", "◇", "⬢", "✿", "⚡", "◈"];
-var COLORS = ["#22d3ee", "#a78bfa", "#f472b6", "#4ade80", "#fbbf24", "#60a5fa", "#fb923c", "#e879f9"];
+  var W = 960;
+  var H = 540;
+  var SETTINGS_KEY = "rnf:memory-matrix-glitch:settings";
 
-var DIFF_CFG = {
-  easy:    { basePairs: 4, timeBonus: 18, bombChance: 0, mismatchPenalty: 0, peek: 2.5, glitchMult: 0.6 },
-  normal:  { basePairs: 5, timeBonus: 14, bombChance: 0.06, mismatchPenalty: 2, peek: 1.8, glitchMult: 1 },
-  hard:    { basePairs: 6, timeBonus: 10, bombChance: 0.1, mismatchPenalty: 4, peek: 1.2, glitchMult: 1.4 },
-  extreme: { basePairs: 7, timeBonus: 8, bombChance: 0.14, mismatchPenalty: 6, peek: 0.6, glitchMult: 2 }
-};
+  var SYMBOLS = ["◆", "★", "▲", "●", "■", "♦", "✦", "⬡", "◎", "✚", "▼", "◇", "⬢", "✿", "⚡", "◈", "※", "▣"];
+  var SYM_COLORS = [
+    0x22d3ee, 0xa78bfa, 0xf472b6, 0x4ade80, 0xfbbf24, 0x60a5fa,
+    0xfb923c, 0xe879f9, 0x34d399, 0xf43f5e, 0x38bdf8, 0xc084fc,
+    0xfde047, 0x2dd4bf, 0xf97316, 0xa3e635, 0x818cf8, 0xfb7185
+  ];
 
-function cleanup() {
-  shell.detachKeyboard();
-  shell.detachTouchControls();
-  running = false;
-  if (loopId) cancelAnimationFrame(loopId);
-  loopId = null;
-  shell.canvas.removeEventListener("pointerdown", onPointer);
-  window.removeEventListener("keydown", onKeyDown);
-}
+  var DIFF = {
+    casual: {
+      id: "casual",
+      label: "Casual 輕鬆",
+      desc: "4×4（8 對）· 時間充裕 · 失敗無扣分",
+      color: "#67e8f9",
+      scoreMult: 1.0,
+      cols: 4,
+      rows: 4,
+      pairs: 8,
+      time: 90,
+      mismatchPenalty: 0,
+      scorePenalty: false,
+      glitchEvery: 0,
+      peek: 2.2
+    },
+    standard: {
+      id: "standard",
+      label: "Standard 電競",
+      desc: "4×6（12 對）· 標準倒數 · Combo 翻倍",
+      color: "#a78bfa",
+      scoreMult: 1.35,
+      cols: 6,
+      rows: 4,
+      pairs: 12,
+      time: 75,
+      mismatchPenalty: 2,
+      scorePenalty: true,
+      glitchEvery: 0,
+      peek: 1.6
+    },
+    extreme: {
+      id: "extreme",
+      label: "Extreme 狂暴",
+      desc: "6×6（18 對）· 極速倒數 · Glitch Overload",
+      color: "#f472b6",
+      scoreMult: 2.5,
+      cols: 6,
+      rows: 6,
+      pairs: 18,
+      time: 70,
+      mismatchPenalty: 4,
+      scorePenalty: true,
+      glitchEvery: 15,
+      peek: 1.0
+    }
+  };
 
-function diffCfg() { return DIFF_CFG[diffId] || DIFF_CFG.normal; }
+  var selectedDiff = "standard";
+  var gameSettings = loadSettings();
 
-function initMatrixRain() {
-  matrixDrops = [];
-  for (var i = 0; i < (shell.isHighQuality() ? 48 : 20); i++) {
-    matrixDrops.push({
-      x: Math.random() * W, y: Math.random() * H,
-      spd: 40 + Math.random() * 120, len: 4 + Math.random() * 12,
-      ch: String.fromCharCode(0x30A0 + Math.floor(Math.random() * 96))
+  function loadSettings() {
+    var base = { sfx: true, shake: true };
+    try {
+      if (typeof RNF !== "undefined" && RNF.getSettings) {
+        var s = RNF.getSettings();
+        base.sfx = (s.sfxVolume == null ? 0.75 : s.sfxVolume) > 0.02;
+        base.shake = s.screenShake !== false;
+      }
+      var raw = localStorage.getItem(SETTINGS_KEY);
+      if (raw) Object.assign(base, JSON.parse(raw));
+    } catch (_e) {}
+    return base;
+  }
+
+  function saveSettings() {
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(gameSettings));
+      if (typeof RNF !== "undefined" && RNF.setSettings) {
+        RNF.setSettings({
+          sfxVolume: gameSettings.sfx ? 0.75 : 0,
+          screenShake: !!gameSettings.shake
+        });
+      }
+    } catch (_e) {}
+  }
+
+  var audioCtx = null;
+  function ensureAudio() {
+    if (!audioCtx) {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    }
+    if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+    return audioCtx;
+  }
+  function tone(freq, dur, type, vol, slide) {
+    if (!gameSettings.sfx) return;
+    var ctx = ensureAudio();
+    if (!ctx) return;
+    var t0 = ctx.currentTime;
+    var o = ctx.createOscillator();
+    var g = ctx.createGain();
+    o.type = type || "square";
+    o.frequency.setValueAtTime(freq, t0);
+    if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(40, slide), t0 + dur);
+    g.gain.setValueAtTime(vol || 0.1, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(t0); o.stop(t0 + dur + 0.02);
+  }
+  var SFX = {
+    click: function () { tone(520, 0.05, "triangle", 0.07); },
+    confirm: function () { tone(660, 0.07, "square", 0.09); tone(990, 0.08, "triangle", 0.07); },
+    flip: function () { tone(380, 0.05, "sawtooth", 0.07, 620); tone(200, 0.04, "square", 0.04); },
+    match: function (n) {
+      var f = 520 + Math.min(n || 1, 12) * 55;
+      tone(f, 0.07, "square", 0.11);
+      tone(f * 1.5, 0.1, "triangle", 0.08);
+    },
+    ladder: function (n) {
+      for (var i = 0; i < Math.min(n, 8); i++) {
+        (function (i) {
+          setTimeout(function () { tone(480 + i * 70, 0.055, "square", 0.09); }, i * 42);
+        })(i);
+      }
+    },
+    fail: function () { tone(180, 0.12, "sawtooth", 0.12, 70); tone(140, 0.1, "square", 0.08); },
+    alarm: function () { tone(880, 0.06, "square", 0.08); tone(440, 0.08, "sawtooth", 0.07); },
+    heartbeat: function () { tone(90, 0.08, "sine", 0.12); tone(70, 0.12, "triangle", 0.08); },
+    glitch: function () { tone(120, 0.05, "sawtooth", 0.1); tone(900, 0.04, "square", 0.06); tone(60, 0.1, "triangle", 0.07); },
+    win: function () {
+      [523, 659, 784, 1046].forEach(function (f, i) {
+        setTimeout(function () { tone(f, 0.1, "square", 0.1); }, i * 70);
+      });
+    },
+    lose: function () { tone(160, 0.25, "sawtooth", 0.14, 45); },
+    toggle: function () { tone(440, 0.05, "triangle", 0.07); }
+  };
+
+  function doShake(cam, dur, intens) {
+    if (!gameSettings.shake || !cam) return;
+    cam.shake(dur, intens);
+  }
+
+  function neonBurst(scene, x, y, tint, count) {
+    var n = Phaser.Math.Clamp(count || 25, 15, 40);
+    var emitter = scene.add.particles(x, y, "spark", {
+      speed: { min: 60, max: 320 },
+      angle: { min: 0, max: 360 },
+      lifespan: { min: 280, max: 700 },
+      scale: { start: 1.15, end: 0 },
+      alpha: { start: 1, end: 0 },
+      gravityY: 40,
+      blendMode: "ADD",
+      tint: tint,
+      emitting: false
+    });
+    emitter.explode(n);
+    scene.time.delayedCall(850, function () { if (emitter.destroy) emitter.destroy(); });
+  }
+
+  function makeTextures(scene) {
+    var g = scene.make.graphics({ x: 0, y: 0, add: false });
+    g.clear();
+    g.fillStyle(0x00ff66, 1);
+    g.fillCircle(2, 2, 2);
+    g.generateTexture("spark", 4, 4);
+
+    g.clear();
+    g.fillStyle(0x0a1a12, 1);
+    g.fillRoundedRect(0, 0, 80, 96, 8);
+    g.lineStyle(2, 0x22d3ee, 0.85);
+    g.strokeRoundedRect(1, 1, 78, 94, 8);
+    g.fillStyle(0x22d3ee, 0.15);
+    g.fillRoundedRect(12, 20, 56, 56, 6);
+    g.lineStyle(1, 0x4ade80, 0.6);
+    g.strokeRect(22, 30, 36, 36);
+    g.generateTexture("card-back", 80, 96);
+
+    g.clear();
+    g.fillStyle(0x0b1220, 1);
+    g.fillRoundedRect(0, 0, 80, 96, 8);
+    g.lineStyle(2, 0x4ade80, 0.95);
+    g.strokeRoundedRect(1, 1, 78, 94, 8);
+    g.generateTexture("card-face", 80, 96);
+
+    g.destroy();
+  }
+
+  function shuffle(arr) {
+    for (var i = arr.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+    }
+    return arr;
+  }
+
+  function pulseBtn(scene, targets) {
+    scene.tweens.add({
+      targets: targets, scale: 1.08, duration: 90, yoyo: true, ease: "Back.easeOut"
     });
   }
-}
 
-function stagePairs() {
-  var cfg = diffCfg();
-  return Math.min(cfg.basePairs + stage - 1, 10);
-}
+  function makeButton(scene, x, y, label, color, onClick, width) {
+    var bw = width || 300;
+    var bg = scene.add.rectangle(x, y, bw, 50, color, 0.2)
+      .setStrokeStyle(2, color, 0.9)
+      .setInteractive({ useHandCursor: true });
+    var txt = scene.add.text(x, y, label, {
+      fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif",
+      fontSize: "18px", fontStyle: "bold", color: "#e2e8f0"
+    }).setOrigin(0.5);
+    bg.on("pointerover", function () {
+      scene.tweens.add({ targets: [bg, txt], scale: 1.05, duration: 120, ease: "Cubic.easeOut" });
+    });
+    bg.on("pointerout", function () {
+      scene.tweens.add({ targets: [bg, txt], scale: 1, duration: 120, ease: "Cubic.easeOut" });
+    });
+    bg.on("pointerdown", function () {
+      pulseBtn(scene, [bg, txt]);
+      SFX.click();
+      onClick();
+    });
+    return { bg: bg, txt: txt };
+  }
 
-function buildLevel() {
-  var cfg = diffCfg();
-  var pairs = stagePairs();
-  var items = [];
-  for (var i = 0; i < pairs; i++) {
-    var sym = ICONS[i % ICONS.length], col = COLORS[i % COLORS.length];
-    var entry = { id: i, sym: sym, col: col, bomb: false };
-    if (Math.random() < cfg.bombChance && pairs > 4) {
-      entry.bomb = true; entry.sym = "⚠"; entry.col = "#f87171";
+  class BootScene extends Phaser.Scene {
+    constructor() { super("BootScene"); }
+    create() {
+      makeTextures(this);
+      this.cameras.main.setBackgroundColor("#04060c");
+      this.cameras.main.fadeIn(320, 4, 6, 12);
+      var t = this.add.text(W / 2, H / 2 - 8, "MEMORY MATRIX GLITCH", {
+        fontFamily: "Consolas, Segoe UI, monospace", fontSize: "24px", fontStyle: "bold", color: "#22ff88"
+      }).setOrigin(0.5).setAlpha(0);
+      this.add.text(W / 2, H / 2 + 28, "Phaser 3 · RainyNightFrog", {
+        fontFamily: "Segoe UI, sans-serif", fontSize: "13px", color: "#64748b"
+      }).setOrigin(0.5);
+      this.tweens.add({ targets: t, alpha: 1, scale: 1.04, duration: 400, ease: "Back.easeOut" });
+      this.time.delayedCall(520, function () { this.scene.start("MainMenuScene"); }, [], this);
     }
-    items.push(Object.assign({}, entry));
-    items.push(Object.assign({}, entry));
   }
-  for (var j = items.length - 1; j > 0; j--) {
-    var k = Math.floor(Math.random() * (j + 1));
-    var tmp = items[j]; items[j] = items[k]; items[k] = tmp;
-  }
-  var cols = pairs <= 5 ? 4 : pairs <= 8 ? 5 : 6;
-  var rows = Math.ceil(pairs * 2 / cols);
-  var cw = Math.min(88, (W - 80) / cols - 10);
-  var ch = Math.min(108, (H - 100) / rows - 10);
-  var gap = 10;
-  var totalW = cols * cw + (cols - 1) * gap;
-  var totalH = rows * ch + (rows - 1) * gap;
-  var ox = (W - totalW) / 2, oy = (H - totalH) / 2 + 16;
-  cards = items.map(function (item, idx) {
-    var c = idx % cols, r = Math.floor(idx / cols);
-    return {
-      item: item, x: ox + c * (cw + gap), y: oy + r * (ch + gap), w: cw, h: ch,
-      flipped: false, matched: false, flipT: 0, glitch: 0, shake: 0, idx: idx
-    };
-  });
-  matched = 0; selected = []; flipLock = false; perfectStage = true;
-  peekTimer = cfg.peek; peekDone = false;
-  if (stage === 1) timeLeft = (diffId === "easy" ? 95 : diffId === "normal" ? 80 : diffId === "hard" ? 65 : 50);
-  else timeLeft += cfg.timeBonus;
-}
 
-function startGame() {
-  cleanup();
-  speedScale = shell.getSpeedScale();
-  diffId = (shell.getDifficulty() || {}).id || "normal";
-  ctx = shell.ctx; particles = shell.particles;
-  stage = 1; score = 0; combo = 0; maxCombo = 0; animT = 0; streakBonus = 0;
-  initMatrixRain(); buildLevel(); updateHud();
-  running = true; keys = {};
-  shell.attachKeyboard(keys);
-  shell.canvas.addEventListener("pointerdown", onPointer);
-  window.addEventListener("keydown", onKeyDown);
-  lastT = performance.now();
-  loopId = requestAnimationFrame(loop);
-}
+  class MainMenuScene extends Phaser.Scene {
+    constructor() { super("MainMenuScene"); }
+    create() {
+      ensureAudio();
+      this.cameras.main.setBackgroundColor("#050a08");
+      this.cameras.main.fadeIn(200, 4, 6, 12);
+      this.createRain(0.6);
 
-function updateHud() {
-  var cfg = diffCfg();
-  var mult = (1 + combo * 0.35 + streakBonus * 0.1).toFixed(1);
-  shell.setHud(
-    '<div><span>' + RNF.t("hud.score") + '</span><b>' + score.toLocaleString() + '</b></div>' +
-    '<div><span>' + RNF.t("hud.remaining") + '</span><b style="color:' + (timeLeft < 10 ? '#f472b6' : '#22d3ee') + '">' + Math.ceil(timeLeft) + 's</b></div>' +
-    '<div><span>' + RNF.t("hud.combo") + '</span><b style="color:#fbbf24">x' + combo + '</b></div>' +
-    '<div><span>' + RNF.t("hud.mult") + '</span><b>x' + mult + '</b></div>' +
-    '<div><span>' + RNF.t("hud.stage") + '</span><b>' + stage + '</b></div>' +
-    '<div><span>' + RNF.t("hud.pairs") + '</span><b>' + matched + '/' + (cards.length / 2) + '</b></div>'
-  );
-}
+      var badge = this.add.text(W / 2, 78, "RAINYNIGHTFROG · CYBER ARCADE", {
+        fontFamily: "Consolas, monospace", fontSize: "11px", fontStyle: "bold",
+        color: "#22ff88", letterSpacing: 3
+      }).setOrigin(0.5).setAlpha(0);
 
-function canvasPos(e) {
-  var rect = shell.canvas.getBoundingClientRect();
-  return {
-    x: (e.clientX - rect.left) * (W / rect.width),
-    y: (e.clientY - rect.top) * (H / rect.height)
-  };
-}
+      var title = this.add.text(W / 2, 140, "MEMORY MATRIX GLITCH", {
+        fontFamily: "Consolas, Segoe UI, monospace",
+        fontSize: "30px", fontStyle: "bold", color: "#ffffff"
+      }).setOrigin(0.5).setScale(0.65).setAlpha(0);
 
-function cardAt(mx, my) {
-  for (var i = cards.length - 1; i >= 0; i--) {
-    var c = cards[i];
-    if (mx >= c.x && mx <= c.x + c.w && my >= c.y && my <= c.y + c.h) return c;
-  }
-  return null;
-}
+      var sub = this.add.text(W / 2, 195, "駭客矩陣記憶翻牌 · 3D 翻轉 · Combo · Glitch Overload", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+        fontSize: "15px", color: "#94a3b8"
+      }).setOrigin(0.5).setAlpha(0);
 
-function addFloater(x, y, text, color) {
-  floaters.push({ x: x, y: y, text: text, color: color || "#fff", life: 0.85, vy: -32 });
-}
+      this.tweens.add({ targets: badge, alpha: 1, y: 88, duration: 400, ease: "Cubic.easeOut" });
+      this.tweens.add({ targets: title, alpha: 1, scale: 1, duration: 480, ease: "Back.easeOut", delay: 50 });
+      this.tweens.add({ targets: sub, alpha: 1, duration: 380, ease: "Cubic.easeOut", delay: 120 });
 
-function flipCard(c) {
-  if (!running || flipLock || c.flipped || c.matched || selected.length >= 2) return;
-  if (!peekDone && peekTimer > 0) return;
-  c.flipped = true; c.flipT = 0;
-  c.glitch = 0.35 * diffCfg().glitchMult;
-  selected.push(c);
-  RNF.sfx.click();
-  if (c.item.bomb) {
-    handleBomb(c);
-    return;
-  }
-  if (selected.length === 2) {
-    flipLock = true;
-    setTimeout(checkMatch, 480);
-  }
-}
-
-function handleBomb(c) {
-  var cfg = diffCfg();
-  timeLeft = Math.max(0, timeLeft - (8 + stage * 2));
-  combo = 0; perfectStage = false;
-  c.shake = 0.5; scanGlitch = 0.6;
-  shell.triggerShake(10, 0.25);
-  RNF.sfx.die();
-  particles.burst(c.x + c.w / 2, c.y + c.h / 2, "#f87171", 20);
-  addFloater(c.x + c.w / 2, c.y, RNF.t("floater.bomb"), "#f87171");
-  setTimeout(function () {
-    if (!running) return;
-    c.flipped = false; c.glitch = 0.3;
-    selected = selected.filter(function (x) { return x !== c; });
-    updateHud();
-  }, 500);
-}
-
-function checkMatch() {
-  if (!running) return;
-  var a = selected[0], b = selected[1];
-  if (a.item.id === b.item.id && !a.item.bomb) {
-    a.matched = b.matched = true;
-    matched++; combo++; maxCombo = Math.max(maxCombo, combo);
-    if (combo >= 3) streakBonus = Math.min(5, streakBonus + 0.5);
-    var mult = 1 + combo * 0.35 + streakBonus * 0.1;
-    var pts = Math.floor((80 + stage * 25 + combo * 20) * mult);
-    score += pts;
-    RNF.sfx.combo(Math.min(combo, 10));
-    shell.triggerShake(3 + combo * 0.4, 0.12);
-    scanGlitch = 0.15;
-    var cx = (a.x + b.x) / 2 + a.w / 2, cy = (a.y + b.y) / 2 + a.h / 2;
-    particles.burst(cx, cy, a.item.col, 16);
-    addFloater(cx, cy - 10, "+" + pts, a.item.col);
-    if (matched >= cards.length / 2) {
-      var bonus = perfectStage ? Math.floor(200 * stage * mult) : Math.floor(80 * stage);
-      score += bonus;
-      if (perfectStage) addFloater(W / 2, H / 2, RNF.t("floater.perfect") + " +" + bonus, "#fbbf24");
-      stage++;
-      RNF.sfx.score();
-      setTimeout(function () { if (running) { buildLevel(); updateHud(); } }, 700);
+      var self = this;
+      makeButton(this, W / 2, 300, "開始解密 START", 0x22c55e, function () {
+        SFX.confirm();
+        self.cameras.main.fadeOut(160, 4, 6, 12);
+        self.time.delayedCall(170, function () { self.scene.start("DifficultyScene"); });
+      });
+      makeButton(this, W / 2, 370, "設定 SETTINGS", 0xa78bfa, function () {
+        self.scene.launch("SettingsScene");
+      });
+      makeButton(this, W / 2, 440, "操作說明", 0x64748b, function () {
+        if (self.helpTxt) return;
+        self.helpTxt = self.add.text(W / 2, 500,
+          "點擊／觸控翻開卡牌 · 配對相同符號解密 · 維持 Combo 衝高分", {
+          fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+          fontSize: "13px", color: "#86efac"
+        }).setOrigin(0.5).setAlpha(0);
+        self.tweens.add({ targets: self.helpTxt, alpha: 1, y: 492, duration: 280, ease: "Cubic.easeOut" });
+      }, 220);
     }
-  } else {
-    combo = 0; perfectStage = false;
-    var pen = diffCfg().mismatchPenalty;
-    if (pen > 0) {
-      timeLeft = Math.max(0, timeLeft - pen);
-      addFloater((a.x + b.x) / 2 + a.w / 2, a.y, "-" + pen + "s", "#f472b6");
+
+    createRain(speed) {
+      this.rainGfx = this.add.graphics().setDepth(0);
+      this.drops = [];
+      var chars = "01アイウエオカキクケコﾊｯｶｰ<>/$#@*";
+      for (var i = 0; i < 40; i++) {
+        this.drops.push({
+          x: (i / 40) * W + Math.random() * 20,
+          y: Math.random() * H,
+          speed: (40 + Math.random() * 120) * speed,
+          len: 8 + Math.floor(Math.random() * 12),
+          chars: chars
+        });
+      }
+      this.rainSpeed = speed;
     }
-    RNF.sfx.hit();
-    a.shake = b.shake = 0.35;
-    setTimeout(function () {
-      if (!running) return;
-      a.flipped = b.flipped = false;
-      a.glitch = b.glitch = 0.25 * diffCfg().glitchMult;
-    }, 320);
+
+    update(_t, delta) {
+      if (!this.rainGfx) return;
+      var dt = delta / 1000;
+      this.rainGfx.clear();
+      for (var i = 0; i < this.drops.length; i++) {
+        var d = this.drops[i];
+        d.y += d.speed * dt;
+        if (d.y > H + 40) d.y = -40;
+        for (var j = 0; j < d.len; j++) {
+          var a = 0.05 + (1 - j / d.len) * 0.35;
+          this.rainGfx.fillStyle(0x22ff66, a);
+          this.rainGfx.fillRect(d.x, d.y - j * 12, 2, 10);
+        }
+      }
+    }
   }
-  selected = []; flipLock = false;
-  updateHud();
-}
 
-function onPointer(e) {
-  if (!running) return;
-  var p = canvasPos(e);
-  var c = cardAt(p.x, p.y);
-  if (c) flipCard(c);
-}
+  class DifficultyScene extends Phaser.Scene {
+    constructor() { super("DifficultyScene"); }
+    create() {
+      this.cameras.main.setBackgroundColor("#050a08");
+      this.cameras.main.fadeIn(160, 4, 6, 12);
 
-function onKeyDown(e) {
-  if (!running) return;
-  if (e.code === "Enter") {
-    var pick = cards.find(function (c) { return !c.matched && !c.flipped; });
-    if (pick) flipCard(pick);
+      var head = this.add.text(W / 2, 70, "選擇難度", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+        fontSize: "34px", fontStyle: "bold", color: "#e2e8f0"
+      }).setOrigin(0.5).setScale(0.7).setAlpha(0);
+      this.tweens.add({ targets: head, alpha: 1, scale: 1, duration: 360, ease: "Back.easeOut" });
+
+      this.add.text(W / 2, 118, "剩餘時間越少 → 代碼雨越快 · 最後 5 秒紅光心跳", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+        fontSize: "14px", color: "#64748b"
+      }).setOrigin(0.5);
+
+      var self = this;
+      ["casual", "standard", "extreme"].forEach(function (key, i) {
+        var d = DIFF[key];
+        var col = Phaser.Display.Color.HexStringToColor(d.color).color;
+        var y = 190 + i * 88;
+        makeButton(self, W / 2, y, d.label, col, function () {
+          selectedDiff = key;
+          SFX.confirm();
+          self.cameras.main.fadeOut(160, 4, 6, 12);
+          self.time.delayedCall(170, function () {
+            self.scene.start("GameScene", { difficulty: key });
+          });
+        });
+        self.add.text(W / 2, y + 32, d.desc + " · 分數 x" + d.scoreMult.toFixed(2), {
+          fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+          fontSize: "12px", color: "#94a3b8"
+        }).setOrigin(0.5);
+      });
+
+      makeButton(this, W / 2, 490, "返回", 0x475569, function () {
+        self.scene.start("MainMenuScene");
+      }, 160);
+    }
   }
-}
 
-function loop(now) {
-  if (!running) return;
-  var dt = Math.min(0.05, (now - lastT) / 1000);
-  lastT = now; animT += dt;
-  timeLeft -= dt * speedScale;
-  if (peekTimer > 0) {
-    peekTimer -= dt;
-    cards.forEach(function (c) { c.flipped = true; c.flipT = 1; });
-    if (peekTimer <= 0) {
-      peekDone = true;
-      cards.forEach(function (c) {
-        if (!c.matched) { c.flipped = false; c.flipT = 0; c.glitch = 0.2; }
+  class SettingsScene extends Phaser.Scene {
+    constructor() { super("SettingsScene"); }
+    create() {
+      var dim = this.add.rectangle(W / 2, H / 2, W, H, 0x02040a, 0.75).setInteractive().setDepth(100);
+      var panel = this.add.rectangle(W / 2, H / 2, 420, 300, 0x0b1220, 0.98)
+        .setStrokeStyle(2, 0x22c55e, 0.85).setScale(0.75).setAlpha(0).setDepth(101);
+      var title = this.add.text(W / 2, H / 2 - 110, "設定選單", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+        fontSize: "26px", fontStyle: "bold", color: "#e2e8f0"
+      }).setOrigin(0.5).setAlpha(0).setDepth(102);
+
+      this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 300, ease: "Back.easeOut" });
+      this.tweens.add({ targets: title, alpha: 1, duration: 260, ease: "Cubic.easeOut", delay: 50 });
+
+      var self = this;
+      var sfxBtn = makeButton(this, W / 2, H / 2 - 20, gameSettings.sfx ? "音效：開" : "音效：關", 0x22c55e, function () {
+        gameSettings.sfx = !gameSettings.sfx; saveSettings(); SFX.toggle();
+        sfxBtn.txt.setText(gameSettings.sfx ? "音效：開" : "音效：關");
+      }, 260);
+      sfxBtn.bg.setDepth(102); sfxBtn.txt.setDepth(103);
+
+      var shakeBtn = makeButton(this, W / 2, H / 2 + 50, gameSettings.shake ? "震屏：開" : "震屏：關", 0xa78bfa, function () {
+        gameSettings.shake = !gameSettings.shake; saveSettings(); SFX.toggle();
+        shakeBtn.txt.setText(gameSettings.shake ? "震屏：開" : "震屏：關");
+      }, 260);
+      shakeBtn.bg.setDepth(102); shakeBtn.txt.setDepth(103);
+
+      var closeBtn = makeButton(this, W / 2, H / 2 + 120, "關閉", 0x64748b, function () {
+        self.scene.stop("SettingsScene");
+      }, 180);
+      closeBtn.bg.setDepth(102); closeBtn.txt.setDepth(103);
+
+      dim.on("pointerdown", function () { self.scene.stop("SettingsScene"); });
+    }
+  }
+
+  class GameScene extends Phaser.Scene {
+    constructor() { super("GameScene"); }
+
+    init(data) {
+      this.diffKey = (data && data.difficulty) || selectedDiff || "standard";
+      this.diff = DIFF[this.diffKey] || DIFF.standard;
+      selectedDiff = this.diffKey;
+    }
+
+    create() {
+      ensureAudio();
+      this.cameras.main.setBackgroundColor("#050a08");
+      this.cameras.main.fadeIn(180, 4, 6, 12);
+
+      this.score = 0;
+      this.combo = 0;
+      this.maxCombo = 0;
+      this.matchedPairs = 0;
+      this.timeLeft = this.diff.time;
+      this.timeMax = this.diff.time;
+      this.elapsed = 0;
+      this.dangerMultiplier = 1;
+      this.alive = true;
+      this.busy = false;
+      this.selected = [];
+      this.cards = [];
+      this.glitchTimer = this.diff.glitchEvery;
+      this.blindUntil = 0;
+      this.heartbeatAcc = 0;
+      this.startStamp = this.time.now;
+
+      this.createRain(1);
+      this.drawGrid();
+      this.buildCards();
+      this.createHud();
+
+      this.flash = this.add.rectangle(W / 2, H / 2, W, H, 0xff2244, 0).setDepth(60);
+      this.blindOverlay = this.add.rectangle(W / 2, H / 2, W, H, 0x001a0a, 0)
+        .setDepth(45).setVisible(false);
+      this.blindText = this.add.text(W / 2, H / 2, "GLITCH OVERLOAD", {
+        fontFamily: "Consolas, monospace", fontSize: "28px", fontStyle: "bold", color: "#22ff88"
+      }).setOrigin(0.5).setDepth(46).setAlpha(0);
+
+      // peek all cards briefly
+      this.peekAll();
+    }
+
+    createRain(mult) {
+      this.rainGfx = this.add.graphics().setDepth(0);
+      this.drops = [];
+      for (var i = 0; i < 48; i++) {
+        this.drops.push({
+          x: (i / 48) * W + Math.random() * 16,
+          y: Math.random() * H,
+          speed: 50 + Math.random() * 140,
+          len: 6 + Math.floor(Math.random() * 14)
+        });
+      }
+      this.rainMult = mult || 1;
+    }
+
+    drawGrid() {
+      var g = this.add.graphics().setDepth(1);
+      g.lineStyle(1, 0x22ff66, 0.06);
+      for (var x = 0; x < W; x += 40) g.lineBetween(x, 0, x, H);
+      for (var y = 0; y < H; y += 40) g.lineBetween(0, y, W, y);
+    }
+
+    createHud() {
+      this.hudScore = this.add.text(14, 10, "SCORE 0", {
+        fontFamily: "Consolas, Segoe UI, monospace", fontSize: "16px", fontStyle: "bold", color: "#67e8f9"
+      }).setDepth(50);
+      this.hudDanger = this.add.text(14, 32, "DANGER: x1.00", {
+        fontFamily: "Consolas, Segoe UI, monospace", fontSize: "14px", fontStyle: "bold", color: "#f472b6"
+      }).setDepth(50);
+      this.hudTime = this.add.text(W / 2, 10, "TIME 0.0", {
+        fontFamily: "Consolas, Segoe UI, monospace", fontSize: "16px", fontStyle: "bold", color: "#4ade80"
+      }).setOrigin(0.5, 0).setDepth(50);
+      this.hudCombo = this.add.text(W / 2, 32, "COMBO —", {
+        fontFamily: "Consolas, Segoe UI, monospace", fontSize: "13px", color: "#fbbf24"
+      }).setOrigin(0.5, 0).setDepth(50);
+      this.hudDiff = this.add.text(W - 14, 10, this.diff.label, {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif", fontSize: "13px", color: this.diff.color
+      }).setOrigin(1, 0).setDepth(50);
+      this.hudPairs = this.add.text(W - 14, 32, "0/" + this.diff.pairs, {
+        fontFamily: "Consolas, monospace", fontSize: "12px", color: "#94a3b8"
+      }).setOrigin(1, 0).setDepth(50);
+
+      this.timerBg = this.add.rectangle(W / 2, H - 18, 400, 10, 0x1e293b, 1).setDepth(50);
+      this.timerBar = this.add.rectangle(W / 2 - 200, H - 18, 400, 8, 0x22c55e, 1).setOrigin(0, 0.5).setDepth(51);
+    }
+
+    buildCards() {
+      var pairs = this.diff.pairs;
+      var deck = [];
+      for (var i = 0; i < pairs; i++) {
+        deck.push(i);
+        deck.push(i);
+      }
+      shuffle(deck);
+
+      var cols = this.diff.cols;
+      var rows = this.diff.rows;
+      var gapX = 10;
+      var gapY = 10;
+      var cardW = Math.min(78, (W - 80 - (cols - 1) * gapX) / cols);
+      var cardH = Math.min(94, (H - 100 - (rows - 1) * gapY) / rows);
+      var totalW = cols * cardW + (cols - 1) * gapX;
+      var totalH = rows * cardH + (rows - 1) * gapY;
+      var ox = (W - totalW) / 2 + cardW / 2;
+      var oy = 70 + cardH / 2 + (H - 100 - totalH) / 2;
+
+      this.cardW = cardW;
+      this.cardH = cardH;
+
+      for (var n = 0; n < deck.length; n++) {
+        var c = n % cols;
+        var r = Math.floor(n / cols);
+        var id = deck[n];
+        var x = ox + c * (cardW + gapX);
+        var y = oy + r * (cardH + gapY);
+        this.cards.push(this.createCard(x, y, id, cardW, cardH));
+      }
+    }
+
+    createCard(x, y, pairId, cw, ch) {
+      var self = this;
+      var container = this.add.container(x, y).setDepth(20);
+      var back = this.add.image(0, 0, "card-back").setDisplaySize(cw, ch);
+      var face = this.add.image(0, 0, "card-face").setDisplaySize(cw, ch).setVisible(false);
+      var glow = this.add.rectangle(0, 0, cw + 6, ch + 6)
+        .setStrokeStyle(2, 0x22d3ee, 0)
+        .setFillStyle(0x000000, 0);
+      var symbol = this.add.text(0, 0, SYMBOLS[pairId], {
+        fontFamily: "Segoe UI, sans-serif",
+        fontSize: Math.floor(Math.min(cw, ch) * 0.42) + "px",
+        color: "#" + SYM_COLORS[pairId].toString(16).padStart(6, "0")
+      }).setOrigin(0.5).setVisible(false);
+
+      container.add([glow, back, face, symbol]);
+      container.setSize(cw, ch);
+      container.setInteractive(new Phaser.Geom.Rectangle(-cw / 2, -ch / 2, cw, ch), Phaser.Geom.Rectangle.Contains);
+
+      var card = {
+        container: container,
+        back: back,
+        face: face,
+        glow: glow,
+        symbol: symbol,
+        pairId: pairId,
+        flipped: false,
+        matched: false,
+        flipping: false
+      };
+
+      container.on("pointerdown", function () {
+        self.onCardClick(card);
+      });
+      container.on("pointerover", function () {
+        if (!card.matched && !card.flipped) glow.setStrokeStyle(2, 0x4ade80, 0.7);
+      });
+      container.on("pointerout", function () {
+        if (!card.matched) glow.setStrokeStyle(2, 0x22d3ee, 0);
+      });
+
+      return card;
+    }
+
+    peekAll() {
+      var self = this;
+      this.busy = true;
+      this.cards.forEach(function (card) {
+        self.showFace(card, false);
+      });
+      this.time.delayedCall(this.diff.peek * 1000, function () {
+        self.cards.forEach(function (card) {
+          if (!card.matched) self.showBack(card, false);
+        });
+        self.busy = false;
       });
     }
-  }
-  if (timeLeft <= 0) {
-    cleanup();
-    shell.gameOver(score, { stage: stage, maxCombo: maxCombo, streak: streakBonus });
-    return;
-  }
-  matrixDrops.forEach(function (d) {
-    d.y += d.spd * dt;
-    if (d.y > H + 20) { d.y = -20; d.x = Math.random() * W; }
-  });
-  cards.forEach(function (c) {
-    if (c.flipT < 1) c.flipT = Math.min(1, c.flipT + dt * 5);
-    if (c.glitch > 0) c.glitch -= dt;
-    if (c.shake > 0) c.shake -= dt;
-  });
-  floaters.forEach(function (f) { f.life -= dt; f.y += f.vy * dt; });
-  floaters = floaters.filter(function (f) { return f.life > 0; });
-  scanGlitch = Math.max(0, scanGlitch - dt * 1.5);
-  if (timeLeft < 10 && Math.floor(timeLeft * 4) !== Math.floor((timeLeft + dt) * 4)) RNF.sfx.heartbeat();
-  particles.update(dt);
-  draw(); updateHud();
-  loopId = requestAnimationFrame(loop);
-}
 
-function drawCard(c) {
-  var showFace = c.flipped || c.matched;
-  var scaleX = showFace ? Math.abs(Math.cos(c.flipT * Math.PI)) : Math.abs(Math.cos((1 - c.flipT) * Math.PI));
-  scaleX = Math.max(0.06, scaleX);
-  var shakeX = c.shake > 0 ? (Math.random() - 0.5) * 10 * c.shake : 0;
-  ctx.save();
-  ctx.translate(c.x + c.w / 2 + shakeX, c.y + c.h / 2);
-  ctx.scale(scaleX, 1);
-  if (c.glitch > 0 && shell.isHighQuality()) {
-    ctx.translate((Math.random() - 0.5) * 14 * c.glitch, (Math.random() - 0.5) * 8 * c.glitch);
-    if (Math.random() < 0.25) ctx.filter = "hue-rotate(" + (Math.random() * 360) + "deg)";
-  }
-  if (showFace) {
-    var col = c.item.bomb ? "#f87171" : c.item.col;
-    ctx.fillStyle = "rgba(6,10,18,0.96)";
-    ctx.strokeStyle = col; ctx.lineWidth = 2;
-    ctx.shadowBlur = 16; ctx.shadowColor = col;
-    ctx.beginPath(); ctx.roundRect(-c.w / 2, -c.h / 2, c.w, c.h, 6); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = col;
-    ctx.font = "bold " + Math.floor(c.h * 0.38) + "px sans-serif";
-    ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText(c.item.sym, 0, 0);
-    if (c.matched) {
-      ctx.strokeStyle = "rgba(74,222,128,0.5)"; ctx.lineWidth = 3;
-      ctx.strokeRect(-c.w / 2 + 2, -c.h / 2 + 2, c.w - 4, c.h - 4);
+    showFace(card, animate) {
+      if (animate) {
+        card.flipping = true;
+        SFX.flip();
+        card.glow.setStrokeStyle(2, SYM_COLORS[card.pairId], 0.95);
+        this.tweens.add({
+          targets: card.container,
+          scaleX: 0.05,
+          duration: 90,
+          ease: "Cubic.easeIn",
+          onComplete: function () {
+            card.back.setVisible(false);
+            card.face.setVisible(true);
+            card.symbol.setVisible(true);
+            card.flipped = true;
+          }
+        });
+        this.tweens.add({
+          targets: card.container,
+          scaleX: 1,
+          duration: 120,
+          delay: 90,
+          ease: "Back.easeOut",
+          onComplete: function () { card.flipping = false; }
+        });
+      } else {
+        card.back.setVisible(false);
+        card.face.setVisible(true);
+        card.symbol.setVisible(true);
+        card.flipped = true;
+        card.glow.setStrokeStyle(2, SYM_COLORS[card.pairId], 0.6);
+      }
     }
-  } else {
-    ctx.fillStyle = "rgba(12,18,32,0.96)";
-    ctx.strokeStyle = "rgba(34,211,238,0.45)"; ctx.lineWidth = 1.5;
-    ctx.shadowBlur = 8; ctx.shadowColor = "#22d3ee";
-    ctx.beginPath(); ctx.roundRect(-c.w / 2, -c.h / 2, c.w, c.h, 6); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = "#22d3ee"; ctx.font = "9px monospace"; ctx.textAlign = "center";
-    ctx.fillText("NEURAL", 0, -10); ctx.fillText("0x" + (c.idx + 1).toString(16).toUpperCase(), 0, 8);
-  }
-  ctx.filter = "none"; ctx.shadowBlur = 0; ctx.restore();
-  if (c.glitch > 0 && shell.isHighQuality()) {
-    ctx.save(); ctx.strokeStyle = c.item.col || "#22d3ee"; ctx.globalAlpha = c.glitch * 0.7;
-    ctx.beginPath(); ctx.moveTo(c.x, c.y + Math.random() * c.h);
-    ctx.lineTo(c.x + c.w, c.y + Math.random() * c.h); ctx.stroke(); ctx.restore();
-  }
-}
 
-function draw() {
-  ctx.save(); shell.applyShake(ctx);
-  ctx.fillStyle = "#030508"; ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = "rgba(34,211,238,0.04)"; ctx.font = "11px monospace";
-  matrixDrops.forEach(function (d) {
-    ctx.globalAlpha = 0.35;
-    ctx.fillText(d.ch, d.x, d.y);
-    ctx.fillText(d.ch, d.x, d.y - d.len * 3);
-  });
-  ctx.globalAlpha = 1;
-  ctx.strokeStyle = "rgba(34,211,238,0.06)"; ctx.lineWidth = 1;
-  for (var i = 0; i < W; i += 32) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, H); ctx.stroke(); }
-  if (peekTimer > 0) {
-    ctx.fillStyle = "rgba(251,191,36,0.12)"; ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = "#fbbf24"; ctx.font = "bold 15px 'Microsoft JhengHei',sans-serif"; ctx.textAlign = "center";
-    ctx.fillText(RNF.t("label.memoryPeek") + " " + Math.ceil(peekTimer) + "s", W / 2, 22);
+    showBack(card, animate) {
+      if (animate) {
+        card.flipping = true;
+        this.tweens.add({
+          targets: card.container,
+          scaleX: 0.05,
+          duration: 90,
+          ease: "Cubic.easeIn",
+          onComplete: function () {
+            card.face.setVisible(false);
+            card.symbol.setVisible(false);
+            card.back.setVisible(true);
+            card.flipped = false;
+            card.glow.setStrokeStyle(2, 0x22d3ee, 0);
+          }
+        });
+        this.tweens.add({
+          targets: card.container,
+          scaleX: 1,
+          duration: 120,
+          delay: 90,
+          ease: "Back.easeOut",
+          onComplete: function () { card.flipping = false; }
+        });
+      } else {
+        card.face.setVisible(false);
+        card.symbol.setVisible(false);
+        card.back.setVisible(true);
+        card.flipped = false;
+        card.glow.setStrokeStyle(2, 0x22d3ee, 0);
+      }
+    }
+
+    onCardClick(card) {
+      if (!this.alive || this.busy || card.matched || card.flipped || card.flipping) return;
+      if (this.blindUntil > 0) return;
+      if (this.selected.length >= 2) return;
+
+      this.showFace(card, true);
+      this.selected.push(card);
+
+      if (this.selected.length === 2) {
+        this.busy = true;
+        var self = this;
+        this.time.delayedCall(280, function () { self.resolvePair(); });
+      }
+    }
+
+    resolvePair() {
+      var a = this.selected[0];
+      var b = this.selected[1];
+      this.selected = [];
+
+      if (a.pairId === b.pairId) {
+        this.onMatch(a, b);
+      } else {
+        this.onMismatch(a, b);
+      }
+    }
+
+    onMatch(a, b) {
+      this.combo++;
+      this.maxCombo = Math.max(this.maxCombo, this.combo);
+      this.matchedPairs++;
+
+      var comboMult = this.diff.id === "casual" ? (1 + this.combo * 0.15) : (1 + this.combo * 0.35);
+      var pts = Math.floor(100 * comboMult * this.diff.scoreMult * this.dangerMultiplier);
+      this.score += pts;
+
+      SFX.match(this.combo);
+      SFX.ladder(Math.min(2 + this.combo, 8));
+
+      var mx = (a.container.x + b.container.x) / 2;
+      var my = (a.container.y + b.container.y) / 2;
+      neonBurst(this, mx, my, 0x22ff66, 25);
+      neonBurst(this, mx, my, 0x22d3ee, 12);
+
+      var floater = this.add.text(mx, my, "+" + pts + (this.combo > 1 ? "  x" + this.combo : ""), {
+        fontFamily: "Consolas, monospace", fontSize: "18px", fontStyle: "bold", color: "#4ade80"
+      }).setOrigin(0.5).setDepth(40);
+      this.tweens.add({
+        targets: floater, y: my - 48, alpha: 0, duration: 480, ease: "Cubic.easeOut",
+        onComplete: function () { floater.destroy(); }
+      });
+
+      var self = this;
+      [a, b].forEach(function (card) {
+        card.matched = true;
+        self.tweens.add({
+          targets: card.container,
+          scale: 1.2,
+          duration: 140,
+          yoyo: true,
+          ease: "Back.easeOut",
+          onComplete: function () {
+            self.tweens.add({
+              targets: card.container,
+              scale: 0.05,
+              alpha: 0,
+              duration: 180,
+              ease: "Cubic.easeIn",
+              onComplete: function () {
+                card.container.setVisible(false);
+              }
+            });
+          }
+        });
+      });
+
+      this.time.delayedCall(360, function () {
+        self.busy = false;
+        if (self.matchedPairs >= self.diff.pairs) self.win();
+      });
+    }
+
+    onMismatch(a, b) {
+      this.combo = 0;
+      SFX.fail();
+      SFX.alarm();
+      doShake(this.cameras.main, 100, 0.01);
+
+      if (this.diff.mismatchPenalty > 0) {
+        this.timeLeft = Math.max(0, this.timeLeft - this.diff.mismatchPenalty);
+      }
+      if (this.diff.scorePenalty) {
+        this.score = Math.max(0, this.score - 20);
+      }
+
+      // red glitch jitter
+      var self = this;
+      [a, b].forEach(function (card) {
+        card.glow.setStrokeStyle(2, 0xf43f5e, 1);
+        self.tweens.add({
+          targets: card.container,
+          x: card.container.x + 5,
+          duration: 40,
+          yoyo: true,
+          repeat: 4,
+          ease: "Sine.easeInOut"
+        });
+      });
+
+      this.time.delayedCall(550, function () {
+        self.showBack(a, true);
+        self.showBack(b, true);
+        self.time.delayedCall(220, function () { self.busy = false; });
+      });
+    }
+
+    triggerGlitchOverload() {
+      if (!this.alive || this.diff.glitchEvery <= 0) return;
+      SFX.glitch();
+      doShake(this.cameras.main, 140, 0.015);
+      this.blindUntil = 2;
+      this.blindOverlay.setVisible(true);
+      this.blindOverlay.setAlpha(0.82);
+      this.blindText.setAlpha(1);
+      this.tweens.add({
+        targets: this.blindText, alpha: 0.4, duration: 200, yoyo: true, repeat: 4
+      });
+
+      // hide faces temporarily visually via overlay; also flip visible selection back
+      if (this.selected.length) {
+        var self = this;
+        this.selected.forEach(function (c) {
+          if (!c.matched) self.showBack(c, false);
+        });
+        this.selected = [];
+        this.busy = false;
+      }
+    }
+
+    win() {
+      if (!this.alive) return;
+      this.alive = false;
+      SFX.win();
+      doShake(this.cameras.main, 160, 0.018);
+      neonBurst(this, W / 2, H / 2, 0x22ff66, 30);
+
+      var remainBonus = Math.floor(this.timeLeft * 12 * this.diff.scoreMult);
+      var comboBonus = Math.floor(this.maxCombo * 40 * this.diff.scoreMult);
+      this.score += remainBonus + comboBonus;
+      this.finish(true, remainBonus);
+    }
+
+    lose() {
+      if (!this.alive) return;
+      this.alive = false;
+      SFX.lose();
+      this.flash.setAlpha(0.65);
+      this.tweens.add({ targets: this.flash, alpha: 0, duration: 450 });
+      doShake(this.cameras.main, 200, 0.02);
+      this.finish(false, 0);
+    }
+
+    finish(success, remainBonus) {
+      var finalScore = Math.floor(this.score);
+      var crackTime = ((this.time.now - this.startStamp) / 1000);
+      var meta = {
+        slug: "memory-matrix-glitch",
+        difficulty: this.diff.id,
+        success: success,
+        maxCombo: this.maxCombo,
+        timeLeft: Number(this.timeLeft.toFixed(1)),
+        crackTime: Number(crackTime.toFixed(1)),
+        dangerPeak: Number(this.dangerMultiplier.toFixed(2))
+      };
+      try {
+        if (typeof RNF !== "undefined" && RNF.submitScore) RNF.submitScore(finalScore, meta);
+      } catch (_e) {}
+
+      var self = this;
+      this.time.delayedCall(500, function () {
+        self.scene.launch("GameOverModal", {
+          score: finalScore,
+          success: success,
+          crackTime: crackTime,
+          timeLeft: self.timeLeft,
+          remainBonus: remainBonus,
+          maxCombo: self.maxCombo,
+          danger: self.dangerMultiplier,
+          diff: self.diff
+        });
+      });
+    }
+
+    update(_t, delta) {
+      if (!this.alive) return;
+      var dt = Math.min(0.05, delta / 1000);
+      this.elapsed += dt;
+
+      // countdown starts after peek
+      if (this.elapsed > this.diff.peek) {
+        this.timeLeft = Math.max(0, this.timeLeft - dt);
+      }
+
+      var timeRatio = this.timeLeft / this.timeMax;
+      this.dangerMultiplier = 1 + Math.log(1 + (1 - timeRatio) * 8 + this.elapsed / 40) * 0.8;
+      this.rainMult = 0.8 + this.dangerMultiplier * 0.7 + (1 - timeRatio) * 1.5;
+
+      // rain
+      this.rainGfx.clear();
+      for (var i = 0; i < this.drops.length; i++) {
+        var d = this.drops[i];
+        d.y += d.speed * this.rainMult * dt;
+        if (d.y > H + 40) d.y = -40;
+        for (var j = 0; j < d.len; j++) {
+          this.rainGfx.fillStyle(0x22ff66, 0.04 + (1 - j / d.len) * 0.28);
+          this.rainGfx.fillRect(d.x, d.y - j * 11, 2, 9);
+        }
+      }
+
+      // glitch overload
+      if (this.diff.glitchEvery > 0 && this.elapsed > this.diff.peek) {
+        this.glitchTimer -= dt;
+        if (this.glitchTimer <= 0) {
+          this.glitchTimer = this.diff.glitchEvery;
+          this.triggerGlitchOverload();
+        }
+      }
+      if (this.blindUntil > 0) {
+        this.blindUntil -= dt;
+        if (this.blindUntil <= 0) {
+          this.blindOverlay.setVisible(false);
+          this.blindText.setAlpha(0);
+        }
+      }
+
+      // last 5s pulse
+      if (this.timeLeft > 0 && this.timeLeft <= 5) {
+        this.heartbeatAcc += dt;
+        if (this.heartbeatAcc >= 0.45) {
+          this.heartbeatAcc = 0;
+          SFX.heartbeat();
+          this.flash.setAlpha(0.2);
+          this.tweens.add({ targets: this.flash, alpha: 0, duration: 180 });
+          doShake(this.cameras.main, 40, 0.004);
+        }
+        this.hudTime.setColor("#f87171");
+        this.timerBar.setFillStyle(0xef4444);
+      } else {
+        this.hudTime.setColor("#4ade80");
+        this.timerBar.setFillStyle(timeRatio < 0.35 ? 0xfbbf24 : 0x22c55e);
+      }
+
+      if (this.timeLeft <= 0) this.lose();
+
+      this.hudScore.setText("SCORE " + this.score.toLocaleString());
+      this.hudDanger.setText("DANGER: x" + this.dangerMultiplier.toFixed(2));
+      this.hudTime.setText("TIME " + this.timeLeft.toFixed(1));
+      this.hudCombo.setText(this.combo > 0 ? "COMBO x" + this.combo : "COMBO —");
+      this.hudPairs.setText(this.matchedPairs + "/" + this.diff.pairs);
+      this.timerBar.width = 400 * Math.max(0, this.timeLeft / this.timeMax);
+    }
   }
-  if (timeLeft < 10) {
-    ctx.fillStyle = "rgba(244,114,182," + (0.15 + Math.sin(animT * 8) * 0.1) + ")";
-    ctx.fillRect(0, 0, W, H);
+
+  class GameOverModal extends Phaser.Scene {
+    constructor() { super("GameOverModal"); }
+    init(data) { this.payload = data || {}; }
+
+    create() {
+      var score = this.payload.score || 0;
+      var success = !!this.payload.success;
+      var diff = this.payload.diff || DIFF.standard;
+
+      this.add.rectangle(W / 2, H / 2, W, H, 0x02040a, 0.75).setInteractive().setDepth(70);
+      var panel = this.add.rectangle(W / 2, H / 2, 500, 400, 0x04140c, 0.97)
+        .setStrokeStyle(2, success ? 0x22c55e : 0xf43f5e, 0.95).setScale(0.7).setAlpha(0).setDepth(71);
+
+      var badge = this.add.text(W / 2, H / 2 - 160, success ? "> DECRYPT_SUCCESS" : "> DECRYPT_FAILED", {
+        fontFamily: "Consolas, monospace", fontSize: "14px", fontStyle: "bold",
+        color: success ? "#22ff88" : "#f87171", letterSpacing: 2
+      }).setOrigin(0.5).setAlpha(0).setDepth(72);
+
+      var title = this.add.text(W / 2, H / 2 - 120, success ? "矩陣破解完成" : "連線逾時中斷", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+        fontSize: "28px", fontStyle: "bold", color: "#ffffff"
+      }).setOrigin(0.5).setAlpha(0).setDepth(72);
+
+      var scoreTxt = this.add.text(W / 2, H / 2 - 45, score.toLocaleString(), {
+        fontFamily: "Consolas, monospace", fontSize: "50px", fontStyle: "bold", color: "#67e8f9"
+      }).setOrigin(0.5).setScale(0.4).setAlpha(0).setDepth(72);
+
+      var meta = this.add.text(W / 2, H / 2 + 30,
+        diff.label +
+        "\n破解耗時 " + Number(this.payload.crackTime || 0).toFixed(1) + "s" +
+        " · 剩餘 " + Number(this.payload.timeLeft || 0).toFixed(1) + "s" +
+        (this.payload.remainBonus ? "（+" + this.payload.remainBonus + "）" : "") +
+        "\n最高 Combo x" + (this.payload.maxCombo || 0) +
+        " · DANGER x" + Number(this.payload.danger || 1).toFixed(2) +
+        "\n已執行 RNF.submitScore → 排行榜", {
+        fontFamily: "Consolas, Microsoft JhengHei, monospace",
+        fontSize: "13px", color: "#86efac", align: "center", lineSpacing: 6
+      }).setOrigin(0.5).setAlpha(0).setDepth(72);
+
+      this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 380, ease: "Back.easeOut" });
+      this.tweens.add({ targets: [badge, title, meta], alpha: 1, duration: 300, ease: "Cubic.easeOut", delay: 80 });
+      this.tweens.add({ targets: scoreTxt, alpha: 1, scale: 1, duration: 480, ease: "Back.easeOut", delay: 100 });
+
+      neonBurst(this, W / 2, H / 2 - 45, success ? 0x22ff66 : 0xf43f5e, 22);
+
+      var self = this;
+      var retry = makeButton(this, W / 2 - 110, H / 2 + 140, "再試一次", 0x22c55e, function () {
+        SFX.confirm();
+        self.scene.stop("GameOverModal");
+        self.scene.stop("GameScene");
+        self.scene.start("GameScene", { difficulty: selectedDiff });
+      }, 180);
+      retry.bg.setDepth(73); retry.txt.setDepth(74);
+
+      var settings = makeButton(this, W / 2 + 110, H / 2 + 140, "設定選單", 0xa78bfa, function () {
+        self.scene.launch("SettingsScene");
+      }, 180);
+      settings.bg.setDepth(73); settings.txt.setDepth(74);
+
+      var menu = makeButton(this, W / 2, H / 2 + 200, "主選單", 0x64748b, function () {
+        SFX.click();
+        self.scene.stop("GameOverModal");
+        self.scene.stop("SettingsScene");
+        self.scene.stop("GameScene");
+        self.scene.start("MainMenuScene");
+      }, 200);
+      menu.bg.setDepth(73); menu.txt.setDepth(74);
+    }
   }
-  if (scanGlitch > 0) {
-    ctx.fillStyle = "rgba(34,211,238," + (scanGlitch * 0.08) + ")";
-    for (var sy = 0; sy < H; sy += 4 + Math.random() * 8) ctx.fillRect(0, sy, W, 2);
+
+  var config = {
+    type: Phaser.WEBGL,
+    parent: "game-host",
+    width: W,
+    height: H,
+    backgroundColor: "#04060c",
+    banner: false,
+    scale: {
+      mode: Phaser.Scale.FIT,
+      autoCenter: Phaser.Scale.CENTER_BOTH
+    },
+    fps: { target: 144, forceSet: false, smoothStep: true },
+    scene: [BootScene, MainMenuScene, DifficultyScene, GameScene, GameOverModal, SettingsScene]
+  };
+
+  try {
+    window.__MEMORY_MATRIX__ = new Phaser.Game(config);
+  } catch (_e) {
+    config.type = Phaser.AUTO;
+    window.__MEMORY_MATRIX__ = new Phaser.Game(config);
   }
-  cards.forEach(drawCard);
-  floaters.forEach(function (f) {
-    ctx.save(); ctx.globalAlpha = Math.max(0, f.life);
-    ctx.fillStyle = f.color; ctx.font = "bold 13px 'Microsoft JhengHei',sans-serif";
-    ctx.textAlign = "center"; ctx.fillText(f.text, f.x, f.y); ctx.restore();
-  });
-  particles.draw(ctx);
-  ctx.restore();
-}
+})();
 </script>
 </body>
 </html>

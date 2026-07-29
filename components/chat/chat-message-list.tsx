@@ -10,7 +10,7 @@ import { RainbowSafeText } from "@/components/supporter/rainbow-safe-text";
 import { useAppSettings } from "@/components/settings/app-settings-provider";
 import {
   isSvipLikeTier,
-  supporterAvatarRingClassByTier,
+  supporterAvatarRingClassByTierLite,
   supporterMessageContentClassByTier,
   type SupporterDisplayTier,
 } from "@/lib/supporter-tier";
@@ -124,7 +124,7 @@ export function ChatMessageList({
   return (
     <div
       ref={containerRef}
-      className="flex min-w-0 flex-1 flex-col gap-2 overflow-y-auto overflow-x-hidden overscroll-contain px-3 py-3"
+      className="chat-message-list flex min-w-0 flex-1 flex-col gap-2 overflow-y-auto overflow-x-hidden overscroll-contain px-3 py-3"
     >
       {messages.map((message) => {
         const recalled = Boolean(message.recalled_at);
@@ -244,6 +244,11 @@ export function ChatMessageList({
           );
         }
 
+        const hasAvatarFrame =
+          !settings.disableCosmeticFx &&
+          Boolean(message.author_avatar_frame_class);
+        const avatarColumnWide = showSupporterFx || hasAvatarFrame;
+
         return (
           <div
             key={message.id}
@@ -254,7 +259,8 @@ export function ChatMessageList({
           >
             <div
               className={cn(
-                "relative w-8 shrink-0 overflow-visible",
+                "relative shrink-0 overflow-visible",
+                avatarColumnWide ? "w-11" : "w-8",
                 showSupporterFx ? "pt-3.5" : "pt-1.5"
               )}
             >
@@ -271,7 +277,7 @@ export function ChatMessageList({
                   "relative mx-auto inline-flex overflow-visible",
                   supporterTier !== "none" &&
                     showSupporterFx &&
-                    supporterAvatarRingClassByTier[supporterTier]
+                    supporterAvatarRingClassByTierLite[supporterTier]
                 )}
               >
               <button
@@ -283,8 +289,7 @@ export function ChatMessageList({
                   message.is_creator && !showSupporterFx
                     ? "bg-gradient-to-br from-violet-500/30 to-cyan-500/30 text-cyan-100 ring-1 ring-cyan-400/20"
                     : !showSupporterFx && "bg-white/8 text-zinc-300",
-                  !settings.disableCosmeticFx &&
-                    message.author_avatar_frame_class,
+                  hasAvatarFrame && message.author_avatar_frame_class,
                   onAuthorClick && "cursor-pointer hover:opacity-80"
                 )}
                 aria-label={message.author_name}
@@ -309,7 +314,10 @@ export function ChatMessageList({
 
             <div
               className={cn(
-                "flex min-w-0 max-w-[calc(100%-2.5rem)] flex-1 flex-col gap-1",
+                "flex min-w-0 flex-1 flex-col gap-1",
+                avatarColumnWide
+                  ? "max-w-[calc(100%-3.25rem)]"
+                  : "max-w-[calc(100%-2.5rem)]",
                 message.is_own ? "items-end" : "items-start"
               )}
             >

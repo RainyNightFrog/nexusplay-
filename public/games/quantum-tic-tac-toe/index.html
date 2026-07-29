@@ -4,482 +4,1112 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Quantum Tic-Tac-Toe · 量子過三關</title>
-
-  <script src="/sdk/rnf-i18n.js?v=20260725a"></script>
-  <script src="/sdk/rnf-game-packs.js?v=20260725a"></script>
-  <script src="/sdk/rnf-game-sdk.js?v=20260725b"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%; height: 100%;
+      background: #04060c; overflow: hidden;
+      font-family: "Segoe UI", "Microsoft JhengHei", system-ui, sans-serif;
+      touch-action: none;
+    }
+    #game-host { width: 100%; height: 100%; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.min.js"></script>
+  <script src="/sdk/rnf-i18n.js?v=20260730c"></script>
+  <script src="/sdk/rnf-game-packs.js?v=20260730c"></script>
+  <script src="/sdk/rnf-game-sdk.js?v=20260730c"></script>
 </head>
 <body>
+  <div id="game-host"></div>
 <script>
-RNF.init();
-var shell = RNF.buildShell({
-  title: "Quantum Tic-Tac-Toe",
-  creator: "LogicKnight_HK",
-  subtitle: "5×5 連五 · 量子糾纏落子 · 限時回合 · AI 難度 · 連勝統計 · 觸控落子",
-  width: 960,
-  height: 520,
-  bgmStyle: "ambient",
-  highlights: ["量子糾纏", "5×5 連五", "限時回合", "連勝紀錄", "觸控落子"],
-  help: {
-    about: "5×5 量子棋盤上的連五對決。每局擁有量子充能，可一次在兩格放置糾纏態，下回合自動坍縮為你的棋子。與 AI 輪流落子，先連成五子者獲勝。",
-    features: [
-      "四段難度縮短回合限時並強化 AI",
-      "量子模式（Q／觸控「量」）：選兩格糾纏，對手回合後坍縮",
-      "困難以上 AI 會連五、擋招並搶佔要位",
-      "連勝紀錄與勝率統計顯示於 HUD",
-      "觸控直接點格落子"
-    ],
-    controls: [
-      "滑鼠／觸控：在空格落子",
-      "Q 或觸控「量」：進入量子模式，再點兩格放置糾纏",
-      "每回合倒數結束前必須落子，逾時判負"
-    ],
-    tips: [
-      "量子落子可同時威脅兩條線，但會消耗充能",
-      "困難 AI 會優先連五與阻擋",
-      "連勝越高，結算分數加成越多"
-    ]
-  },
-  onStop: cleanup,
-  onStart: startGame
-});
+/**
+ * Quantum Tic-Tac-Toe — Phaser 3 商業級電競重構
+ * Boot → MainMenu → Mode → Difficulty → Game → GameOverModal (+ Settings)
+ * Juice：量子落子／倒數心跳／連線雷射爆裂
+ * Casual 3×3 無限時 · Standard 3×3 10s · Extreme 5×5 四子連珠 5s
+ */
+(function () {
+  "use strict";
 
-var W = shell.width, H = shell.height;
-var ctx = shell.ctx, canvas = shell.canvas;
-var particles = shell.particles;
-var animId = null, running = false, gameEnded = false, keys = {};
-var SIZE = 5, CELL, board, quantum, turn, timer, timerMax, heartbeatAcc, animT = 0;
-var speedScale = 1, diffId = "normal", glitchT = 0;
-var wins = 0, losses = 0, draws = 0, winStreak = 0, bestStreak = 0;
-var quantumMode = false, quantumPick = [], quantumCharges = 2;
-var hoverCell = null, collapseAnim = [], lastPlaced = null;
+  if (typeof RNF !== "undefined" && RNF.init) RNF.init();
 
-var save = shell.getSave();
-if (save.wins) wins = save.wins;
-if (save.losses) losses = save.losses;
-if (save.draws) draws = save.draws;
-if (save.winStreak) winStreak = save.winStreak;
-if (save.bestStreak) bestStreak = save.bestStreak;
+  var W = 960;
+  var H = 540;
+  var SETTINGS_KEY = "rnf:quantum-tic-tac-toe:settings";
+  var STATS_KEY = "rnf:quantum-tic-tac-toe:stats";
 
-var TIMER_BY_DIFF = { easy: 50, normal: 38, hard: 26, extreme: 16 };
-
-function cleanup() {
-  shell.detachKeyboard();
-  shell.detachTouchControls();
-  running = false;
-  if (animId) cancelAnimationFrame(animId);
-  animId = null;
-  canvas.removeEventListener("pointerdown", onPointer);
-  canvas.removeEventListener("pointermove", onPointerMove);
-  window.removeEventListener("keydown", onKeyDown);
-}
-
-function winRate() {
-  var t = wins + losses + draws;
-  return t ? Math.round(wins / t * 100) : 0;
-}
-
-function boardOffset() {
-  return { ox: (W - CELL * SIZE) / 2, oy: (H - CELL * SIZE) / 2 + 18 };
-}
-
-function cellFromPos(mx, my) {
-  var o = boardOffset();
-  var c = Math.floor((mx - o.ox) / CELL), r = Math.floor((my - o.oy) / CELL);
-  if (r >= 0 && r < SIZE && c >= 0 && c < SIZE) return { r: r, c: c };
-  return null;
-}
-
-function isEmpty(r, c) { return !board[r][c] && !quantum[r][c]; }
-
-function checkWin(p) {
-  for (var r = 0; r < SIZE; r++) {
-    for (var c = 0; c <= SIZE - 5; c++) {
-      if (board[r][c] === p && board[r][c+1] === p && board[r][c+2] === p && board[r][c+3] === p && board[r][c+4] === p) return true;
+  var DIFF = {
+    casual: {
+      id: "casual",
+      label: "Casual 輕鬆",
+      desc: "3×3 · 無時間限制 · 基礎 AI",
+      color: "#67e8f9",
+      size: 3,
+      winLen: 3,
+      timer: 0,
+      aiDepth: 2,
+      aiDelay: 550,
+      scoreMult: 1.0
+    },
+    standard: {
+      id: "standard",
+      label: "Standard 電競",
+      desc: "3×3 · 每步 10 秒 · 高級 AI",
+      color: "#a78bfa",
+      size: 3,
+      winLen: 3,
+      timer: 10,
+      aiDepth: 6,
+      aiDelay: 320,
+      scoreMult: 1.35
+    },
+    extreme: {
+      id: "extreme",
+      label: "Extreme 狂暴",
+      desc: "5×5 四子連珠 · 每步 5 秒 · 滿級 Minimax",
+      color: "#f472b6",
+      size: 5,
+      winLen: 4,
+      timer: 5,
+      aiDepth: 4,
+      aiDelay: 180,
+      scoreMult: 2.5
     }
-  }
-  for (var c = 0; c < SIZE; c++) {
-    for (var r = 0; r <= SIZE - 5; r++) {
-      if (board[r][c] === p && board[r+1][c] === p && board[r+2][c] === p && board[r+3][c] === p && board[r+4][c] === p) return true;
-    }
-  }
-  for (var r = 0; r <= SIZE - 5; r++) {
-    for (var c = 0; c <= SIZE - 5; c++) {
-      if (board[r][c] === p && board[r+1][c+1] === p && board[r+2][c+2] === p && board[r+3][c+3] === p && board[r+4][c+4] === p) return true;
-      if (board[r][c+4] === p && board[r+1][c+3] === p && board[r+2][c+2] === p && board[r+3][c+1] === p && board[r+4][c] === p) return true;
-    }
-  }
-  return false;
-}
+  };
 
-function isFull() {
-  for (var r = 0; r < SIZE; r++)
-    for (var c = 0; c < SIZE; c++)
-      if (isEmpty(r, c)) return false;
-  return true;
-}
+  var selectedDiff = "standard";
+  var playMode = "ai"; // ai | pvp
+  var gameSettings = loadSettings();
+  var stats = loadStats();
 
-function collapseQuantum() {
-  var list = [];
-  for (var r = 0; r < SIZE; r++) {
-    for (var c = 0; c < SIZE; c++) {
-      if (quantum[r][c]) list.push({ r: r, c: c, owner: quantum[r][c].owner, pair: quantum[r][c].pair });
-    }
-  }
-  list.forEach(function (q) {
-    if (board[q.r][q.c]) { quantum[q.r][q.c] = null; return; }
-    board[q.r][q.c] = q.owner;
-    quantum[q.r][q.c] = null;
-    var o = boardOffset();
-    collapseAnim.push({ r: q.r, c: q.c, t: 0, x: o.ox + q.c * CELL + CELL / 2, y: o.oy + q.r * CELL + CELL / 2 });
-    particles.burst(o.ox + q.c * CELL + CELL / 2, o.oy + q.r * CELL + CELL / 2, q.owner === "X" ? "#22d3ee" : "#f472b6", 14);
-  });
-  RNF.sfx.power();
-  shell.triggerShake(5, 0.15);
-}
-
-function placeQuantum(r, c) {
-  quantumPick.push({ r: r, c: c });
-  quantum[r][c] = { owner: "X", pair: quantumPick.length, phase: Math.random() * Math.PI * 2 };
-  RNF.sfx.laser();
-  if (quantumPick.length >= 2) {
-    quantumCharges--;
-    quantumMode = false;
-    quantumPick = [];
-    turn = "O";
-    timer = timerMax;
-    setTimeout(aiMove, diffId === "extreme" ? 200 : 450);
-  }
-}
-
-function place(r, c, p) {
-  board[r][c] = p;
-  lastPlaced = { r: r, c: c, t: 0 };
-  var o = boardOffset();
-  particles.burst(o.ox + c * CELL + CELL / 2, o.oy + r * CELL + CELL / 2, p === "X" ? "#22d3ee" : "#f472b6", 12);
-  shell.triggerShake(2, 0.08);
-}
-
-function scoreCell(r, c, p) {
-  if (!isEmpty(r, c)) return -99999;
-  var s = 0, dirs = [[0,1],[1,0],[1,1],[1,-1]];
-  dirs.forEach(function (d) {
-    var cnt = 0, open = 0;
-    for (var i = 1; i < 5; i++) {
-      var nr = r + d[0] * i, nc = c + d[1] * i;
-      if (nr < 0 || nr >= SIZE || nc < 0 || nc >= SIZE) break;
-      if (board[nr][nc] === p) cnt++;
-      else if (!board[nr][nc]) { open++; break; } else break;
-    }
-    for (var j = 1; j < 5; j++) {
-      var nr2 = r - d[0] * j, nc2 = c - d[1] * j;
-      if (nr2 < 0 || nr2 >= SIZE || nc2 < 0 || nc2 >= SIZE) break;
-      if (board[nr2][nc2] === p) cnt++;
-      else if (!board[nr2][nc2]) { open++; break; } else break;
-    }
-    if (cnt >= 4) s += 12000;
-    else if (cnt === 3 && open >= 1) s += 600;
-    else if (cnt === 2) s += 45;
-    else if (cnt === 1) s += 6;
-  });
-  if (r === 2 && c === 2) s += 20;
-  return s;
-}
-
-function tryWinBlock(p) {
-  for (var r = 0; r < SIZE; r++) {
-    for (var c = 0; c < SIZE; c++) {
-      if (!isEmpty(r, c)) continue;
-      board[r][c] = p;
-      var win = checkWin(p);
-      board[r][c] = null;
-      if (win) return { r: r, c: c };
-    }
-  }
-  return null;
-}
-
-function aiMove() {
-  if (gameEnded || turn !== "O") return;
-  var win = tryWinBlock("O");
-  if (win) { place(win.r, win.c, "O"); afterAiMove(); return; }
-  var block = tryWinBlock("X");
-  if (block) { place(block.r, block.c, "O"); afterAiMove(); return; }
-
-  var depth = diffId === "easy" ? 0 : diffId === "normal" ? 1 : 2;
-  var best = -99999, br = 0, bc = 0, candidates = [];
-  for (var r = 0; r < SIZE; r++) {
-    for (var c = 0; c < SIZE; c++) {
-      if (!isEmpty(r, c)) continue;
-      var s = scoreCell(r, c, "O") + scoreCell(r, c, "X") * (diffId === "easy" ? 0.7 : 0.95);
-      if (depth >= 2) {
-        board[r][c] = "O";
-        if (checkWin("O")) s += 50000;
-        board[r][c] = null;
+  function loadSettings() {
+    var base = { sfx: true, shake: true };
+    try {
+      if (typeof RNF !== "undefined" && RNF.getSettings) {
+        var s = RNF.getSettings();
+        base.sfx = (s.sfxVolume == null ? 0.75 : s.sfxVolume) > 0.02;
+        base.shake = s.screenShake !== false;
       }
-      candidates.push({ r: r, c: c, s: s });
-    }
+      var raw = localStorage.getItem(SETTINGS_KEY);
+      if (raw) Object.assign(base, JSON.parse(raw));
+    } catch (_e) {}
+    return base;
   }
-  candidates.sort(function (a, b) { return b.s - a.s; });
-  var pool = candidates.slice(0, diffId === "extreme" ? 3 : 5);
-  if (diffId === "easy" && pool.length > 1 && Math.random() < 0.35) {
-    var pick = pool[Math.floor(Math.random() * pool.length)];
-    br = pick.r; bc = pick.c;
-  } else {
-    pool.forEach(function (p) {
-      if (p.s > best) { best = p.s; br = p.r; bc = p.c; }
+
+  function saveSettings() {
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(gameSettings));
+      if (typeof RNF !== "undefined" && RNF.setSettings) {
+        RNF.setSettings({
+          sfxVolume: gameSettings.sfx ? 0.75 : 0,
+          screenShake: !!gameSettings.shake
+        });
+      }
+    } catch (_e) {}
+  }
+
+  function loadStats() {
+    var base = { wins: 0, losses: 0, draws: 0, winStreak: 0, bestStreak: 0, totalScore: 0 };
+    try {
+      var raw = localStorage.getItem(STATS_KEY);
+      if (raw) Object.assign(base, JSON.parse(raw));
+    } catch (_e) {}
+    return base;
+  }
+
+  function saveStats() {
+    try { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); } catch (_e) {}
+  }
+
+  function winRate() {
+    var t = stats.wins + stats.losses + stats.draws;
+    return t ? Math.round((stats.wins / t) * 100) : 0;
+  }
+
+  /* ── Audio ── */
+  var audioCtx = null;
+  function ensureAudio() {
+    if (!audioCtx) {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    }
+    if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+    return audioCtx;
+  }
+  function tone(freq, dur, type, vol, slide) {
+    if (!gameSettings.sfx) return;
+    var ctx = ensureAudio();
+    if (!ctx) return;
+    var t0 = ctx.currentTime;
+    var o = ctx.createOscillator();
+    var g = ctx.createGain();
+    o.type = type || "square";
+    o.frequency.setValueAtTime(freq, t0);
+    if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(40, slide), t0 + dur);
+    g.gain.setValueAtTime(vol || 0.1, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(t0); o.stop(t0 + dur + 0.02);
+  }
+  var SFX = {
+    click: function () { tone(520, 0.05, "triangle", 0.07); },
+    confirm: function () { tone(660, 0.07, "square", 0.09); tone(990, 0.08, "triangle", 0.07); },
+    place: function () { tone(640, 0.07, "sawtooth", 0.09, 880); tone(420, 0.1, "triangle", 0.06); },
+    glitch: function () { tone(180, 0.04, "square", 0.05); tone(720, 0.04, "sawtooth", 0.05); },
+    heartbeat: function () { tone(90, 0.08, "sine", 0.12); tone(70, 0.12, "triangle", 0.08); },
+    win: function () {
+      tone(523, 0.08, "square", 0.1);
+      setTimeout(function () { tone(659, 0.08, "square", 0.1); }, 70);
+      setTimeout(function () { tone(784, 0.14, "triangle", 0.11); }, 140);
+    },
+    lose: function () { tone(200, 0.2, "sawtooth", 0.12, 60); },
+    draw: function () { tone(400, 0.1, "triangle", 0.08); tone(350, 0.12, "sine", 0.07); },
+    timeout: function () { tone(140, 0.25, "sawtooth", 0.12, 50); },
+    toggle: function () { tone(440, 0.05, "triangle", 0.07); }
+  };
+
+  function doShake(cam, dur, intens) {
+    if (!gameSettings.shake || !cam) return;
+    cam.shake(dur, intens);
+  }
+
+  function neonBurst(scene, x, y, tint, count) {
+    var n = Phaser.Math.Clamp(count || 20, 15, 40);
+    var emitter = scene.add.particles(x, y, "spark", {
+      speed: { min: 60, max: 340 },
+      angle: { min: 0, max: 360 },
+      lifespan: { min: 280, max: 720 },
+      scale: { start: 1.15, end: 0 },
+      alpha: { start: 1, end: 0 },
+      gravityY: 60,
+      blendMode: "ADD",
+      tint: tint,
+      emitting: false
+    });
+    emitter.explode(n);
+    scene.time.delayedCall(850, function () { if (emitter.destroy) emitter.destroy(); });
+  }
+
+  function makeTextures(scene) {
+    var g = scene.make.graphics({ x: 0, y: 0, add: false });
+
+    g.clear();
+    g.fillStyle(0x22d3ee, 1);
+    g.fillCircle(4, 4, 4);
+    g.generateTexture("spark", 8, 8);
+
+    g.clear();
+    g.fillStyle(0xa78bfa, 1);
+    g.fillCircle(3, 3, 3);
+    g.generateTexture("spark-v", 6, 6);
+
+    g.clear();
+    g.fillStyle(0xfbbf24, 1);
+    g.fillCircle(3, 3, 3);
+    g.generateTexture("spark-g", 6, 6);
+
+    g.destroy();
+  }
+
+  function pulseBtn(scene, targets) {
+    scene.tweens.add({
+      targets: targets, scale: 1.08, duration: 90, yoyo: true, ease: "Back.easeOut"
     });
   }
-  place(br, bc, "O");
-  RNF.sfx.hit();
-  collapseQuantum();
-  if (checkWin("X")) { endRound("win"); return; }
-  afterAiMove();
-}
 
-function afterAiMove() {
-  if (checkWin("O")) { endRound("lose"); return; }
-  if (isFull()) { endRound("draw"); return; }
-  turn = "X";
-  timer = timerMax;
-}
-
-function endRound(result) {
-  gameEnded = true; running = false;
-  var score = 0;
-  if (result === "win") {
-    wins++; winStreak++;
-    bestStreak = Math.max(bestStreak, winStreak);
-    score = Math.floor(timer * 15) + 600 + winStreak * 80 + (quantumCharges > 0 ? 50 : 0);
-    RNF.sfx.score();
-    shell.triggerShake(8, 0.3);
-    particles.burst(W / 2, H / 2, "#22d3ee", 40);
-  } else if (result === "lose") {
-    losses++; winStreak = 0;
-    score = Math.floor(timer * 3);
-    RNF.sfx.die();
-    shell.triggerShake(10, 0.35);
-  } else {
-    draws++; winStreak = Math.max(0, winStreak - 1);
-    score = 150;
-    RNF.sfx.confirm();
+  function makeButton(scene, x, y, label, color, onClick, width) {
+    var bw = width || 300;
+    var bg = scene.add.rectangle(x, y, bw, 50, color, 0.2)
+      .setStrokeStyle(2, color, 0.9)
+      .setInteractive({ useHandCursor: true });
+    var txt = scene.add.text(x, y, label, {
+      fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif",
+      fontSize: "18px", fontStyle: "bold", color: "#e2e8f0"
+    }).setOrigin(0.5);
+    bg.on("pointerover", function () {
+      scene.tweens.add({ targets: [bg, txt], scale: 1.05, duration: 120, ease: "Cubic.easeOut" });
+    });
+    bg.on("pointerout", function () {
+      scene.tweens.add({ targets: [bg, txt], scale: 1, duration: 120, ease: "Cubic.easeOut" });
+    });
+    bg.on("pointerdown", function () {
+      pulseBtn(scene, [bg, txt]);
+      SFX.click();
+      onClick();
+    });
+    return { bg: bg, txt: txt };
   }
-  shell.saveProgress({ wins: wins, losses: losses, draws: draws, winStreak: winStreak, bestStreak: bestStreak });
-  cleanup();
-  shell.gameOver(score, { result: result, winRate: winRate(), winStreak: winStreak, bestStreak: bestStreak });
-}
 
-function updateHud() {
-  var diff = shell.getDifficulty();
-  shell.setHud(
-    '<div><span>' + RNF.t("hud.turn") + '</span><b>' + (turn === "X" ? RNF.t("label.youX") : RNF.t("label.aiO")) + '</b></div>' +
-    '<div><span>' + RNF.t("hud.countdown") + '</span><b style="color:' + (timer < 10 ? "#f472b6" : "#22d3ee") + '">' + Math.ceil(timer) + 's</b></div>' +
-    '<div><span>' + RNF.t("hud.streak") + '</span><b style="color:#fbbf24">' + winStreak + '</b></div>' +
-    '<div><span>' + RNF.t("hud.quantum") + '</span><b>' + quantumCharges + '</b></div>' +
-    '<div><span>' + RNF.t("hud.winRate") + '</span><b>' + winRate() + '%</b></div>' +
-    '<div><span>' + RNF.t("hud.diff") + '</span><b style="font-size:.72rem;color:#c4b5fd">' + diff.label + '</b></div>'
-  );
-}
-
-function handleCell(r, c) {
-  if (gameEnded || turn !== "X" || !isEmpty(r, c)) return;
-  if (quantumMode && quantumCharges > 0) {
-    if (quantumPick.some(function (p) { return p.r === r && p.c === c; })) return;
-    placeQuantum(r, c);
-    updateHud();
-    if (turn === "O") return;
-    return;
+  /* ── Minimax / Heuristic AI ── */
+  function emptyCells(board, size) {
+    var list = [];
+    for (var r = 0; r < size; r++)
+      for (var c = 0; c < size; c++)
+        if (!board[r][c]) list.push({ r: r, c: c });
+    return list;
   }
-  place(r, c, "X");
-  RNF.sfx.click();
-  if (checkWin("X")) { endRound("win"); return; }
-  if (isFull()) { endRound("draw"); return; }
-  turn = "O";
-  timer = timerMax;
-  setTimeout(aiMove, diffId === "extreme" ? 200 : 400);
-}
 
-function onPointer(e) {
-  if (gameEnded || turn !== "X") return;
-  var rect = canvas.getBoundingClientRect();
-  var mx = (e.clientX - rect.left) * (W / rect.width);
-  var my = (e.clientY - rect.top) * (H / rect.height);
-  var cell = cellFromPos(mx, my);
-  if (cell) handleCell(cell.r, cell.c);
-}
-
-function onPointerMove(e) {
-  var rect = canvas.getBoundingClientRect();
-  var mx = (e.clientX - rect.left) * (W / rect.width);
-  var my = (e.clientY - rect.top) * (H / rect.height);
-  hoverCell = cellFromPos(mx, my);
-}
-
-function onKeyDown(e) {
-  keys[e.code] = true;
-  if (e.code === "KeyQ" && turn === "X" && quantumCharges > 0) {
-    quantumMode = !quantumMode;
-    quantumPick = [];
-    RNF.sfx.power();
-  }
-}
-
-function startGame() {
-  cleanup();
-  speedScale = shell.getSpeedScale();
-  diffId = (shell.getDifficulty() || {}).id || "normal";
-  CELL = Math.min((W - 80) / SIZE, (H - 120) / SIZE);
-  board = []; quantum = [];
-  for (var r = 0; r < SIZE; r++) {
-    board[r] = []; quantum[r] = [];
-    for (var c = 0; c < SIZE; c++) { board[r][c] = null; quantum[r][c] = null; }
-  }
-  turn = "X";
-  timerMax = TIMER_BY_DIFF[diffId] || 38;
-  timer = timerMax;
-  heartbeatAcc = 0; glitchT = 0; animT = 0;
-  gameEnded = false; running = true;
-  quantumMode = false; quantumPick = []; quantumCharges = diffId === "easy" ? 3 : 2;
-  collapseAnim = []; lastPlaced = null; hoverCell = null;
-  keys = {};
-  shell.attachKeyboard(keys);
-  shell.attachTouchControls({
-    keys: keys,
-    buttons: [
-      { code: "KeyQ", label: RNF.t("touch.quantum"), side: "right", hold: false, wide: true,
-        onPress: function () {
-          if (turn === "X" && quantumCharges > 0) {
-            quantumMode = !quantumMode; quantumPick = []; RNF.sfx.power();
+  function findWinLine(board, size, winLen, player) {
+    var dirs = [[0, 1], [1, 0], [1, 1], [1, -1]];
+    for (var r = 0; r < size; r++) {
+      for (var c = 0; c < size; c++) {
+        if (board[r][c] !== player) continue;
+        for (var d = 0; d < dirs.length; d++) {
+          var line = [{ r: r, c: c }];
+          var ok = true;
+          for (var i = 1; i < winLen; i++) {
+            var nr = r + dirs[d][0] * i;
+            var nc = c + dirs[d][1] * i;
+            if (nr < 0 || nr >= size || nc < 0 || nc >= size || board[nr][nc] !== player) {
+              ok = false; break;
+            }
+            line.push({ r: nr, c: nc });
           }
+          if (ok) return line;
         }
       }
-    ],
-    swipe: { threshold: 40, tap: function (e) {
-      var rect = canvas.getBoundingClientRect();
-      var mx = (e.clientX - rect.left) * (W / rect.width);
-      var my = (e.clientY - rect.top) * (H / rect.height);
-      var cell = cellFromPos(mx, my);
-      if (cell) handleCell(cell.r, cell.c);
-    }}
-  });
-  canvas.addEventListener("pointerdown", onPointer);
-  canvas.addEventListener("pointermove", onPointerMove);
-  window.addEventListener("keydown", onKeyDown);
-  lastTs = performance.now();
-  animId = requestAnimationFrame(loop);
-}
-
-var lastTs = 0;
-
-function loop(ts) {
-  if (!running) return;
-  var dt = Math.min(0.05, (ts - lastTs) / 1000);
-  lastTs = ts; animT += dt; glitchT += dt;
-  if (turn === "X") {
-    timer -= dt * speedScale;
-    heartbeatAcc += dt;
-    if (timer < 12 && heartbeatAcc >= (timer < 5 ? 0.35 : 0.75)) {
-      RNF.sfx.heartbeat(); heartbeatAcc = 0;
     }
-    if (timer <= 0) { endRound("lose"); return; }
+    return null;
   }
-  if (lastPlaced) lastPlaced.t += dt;
-  collapseAnim.forEach(function (a) { a.t += dt; });
-  collapseAnim = collapseAnim.filter(function (a) { return a.t < 0.6; });
-  particles.update(dt);
-  draw(); updateHud();
-  animId = requestAnimationFrame(loop);
-}
 
-function drawQuantumCell(r, c, q) {
-  var o = boardOffset();
-  var x = o.ox + c * CELL + CELL / 2, y = o.oy + r * CELL + CELL / 2;
-  var flicker = 0.5 + Math.sin(animT * 8 + q.phase) * 0.35;
-  ctx.save();
-  ctx.globalAlpha = flicker;
-  ctx.strokeStyle = "#a78bfa"; ctx.lineWidth = 2;
-  ctx.shadowBlur = 20; ctx.shadowColor = "#a78bfa";
-  ctx.beginPath(); ctx.arc(x, y, CELL * 0.32, 0, Math.PI * 2); ctx.stroke();
-  ctx.fillStyle = "rgba(167,139,250,0.25)";
-  ctx.fill();
-  ctx.fillStyle = "#c4b5fd"; ctx.font = "bold " + Math.floor(CELL * 0.28) + "px monospace";
-  ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillText("◈", x, y);
-  ctx.restore();
-}
+  function isBoardFull(board, size) {
+    return emptyCells(board, size).length === 0;
+  }
 
-function drawChip(x, y, p) {
-  ctx.save();
-  ctx.shadowBlur = 14; ctx.shadowColor = p === "X" ? "#22d3ee" : "#f472b6";
-  ctx.fillStyle = "rgba(8,12,24,0.92)";
-  ctx.strokeStyle = p === "X" ? "#22d3ee" : "#f472b6";
-  ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.roundRect(x - CELL * 0.38, y - CELL * 0.38, CELL * 0.76, CELL * 0.76, 8);
-  ctx.fill(); ctx.stroke();
-  ctx.fillStyle = p === "X" ? "#22d3ee" : "#f472b6";
-  ctx.font = "bold " + Math.floor(CELL * 0.42) + "px monospace";
-  ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillText(p, x, y);
-  ctx.restore();
-}
-
-function draw() {
-  ctx.save(); shell.applyShake(ctx);
-  var bg = ctx.createRadialGradient(W / 2, H / 2, 20, W / 2, H / 2, W * 0.6);
-  bg.addColorStop(0, "#0c1220"); bg.addColorStop(1, "#04060c");
-  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-
-  if (shell.isHighQuality()) {
-    ctx.strokeStyle = "rgba(34,211,238,0.04)";
-    for (var i = 0; i < 20; i++) {
-      ctx.beginPath(); ctx.moveTo(Math.random() * W, 0); ctx.lineTo(Math.random() * W, H); ctx.stroke();
+  function countOpen(board, size, winLen, player, r, c, dr, dc) {
+    var cnt = 1;
+    var openEnds = 0;
+    var i, nr, nc;
+    for (i = 1; i < winLen; i++) {
+      nr = r + dr * i; nc = c + dc * i;
+      if (nr < 0 || nr >= size || nc < 0 || nc >= size) break;
+      if (board[nr][nc] === player) cnt++;
+      else if (!board[nr][nc]) { openEnds++; break; }
+      else break;
     }
+    for (i = 1; i < winLen; i++) {
+      nr = r - dr * i; nc = c - dc * i;
+      if (nr < 0 || nr >= size || nc < 0 || nc >= size) break;
+      if (board[nr][nc] === player) cnt++;
+      else if (!board[nr][nc]) { openEnds++; break; }
+      else break;
+    }
+    return { cnt: cnt, open: openEnds };
   }
 
-  var o = boardOffset();
-  ctx.strokeStyle = "rgba(34,211,238,0.3)"; ctx.lineWidth = 1.5;
-  for (var i = 0; i <= SIZE; i++) {
-    ctx.beginPath(); ctx.moveTo(o.ox, o.oy + i * CELL); ctx.lineTo(o.ox + SIZE * CELL, o.oy + i * CELL); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(o.ox + i * CELL, o.oy); ctx.lineTo(o.ox + i * CELL, o.oy + SIZE * CELL); ctx.stroke();
-  }
-
-  if (hoverCell && isEmpty(hoverCell.r, hoverCell.c) && turn === "X") {
-    ctx.fillStyle = quantumMode ? "rgba(167,139,250,0.15)" : "rgba(34,211,238,0.12)";
-    ctx.fillRect(o.ox + hoverCell.c * CELL + 2, o.oy + hoverCell.r * CELL + 2, CELL - 4, CELL - 4);
-  }
-
-  for (var r = 0; r < SIZE; r++) {
-    for (var c = 0; c < SIZE; c++) {
-      if (quantum[r][c]) drawQuantumCell(r, c, quantum[r][c]);
-      if (board[r][c]) {
-        drawChip(o.ox + c * CELL + CELL / 2, o.oy + r * CELL + CELL / 2, board[r][c]);
+  function evaluateBoard(board, size, winLen, ai, human) {
+    if (findWinLine(board, size, winLen, ai)) return 100000;
+    if (findWinLine(board, size, winLen, human)) return -100000;
+    var score = 0;
+    var dirs = [[0, 1], [1, 0], [1, 1], [1, -1]];
+    for (var r = 0; r < size; r++) {
+      for (var c = 0; c < size; c++) {
+        if (!board[r][c]) continue;
+        var me = board[r][c] === ai;
+        for (var d = 0; d < dirs.length; d++) {
+          var info = countOpen(board, size, winLen, board[r][c], r, c, dirs[d][0], dirs[d][1]);
+          var w = 0;
+          if (info.cnt >= winLen - 1 && info.open > 0) w = 5000;
+          else if (info.cnt >= winLen - 2 && info.open >= 1) w = 400;
+          else if (info.cnt >= 2) w = 40 * info.cnt;
+          score += me ? w : -w * 1.1;
+        }
+        // center bias
+        var mid = (size - 1) / 2;
+        var dist = Math.abs(r - mid) + Math.abs(c - mid);
+        score += (me ? 1 : -1) * (size - dist);
       }
     }
+    return score;
   }
 
-  if (lastPlaced && lastPlaced.t < 0.5) {
-    ctx.strokeStyle = "rgba(251,191,36," + (0.6 - lastPlaced.t) + ")";
-    ctx.lineWidth = 3;
-    ctx.strokeRect(o.ox + lastPlaced.c * CELL + 1, o.oy + lastPlaced.r * CELL + 1, CELL - 2, CELL - 2);
+  function minimax(board, size, winLen, depth, maximizing, ai, human, alpha, beta) {
+    if (findWinLine(board, size, winLen, ai)) return { score: 100000 + depth };
+    if (findWinLine(board, size, winLen, human)) return { score: -100000 - depth };
+    var empties = emptyCells(board, size);
+    if (depth === 0 || empties.length === 0) {
+      return { score: evaluateBoard(board, size, winLen, ai, human) };
+    }
+
+    // move ordering: center first
+    var mid = (size - 1) / 2;
+    empties.sort(function (a, b) {
+      return (Math.abs(a.r - mid) + Math.abs(a.c - mid)) - (Math.abs(b.r - mid) + Math.abs(b.c - mid));
+    });
+
+    var bestMove = empties[0];
+    if (maximizing) {
+      var maxEval = -Infinity;
+      for (var i = 0; i < empties.length; i++) {
+        var m = empties[i];
+        board[m.r][m.c] = ai;
+        var ev = minimax(board, size, winLen, depth - 1, false, ai, human, alpha, beta).score;
+        board[m.r][m.c] = null;
+        if (ev > maxEval) { maxEval = ev; bestMove = m; }
+        alpha = Math.max(alpha, ev);
+        if (beta <= alpha) break;
+      }
+      return { score: maxEval, move: bestMove };
+    } else {
+      var minEval = Infinity;
+      for (var j = 0; j < empties.length; j++) {
+        var m2 = empties[j];
+        board[m2.r][m2.c] = human;
+        var ev2 = minimax(board, size, winLen, depth - 1, true, ai, human, alpha, beta).score;
+        board[m2.r][m2.c] = null;
+        if (ev2 < minEval) { minEval = ev2; bestMove = m2; }
+        beta = Math.min(beta, ev2);
+        if (beta <= alpha) break;
+      }
+      return { score: minEval, move: bestMove };
+    }
   }
 
-  var barW = SIZE * CELL;
-  ctx.fillStyle = "rgba(0,0,0,0.45)"; ctx.fillRect(o.ox, o.oy - 16, barW, 8);
-  ctx.fillStyle = timer < 10 ? "#f472b6" : "#22d3ee";
-  ctx.fillRect(o.ox, o.oy - 16, barW * (timer / timerMax), 8);
-
-  if (quantumMode) {
-    ctx.fillStyle = "rgba(167,139,250,0.85)"; ctx.font = "bold 13px 'Microsoft JhengHei',sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText(RNF.t("label.quantumPick") + " " + (2 - quantumPick.length) + " " + RNF.t("label.cells"), W / 2, o.oy + SIZE * CELL + 28);
-  } else {
-    ctx.fillStyle = "#94a3b8"; ctx.font = "13px 'Microsoft JhengHei',sans-serif"; ctx.textAlign = "center";
-    ctx.fillText(RNF.t("label.quantumHint"), W / 2, o.oy + SIZE * CELL + 28);
+  function pickAiMove(board, size, winLen, depth, ai, human) {
+    // immediate win / block
+    var empties = emptyCells(board, size);
+    var i, m;
+    for (i = 0; i < empties.length; i++) {
+      m = empties[i];
+      board[m.r][m.c] = ai;
+      if (findWinLine(board, size, winLen, ai)) { board[m.r][m.c] = null; return m; }
+      board[m.r][m.c] = null;
+    }
+    for (i = 0; i < empties.length; i++) {
+      m = empties[i];
+      board[m.r][m.c] = human;
+      if (findWinLine(board, size, winLen, human)) { board[m.r][m.c] = null; return m; }
+      board[m.r][m.c] = null;
+    }
+    var d = Math.min(depth, empties.length);
+    if (size >= 5) d = Math.min(d, 3 + Math.min(2, Math.floor((25 - empties.length) / 6)));
+    var result = minimax(board, size, winLen, d, true, ai, human, -Infinity, Infinity);
+    return result.move || empties[0];
   }
 
-  particles.draw(ctx);
-  ctx.restore();
-}
+  /* ═══════════════ Boot ═══════════════ */
+  class BootScene extends Phaser.Scene {
+    constructor() { super("BootScene"); }
+    create() {
+      makeTextures(this);
+      this.cameras.main.setBackgroundColor("#04060c");
+      this.cameras.main.fadeIn(320, 4, 6, 12);
+      var t = this.add.text(W / 2, H / 2 - 8, "QUANTUM TIC-TAC-TOE", {
+        fontFamily: "Segoe UI, sans-serif", fontSize: "26px", fontStyle: "bold", color: "#22d3ee"
+      }).setOrigin(0.5).setAlpha(0);
+      this.add.text(W / 2, H / 2 + 28, "Phaser 3 · RainyNightFrog", {
+        fontFamily: "Segoe UI, sans-serif", fontSize: "13px", color: "#64748b"
+      }).setOrigin(0.5);
+      this.tweens.add({ targets: t, alpha: 1, scale: 1.04, duration: 400, ease: "Back.easeOut" });
+      this.time.delayedCall(520, function () { this.scene.start("MainMenuScene"); }, [], this);
+    }
+  }
+
+  /* ═══════════════ Main Menu ═══════════════ */
+  class MainMenuScene extends Phaser.Scene {
+    constructor() { super("MainMenuScene"); }
+    create() {
+      ensureAudio();
+      this.cameras.main.setBackgroundColor("#060a14");
+      this.cameras.main.fadeIn(200, 4, 6, 12);
+
+      for (var i = 0; i < 20; i++) {
+        var mark = this.add.text(
+          Phaser.Math.Between(40, W - 40), Phaser.Math.Between(40, H - 40),
+          i % 2 ? "X" : "O", {
+            fontFamily: "Segoe UI, sans-serif", fontSize: String(Phaser.Math.Between(18, 36)) + "px",
+            fontStyle: "bold", color: i % 2 ? "#22d3ee" : "#f472b6"
+          }
+        ).setAlpha(0.06);
+        this.tweens.add({
+          targets: mark, alpha: 0.12, duration: Phaser.Math.Between(1200, 2400),
+          yoyo: true, repeat: -1, ease: "Sine.easeInOut"
+        });
+      }
+
+      var badge = this.add.text(W / 2, 78, "RAINYNIGHTFROG · CYBER ARCADE", {
+        fontFamily: "Segoe UI, sans-serif", fontSize: "11px", fontStyle: "bold",
+        color: "#22d3ee", letterSpacing: 3
+      }).setOrigin(0.5).setAlpha(0);
+
+      var title = this.add.text(W / 2, 140, "QUANTUM TIC-TAC-TOE", {
+        fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif",
+        fontSize: "36px", fontStyle: "bold", color: "#ffffff"
+      }).setOrigin(0.5).setScale(0.65).setAlpha(0);
+
+      var sub = this.add.text(W / 2, 192, "量子過三關 · Minimax AI · 限時心跳 · 連線雷射爆裂", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+        fontSize: "15px", color: "#94a3b8"
+      }).setOrigin(0.5).setAlpha(0);
+
+      var st = this.add.text(W / 2, 230,
+        "連勝 " + stats.winStreak + " · 最佳 " + stats.bestStreak + " · 勝率 " + winRate() + "% · 積分 " + stats.totalScore.toLocaleString(), {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+        fontSize: "13px", color: "#64748b"
+      }).setOrigin(0.5).setAlpha(0);
+
+      this.tweens.add({ targets: badge, alpha: 1, y: 88, duration: 400, ease: "Cubic.easeOut" });
+      this.tweens.add({ targets: title, alpha: 1, scale: 1, duration: 480, ease: "Back.easeOut", delay: 50 });
+      this.tweens.add({ targets: [sub, st], alpha: 1, duration: 380, ease: "Cubic.easeOut", delay: 120 });
+
+      var self = this;
+      makeButton(this, W / 2, 300, "開始遊戲 START", 0x22d3ee, function () {
+        SFX.confirm();
+        self.cameras.main.fadeOut(160, 4, 6, 12);
+        self.time.delayedCall(170, function () { self.scene.start("ModeScene"); });
+      });
+      makeButton(this, W / 2, 370, "設定 SETTINGS", 0xa78bfa, function () {
+        self.scene.launch("SettingsScene");
+      });
+      makeButton(this, W / 2, 440, "操作說明", 0x64748b, function () {
+        if (self.helpTxt) return;
+        self.helpTxt = self.add.text(W / 2, 500,
+          "點格落子 · 單人戰 AI 或雙人同屏 · 連線即勝 · Extreme 為 5×5 四子連珠", {
+          fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+          fontSize: "13px", color: "#c4b5fd"
+        }).setOrigin(0.5).setAlpha(0);
+        self.tweens.add({ targets: self.helpTxt, alpha: 1, y: 492, duration: 280, ease: "Cubic.easeOut" });
+      }, 220);
+    }
+  }
+
+  /* ═══════════════ Mode ═══════════════ */
+  class ModeScene extends Phaser.Scene {
+    constructor() { super("ModeScene"); }
+    create() {
+      this.cameras.main.setBackgroundColor("#060a14");
+      this.cameras.main.fadeIn(160, 4, 6, 12);
+
+      var head = this.add.text(W / 2, 120, "對戰模式", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+        fontSize: "34px", fontStyle: "bold", color: "#e2e8f0"
+      }).setOrigin(0.5).setScale(0.7).setAlpha(0);
+      this.tweens.add({ targets: head, alpha: 1, scale: 1, duration: 360, ease: "Back.easeOut" });
+
+      var self = this;
+      makeButton(this, W / 2, 240, "單人 · 對抗賽博 AI", 0x22d3ee, function () {
+        playMode = "ai";
+        SFX.confirm();
+        self.scene.start("DifficultyScene");
+      });
+      makeButton(this, W / 2, 320, "雙人 · 同屏對戰", 0xf472b6, function () {
+        playMode = "pvp";
+        SFX.confirm();
+        self.scene.start("DifficultyScene");
+      });
+      makeButton(this, W / 2, 420, "返回", 0x475569, function () {
+        self.scene.start("MainMenuScene");
+      }, 160);
+    }
+  }
+
+  /* ═══════════════ Difficulty ═══════════════ */
+  class DifficultyScene extends Phaser.Scene {
+    constructor() { super("DifficultyScene"); }
+    create() {
+      this.cameras.main.setBackgroundColor("#060a14");
+      this.cameras.main.fadeIn(160, 4, 6, 12);
+
+      var head = this.add.text(W / 2, 70, "選擇難度", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+        fontSize: "34px", fontStyle: "bold", color: "#e2e8f0"
+      }).setOrigin(0.5).setScale(0.7).setAlpha(0);
+      this.tweens.add({ targets: head, alpha: 1, scale: 1, duration: 360, ease: "Back.easeOut" });
+
+      this.add.text(W / 2, 118, "連勝越高 → AI 更快 · Combo 倍率越高", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+        fontSize: "14px", color: "#64748b"
+      }).setOrigin(0.5);
+
+      var self = this;
+      ["casual", "standard", "extreme"].forEach(function (key, i) {
+        var d = DIFF[key];
+        var col = Phaser.Display.Color.HexStringToColor(d.color).color;
+        var y = 190 + i * 88;
+        makeButton(self, W / 2, y, d.label, col, function () {
+          selectedDiff = key;
+          SFX.confirm();
+          self.cameras.main.fadeOut(160, 4, 6, 12);
+          self.time.delayedCall(170, function () {
+            self.scene.start("GameScene", { difficulty: key, mode: playMode });
+          });
+        });
+        self.add.text(W / 2, y + 32, d.desc + " · 分數 x" + d.scoreMult.toFixed(2), {
+          fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+          fontSize: "12px", color: "#94a3b8"
+        }).setOrigin(0.5);
+      });
+
+      makeButton(this, W / 2, 490, "返回", 0x475569, function () {
+        self.scene.start("ModeScene");
+      }, 160);
+    }
+  }
+
+  /* ═══════════════ Settings ═══════════════ */
+  class SettingsScene extends Phaser.Scene {
+    constructor() { super("SettingsScene"); }
+    create() {
+      var dim = this.add.rectangle(W / 2, H / 2, W, H, 0x02040a, 0.75).setInteractive().setDepth(100);
+      var panel = this.add.rectangle(W / 2, H / 2, 420, 300, 0x0b1220, 0.98)
+        .setStrokeStyle(2, 0x22d3ee, 0.85).setScale(0.75).setAlpha(0).setDepth(101);
+      var title = this.add.text(W / 2, H / 2 - 110, "設定選單", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+        fontSize: "26px", fontStyle: "bold", color: "#e2e8f0"
+      }).setOrigin(0.5).setAlpha(0).setDepth(102);
+
+      this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 300, ease: "Back.easeOut" });
+      this.tweens.add({ targets: title, alpha: 1, duration: 260, ease: "Cubic.easeOut", delay: 50 });
+
+      var self = this;
+      var sfxBtn = makeButton(this, W / 2, H / 2 - 20, gameSettings.sfx ? "音效：開" : "音效：關", 0x22d3ee, function () {
+        gameSettings.sfx = !gameSettings.sfx; saveSettings(); SFX.toggle();
+        sfxBtn.txt.setText(gameSettings.sfx ? "音效：開" : "音效：關");
+      }, 260);
+      sfxBtn.bg.setDepth(102); sfxBtn.txt.setDepth(103);
+
+      var shakeBtn = makeButton(this, W / 2, H / 2 + 50, gameSettings.shake ? "震屏：開" : "震屏：關", 0xa78bfa, function () {
+        gameSettings.shake = !gameSettings.shake; saveSettings(); SFX.toggle();
+        shakeBtn.txt.setText(gameSettings.shake ? "震屏：開" : "震屏：關");
+      }, 260);
+      shakeBtn.bg.setDepth(102); shakeBtn.txt.setDepth(103);
+
+      var closeBtn = makeButton(this, W / 2, H / 2 + 120, "關閉", 0x64748b, function () {
+        self.scene.stop("SettingsScene");
+      }, 180);
+      closeBtn.bg.setDepth(102); closeBtn.txt.setDepth(103);
+
+      dim.on("pointerdown", function () { self.scene.stop("SettingsScene"); });
+    }
+  }
+
+  /* ═══════════════ Game ═══════════════ */
+  class GameScene extends Phaser.Scene {
+    constructor() { super("GameScene"); }
+
+    init(data) {
+      this.diffKey = (data && data.difficulty) || selectedDiff || "standard";
+      this.diff = DIFF[this.diffKey] || DIFF.standard;
+      this.mode = (data && data.mode) || playMode || "ai";
+      selectedDiff = this.diffKey;
+      playMode = this.mode;
+    }
+
+    create() {
+      ensureAudio();
+      this.cameras.main.setBackgroundColor("#050814");
+      this.cameras.main.fadeIn(180, 4, 6, 12);
+
+      this.size = this.diff.size;
+      this.winLen = this.diff.winLen;
+      this.cell = this.size === 3 ? 110 : 72;
+      this.boardW = this.cell * this.size;
+      this.ox = (W - this.boardW) / 2;
+      this.oy = (H - this.boardW) / 2 + 16;
+
+      this.board = [];
+      this.marks = [];
+      for (var r = 0; r < this.size; r++) {
+        this.board[r] = [];
+        this.marks[r] = [];
+        for (var c = 0; c < this.size; c++) {
+          this.board[r][c] = null;
+          this.marks[r][c] = null;
+        }
+      }
+
+      this.turn = "X";
+      this.alive = true;
+      this.locked = false;
+      this.timerMax = this.diff.timer;
+      this.timer = this.timerMax;
+      this.heartbeatAcc = 0;
+      this.roundScore = 0;
+      this.comboMult = 1 + stats.winStreak * 0.15;
+      this.dangerMultiplier = 1 + Math.log(1 + stats.winStreak / 3) * 0.8;
+      this.aiThinking = false;
+
+      // AI delay shortened by streak (faster thinking)
+      this.aiDelay = Math.max(80, this.diff.aiDelay / (1 + stats.winStreak * 0.12));
+      this.aiDepth = this.diff.aiDepth + Math.min(2, Math.floor(stats.winStreak / 4));
+
+      this.drawBoard();
+      this.createHud();
+      this.pulse = this.add.rectangle(W / 2, H / 2, W, H, 0xff2244, 0).setDepth(50);
+      this.laserGfx = this.add.graphics().setDepth(30);
+
+      var self = this;
+      this.input.on("pointerdown", function (p) {
+        if (!self.alive || self.locked || self.aiThinking) return;
+        if (self.mode === "ai" && self.turn === "O") return;
+        var cell = self.cellFromPos(p.x, p.y);
+        if (cell && !self.board[cell.r][cell.c]) self.placeMark(cell.r, cell.c, self.turn);
+      });
+    }
+
+    drawBoard() {
+      var g = this.add.graphics().setDepth(0);
+      g.fillStyle(0x060a12, 1);
+      g.fillRect(0, 0, W, H);
+
+      // neon grid glow
+      g.lineStyle(4, 0x22d3ee, 0.12);
+      g.strokeRect(this.ox - 6, this.oy - 6, this.boardW + 12, this.boardW + 12);
+      g.lineStyle(2, 0xa78bfa, 0.55);
+      g.strokeRect(this.ox - 2, this.oy - 2, this.boardW + 4, this.boardW + 4);
+
+      for (var i = 1; i < this.size; i++) {
+        var x = this.ox + i * this.cell;
+        var y = this.oy + i * this.cell;
+        g.lineStyle(2, 0x22d3ee, 0.45);
+        g.lineBetween(x, this.oy + 4, x, this.oy + this.boardW - 4);
+        g.lineBetween(this.ox + 4, y, this.ox + this.boardW - 4, y);
+        g.lineStyle(6, 0x22d3ee, 0.08);
+        g.lineBetween(x, this.oy + 4, x, this.oy + this.boardW - 4);
+        g.lineBetween(this.ox + 4, y, this.ox + this.boardW - 4, y);
+      }
+
+      // interactive cells
+      this.hitZones = [];
+      for (var r = 0; r < this.size; r++) {
+        for (var c = 0; c < this.size; c++) {
+          var cx = this.ox + c * this.cell + this.cell / 2;
+          var cy = this.oy + r * this.cell + this.cell / 2;
+          var zone = this.add.rectangle(cx, cy, this.cell - 8, this.cell - 8, 0x22d3ee, 0)
+            .setInteractive({ useHandCursor: true }).setDepth(5);
+          zone.on("pointerover", function () {
+            if (this.fillAlpha === 0) this.setFillStyle(0x22d3ee, 0.08);
+          });
+          zone.on("pointerout", function () {
+            this.setFillStyle(0x22d3ee, 0);
+          });
+          this.hitZones.push(zone);
+        }
+      }
+    }
+
+    createHud() {
+      this.hudTurn = this.add.text(W / 2, 14, "", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+        fontSize: "16px", fontStyle: "bold", color: "#e2e8f0"
+      }).setOrigin(0.5, 0).setDepth(40);
+
+      this.hudDiff = this.add.text(14, 12, this.diff.label, {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+        fontSize: "13px", color: this.diff.color
+      }).setDepth(40);
+
+      this.hudDanger = this.add.text(14, 34, "DANGER: x" + this.dangerMultiplier.toFixed(2), {
+        fontFamily: "Segoe UI, sans-serif", fontSize: "13px", fontStyle: "bold", color: "#f472b6"
+      }).setDepth(40);
+
+      this.hudStreak = this.add.text(W - 14, 12, "連勝 " + stats.winStreak + " · Combo x" + this.comboMult.toFixed(2), {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+        fontSize: "13px", color: "#fbbf24"
+      }).setOrigin(1, 0).setDepth(40);
+
+      this.hudMode = this.add.text(W - 14, 34, this.mode === "ai" ? "VS AI" : "雙人同屏", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+        fontSize: "12px", color: "#94a3b8"
+      }).setOrigin(1, 0).setDepth(40);
+
+      // timer bar
+      this.timerBg = this.add.rectangle(W / 2, H - 22, 360, 12, 0x1e293b, 1).setDepth(40);
+      this.timerBar = this.add.rectangle(W / 2 - 180, H - 22, 360, 10, 0x22d3ee, 1).setOrigin(0, 0.5).setDepth(41);
+      this.timerTxt = this.add.text(W / 2, H - 42, "", {
+        fontFamily: "Segoe UI, sans-serif", fontSize: "13px", color: "#94a3b8"
+      }).setOrigin(0.5).setDepth(40);
+
+      if (!this.timerMax) {
+        this.timerBg.setVisible(false);
+        this.timerBar.setVisible(false);
+        this.timerTxt.setText("無時間限制");
+      }
+
+      this.refreshTurnHud();
+    }
+
+    refreshTurnHud() {
+      var name;
+      if (this.mode === "ai") {
+        name = this.turn === "X" ? "你的回合 · X" : "賽博 AI 思考中 · O";
+      } else {
+        name = this.turn === "X" ? "玩家 1 · X" : "玩家 2 · O";
+      }
+      this.hudTurn.setText(name);
+      this.hudTurn.setColor(this.turn === "X" ? "#67e8f9" : "#f9a8d4");
+    }
+
+    cellFromPos(x, y) {
+      var c = Math.floor((x - this.ox) / this.cell);
+      var r = Math.floor((y - this.oy) / this.cell);
+      if (r >= 0 && r < this.size && c >= 0 && c < this.size) return { r: r, c: c };
+      return null;
+    }
+
+    cellCenter(r, c) {
+      return {
+        x: this.ox + c * this.cell + this.cell / 2,
+        y: this.oy + r * this.cell + this.cell / 2
+      };
+    }
+
+    placeMark(r, c, player) {
+      if (!this.alive || this.board[r][c]) return;
+      this.board[r][c] = player;
+      this.locked = true;
+
+      var pos = this.cellCenter(r, c);
+      var color = player === "X" ? "#67e8f9" : "#f472b6";
+      var tint = player === "X" ? 0x22d3ee : 0xf472b6;
+      var fontSize = this.size === 3 ? "64px" : "42px";
+
+      var txt = this.add.text(pos.x, pos.y, player, {
+        fontFamily: "Segoe UI, sans-serif",
+        fontSize: fontSize,
+        fontStyle: "bold",
+        color: color
+      }).setOrigin(0.5).setDepth(20).setScale(0.2).setAlpha(0.4);
+
+      this.marks[r][c] = txt;
+
+      // 量子疊加態：Glitch 閃爍 + 彈簧落盤
+      var self = this;
+      var glitchCount = 0;
+      var glitchEvent = this.time.addEvent({
+        delay: 40,
+        repeat: 5,
+        callback: function () {
+          glitchCount++;
+          txt.setAlpha(glitchCount % 2 ? 0.35 : 0.9);
+          txt.setX(pos.x + Phaser.Math.Between(-4, 4));
+          txt.setY(pos.y + Phaser.Math.Between(-3, 3));
+          if (glitchCount % 2 === 0) SFX.glitch();
+        }
+      });
+
+      this.tweens.add({
+        targets: txt,
+        scale: 1.15,
+        alpha: 1,
+        duration: 280,
+        ease: "Back.easeOut",
+        onComplete: function () {
+          txt.setPosition(pos.x, pos.y);
+          self.tweens.add({
+            targets: txt, scale: 1, duration: 120, ease: "Cubic.easeOut"
+          });
+        }
+      });
+
+      neonBurst(this, pos.x, pos.y, tint, 15);
+      SFX.place();
+      doShake(this.cameras.main, 80, 0.008);
+
+      this.time.delayedCall(300, function () {
+        glitchEvent.remove(false);
+        txt.setPosition(pos.x, pos.y).setAlpha(1);
+        self.afterPlace(player);
+      });
+    }
+
+    afterPlace(player) {
+      var line = findWinLine(this.board, this.size, this.winLen, player);
+      if (line) {
+        this.onWin(player, line);
+        return;
+      }
+      if (isBoardFull(this.board, this.size)) {
+        this.onDraw();
+        return;
+      }
+
+      this.turn = player === "X" ? "O" : "X";
+      this.timer = this.timerMax;
+      this.locked = false;
+      this.refreshTurnHud();
+
+      if (this.mode === "ai" && this.turn === "O") {
+        this.scheduleAi();
+      }
+    }
+
+    scheduleAi() {
+      this.aiThinking = true;
+      this.hudTurn.setText("賽博 AI Minimax · 運算中…");
+      var self = this;
+      this.time.delayedCall(this.aiDelay, function () {
+        if (!self.alive) return;
+        var move = pickAiMove(
+          self.board, self.size, self.winLen, self.aiDepth, "O", "X"
+        );
+        self.aiThinking = false;
+        if (move) self.placeMark(move.r, move.c, "O");
+      });
+    }
+
+    onWin(player, line) {
+      this.alive = false;
+      this.locked = true;
+
+      // 雷射貫穿連線
+      var a = this.cellCenter(line[0].r, line[0].c);
+      var b = this.cellCenter(line[line.length - 1].r, line[line.length - 1].c);
+      var tint = player === "X" ? 0x22d3ee : 0xf472b6;
+      this.laserGfx.clear();
+      this.laserGfx.lineStyle(10, tint, 0.25);
+      this.laserGfx.lineBetween(a.x, a.y, b.x, b.y);
+      this.laserGfx.lineStyle(3, 0xffffff, 0.95);
+      this.laserGfx.lineBetween(a.x, a.y, b.x, b.y);
+
+      for (var i = 0; i < line.length; i++) {
+        var p = this.cellCenter(line[i].r, line[i].c);
+        neonBurst(this, p.x, p.y, tint, 22);
+        neonBurst(this, p.x, p.y, 0xfbbf24, 12);
+        var mark = this.marks[line[i].r][line[i].c];
+        if (mark) {
+          this.tweens.add({
+            targets: mark, scale: 1.35, duration: 200, yoyo: true, ease: "Back.easeOut"
+          });
+        }
+      }
+
+      doShake(this.cameras.main, 200, 0.02);
+      neonBurst(this, W / 2, H / 2, 0xa78bfa, 30);
+      neonBurst(this, W / 2, H / 2, 0x22d3ee, 20);
+
+      var humanWin = (this.mode === "ai" && player === "X") || (this.mode === "pvp");
+      // score: only meaningful for AI mode human win / or P1 in pvp as X win contributes
+      var base = 500 + line.length * 80 + Math.floor(this.timer * 20);
+      this.roundScore = Math.floor(base * this.diff.scoreMult * this.comboMult * this.dangerMultiplier);
+
+      if (this.mode === "ai") {
+        if (player === "X") {
+          SFX.win();
+          stats.wins++;
+          stats.winStreak++;
+          stats.bestStreak = Math.max(stats.bestStreak, stats.winStreak);
+          stats.totalScore += this.roundScore;
+        } else {
+          SFX.lose();
+          stats.losses++;
+          stats.winStreak = 0;
+          this.roundScore = Math.floor(80 * this.diff.scoreMult);
+          stats.totalScore += this.roundScore;
+        }
+      } else {
+        SFX.win();
+        // PvP: treat as session score
+        stats.wins++;
+        stats.winStreak++;
+        stats.bestStreak = Math.max(stats.bestStreak, stats.winStreak);
+        stats.totalScore += this.roundScore;
+      }
+      saveStats();
+      this.finishMatch(player === "X" ? (this.mode === "ai" ? "勝利" : "玩家 1 獲勝") : (this.mode === "ai" ? "敗北" : "玩家 2 獲勝"), player);
+    }
+
+    onDraw() {
+      this.alive = false;
+      this.locked = true;
+      SFX.draw();
+      stats.draws++;
+      stats.winStreak = 0;
+      this.roundScore = Math.floor(150 * this.diff.scoreMult);
+      stats.totalScore += this.roundScore;
+      saveStats();
+      doShake(this.cameras.main, 120, 0.012);
+      this.finishMatch("平手", null);
+    }
+
+    onTimeout() {
+      if (!this.alive) return;
+      SFX.timeout();
+      // current player loses on timeout
+      var loser = this.turn;
+      var winner = loser === "X" ? "O" : "X";
+      // fabricate a fake win without line laser (or pulse)
+      this.alive = false;
+      this.locked = true;
+
+      if (this.mode === "ai") {
+        if (winner === "X") {
+          // AI timed out - rare, human win
+          stats.wins++;
+          stats.winStreak++;
+          stats.bestStreak = Math.max(stats.bestStreak, stats.winStreak);
+          this.roundScore = Math.floor(400 * this.diff.scoreMult * this.comboMult);
+        } else {
+          stats.losses++;
+          stats.winStreak = 0;
+          this.roundScore = Math.floor(50 * this.diff.scoreMult);
+        }
+      } else {
+        stats.wins++;
+        this.roundScore = Math.floor(300 * this.diff.scoreMult);
+      }
+      stats.totalScore += this.roundScore;
+      saveStats();
+      doShake(this.cameras.main, 200, 0.02);
+      this.pulse.setAlpha(0.5);
+      this.tweens.add({ targets: this.pulse, alpha: 0, duration: 400 });
+      var label = this.mode === "ai"
+        ? (winner === "X" ? "AI 逾時 · 你勝" : "逾時敗北")
+        : (winner === "X" ? "玩家 2 逾時 · 玩家 1 勝" : "玩家 1 逾時 · 玩家 2 勝");
+      this.finishMatch(label, winner);
+    }
+
+    finishMatch(resultLabel, winner) {
+      var finalScore = Math.floor(this.roundScore);
+      var meta = {
+        slug: "quantum-tic-tac-toe",
+        difficulty: this.diff.id,
+        mode: this.mode,
+        result: resultLabel,
+        winStreak: stats.winStreak,
+        winRate: winRate(),
+        winner: winner
+      };
+      try {
+        if (typeof RNF !== "undefined" && RNF.submitScore) RNF.submitScore(finalScore, meta);
+      } catch (_e) {}
+
+      var self = this;
+      this.time.delayedCall(700, function () {
+        self.scene.launch("GameOverModal", {
+          score: finalScore,
+          result: resultLabel,
+          winStreak: stats.winStreak,
+          bestStreak: stats.bestStreak,
+          winRate: winRate(),
+          totalScore: stats.totalScore,
+          diff: self.diff,
+          mode: self.mode
+        });
+      });
+    }
+
+    update(_t, delta) {
+      if (!this.alive || !this.timerMax) return;
+      if (this.locked || this.aiThinking) return;
+
+      var dt = Math.min(0.05, delta / 1000);
+      this.timer = Math.max(0, this.timer - dt);
+
+      var ratio = this.timer / this.timerMax;
+      this.timerBar.width = 360 * ratio;
+      this.timerBar.setFillStyle(ratio < 0.3 ? 0xf472b6 : (ratio < 0.55 ? 0xfbbf24 : 0x22d3ee));
+      this.timerTxt.setText("思考時間 " + this.timer.toFixed(1) + "s");
+
+      // 最後 3 秒心跳 + 紅光脈衝
+      if (this.timer > 0 && this.timer <= 3) {
+        this.heartbeatAcc += dt;
+        var beatEvery = 0.35 + this.timer * 0.08;
+        if (this.heartbeatAcc >= beatEvery) {
+          this.heartbeatAcc = 0;
+          SFX.heartbeat();
+          this.pulse.setAlpha(0.18);
+          this.tweens.add({ targets: this.pulse, alpha: 0, duration: 180, ease: "Cubic.easeOut" });
+          doShake(this.cameras.main, 40, 0.004);
+        }
+      }
+
+      if (this.timer <= 0) this.onTimeout();
+    }
+  }
+
+  /* ═══════════════ Game Over ═══════════════ */
+  class GameOverModal extends Phaser.Scene {
+    constructor() { super("GameOverModal"); }
+    init(data) { this.payload = data || {}; }
+
+    create() {
+      var score = this.payload.score || 0;
+      var result = this.payload.result || "結算";
+      var diff = this.payload.diff || DIFF.standard;
+
+      this.add.rectangle(W / 2, H / 2, W, H, 0x02040a, 0.72).setInteractive().setDepth(70);
+      var panel = this.add.rectangle(W / 2, H / 2, 480, 400, 0x0b1220, 0.97)
+        .setStrokeStyle(2, 0x22d3ee, 0.95).setScale(0.7).setAlpha(0).setDepth(71);
+
+      var badge = this.add.text(W / 2, H / 2 - 160, "MATCH OVER", {
+        fontFamily: "Segoe UI, sans-serif", fontSize: "13px", fontStyle: "bold",
+        color: "#22d3ee", letterSpacing: 3
+      }).setOrigin(0.5).setAlpha(0).setDepth(72);
+
+      var title = this.add.text(W / 2, H / 2 - 120, result, {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+        fontSize: "28px", fontStyle: "bold", color: "#ffffff"
+      }).setOrigin(0.5).setAlpha(0).setDepth(72);
+
+      var scoreTxt = this.add.text(W / 2, H / 2 - 50, score.toLocaleString(), {
+        fontFamily: "Segoe UI, sans-serif", fontSize: "52px", fontStyle: "bold", color: "#67e8f9"
+      }).setOrigin(0.5).setScale(0.4).setAlpha(0).setDepth(72);
+
+      var meta = this.add.text(W / 2, H / 2 + 30,
+        diff.label + " · " + (this.payload.mode === "ai" ? "VS AI" : "雙人同屏") +
+        "\n連勝 " + (this.payload.winStreak || 0) +
+        " · 最佳連勝 " + (this.payload.bestStreak || 0) +
+        " · 勝率 " + (this.payload.winRate || 0) + "%" +
+        "\n生涯積分 " + (this.payload.totalScore || 0).toLocaleString() +
+        "\n已執行 RNF.submitScore → 排行榜", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+        fontSize: "13px", color: "#94a3b8", align: "center", lineSpacing: 6
+      }).setOrigin(0.5).setAlpha(0).setDepth(72);
+
+      this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 380, ease: "Back.easeOut" });
+      this.tweens.add({ targets: [badge, title, meta], alpha: 1, duration: 300, ease: "Cubic.easeOut", delay: 80 });
+      this.tweens.add({ targets: scoreTxt, alpha: 1, scale: 1, duration: 480, ease: "Back.easeOut", delay: 100 });
+
+      neonBurst(this, W / 2, H / 2 - 50, 0x22d3ee, 22);
+
+      var self = this;
+      var retry = makeButton(this, W / 2 - 110, H / 2 + 140, "再試一次", 0x22d3ee, function () {
+        SFX.confirm();
+        self.scene.stop("GameOverModal");
+        self.scene.stop("GameScene");
+        self.scene.start("GameScene", { difficulty: selectedDiff, mode: playMode });
+      }, 180);
+      retry.bg.setDepth(73); retry.txt.setDepth(74);
+
+      var settings = makeButton(this, W / 2 + 110, H / 2 + 140, "設定選單", 0xa78bfa, function () {
+        self.scene.launch("SettingsScene");
+      }, 180);
+      settings.bg.setDepth(73); settings.txt.setDepth(74);
+
+      var menu = makeButton(this, W / 2, H / 2 + 200, "主選單", 0x64748b, function () {
+        SFX.click();
+        self.scene.stop("GameOverModal");
+        self.scene.stop("SettingsScene");
+        self.scene.stop("GameScene");
+        self.scene.start("MainMenuScene");
+      }, 200);
+      menu.bg.setDepth(73); menu.txt.setDepth(74);
+    }
+  }
+
+  var config = {
+    type: Phaser.WEBGL,
+    parent: "game-host",
+    width: W,
+    height: H,
+    backgroundColor: "#04060c",
+    banner: false,
+    scale: {
+      mode: Phaser.Scale.FIT,
+      autoCenter: Phaser.Scale.CENTER_BOTH
+    },
+    fps: { target: 144, forceSet: false, smoothStep: true },
+    scene: [BootScene, MainMenuScene, ModeScene, DifficultyScene, GameScene, GameOverModal, SettingsScene]
+  };
+
+  try {
+    window.__QUANTUM_TTT__ = new Phaser.Game(config);
+  } catch (_e) {
+    config.type = Phaser.AUTO;
+    window.__QUANTUM_TTT__ = new Phaser.Game(config);
+  }
+})();
 </script>
 </body>
 </html>

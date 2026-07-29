@@ -4,577 +4,1331 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Cyber Bubble Pop · 賽博泡泡龍</title>
-
-  <script src="/sdk/rnf-i18n.js?v=20260725a"></script>
-  <script src="/sdk/rnf-game-packs.js?v=20260725a"></script>
-  <script src="/sdk/rnf-game-sdk.js?v=20260725b"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%; height: 100%;
+      background: #04060c; overflow: hidden;
+      font-family: "Segoe UI", "Microsoft JhengHei", system-ui, sans-serif;
+      touch-action: none;
+    }
+    #game-host { width: 100%; height: 100%; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.min.js"></script>
+  <script src="/sdk/rnf-i18n.js?v=20260730b"></script>
+  <script src="/sdk/rnf-game-packs.js?v=20260730b"></script>
+  <script src="/sdk/rnf-game-sdk.js?v=20260730b"></script>
 </head>
 <body>
+  <div id="game-host"></div>
 <script>
-RNF.init();
-var shell = RNF.buildShell({
-  title: "Cyber Bubble Pop",
-  creator: "BubbleMaster_X",
-  subtitle: "彈道預覽 · 閃電／黑洞／炸彈 · 連鎖 Combo · 頂部下壓 · 觸控瞄準",
-  width: 960,
-  height: 520,
-  bgmStyle: "ambient",
-  highlights: ["四段難度", "特殊泡泡", "連鎖消除", "頂部下壓", "觸控就緒"],
-  help: {
-    about: "經典泡泡龍的霓虹重製版。發射泡泡與上方同色泡泡相鄰三顆以上即可消除並得分，連鎖消除可觸發震屏與加分。",
-    features: [
-      "四段難度：初始列數、頂部下壓速度、發射冷卻與警戒線高度",
-      "閃電球消除整行、黑洞球吸收周圍、炸彈球清除範圍（困難+）",
-      "彈道預覽含牆壁反彈，連鎖限時內維持 Combo 倍率",
-      "桌面鍵盤＋手機虛擬鍵／畫面拖曳瞄準"
-    ],
-    controls: [
-      "← →：調整發射角度",
-      "空白鍵／觸控「射」：發射泡泡",
-      "手機：在發射區拖曳可快速調整角度"
-    ],
-    tips: [
-      "閃電球：消除整行並產生連鎖",
-      "黑洞球：吸收周圍同色與鄰近泡泡",
-      "炸彈球（困難+）：清除小範圍泡泡",
-      "頂部定時下壓，勿讓泡泡觸及底線"
-    ]
-  },
-  onStop: cleanup,
-  onStart: startGame
-});
+/**
+ * Cyber Bubble Pop — Phaser 3 商業級電競重構
+ * Boot → MainMenu → Difficulty → Game → GameOverModal (+ Settings)
+ * Juice：連擊震屏／星塵／雷電／黑洞／掉落拖尾
+ * 難度：Casual（長瞄準線+慢下壓）／Standard／Extreme（5 秒下壓+迷霧）
+ */
+(function () {
+  "use strict";
 
-var W = shell.width, H = shell.height;
-var ctx, particles, animId, running, gameEnded, keys, lastTs, frameDt;
-var COLORS = ["#22d3ee", "#a78bfa", "#f472b6", "#34d399", "#fbbf24", "#fb7185"];
-var RADIUS = 18, ROWS = 13, COLS = 16;
-var grid, aimAngle, currentBubble, nextBubble, score, combo, comboTimer;
-var falling, shootCooldown, projectile, dropTimer, dangerY, speedScale, diffId, diffTun, highQ;
-var sens = 1;
+  if (typeof RNF !== "undefined" && RNF.init) RNF.init();
 
-function diffTuning() {
-  var map = {
-    easy: { initRows: 4, dropEvery: 14, shootCd: 0.32, dangerRow: ROWS - 2, specialRate: 0.07, bombOk: false },
-    normal: { initRows: 5, dropEvery: 11, shootCd: 0.26, dangerRow: ROWS - 2, specialRate: 0.06, bombOk: false },
-    hard: { initRows: 6, dropEvery: 8.5, shootCd: 0.22, dangerRow: ROWS - 3, specialRate: 0.08, bombOk: true },
-    extreme: { initRows: 7, dropEvery: 6.5, shootCd: 0.18, dangerRow: ROWS - 3, specialRate: 0.09, bombOk: true }
-  };
-  return map[diffId] || map.normal;
-}
+  var W = 960;
+  var H = 540;
+  var RADIUS = 18;
+  var ROWS = 14;
+  var COLS = 16;
+  var TOP_PAD = 36;
+  var SETTINGS_KEY = "rnf:cyber-bubble-pop:settings";
 
-function cleanup() {
-  shell.detachKeyboard();
-  shell.detachTouchControls();
-  running = false;
-  if (animId) cancelAnimationFrame(animId);
-  animId = null;
-  window.removeEventListener("keydown", onKeyDown);
-  window.removeEventListener("keyup", onKeyUp);
-  if (shell && shell.canvas) {
-    shell.canvas.removeEventListener("pointerdown", onAimPointer);
-    shell.canvas.removeEventListener("pointermove", onAimPointer);
-  }
-}
+  var COLOR_HEX = [0x22d3ee, 0xa78bfa, 0xf472b6, 0x34d399, 0xfbbf24, 0xfb7185];
+  var COLOR_CSS = ["#22d3ee", "#a78bfa", "#f472b6", "#34d399", "#fbbf24", "#fb7185"];
 
-var keys = {};
-function onKeyDown(e) {
-  if (gameEnded) return;
-  keys[e.code] = true;
-  if ((e.key === " " || e.code === "Space") && !e.repeat) { e.preventDefault(); shoot(); }
-}
-function onKeyUp(e) { keys[e.code] = false; }
-
-function onAimPointer(e) {
-  if (!running || gameEnded || projectile) return;
-  var rect = shell.canvas.getBoundingClientRect();
-  if (!rect.width) return;
-  var cx = e.clientX != null ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
-  var cy = e.clientY != null ? e.clientY : (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
-  var px = (cx - rect.left) * (W / rect.width);
-  var py = (cy - rect.top) * (H / rect.height);
-  if (py < H * 0.55) return;
-  var sx = W / 2, sy = H - 44;
-  var ang = Math.atan2(px - sx, sy - py);
-  aimAngle = Math.max(-1.35, Math.min(1.35, ang));
-}
-
-function makeBubble(c, r, color, special) {
-  return {
-    c: c, r: r,
-    x: c * RADIUS * 2 + (r % 2 ? RADIUS : 0) + RADIUS,
-    y: r * RADIUS * 1.732 + RADIUS + 12,
-    color: color, special: special || null
-  };
-}
-
-function initGrid() {
-  grid = [];
-  for (var r = 0; r < diffTun.initRows; r++) {
-    for (var c = 0; c < COLS; c++) {
-      if (Math.random() < 0.88) {
-        grid.push(makeBubble(c, r, COLORS[Math.floor(Math.random() * COLORS.length)], rollSpecial()));
-      }
+  var DIFF = {
+    casual: {
+      id: "casual",
+      label: "Casual 輕鬆",
+      desc: "發射線較長 · 泡泡下降慢",
+      color: "#67e8f9",
+      scoreMult: 1.0,
+      initRows: 4,
+      dropEvery: 16,
+      shootCd: 0.28,
+      aimLen: 14,
+      specialRate: 0.08,
+      fog: false,
+      forceDrop: false
+    },
+    standard: {
+      id: "standard",
+      label: "Standard 電競",
+      desc: "標準極速 · 霓虹連擊",
+      color: "#a78bfa",
+      scoreMult: 1.35,
+      initRows: 5,
+      dropEvery: 11,
+      shootCd: 0.22,
+      aimLen: 9,
+      specialRate: 0.07,
+      fog: false,
+      forceDrop: false
+    },
+    extreme: {
+      id: "extreme",
+      label: "Extreme 狂暴",
+      desc: "每 5 秒強制下壓 · 隨機迷霧泡泡",
+      color: "#f472b6",
+      scoreMult: 2.5,
+      initRows: 6,
+      dropEvery: 5,
+      shootCd: 0.16,
+      aimLen: 7,
+      specialRate: 0.1,
+      fog: true,
+      forceDrop: true
     }
-  }
-}
+  };
 
-function rollSpecial() {
-  if (Math.random() > diffTun.specialRate) return null;
-  var r = Math.random();
-  if (r < 0.4) return "lightning";
-  if (r < 0.75) return "blackhole";
-  if (diffTun.bombOk && r < 0.95) return "bomb";
-  return null;
-}
+  var selectedDiff = "standard";
+  var gameSettings = loadSettings();
 
-function snapPos(x, y) {
-  var r = Math.round((y - RADIUS - 12) / (RADIUS * 1.732));
-  r = Math.max(0, Math.min(ROWS - 1, r));
-  var offset = r % 2 ? RADIUS : 0;
-  var c = Math.round((x - RADIUS - offset) / (RADIUS * 2));
-  c = Math.max(0, Math.min(COLS - 1, c));
-  return { c: c, r: r };
-}
-
-function getBubble(c, r) {
-  for (var i = 0; i < grid.length; i++) {
-    if (grid[i].c === c && grid[i].r === r) return grid[i];
-  }
-  return null;
-}
-
-function neighbors(c, r) {
-  var odd = r % 2;
-  var dirs = odd
-    ? [[-1, 0], [1, 0], [0, -1], [1, -1], [0, 1], [1, 1]]
-    : [[-1, 0], [1, 0], [-1, -1], [0, -1], [-1, 1], [0, 1]];
-  var list = [];
-  dirs.forEach(function (d) {
-    var b = getBubble(c + d[0], r + d[1]);
-    if (b) list.push(b);
-  });
-  return list;
-}
-
-function findCluster(start, color) {
-  var visited = {}, cluster = [], queue = [start];
-  visited[start.c + "," + start.r] = true;
-  while (queue.length) {
-    var b = queue.shift();
-    cluster.push(b);
-    neighbors(b.c, b.r).forEach(function (n) {
-      if (!visited[n.c + "," + n.r] && n.color === color && !n.special) {
-        visited[n.c + "," + n.r] = true;
-        queue.push(n);
+  function loadSettings() {
+    var base = { sfx: true, shake: true };
+    try {
+      if (typeof RNF !== "undefined" && RNF.getSettings) {
+        var s = RNF.getSettings();
+        base.sfx = (s.sfxVolume == null ? 0.75 : s.sfxVolume) > 0.02;
+        base.shake = s.screenShake !== false;
       }
+      var raw = localStorage.getItem(SETTINGS_KEY);
+      if (raw) Object.assign(base, JSON.parse(raw));
+    } catch (_e) {}
+    return base;
+  }
+
+  function saveSettings() {
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(gameSettings));
+      if (typeof RNF !== "undefined" && RNF.setSettings) {
+        RNF.setSettings({
+          sfxVolume: gameSettings.sfx ? 0.75 : 0,
+          screenShake: !!gameSettings.shake
+        });
+      }
+    } catch (_e) {}
+  }
+
+  /* ── Web Audio ── */
+  var audioCtx = null;
+  function ensureAudio() {
+    if (!audioCtx) {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    }
+    if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+    return audioCtx;
+  }
+  function tone(freq, dur, type, vol, slide) {
+    if (!gameSettings.sfx) return;
+    var ctx = ensureAudio();
+    if (!ctx) return;
+    var t0 = ctx.currentTime;
+    var o = ctx.createOscillator();
+    var g = ctx.createGain();
+    o.type = type || "square";
+    o.frequency.setValueAtTime(freq, t0);
+    if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(40, slide), t0 + dur);
+    g.gain.setValueAtTime(vol || 0.1, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(t0); o.stop(t0 + dur + 0.02);
+  }
+  var SFX = {
+    click: function () { tone(520, 0.05, "triangle", 0.07); },
+    confirm: function () { tone(660, 0.07, "square", 0.09); tone(990, 0.09, "triangle", 0.07); },
+    shoot: function () { tone(480, 0.06, "sawtooth", 0.08, 720); },
+    bounce: function () { tone(360, 0.04, "triangle", 0.05); },
+    hit: function () { tone(220, 0.06, "square", 0.07); },
+    pop: function (step) {
+      var f = 520 + Math.min(step || 0, 10) * 55;
+      tone(f, 0.07, "square", 0.11);
+      tone(f * 1.5, 0.09, "triangle", 0.08);
+    },
+    ladder: function (n) {
+      for (var i = 0; i < Math.min(n, 8); i++) {
+        (function (i) {
+          setTimeout(function () { tone(500 + i * 70, 0.06, "square", 0.09); }, i * 45);
+        })(i);
+      }
+    },
+    lightning: function () { tone(900, 0.05, "sawtooth", 0.1); tone(200, 0.18, "square", 0.1, 80); },
+    blackhole: function () { tone(140, 0.25, "sawtooth", 0.12, 40); tone(90, 0.3, "sine", 0.08); },
+    drop: function () { tone(180, 0.08, "triangle", 0.07); },
+    die: function () { tone(160, 0.22, "sawtooth", 0.14, 45); tone(70, 0.4, "triangle", 0.1); },
+    toggle: function () { tone(440, 0.05, "triangle", 0.07); }
+  };
+
+  function doShake(cam, dur, intens) {
+    if (!gameSettings.shake || !cam) return;
+    cam.shake(dur, intens);
+  }
+
+  function neonBurst(scene, x, y, tint, count) {
+    var n = Phaser.Math.Clamp(count || 25, 15, 30);
+    var key = "spark-" + (tint != null ? tint.toString(16) : "cyan");
+    if (!scene.textures.exists(key)) key = "spark-cyan";
+    var emitter = scene.add.particles(x, y, key, {
+      speed: { min: 70, max: 340 },
+      angle: { min: 0, max: 360 },
+      lifespan: { min: 280, max: 700 },
+      scale: { start: 1.2, end: 0 },
+      alpha: { start: 1, end: 0 },
+      gravityY: 80,
+      blendMode: "ADD",
+      tint: tint,
+      emitting: false
+    });
+    emitter.explode(n);
+    scene.time.delayedCall(850, function () { if (emitter.destroy) emitter.destroy(); });
+  }
+
+  function makeTextures(scene) {
+    var g = scene.make.graphics({ x: 0, y: 0, add: false });
+    var i, hex, name;
+
+    for (i = 0; i < COLOR_HEX.length; i++) {
+      hex = COLOR_HEX[i];
+      name = "bubble-" + i;
+      g.clear();
+      g.fillStyle(hex, 1);
+      g.fillCircle(RADIUS, RADIUS, RADIUS - 2);
+      g.fillStyle(0xffffff, 0.4);
+      g.fillCircle(RADIUS - 5, RADIUS - 5, 5);
+      g.generateTexture(name, RADIUS * 2, RADIUS * 2);
+    }
+
+    // lightning overlay mark
+    g.clear();
+    g.lineStyle(3, 0xfbbf24, 1);
+    g.beginPath();
+    g.moveTo(8, 4); g.lineTo(14, 14); g.lineTo(10, 14); g.lineTo(16, 28); g.lineTo(10, 16); g.lineTo(13, 16); g.closePath();
+    g.strokePath();
+    g.generateTexture("mark-lightning", 24, 32);
+
+    g.clear();
+    g.fillStyle(0x0a0614, 1);
+    g.fillCircle(10, 10, 9);
+    g.lineStyle(2, 0xa78bfa, 1);
+    g.strokeCircle(10, 10, 9);
+    g.lineStyle(1, 0xc4b5fd, 0.8);
+    g.strokeCircle(10, 10, 5);
+    g.generateTexture("mark-blackhole", 20, 20);
+
+    g.clear();
+    g.fillStyle(0x94a3b8, 0.55);
+    g.fillCircle(RADIUS, RADIUS, RADIUS - 2);
+    g.fillStyle(0xe2e8f0, 0.25);
+    g.fillCircle(RADIUS - 4, RADIUS - 6, 8);
+    g.generateTexture("bubble-fog", RADIUS * 2, RADIUS * 2);
+
+    g.clear();
+    g.fillStyle(0x22d3ee, 1);
+    g.fillCircle(3, 3, 3);
+    g.generateTexture("spark-cyan", 6, 6);
+
+    g.clear();
+    g.fillStyle(0xa78bfa, 1);
+    g.fillCircle(3, 3, 3);
+    g.generateTexture("spark-violet", 6, 6);
+
+    g.clear();
+    g.fillStyle(0xfbbf24, 1);
+    g.fillCircle(3, 3, 3);
+    g.generateTexture("spark-gold", 6, 6);
+
+    g.clear();
+    g.fillStyle(0xf472b6, 1);
+    g.fillCircle(4, 4, 4);
+    g.generateTexture("spark-pink", 8, 8);
+
+    // per-color sparks
+    for (i = 0; i < COLOR_HEX.length; i++) {
+      g.clear();
+      g.fillStyle(COLOR_HEX[i], 1);
+      g.fillCircle(3, 3, 3);
+      g.generateTexture("spark-" + COLOR_HEX[i].toString(16), 6, 6);
+    }
+
+    g.clear();
+    g.fillStyle(0x22d3ee, 1);
+    g.fillCircle(16, 16, 14);
+    g.fillStyle(0xffffff, 0.45);
+    g.fillCircle(11, 11, 5);
+    g.generateTexture("cannon", 32, 32);
+
+    g.destroy();
+  }
+
+  function pulseBtn(scene, targets) {
+    scene.tweens.add({
+      targets: targets, scale: 1.08, duration: 90, yoyo: true, ease: "Back.easeOut"
     });
   }
-  return cluster;
-}
 
-function floatingBubbles() {
-  var connected = {};
-  grid.forEach(function (b) {
-    if (b.r === 0) {
-      var q = [b], vis = {};
-      while (q.length) {
-        var cur = q.shift();
-        var k = cur.c + "," + cur.r;
-        if (vis[k]) continue;
-        vis[k] = true;
-        connected[k] = true;
-        neighbors(cur.c, cur.r).forEach(function (n) {
-          if (!vis[n.c + "," + n.r]) q.push(n);
+  function makeButton(scene, x, y, label, color, onClick, width) {
+    var bw = width || 300;
+    var bg = scene.add.rectangle(x, y, bw, 50, color, 0.2)
+      .setStrokeStyle(2, color, 0.9)
+      .setInteractive({ useHandCursor: true });
+    var txt = scene.add.text(x, y, label, {
+      fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif",
+      fontSize: "18px", fontStyle: "bold", color: "#e2e8f0"
+    }).setOrigin(0.5);
+    bg.on("pointerover", function () {
+      scene.tweens.add({ targets: [bg, txt], scale: 1.05, duration: 120, ease: "Cubic.easeOut" });
+    });
+    bg.on("pointerout", function () {
+      scene.tweens.add({ targets: [bg, txt], scale: 1, duration: 120, ease: "Cubic.easeOut" });
+    });
+    bg.on("pointerdown", function () {
+      pulseBtn(scene, [bg, txt]);
+      SFX.click();
+      onClick();
+    });
+    return { bg: bg, txt: txt };
+  }
+
+  /* ═══════════════ Boot ═══════════════ */
+  class BootScene extends Phaser.Scene {
+    constructor() { super("BootScene"); }
+    create() {
+      makeTextures(this);
+      this.cameras.main.setBackgroundColor("#04060c");
+      this.cameras.main.fadeIn(320, 4, 6, 12);
+      var t = this.add.text(W / 2, H / 2 - 8, "CYBER BUBBLE POP", {
+        fontFamily: "Segoe UI, sans-serif", fontSize: "28px", fontStyle: "bold", color: "#22d3ee"
+      }).setOrigin(0.5).setAlpha(0);
+      this.add.text(W / 2, H / 2 + 28, "Phaser 3 · RainyNightFrog", {
+        fontFamily: "Segoe UI, sans-serif", fontSize: "13px", color: "#64748b"
+      }).setOrigin(0.5);
+      this.tweens.add({ targets: t, alpha: 1, scale: 1.04, duration: 400, ease: "Back.easeOut" });
+      this.time.delayedCall(520, function () { this.scene.start("MainMenuScene"); }, [], this);
+    }
+  }
+
+  /* ═══════════════ Main Menu ═══════════════ */
+  class MainMenuScene extends Phaser.Scene {
+    constructor() { super("MainMenuScene"); }
+    create() {
+      ensureAudio();
+      this.cameras.main.setBackgroundColor("#060a14");
+      this.cameras.main.fadeIn(200, 4, 6, 12);
+
+      for (var i = 0; i < 36; i++) {
+        var c = COLOR_HEX[i % COLOR_HEX.length];
+        var orb = this.add.circle(
+          Phaser.Math.Between(40, W - 40), Phaser.Math.Between(40, H - 40),
+          Phaser.Math.Between(3, 7), c, Phaser.Math.FloatBetween(0.08, 0.22)
+        );
+        this.tweens.add({
+          targets: orb, y: orb.y - Phaser.Math.Between(20, 60), alpha: 0.05,
+          duration: Phaser.Math.Between(1600, 3200), yoyo: true, repeat: -1, ease: "Sine.easeInOut"
+        });
+      }
+
+      var badge = this.add.text(W / 2, 86, "RAINYNIGHTFROG · CYBER ARCADE", {
+        fontFamily: "Segoe UI, sans-serif", fontSize: "11px", fontStyle: "bold",
+        color: "#22d3ee", letterSpacing: 3
+      }).setOrigin(0.5).setAlpha(0);
+
+      var title = this.add.text(W / 2, 148, "CYBER BUBBLE POP", {
+        fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif",
+        fontSize: "40px", fontStyle: "bold", color: "#ffffff"
+      }).setOrigin(0.5).setScale(0.65).setAlpha(0);
+
+      var sub = this.add.text(W / 2, 202, "賽博泡泡龍 · 雷射瞄準 · 雷電／黑洞 · 連擊星塵", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+        fontSize: "15px", color: "#94a3b8"
+      }).setOrigin(0.5).setAlpha(0);
+
+      this.tweens.add({ targets: badge, alpha: 1, y: 96, duration: 400, ease: "Cubic.easeOut" });
+      this.tweens.add({ targets: title, alpha: 1, scale: 1, duration: 480, ease: "Back.easeOut", delay: 50 });
+      this.tweens.add({ targets: sub, alpha: 1, duration: 380, ease: "Cubic.easeOut", delay: 120 });
+
+      var self = this;
+      makeButton(this, W / 2, 300, "開始遊戲 START", 0x22d3ee, function () {
+        SFX.confirm();
+        self.cameras.main.fadeOut(180, 4, 6, 12);
+        self.time.delayedCall(190, function () { self.scene.start("DifficultyScene"); });
+      });
+      makeButton(this, W / 2, 370, "設定 SETTINGS", 0xa78bfa, function () {
+        self.scene.launch("SettingsScene");
+      });
+      makeButton(this, W / 2, 440, "操作說明", 0x64748b, function () {
+        if (self.helpTxt) return;
+        self.helpTxt = self.add.text(W / 2, 500,
+          "拖曳瞄準 · 放開／點擊發射 · 同色 ≥3 消除 · 雷電清整行 · 黑洞清 3×3", {
+          fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+          fontSize: "13px", color: "#c4b5fd"
+        }).setOrigin(0.5).setAlpha(0);
+        self.tweens.add({ targets: self.helpTxt, alpha: 1, y: 492, duration: 280, ease: "Cubic.easeOut" });
+      }, 220);
+    }
+  }
+
+  /* ═══════════════ Difficulty ═══════════════ */
+  class DifficultyScene extends Phaser.Scene {
+    constructor() { super("DifficultyScene"); }
+    create() {
+      this.cameras.main.setBackgroundColor("#060a14");
+      this.cameras.main.fadeIn(160, 4, 6, 12);
+
+      var head = this.add.text(W / 2, 70, "選擇難度", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+        fontSize: "34px", fontStyle: "bold", color: "#e2e8f0"
+      }).setOrigin(0.5).setScale(0.7).setAlpha(0);
+      this.tweens.add({ targets: head, alpha: 1, scale: 1, duration: 360, ease: "Back.easeOut" });
+
+      this.add.text(W / 2, 118, "危險倍率隨時間遞增 · 壓陣間隔會越來越短", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+        fontSize: "14px", color: "#64748b"
+      }).setOrigin(0.5);
+
+      var self = this;
+      ["casual", "standard", "extreme"].forEach(function (key, i) {
+        var d = DIFF[key];
+        var col = Phaser.Display.Color.HexStringToColor(d.color).color;
+        var y = 190 + i * 88;
+        makeButton(self, W / 2, y, d.label, col, function () {
+          selectedDiff = key;
+          SFX.confirm();
+          self.cameras.main.fadeOut(160, 4, 6, 12);
+          self.time.delayedCall(170, function () {
+            self.scene.start("GameScene", { difficulty: key });
+          });
+        });
+        self.add.text(W / 2, y + 32, d.desc + " · 分數 x" + d.scoreMult.toFixed(2), {
+          fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+          fontSize: "12px", color: "#94a3b8"
+        }).setOrigin(0.5);
+      });
+
+      makeButton(this, W / 2, 490, "返回", 0x475569, function () {
+        self.scene.start("MainMenuScene");
+      }, 160);
+    }
+  }
+
+  /* ═══════════════ Settings ═══════════════ */
+  class SettingsScene extends Phaser.Scene {
+    constructor() { super("SettingsScene"); }
+    create() {
+      var dim = this.add.rectangle(W / 2, H / 2, W, H, 0x02040a, 0.75).setInteractive().setDepth(100);
+      var panel = this.add.rectangle(W / 2, H / 2, 420, 300, 0x0b1220, 0.98)
+        .setStrokeStyle(2, 0x22d3ee, 0.85).setScale(0.75).setAlpha(0).setDepth(101);
+      var title = this.add.text(W / 2, H / 2 - 110, "設定選單", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+        fontSize: "26px", fontStyle: "bold", color: "#e2e8f0"
+      }).setOrigin(0.5).setAlpha(0).setDepth(102);
+
+      this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 300, ease: "Back.easeOut" });
+      this.tweens.add({ targets: title, alpha: 1, duration: 260, ease: "Cubic.easeOut", delay: 50 });
+
+      var self = this;
+      var sfxBtn = makeButton(this, W / 2, H / 2 - 20, gameSettings.sfx ? "音效：開" : "音效：關", 0x22d3ee, function () {
+        gameSettings.sfx = !gameSettings.sfx;
+        saveSettings();
+        SFX.toggle();
+        sfxBtn.txt.setText(gameSettings.sfx ? "音效：開" : "音效：關");
+      }, 260);
+      sfxBtn.bg.setDepth(102); sfxBtn.txt.setDepth(103);
+
+      var shakeBtn = makeButton(this, W / 2, H / 2 + 50, gameSettings.shake ? "震屏：開" : "震屏：關", 0xa78bfa, function () {
+        gameSettings.shake = !gameSettings.shake;
+        saveSettings();
+        SFX.toggle();
+        shakeBtn.txt.setText(gameSettings.shake ? "震屏：開" : "震屏：關");
+      }, 260);
+      shakeBtn.bg.setDepth(102); shakeBtn.txt.setDepth(103);
+
+      var closeBtn = makeButton(this, W / 2, H / 2 + 120, "關閉", 0x64748b, function () {
+        self.scene.stop("SettingsScene");
+      }, 180);
+      closeBtn.bg.setDepth(102); closeBtn.txt.setDepth(103);
+
+      dim.on("pointerdown", function () { self.scene.stop("SettingsScene"); });
+    }
+  }
+
+  /* ═══════════════ Game ═══════════════ */
+  class GameScene extends Phaser.Scene {
+    constructor() { super("GameScene"); }
+
+    init(data) {
+      this.diffKey = (data && data.difficulty) || selectedDiff || "standard";
+      this.diff = DIFF[this.diffKey] || DIFF.standard;
+      selectedDiff = this.diffKey;
+    }
+
+    create() {
+      ensureAudio();
+      this.cameras.main.setBackgroundColor("#050814");
+      this.cameras.main.fadeIn(180, 4, 6, 12);
+
+      this.score = 0;
+      this.combo = 0;
+      this.maxCombo = 0;
+      this.comboTimer = 0;
+      this.elapsedTime = 0;
+      this.dangerMultiplier = 1;
+      this.alive = true;
+      this.busy = false;
+      this.shootCd = 0;
+      this.dropTimer = this.diff.dropEvery;
+      this.aimAngle = 0;
+      this.aiming = false;
+      this.projectile = null;
+      this.grid = [];
+      this.falling = [];
+      this.bubbleLayer = this.add.container(0, 0).setDepth(10);
+      this.fxLayer = this.add.container(0, 0).setDepth(20);
+
+      this.dangerRow = ROWS - 3;
+      this.dangerY = this.rowY(this.dangerRow);
+
+      this.drawArena();
+      this.initGrid();
+      this.current = this.rollBubble();
+      this.next = this.rollBubble();
+
+      this.cannonX = W / 2;
+      this.cannonY = H - 48;
+      this.cannon = this.add.image(this.cannonX, this.cannonY, "cannon").setDepth(15);
+      this.currentSpr = this.add.image(this.cannonX, this.cannonY, "bubble-0").setDepth(16);
+      this.nextSpr = this.add.image(this.cannonX + 56, this.cannonY + 16, "bubble-0").setScale(0.72).setDepth(14).setAlpha(0.9);
+      this.nextLabel = this.add.text(this.cannonX + 56, this.cannonY + 36, "NEXT", {
+        fontFamily: "Segoe UI, sans-serif", fontSize: "10px", color: "#64748b"
+      }).setOrigin(0.5, 0).setDepth(14);
+
+      this.aimGfx = this.add.graphics().setDepth(12);
+      this.laserGlow = this.add.graphics().setDepth(11);
+      this.syncLauncherSprites();
+
+      this.flash = this.add.rectangle(W / 2, H / 2, W, H, 0xff2244, 0).setDepth(60);
+      this.createHud();
+      this.bindInput();
+    }
+
+    drawArena() {
+      var g = this.add.graphics().setDepth(0);
+      g.fillStyle(0x060a12, 1);
+      g.fillRect(0, 0, W, H);
+      g.lineStyle(1, 0xa78bfa, 0.15);
+      g.strokeRect(RADIUS, 10, W - RADIUS * 2, this.rowY(ROWS - 1) + RADIUS);
+      // danger line
+      this.dangerGfx = this.add.graphics().setDepth(5);
+      this.redrawDanger();
+    }
+
+    redrawDanger() {
+      this.dangerGfx.clear();
+      this.dangerGfx.lineStyle(2, 0xf472b6, 0.45);
+      this.dangerGfx.beginPath();
+      this.dangerGfx.moveTo(RADIUS, this.dangerY);
+      this.dangerGfx.lineTo(W - RADIUS, this.dangerY);
+      this.dangerGfx.strokePath();
+    }
+
+    createHud() {
+      this.hudScore = this.add.text(14, 8, "SCORE 0", {
+        fontFamily: "Segoe UI, sans-serif", fontSize: "16px", fontStyle: "bold", color: "#67e8f9"
+      }).setDepth(40);
+      this.hudDanger = this.add.text(14, 30, "DANGER: x1.00", {
+        fontFamily: "Segoe UI, sans-serif", fontSize: "14px", fontStyle: "bold", color: "#f472b6"
+      }).setDepth(40);
+      this.hudCombo = this.add.text(W / 2, 8, "COMBO —", {
+        fontFamily: "Segoe UI, sans-serif", fontSize: "15px", fontStyle: "bold", color: "#fbbf24"
+      }).setOrigin(0.5, 0).setDepth(40);
+      this.hudDrop = this.add.text(W - 14, 8, "DROP 0s", {
+        fontFamily: "Segoe UI, sans-serif", fontSize: "13px", color: "#94a3b8"
+      }).setOrigin(1, 0).setDepth(40);
+      this.hudDiff = this.add.text(W - 14, 30, this.diff.label, {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif", fontSize: "12px", color: this.diff.color
+      }).setOrigin(1, 0).setDepth(40);
+    }
+
+    cellX(c, r) {
+      return c * RADIUS * 2 + (r % 2 ? RADIUS : 0) + RADIUS;
+    }
+    rowY(r) {
+      return r * RADIUS * 1.732 + RADIUS + TOP_PAD;
+    }
+
+    bindInput() {
+      var self = this;
+      this.input.on("pointerdown", function (p) {
+        if (!self.alive || self.busy || self.projectile) return;
+        self.aiming = true;
+        self.updateAimFromPointer(p);
+      });
+      this.input.on("pointermove", function (p) {
+        if (!self.alive) return;
+        if (self.aiming || p.isDown) self.updateAimFromPointer(p);
+      });
+      this.input.on("pointerup", function (p) {
+        if (!self.alive || self.busy || self.projectile) { self.aiming = false; return; }
+        if (self.aiming) {
+          self.updateAimFromPointer(p);
+          self.shoot();
+        }
+        self.aiming = false;
+      });
+
+      this.cursors = this.input.keyboard.createCursorKeys();
+      this.input.keyboard.on("keydown-SPACE", function () {
+        if (self.alive && !self.busy && !self.projectile) self.shoot();
+      });
+    }
+
+    updateAimFromPointer(p) {
+      var ang = Math.atan2(p.x - this.cannonX, this.cannonY - p.y);
+      this.aimAngle = Phaser.Math.Clamp(ang, -1.35, 1.35);
+    }
+
+    rollSpecial() {
+      if (Math.random() > this.diff.specialRate) {
+        if (this.diff.fog && Math.random() < 0.12) return "fog";
+        return null;
+      }
+      var r = Math.random();
+      if (r < 0.42) return "lightning";
+      if (r < 0.8) return "blackhole";
+      if (this.diff.fog && r < 0.95) return "fog";
+      return null;
+    }
+
+    rollBubble() {
+      return {
+        colorIdx: Phaser.Math.Between(0, COLOR_HEX.length - 1),
+        special: this.rollSpecial()
+      };
+    }
+
+    makeBubble(c, r, colorIdx, special) {
+      var b = {
+        c: c, r: r,
+        x: this.cellX(c, r),
+        y: this.rowY(r),
+        colorIdx: colorIdx,
+        special: special || null,
+        spr: null,
+        mark: null
+      };
+      this.attachSprite(b);
+      return b;
+    }
+
+    attachSprite(b) {
+      var tex = (b.special === "fog") ? "bubble-fog" : ("bubble-" + b.colorIdx);
+      b.spr = this.add.image(b.x, b.y, tex).setDepth(10);
+      this.bubbleLayer.add(b.spr);
+      if (b.special === "lightning") {
+        b.mark = this.add.image(b.x, b.y, "mark-lightning").setScale(0.55).setDepth(11);
+        this.bubbleLayer.add(b.mark);
+      } else if (b.special === "blackhole") {
+        b.mark = this.add.image(b.x, b.y, "mark-blackhole").setDepth(11);
+        this.bubbleLayer.add(b.mark);
+      }
+    }
+
+    destroyBubbleVisual(b) {
+      if (b.spr) { b.spr.destroy(); b.spr = null; }
+      if (b.mark) { b.mark.destroy(); b.mark = null; }
+    }
+
+    syncBubblePos(b) {
+      b.x = this.cellX(b.c, b.r);
+      b.y = this.rowY(b.r);
+      if (b.spr) b.spr.setPosition(b.x, b.y);
+      if (b.mark) b.mark.setPosition(b.x, b.y);
+    }
+
+    initGrid() {
+      this.grid = [];
+      for (var r = 0; r < this.diff.initRows; r++) {
+        for (var c = 0; c < COLS; c++) {
+          if (Math.random() < 0.88) {
+            this.grid.push(this.makeBubble(c, r, Phaser.Math.Between(0, COLOR_HEX.length - 1), this.rollSpecial()));
+          }
+        }
+      }
+    }
+
+    getBubble(c, r) {
+      for (var i = 0; i < this.grid.length; i++) {
+        if (this.grid[i].c === c && this.grid[i].r === r) return this.grid[i];
+      }
+      return null;
+    }
+
+    neighbors(c, r) {
+      var odd = r % 2;
+      var dirs = odd
+        ? [[-1, 0], [1, 0], [0, -1], [1, -1], [0, 1], [1, 1]]
+        : [[-1, 0], [1, 0], [-1, -1], [0, -1], [-1, 1], [0, 1]];
+      var list = [];
+      for (var i = 0; i < dirs.length; i++) {
+        var b = this.getBubble(c + dirs[i][0], r + dirs[i][1]);
+        if (b) list.push(b);
+      }
+      return list;
+    }
+
+    findCluster(start, colorIdx) {
+      var visited = {};
+      var cluster = [];
+      var queue = [start];
+      visited[start.c + "," + start.r] = true;
+      while (queue.length) {
+        var b = queue.shift();
+        cluster.push(b);
+        var ns = this.neighbors(b.c, b.r);
+        for (var i = 0; i < ns.length; i++) {
+          var n = ns[i];
+          var k = n.c + "," + n.r;
+          // fog：以真實 colorIdx 參與同色連線；特殊雷電/黑洞不進一般同色簇
+          if (!visited[k] && n.colorIdx === colorIdx && n.special !== "lightning" && n.special !== "blackhole") {
+            visited[k] = true;
+            queue.push(n);
+          }
+        }
+      }
+      return cluster;
+    }
+
+    syncLauncherSprites() {
+      if (this.current) {
+        var tex = this.current.special === "fog" ? "bubble-fog" : ("bubble-" + this.current.colorIdx);
+        this.currentSpr.setTexture(tex).setVisible(true);
+        this.cannon.setTint(COLOR_HEX[this.current.colorIdx]);
+      } else {
+        this.currentSpr.setVisible(false);
+      }
+      if (this.next) {
+        var ntex = this.next.special === "fog" ? "bubble-fog" : ("bubble-" + this.next.colorIdx);
+        this.nextSpr.setTexture(ntex);
+      }
+    }
+
+    predictAimPath() {
+      var len = this.diff.aimLen;
+      var pts = [{ x: this.cannonX, y: this.cannonY }];
+      var x = this.cannonX;
+      var y = this.cannonY;
+      var vx = Math.sin(this.aimAngle);
+      var vy = -Math.cos(this.aimAngle);
+      var step = 22;
+      for (var i = 0; i < len * 4; i++) {
+        x += vx * step;
+        y += vy * step;
+        if (x < RADIUS) { x = RADIUS; vx = Math.abs(vx); }
+        if (x > W - RADIUS) { x = W - RADIUS; vx = -Math.abs(vx); }
+        pts.push({ x: x, y: y });
+        if (y < TOP_PAD + RADIUS) break;
+        // stop near a bubble
+        var hit = false;
+        for (var g = 0; g < this.grid.length; g++) {
+          if (Phaser.Math.Distance.Between(x, y, this.grid[g].x, this.grid[g].y) < RADIUS * 1.9) {
+            hit = true; break;
+          }
+        }
+        if (hit) break;
+      }
+      return pts;
+    }
+
+    drawAimLaser() {
+      this.aimGfx.clear();
+      this.laserGlow.clear();
+      if (!this.alive || this.projectile || this.busy || !this.current) return;
+
+      var pts = this.predictAimPath();
+      var col = COLOR_HEX[this.current.colorIdx];
+
+      this.laserGlow.lineStyle(6, col, 0.12);
+      this.laserGlow.beginPath();
+      this.laserGlow.moveTo(pts[0].x, pts[0].y);
+      for (var i = 1; i < pts.length; i++) this.laserGlow.lineTo(pts[i].x, pts[i].y);
+      this.laserGlow.strokePath();
+
+      this.aimGfx.lineStyle(2, col, 0.85);
+      this.aimGfx.beginPath();
+      this.aimGfx.moveTo(pts[0].x, pts[0].y);
+      for (var j = 1; j < pts.length; j++) this.aimGfx.lineTo(pts[j].x, pts[j].y);
+      this.aimGfx.strokePath();
+
+      // dashed feel via dots
+      for (var k = 1; k < pts.length; k += 2) {
+        this.aimGfx.fillStyle(0xffffff, 0.55);
+        this.aimGfx.fillCircle(pts[k].x, pts[k].y, 2.2);
+      }
+
+      var tip = pts[pts.length - 1];
+      this.aimGfx.fillStyle(col, 0.9);
+      this.aimGfx.fillCircle(tip.x, tip.y, 4);
+    }
+
+    shoot() {
+      if (!this.alive || this.busy || this.projectile || !this.current || this.shootCd > 0) return;
+      this.shootCd = this.diff.shootCd;
+      var dx = Math.sin(this.aimAngle);
+      var dy = -Math.cos(this.aimAngle);
+      var speed = 520;
+      this.projectile = {
+        x: this.cannonX,
+        y: this.cannonY,
+        vx: dx * speed,
+        vy: dy * speed,
+        colorIdx: this.current.colorIdx,
+        special: this.current.special,
+        spr: this.add.image(this.cannonX, this.cannonY,
+          this.current.special === "fog" ? "bubble-fog" : ("bubble-" + this.current.colorIdx)
+        ).setDepth(18)
+      };
+      this.current = null;
+      this.syncLauncherSprites();
+      SFX.shoot();
+      this.tweens.add({
+        targets: this.cannon, scale: 0.85, duration: 70, yoyo: true, ease: "Back.easeOut"
+      });
+    }
+
+    snapPos(x, y) {
+      var r = Math.round((y - RADIUS - TOP_PAD) / (RADIUS * 1.732));
+      r = Phaser.Math.Clamp(r, 0, ROWS - 1);
+      var offset = r % 2 ? RADIUS : 0;
+      var c = Math.round((x - RADIUS - offset) / (RADIUS * 2));
+      c = Phaser.Math.Clamp(c, 0, COLS - 1);
+      return { c: c, r: r };
+    }
+
+    landBubble(f) {
+      var pos = this.snapPos(f.x, f.y);
+      if (this.getBubble(pos.c, pos.r)) {
+        var tries = [[0, 1], [-1, 0], [1, 0], [0, -1], [-1, 1], [1, 1], [-1, -1], [1, -1]];
+        var placed = false;
+        for (var i = 0; i < tries.length; i++) {
+          var nc = pos.c + tries[i][0];
+          var nr = pos.r + tries[i][1];
+          if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && !this.getBubble(nc, nr)) {
+            pos = { c: nc, r: nr };
+            placed = true;
+            break;
+          }
+        }
+        if (!placed) pos.r = Math.min(pos.r + 1, ROWS - 1);
+      }
+
+      if (f.spr) f.spr.destroy();
+      this.projectile = null;
+
+      var nb = this.makeBubble(pos.c, pos.r, f.colorIdx, f.special);
+      this.grid.push(nb);
+      SFX.hit();
+
+      // pop-in tween
+      nb.spr.setScale(0.4);
+      this.tweens.add({ targets: nb.spr, scale: 1, duration: 160, ease: "Back.easeOut" });
+
+      this.busy = true;
+      var self = this;
+      this.time.delayedCall(40, function () {
+        self.resolveAfterPlace(nb);
+      });
+    }
+
+    resolveAfterPlace(placed) {
+      var cluster = this.findCluster(placed, placed.colorIdx);
+      if (cluster.length >= 3) {
+        this.processMatch(cluster, 0);
+      } else if (placed.special === "lightning" || placed.special === "blackhole") {
+        this.activateSpecial(placed);
+        this.removeFromGrid([placed]);
+        this.dropFloating();
+        this.afterResolve();
+      } else {
+        this.combo = 0;
+        this.afterResolve();
+      }
+    }
+
+    processMatch(cluster, chainDepth) {
+      this.combo++;
+      this.maxCombo = Math.max(this.maxCombo, this.combo);
+      this.comboTimer = 4.5;
+
+      var colorIdx = cluster[0].colorIdx;
+      var tint = COLOR_HEX[colorIdx];
+      var pts = Math.floor(cluster.length * 12 * (1 + this.combo * 0.35 + chainDepth * 0.2) * this.diff.scoreMult * (0.85 + this.dangerMultiplier * 0.15));
+      this.score += pts;
+
+      // Juice：震屏 + 25 同色星塵 + 音階
+      doShake(this.cameras.main, 150, 0.02);
+      var cx = 0, cy = 0;
+      for (var i = 0; i < cluster.length; i++) { cx += cluster[i].x; cy += cluster[i].y; }
+      cx /= cluster.length; cy /= cluster.length;
+      neonBurst(this, cx, cy, tint, 25);
+      SFX.pop(this.combo);
+      SFX.ladder(Math.min(3 + this.combo, 8));
+
+      var floater = this.add.text(cx, cy, "+" + pts + (this.combo > 1 ? "  x" + this.combo : ""), {
+        fontFamily: "Segoe UI, sans-serif", fontSize: "22px", fontStyle: "bold", color: COLOR_CSS[colorIdx]
+      }).setOrigin(0.5).setDepth(35);
+      this.tweens.add({
+        targets: floater, y: cy - 50, alpha: 0, scale: 1.25, duration: 480, ease: "Cubic.easeOut",
+        onComplete: function () { floater.destroy(); }
+      });
+
+      // specials inside cluster
+      var specials = [];
+      for (var s = 0; s < cluster.length; s++) {
+        if (cluster[s].special === "lightning" || cluster[s].special === "blackhole") specials.push(cluster[s]);
+      }
+
+      this.popVisual(cluster);
+      this.removeFromGrid(cluster);
+
+      for (var sp = 0; sp < specials.length; sp++) {
+        this.activateSpecial(specials[sp]);
+      }
+
+      this.dropFloating();
+
+      // chain check
+      var self = this;
+      this.time.delayedCall(120, function () {
+        var again = null;
+        for (var g = 0; g < self.grid.length; g++) {
+          var b = self.grid[g];
+          if (b.special === "lightning" || b.special === "blackhole") continue;
+          var cl = self.findCluster(b, b.colorIdx);
+          if (cl.length >= 3) { again = cl; break; }
+        }
+        if (again) self.processMatch(again, chainDepth + 1);
+        else self.afterResolve();
+      });
+    }
+
+    popVisual(list) {
+      for (var i = 0; i < list.length; i++) {
+        (function (b) {
+          if (!b.spr) return;
+          var spr = b.spr;
+          var mark = b.mark;
+          b.spr = null;
+          b.mark = null;
+          this.tweens.add({
+            targets: spr, scale: 1.6, alpha: 0, duration: 180, ease: "Cubic.easeOut",
+            onComplete: function () { if (spr.destroy) spr.destroy(); }
+          });
+          if (mark) {
+            this.tweens.add({
+              targets: mark, scale: 1.4, alpha: 0, duration: 180,
+              onComplete: function () { if (mark.destroy) mark.destroy(); }
+            });
+          }
+        }).call(this, list[i]);
+      }
+    }
+
+    removeFromGrid(list) {
+      var kill = {};
+      for (var i = 0; i < list.length; i++) kill[list[i].c + "," + list[i].r] = true;
+      var kept = [];
+      for (var g = 0; g < this.grid.length; g++) {
+        var b = this.grid[g];
+        var k = b.c + "," + b.r;
+        if (kill[k]) {
+          this.destroyBubbleVisual(b);
+        } else {
+          kept.push(b);
+        }
+      }
+      this.grid = kept;
+    }
+
+    activateSpecial(b) {
+      if (b.special === "lightning") {
+        SFX.lightning();
+        doShake(this.cameras.main, 160, 0.022);
+        // 貫穿整行
+        var row = b.r;
+        var beam = this.add.rectangle(W / 2, this.rowY(row), W - 40, 10, 0xfbbf24, 0.85)
+          .setDepth(30).setBlendMode(Phaser.BlendModes.ADD);
+        this.tweens.add({
+          targets: beam, alpha: 0, scaleY: 3, duration: 280, ease: "Cubic.easeOut",
+          onComplete: function () { beam.destroy(); }
+        });
+        neonBurst(this, b.x, b.y, 0xfbbf24, 22);
+
+        var victims = [];
+        for (var i = 0; i < this.grid.length; i++) {
+          if (this.grid[i].r === row) {
+            victims.push(this.grid[i]);
+            this.score += Math.floor(15 * this.diff.scoreMult);
+          }
+        }
+        this.popVisual(victims);
+        this.removeFromGrid(victims);
+      } else if (b.special === "blackhole") {
+        SFX.blackhole();
+        doShake(this.cameras.main, 170, 0.024);
+        neonBurst(this, b.x, b.y, 0xa78bfa, 26);
+        // 吸附消除周圍 3×3
+        var victims = [];
+        for (var i = 0; i < this.grid.length; i++) {
+          var g = this.grid[i];
+          var dc = Math.abs(g.c - b.c);
+          var dr = Math.abs(g.r - b.r);
+          if (dc <= 1 && dr <= 1) {
+            victims.push(g);
+            this.score += Math.floor(12 * this.diff.scoreMult);
+          }
+        }
+        for (var v = 0; v < victims.length; v++) {
+          if (victims[v].spr) {
+            this.tweens.add({
+              targets: victims[v].spr,
+              x: b.x, y: b.y, scale: 0.15, alpha: 0.2, duration: 140, ease: "Cubic.easeIn"
+            });
+          }
+        }
+        this.popVisual(victims);
+        this.removeFromGrid(victims);
+      }
+    }
+
+    dropFloating() {
+      var connected = {};
+      for (var i = 0; i < this.grid.length; i++) {
+        if (this.grid[i].r !== 0) continue;
+        var q = [this.grid[i]];
+        var vis = {};
+        while (q.length) {
+          var cur = q.shift();
+          var k = cur.c + "," + cur.r;
+          if (vis[k]) continue;
+          vis[k] = true;
+          connected[k] = true;
+          var ns = this.neighbors(cur.c, cur.r);
+          for (var n = 0; n < ns.length; n++) {
+            var nk = ns[n].c + "," + ns[n].r;
+            if (!vis[nk]) q.push(ns[n]);
+          }
+        }
+      }
+
+      var drop = [];
+      var kept = [];
+      for (var g = 0; g < this.grid.length; g++) {
+        var b = this.grid[g];
+        var key = b.c + "," + b.r;
+        if (!connected[key]) drop.push(b);
+        else kept.push(b);
+      }
+      this.grid = kept;
+
+      if (!drop.length) return;
+
+      SFX.drop();
+      doShake(this.cameras.main, 100, 0.012);
+      for (var d = 0; d < drop.length; d++) {
+        var db = drop[d];
+        this.score += Math.floor(8 * (1 + this.combo * 0.15) * this.diff.scoreMult);
+        var spr = db.spr;
+        var mark = db.mark;
+        db.spr = null;
+        db.mark = null;
+        if (!spr) continue;
+
+        var trail = this.add.particles(spr.x, spr.y, "spark-" + COLOR_HEX[db.colorIdx].toString(16), {
+          speed: { min: 5, max: 30 },
+          lifespan: 400,
+          scale: { start: 0.8, end: 0 },
+          alpha: { start: 0.7, end: 0 },
+          blendMode: "ADD",
+          frequency: 20,
+          follow: spr
+        }).setDepth(9);
+
+        this.falling.push({
+          spr: spr,
+          mark: mark,
+          trail: trail,
+          vy: 40,
+          colorIdx: db.colorIdx,
+          life: 1.4
         });
       }
     }
-  });
-  var drop = [];
-  grid = grid.filter(function (b) {
-    if (!connected[b.c + "," + b.r]) { drop.push(b); return false; }
-    return true;
-  });
-  drop.forEach(function (b) {
-    falling.push({ x: b.x, y: b.y, vy: 0, color: b.color, life: 1 });
-    score += Math.floor(8 * (1 + combo * 0.15));
-  });
-  if (drop.length) {
-    shell.triggerShake(4 + Math.min(drop.length, 6), 0.18);
-    RNF.sfx.combo(Math.min(drop.length + combo, 10));
-  }
-}
 
-function removeBubble(b) {
-  particles.burst(b.x, b.y, b.color, highQ ? 12 : 6);
-}
+    afterResolve() {
+      this.busy = false;
+      this.current = this.next;
+      this.next = this.rollBubble();
+      this.syncLauncherSprites();
+      this.checkDanger();
 
-function activateSpecial(b) {
-  if (b.special === "lightning") {
-    grid.forEach(function (g) {
-      if (g.c === b.c) {
-        removeBubble(g);
-        score += 15;
+      if (this.grid.length === 0) {
+        this.score += Math.floor(800 * this.diff.scoreMult);
+        SFX.ladder(6);
+        doShake(this.cameras.main, 140, 0.018);
+        this.initGrid();
+        this.dropTimer = this.diff.dropEvery / Math.max(0.5, this.dangerMultiplier);
       }
-    });
-    grid = grid.filter(function (g) { return g.c !== b.c; });
-    shell.triggerShake(8, 0.2);
-    RNF.sfx.power();
-  } else if (b.special === "blackhole") {
-    var cx = b.x, cy = b.y, rad = RADIUS * 4.5;
-    grid.forEach(function (g) {
-      if (Math.hypot(g.x - cx, g.y - cy) < rad) {
-        removeBubble(g);
-        score += 12;
-      }
-    });
-    grid = grid.filter(function (g) { return Math.hypot(g.x - cx, g.y - cy) >= rad; });
-    particles.burst(cx, cy, "#a78bfa", highQ ? 24 : 12);
-    shell.triggerShake(10, 0.22);
-    RNF.sfx.power();
-  } else if (b.special === "bomb") {
-    var bx = b.x, by = b.y, br = RADIUS * 3.2;
-    grid.forEach(function (g) {
-      if (Math.hypot(g.x - bx, g.y - by) < br) {
-        removeBubble(g);
-        score += 10;
-      }
-    });
-    grid = grid.filter(function (g) { return Math.hypot(g.x - bx, g.y - by) >= br; });
-    shell.triggerShake(12, 0.25);
-    RNF.sfx.power();
-  }
-}
+    }
 
-function popCluster(cluster) {
-  cluster.forEach(function (b) {
-    removeBubble(b);
-    if (b.special) activateSpecial(b);
-  });
-  var remove = {};
-  cluster.forEach(function (b) { remove[b.c + "," + b.r] = true; });
-  grid = grid.filter(function (b) { return !remove[b.c + "," + b.r]; });
-}
+    pushCeiling() {
+      if (!this.alive) return;
+      var maxR = 0;
+      for (var i = 0; i < this.grid.length; i++) {
+        if (this.grid[i].r > maxR) maxR = this.grid[i].r;
+      }
+      if (maxR >= ROWS - 2) { this.die(); return; }
 
-function processMatches(placed, chainDepth) {
-  chainDepth = chainDepth || 0;
-  var cluster = findCluster(placed, placed.color);
-  if (cluster.length >= 3) {
-    combo++;
-    comboTimer = 4.5;
-    var pts = cluster.length * 12 * (1 + combo * 0.35 + chainDepth * 0.2);
-    score += Math.floor(pts);
-    RNF.sfx.pop();
-    shell.triggerShake(3 + combo + chainDepth * 2, 0.16);
-    if (combo > 1) RNF.sfx.combo(Math.min(combo, 12));
-    popCluster(cluster);
-    floatingBubbles();
-    if (grid.length) {
-      var again = false;
-      grid.forEach(function (g) {
-        if (findCluster(g, g.color).length >= 3) again = true;
+      for (var g = 0; g < this.grid.length; g++) {
+        this.grid[g].r++;
+        this.syncBubblePos(this.grid[g]);
+      }
+
+      var newRow = [];
+      for (var c = 0; c < COLS; c++) {
+        if (Math.random() < 0.82) {
+          newRow.push(this.makeBubble(c, 0, Phaser.Math.Between(0, COLOR_HEX.length - 1), this.rollSpecial()));
+        }
+      }
+      this.grid = newRow.concat(this.grid);
+      SFX.drop();
+      doShake(this.cameras.main, 90, 0.012);
+      this.checkDanger();
+    }
+
+    checkDanger() {
+      for (var i = 0; i < this.grid.length; i++) {
+        if (this.grid[i].r >= this.dangerRow) {
+          this.die();
+          return;
+        }
+      }
+    }
+
+    die() {
+      if (!this.alive) return;
+      this.alive = false;
+      this.aimGfx.clear();
+      this.laserGlow.clear();
+      SFX.die();
+
+      // 全螢幕閃紅震屏
+      this.flash.setFillStyle(0xff2244, 1);
+      this.flash.setAlpha(0.75);
+      this.tweens.add({
+        targets: this.flash, alpha: 0, duration: 500, ease: "Cubic.easeOut"
       });
-      if (again) processMatches(placed, chainDepth + 1);
+      doShake(this.cameras.main, 320, 0.035);
+      neonBurst(this, W / 2, H / 2, 0xf472b6, 28);
+      neonBurst(this, W / 2, H / 2, 0x22d3ee, 18);
+
+      var finalScore = Math.floor(this.score);
+      var meta = {
+        slug: "cyber-bubble-pop",
+        difficulty: this.diff.id,
+        rawScore: finalScore,
+        maxCombo: this.maxCombo,
+        elapsed: Math.floor(this.elapsedTime),
+        dangerPeak: Number(this.dangerMultiplier.toFixed(2))
+      };
+      try {
+        if (typeof RNF !== "undefined" && RNF.submitScore) RNF.submitScore(finalScore, meta);
+      } catch (_e) {}
+
+      var self = this;
+      this.time.delayedCall(480, function () {
+        self.scene.launch("GameOverModal", {
+          score: finalScore,
+          elapsed: self.elapsedTime,
+          maxCombo: self.maxCombo,
+          danger: self.dangerMultiplier,
+          diff: self.diff
+        });
+      });
     }
-  } else if (chainDepth === 0) {
-    combo = 0;
-  }
-}
 
-function pushCeiling() {
-  var maxR = 0;
-  grid.forEach(function (b) { if (b.r > maxR) maxR = b.r; });
-  if (maxR >= ROWS - 2) { endGame(); return; }
-  grid.forEach(function (b) {
-    b.r++;
-    b.y = b.r * RADIUS * 1.732 + RADIUS + 12;
-    b.x = b.c * RADIUS * 2 + (b.r % 2 ? RADIUS : 0) + RADIUS;
-  });
-  var newRow = [];
-  for (var c = 0; c < COLS; c++) {
-    if (Math.random() < 0.82) {
-      newRow.push(makeBubble(c, 0, COLORS[Math.floor(Math.random() * COLORS.length)], rollSpecial()));
-    }
-  }
-  grid = newRow.concat(grid);
-  shell.triggerShake(5, 0.15);
-  RNF.sfx.heartbeat();
-  checkDanger();
-}
+    update(_t, delta) {
+      if (!this.alive) return;
+      var dt = Math.min(0.05, delta / 1000);
+      this.elapsedTime += dt;
 
-function checkDanger() {
-  dangerY = diffTun.dangerRow * RADIUS * 1.732 + RADIUS + 12;
-  if (grid.some(function (b) { return b.r >= diffTun.dangerRow; })) endGame();
-}
+      this.dangerMultiplier = 1 + Math.log(1 + this.elapsedTime / 30) * 0.8;
+      var threat = this.dangerMultiplier;
 
-function landBubble(f) {
-  var pos = snapPos(f.x, f.y);
-  if (getBubble(pos.c, pos.r)) {
-    var placed = false;
-    var tries = [[0, 1], [-1, 0], [1, 0], [0, -1], [-1, 1], [1, 1], [-1, -1], [1, -1]];
-    for (var i = 0; i < tries.length; i++) {
-      var nc = pos.c + tries[i][0], nr = pos.r + tries[i][1];
-      if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && !getBubble(nc, nr)) {
-        pos = { c: nc, r: nr }; placed = true; break;
+      this.shootCd = Math.max(0, this.shootCd - dt);
+      this.comboTimer = Math.max(0, this.comboTimer - dt);
+      if (this.comboTimer <= 0 && this.combo > 0) this.combo = 0;
+
+      // 鍵盤微調瞄準
+      var aimSpd = 1.9;
+      if (this.cursors.left.isDown) this.aimAngle -= aimSpd * dt;
+      if (this.cursors.right.isDown) this.aimAngle += aimSpd * dt;
+      this.aimAngle = Phaser.Math.Clamp(this.aimAngle, -1.35, 1.35);
+
+      // 壓陣間隔隨危險倍率縮短（Extreme 基準 5 秒）
+      var dropEvery = this.diff.dropEvery / Math.max(0.55, threat * 0.85 + 0.15);
+      if (this.diff.forceDrop) dropEvery = Math.min(dropEvery, 5 / Math.max(1, threat * 0.7));
+      this.dropTimer -= dt;
+      if (this.dropTimer <= 0) {
+        this.pushCeiling();
+        this.dropTimer = dropEvery;
       }
+
+      // 飛行彈
+      if (this.projectile) {
+        var f = this.projectile;
+        f.x += f.vx * dt;
+        f.y += f.vy * dt;
+        f.spr.setPosition(f.x, f.y);
+        if (f.x < RADIUS) { f.x = RADIUS; f.vx = Math.abs(f.vx); SFX.bounce(); }
+        if (f.x > W - RADIUS) { f.x = W - RADIUS; f.vx = -Math.abs(f.vx); SFX.bounce(); }
+        if (f.y < TOP_PAD + RADIUS) { this.landBubble(f); }
+        else {
+          for (var i = 0; i < this.grid.length; i++) {
+            if (Phaser.Math.Distance.Between(f.x, f.y, this.grid[i].x, this.grid[i].y) < RADIUS * 1.85) {
+              this.landBubble(f);
+              break;
+            }
+          }
+        }
+      }
+
+      // 掉落重力 + 拖尾
+      for (var d = this.falling.length - 1; d >= 0; d--) {
+        var drop = this.falling[d];
+        drop.vy += 980 * dt;
+        drop.spr.y += drop.vy * dt;
+        if (drop.mark) drop.mark.y = drop.spr.y;
+        if (drop.trail) drop.trail.setPosition(drop.spr.x, drop.spr.y);
+        drop.life -= dt * 0.7;
+        drop.spr.setAlpha(Math.max(0, drop.life));
+        if (drop.life <= 0 || drop.spr.y > H + 40) {
+          if (drop.trail) drop.trail.destroy();
+          if (drop.mark) drop.mark.destroy();
+          drop.spr.destroy();
+          this.falling.splice(d, 1);
+        }
+      }
+
+      this.drawAimLaser();
+      this.cannon.setRotation(this.aimAngle);
+
+      this.hudScore.setText("SCORE " + this.score.toLocaleString());
+      this.hudDanger.setText("DANGER: x" + this.dangerMultiplier.toFixed(2));
+      this.hudCombo.setText(this.combo > 0 ? "COMBO x" + this.combo : "COMBO —");
+      this.hudDrop.setText("DROP " + Math.max(0, this.dropTimer).toFixed(1) + "s");
     }
-    if (!placed) pos.r = Math.min(pos.r + 1, ROWS - 1);
   }
-  var nb = makeBubble(pos.c, pos.r, f.color, f.special);
-  nb.x = pos.c * RADIUS * 2 + (pos.r % 2 ? RADIUS : 0) + RADIUS;
-  nb.y = pos.r * RADIUS * 1.732 + RADIUS + 12;
-  grid.push(nb);
-  projectile = null;
-  RNF.sfx.hit();
-  var cluster = findCluster(nb, nb.color);
-  if (cluster.length >= 3) {
-    processMatches(nb);
-  } else if (nb.special) {
-    activateSpecial(nb);
-    var rk = nb.c + "," + nb.r;
-    grid = grid.filter(function (g) { return g.c + "," + g.r !== rk; });
-    floatingBubbles();
-  } else {
-    combo = 0;
-  }
-  currentBubble = nextBubble;
-  nextBubble = randomBubble();
-  checkDanger();
-}
 
-function shoot() {
-  if (shootCooldown > 0 || !currentBubble || projectile || gameEnded) return;
-  shootCooldown = diffTun.shootCd / speedScale;
-  var sx = W / 2, sy = H - 44;
-  var dx = Math.sin(aimAngle), dy = -Math.cos(aimAngle);
-  projectile = {
-    x: sx, y: sy,
-    vx: dx * 420 * speedScale, vy: dy * 420 * speedScale,
-    color: currentBubble.color, special: currentBubble.special
+  /* ═══════════════ Game Over ═══════════════ */
+  class GameOverModal extends Phaser.Scene {
+    constructor() { super("GameOverModal"); }
+    init(data) { this.payload = data || {}; }
+
+    create() {
+      var score = this.payload.score || 0;
+      var elapsed = this.payload.elapsed || 0;
+      var maxCombo = this.payload.maxCombo || 0;
+      var danger = this.payload.danger || 1;
+      var diff = this.payload.diff || DIFF.standard;
+
+      this.add.rectangle(W / 2, H / 2, W, H, 0x02040a, 0.72).setInteractive().setDepth(70);
+      var panel = this.add.rectangle(W / 2, H / 2, 460, 380, 0x0b1220, 0.97)
+        .setStrokeStyle(2, 0x22d3ee, 0.95).setScale(0.7).setAlpha(0).setDepth(71);
+
+      var badge = this.add.text(W / 2, H / 2 - 150, "GAME OVER", {
+        fontFamily: "Segoe UI, sans-serif", fontSize: "13px", fontStyle: "bold",
+        color: "#f472b6", letterSpacing: 3
+      }).setOrigin(0.5).setAlpha(0).setDepth(72);
+
+      var title = this.add.text(W / 2, H / 2 - 112, "霓虹結算", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+        fontSize: "30px", fontStyle: "bold", color: "#ffffff"
+      }).setOrigin(0.5).setAlpha(0).setDepth(72);
+
+      var scoreTxt = this.add.text(W / 2, H / 2 - 40, score.toLocaleString(), {
+        fontFamily: "Segoe UI, sans-serif", fontSize: "54px", fontStyle: "bold", color: "#67e8f9"
+      }).setOrigin(0.5).setScale(0.4).setAlpha(0).setDepth(72);
+
+      var meta = this.add.text(W / 2, H / 2 + 30,
+        diff.label +
+        "\n生存 " + elapsed.toFixed(1) + "s  ·  最高 Combo x" + maxCombo +
+        "  ·  DANGER x" + Number(danger).toFixed(2) +
+        "\n已執行 RNF.submitScore → 排行榜", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+        fontSize: "13px", color: "#94a3b8", align: "center", lineSpacing: 6
+      }).setOrigin(0.5).setAlpha(0).setDepth(72);
+
+      this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 380, ease: "Back.easeOut" });
+      this.tweens.add({ targets: [badge, title, meta], alpha: 1, duration: 300, ease: "Cubic.easeOut", delay: 80 });
+      this.tweens.add({ targets: scoreTxt, alpha: 1, scale: 1, duration: 480, ease: "Back.easeOut", delay: 100 });
+
+      neonBurst(this, W / 2, H / 2 - 40, 0x22d3ee, 22);
+
+      var self = this;
+      var retry = makeButton(this, W / 2 - 110, H / 2 + 130, "再試一次", 0x22d3ee, function () {
+        SFX.confirm();
+        self.scene.stop("GameOverModal");
+        self.scene.stop("GameScene");
+        self.scene.start("GameScene", { difficulty: selectedDiff });
+      }, 180);
+      retry.bg.setDepth(73); retry.txt.setDepth(74);
+
+      var settings = makeButton(this, W / 2 + 110, H / 2 + 130, "設定選單", 0xa78bfa, function () {
+        self.scene.launch("SettingsScene");
+      }, 180);
+      settings.bg.setDepth(73); settings.txt.setDepth(74);
+
+      var menu = makeButton(this, W / 2, H / 2 + 190, "主選單", 0x64748b, function () {
+        SFX.click();
+        self.scene.stop("GameOverModal");
+        self.scene.stop("SettingsScene");
+        self.scene.stop("GameScene");
+        self.scene.start("MainMenuScene");
+      }, 200);
+      menu.bg.setDepth(73); menu.txt.setDepth(74);
+    }
+  }
+
+  var config = {
+    type: Phaser.WEBGL,
+    parent: "game-host",
+    width: W,
+    height: H,
+    backgroundColor: "#04060c",
+    banner: false,
+    scale: {
+      mode: Phaser.Scale.FIT,
+      autoCenter: Phaser.Scale.CENTER_BOTH
+    },
+    fps: { target: 144, forceSet: false, smoothStep: true },
+    scene: [BootScene, MainMenuScene, DifficultyScene, GameScene, GameOverModal, SettingsScene]
   };
-  currentBubble = null;
-  RNF.sfx.laser();
-}
 
-function updateProjectile() {
-  if (!projectile) return;
-  var f = projectile;
-  f.x += f.vx * frameDt;
-  f.y += f.vy * frameDt;
-  if (f.x < RADIUS) { f.x = RADIUS; f.vx = Math.abs(f.vx); RNF.sfx.hit(); }
-  if (f.x > W - RADIUS) { f.x = W - RADIUS; f.vx = -Math.abs(f.vx); RNF.sfx.hit(); }
-  if (f.y < RADIUS + 12) { landBubble(f); return; }
-  for (var i = 0; i < grid.length; i++) {
-    var g = grid[i];
-    if (Math.hypot(f.x - g.x, f.y - g.y) < RADIUS * 1.85) { landBubble(f); return; }
+  try {
+    window.__CYBER_BUBBLE__ = new Phaser.Game(config);
+  } catch (_e) {
+    config.type = Phaser.AUTO;
+    window.__CYBER_BUBBLE__ = new Phaser.Game(config);
   }
-}
-
-function randomBubble() {
-  return { color: COLORS[Math.floor(Math.random() * COLORS.length)], special: rollSpecial() };
-}
-
-function aimGuidePoints() {
-  var sx = W / 2, sy = H - 44;
-  var dx = Math.sin(aimAngle), dy = -Math.cos(aimAngle);
-  var pts = [{ x: sx, y: sy }];
-  var x = sx, y = sy, vx = dx, vy = dy;
-  for (var i = 0; i < 6; i++) {
-    var step = 28;
-    x += vx * step; y += vy * step;
-    if (x < RADIUS) { x = RADIUS; vx = Math.abs(vx); }
-    if (x > W - RADIUS) { x = W - RADIUS; vx = -Math.abs(vx); }
-    pts.push({ x: x, y: y });
-    if (y < RADIUS + 20) break;
-  }
-  return pts;
-}
-
-function endGame() {
-  if (gameEnded) return;
-  gameEnded = true;
-  running = false;
-  RNF.sfx.die();
-  shell.triggerShake(10, 0.35);
-  cleanup();
-  shell.gameOver(score, { combo: combo });
-}
-
-function updateHud() {
-  shell.setHud(
-    '<div><span>' + RNF.t("hud.score") + '</span><b>' + score.toLocaleString() + '</b></div>' +
-    '<div><span>' + RNF.t("hud.combo") + '</span><b style="color:' + (combo > 1 ? "#fbbf24" : "#22d3ee") + '">x' + combo + '</b></div>' +
-    '<div><span>' + RNF.t("hud.timer") + '</span><b>' + comboTimer.toFixed(1) + 's</b></div>' +
-    '<div><span>' + RNF.t("hud.bubbles") + '</span><b>' + grid.length + '</b></div>' +
-    '<div><span>' + RNF.t("hud.drop") + '</span><b>' + Math.max(0, dropTimer).toFixed(0) + 's</b></div>'
-  );
-}
-
-function startGame() {
-  cleanup();
-  ctx = shell.ctx;
-  particles = shell.particles;
-  highQ = shell.isHighQuality();
-  speedScale = shell.getSpeedScale();
-  diffId = (shell.getDifficulty() || {}).id || "normal";
-  diffTun = diffTuning();
-  sens = (shell.getTuning && shell.getTuning().sensitivity) || 1;
-  score = 0; combo = 0; comboTimer = 0;
-  aimAngle = 0; shootCooldown = 0; dropTimer = diffTun.dropEvery;
-  falling = []; gameEnded = false; projectile = null;
-  initGrid();
-  currentBubble = randomBubble();
-  nextBubble = randomBubble();
-  dangerY = diffTun.dangerRow * RADIUS * 1.732 + RADIUS + 12;
-  running = true;
-  keys = {};
-  shell.attachKeyboard(keys);
-  shell.attachTouchControls({
-    keys: keys,
-    buttons: [
-      { code: "ArrowLeft", label: "◀", side: "left", hold: true },
-      { code: "ArrowRight", label: "▶", side: "left", hold: true },
-      { code: "Space", label: RNF.t("touch.fire"), side: "right", hold: false, wide: true, onPress: function () { shoot(); } }
-    ]
-  });
-  window.addEventListener("keydown", onKeyDown);
-  window.addEventListener("keyup", onKeyUp);
-  shell.canvas.addEventListener("pointerdown", onAimPointer);
-  shell.canvas.addEventListener("pointermove", onAimPointer);
-  lastTs = performance.now();
-  animId = requestAnimationFrame(loop);
-}
-
-function loop(ts) {
-  if (!running) return;
-  var dt = Math.min(0.033, (ts - lastTs) / 1000);
-  lastTs = ts;
-  frameDt = dt;
-  shootCooldown = Math.max(0, shootCooldown - dt);
-  comboTimer = Math.max(0, comboTimer - dt);
-  if (comboTimer <= 0 && combo > 0) combo = 0;
-
-  dropTimer -= dt;
-  if (dropTimer <= 0) {
-    pushCeiling();
-    dropTimer = diffTun.dropEvery / speedScale;
-  }
-
-  var aimSpd = 1.8 * sens * speedScale;
-  if (keys["ArrowLeft"]) aimAngle -= aimSpd * dt;
-  if (keys["ArrowRight"]) aimAngle += aimSpd * dt;
-  aimAngle = Math.max(-1.35, Math.min(1.35, aimAngle));
-
-  falling.forEach(function (f) {
-    f.vy += 320 * frameDt;
-    f.y += f.vy * frameDt;
-    f.life -= dt * 0.8;
-    if (highQ) particles.trail(f.x, f.y, f.color);
-  });
-  falling = falling.filter(function (f) { return f.life > 0 && f.y < H + 20; });
-
-  updateProjectile();
-  particles.update(dt);
-  draw();
-  updateHud();
-  if (grid.length === 0) {
-    score += 800;
-    RNF.sfx.score();
-    shell.triggerShake(8, 0.25);
-    initGrid();
-    dropTimer = diffTun.dropEvery;
-  }
-  animId = requestAnimationFrame(loop);
-}
-
-function drawBubble(b, alpha, scale) {
-  scale = scale || 1;
-  ctx.globalAlpha = alpha || 1;
-  ctx.shadowBlur = highQ ? 14 : 6;
-  ctx.shadowColor = b.color;
-  ctx.fillStyle = b.color;
-  ctx.beginPath();
-  ctx.arc(b.x, b.y, (RADIUS - 2) * scale, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "rgba(255,255,255,0.35)";
-  ctx.beginPath();
-  ctx.arc(b.x - 5 * scale, b.y - 5 * scale, 5 * scale, 0, Math.PI * 2);
-  ctx.fill();
-  if (b.special === "lightning") {
-    ctx.strokeStyle = "#fbbf24"; ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(b.x - 4, b.y - 8); ctx.lineTo(b.x + 2, b.y); ctx.lineTo(b.x - 2, b.y); ctx.lineTo(b.x + 4, b.y + 8);
-    ctx.stroke();
-  } else if (b.special === "blackhole") {
-    ctx.fillStyle = "#0f0a1a";
-    ctx.beginPath(); ctx.arc(b.x, b.y, RADIUS * 0.55 * scale, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = "#a78bfa"; ctx.stroke();
-  } else if (b.special === "bomb") {
-    ctx.fillStyle = "#fb7185";
-    ctx.font = "bold 11px sans-serif"; ctx.textAlign = "center";
-    ctx.fillText("💣", b.x, b.y + 4);
-  }
-  ctx.shadowBlur = 0;
-  ctx.globalAlpha = 1;
-}
-
-function draw() {
-  ctx.save();
-  shell.applyShake(ctx);
-  ctx.fillStyle = "#060a12";
-  ctx.fillRect(0, 0, W, H);
-
-  ctx.strokeStyle = "rgba(167,139,250,0.12)";
-  ctx.strokeRect(RADIUS, 10, W - RADIUS * 2, ROWS * RADIUS * 1.732 + 8);
-
-  ctx.strokeStyle = "rgba(244,114,182,0.35)";
-  ctx.setLineDash([8, 8]);
-  ctx.beginPath();
-  ctx.moveTo(RADIUS, dangerY);
-  ctx.lineTo(W - RADIUS, dangerY);
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  grid.forEach(function (b) { drawBubble(b); });
-  falling.forEach(function (f) { drawBubble({ x: f.x, y: f.y, color: f.color }, f.life); });
-
-  var sx = W / 2, sy = H - 44;
-  var guide = aimGuidePoints();
-  ctx.strokeStyle = "rgba(34,211,238,0.45)";
-  ctx.lineWidth = 2;
-  ctx.setLineDash([5, 5]);
-  ctx.beginPath();
-  ctx.moveTo(guide[0].x, guide[0].y);
-  for (var gi = 1; gi < guide.length; gi++) ctx.lineTo(guide[gi].x, guide[gi].y);
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  ctx.fillStyle = "rgba(34,211,238,0.15)";
-  ctx.beginPath();
-  ctx.moveTo(sx, sy);
-  ctx.lineTo(sx + Math.sin(aimAngle) * 140, sy - Math.cos(aimAngle) * 140);
-  ctx.lineTo(sx + Math.sin(aimAngle + 0.08) * 60, sy - Math.cos(aimAngle + 0.08) * 60);
-  ctx.closePath();
-  ctx.fill();
-
-  if (projectile) drawBubble(projectile);
-  else if (currentBubble) drawBubble({ x: sx, y: sy, color: currentBubble.color, special: currentBubble.special });
-  drawBubble({ x: sx + 52, y: sy + 18, color: nextBubble.color, special: nextBubble.special }, 1, 0.75);
-
-  ctx.fillStyle = "#64748b";
-  ctx.font = "10px sans-serif";
-  ctx.textAlign = "left";
-  ctx.fillText("NEXT", sx + 38, sy + 36);
-
-  if (combo > 1 && comboTimer > 0) {
-    ctx.fillStyle = "#fbbf24";
-    ctx.font = "bold 20px sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText("COMBO x" + combo, W / 2, H - 8);
-  }
-
-  particles.draw(ctx);
-  ctx.restore();
-}
+})();
 </script>
 </body>
 </html>

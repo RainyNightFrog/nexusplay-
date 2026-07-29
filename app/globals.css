@@ -1281,6 +1281,17 @@
       0 0 0 1px rgba(56, 189, 248, 0.45),
       0 0 8px rgba(56, 189, 248, 0.25);
   }
+
+  /* 聊天小頭像：縮小 AP 框外擴，避免窄欄裁切光環 */
+  .chat-message-list .ap-frame-void-orbit::before,
+  .chat-message-list .ap-frame-eternal-rain::before {
+    inset: -3px;
+  }
+
+  .chat-message-list .ap-frame-void-orbit::after,
+  .chat-message-list .ap-frame-eternal-rain::after {
+    inset: -4px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

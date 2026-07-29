@@ -89,7 +89,7 @@ export function UserNav() {
       <NotificationBell />
       <div
         className={cn(
-          "relative",
+          "relative overflow-visible",
           showSupporterFx &&
             supporterTier !== "none" &&
             supporterAvatarRingClassByTier[supporterTier]

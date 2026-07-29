@@ -1,0 +1,75 @@
+# RainyNightFrog · Phaser 3 電競遊戲開發 Skill 規範（最高優先）
+
+當你在 `game-platform/public/games/`（或 `public/games/`）目錄下**生成或修改**任何 HTML5 遊戲時，必須嚴格遵守以下標準。
+參考實作：`game-platform/public/games/_template/index.html`。
+
+> 既有 10 款街機若仍為 Vanilla Canvas：僅做小修可不強制整檔遷移；**新建遊戲、大改玩法／重寫、或用戶要求電競打擊感時，必須改用本規範（Phaser 3）**。
+
+---
+
+## 1. 引擎與渲染標準 (Engine & Performance)
+
+- **強制使用 Phaser 3**，經由 CDN 載入：
+  `https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.min.js`
+- **禁止**撰寫手動 `requestAnimationFrame` 刷新的原生 Vanilla Canvas 遊戲邏輯（新建／重寫時）。
+- **物理與移動解耦**：所有物體位移必須基於 **Delta Time (dt)** 或 **Phaser Arcade Physics**，確保 60FPS～144FPS 螢幕皆能滿幀平滑運行。
+  - 範例：`sprite.x += speed * (delta / 1000)` 或 `physics.add.velocityFromRotation(...)`
+- 畫布建議固定邏輯解析度（如 960×540），以 `Scale.FIT` + `CENTER_BOTH` 適配容器。
+
+## 2. 遊戲打擊感四要素 (Game Juice Mandatory)
+
+以下四項為**強制**，缺一不可：
+
+1. **震屏反饋 (Screen Shake)**  
+   受傷、擊殺、受擊或得分時必須觸發：  
+   `this.cameras.main.shake(100, 0.01)`（可依強度微調 duration／intensity）。
+
+2. **霓虹粒子系統 (Particle Emitter)**  
+   物件消除、爆炸或碰撞時，必須爆發 **15～30** 個具備 Alpha 衰減的霓虹粒子。
+
+3. **彈性緩動動畫 (Tweens)**  
+   UI 彈窗、得分數字上升與按鈕點擊必須搭配 `Cubic.easeOut` 或 `Back.easeOut` 的彈性縮放 Tween。
+
+4. **音效回饋 (Web Audio SFX)**  
+   關鍵操作（跳躍、得分、爆炸、Game Over）必須使用 Phaser 音效或原生 Web Audio 生成賽博電競音效。  
+   若已載入 RNF SDK，可併用 `RNF.sfx.*`，但不得省略關鍵回饋。
+
+## 3. 難度階梯與動態平衡 (Difficulty Scaling)
+
+- **三段難度選擇**（選單必須提供）：
+  - Casual 輕鬆
+  - Standard 電競
+  - Extreme 狂暴
+- **動態難度遞增公式**（於 GameScene `update` 中計算）：
+  ```js
+  dangerMultiplier = 1 + Math.log(1 + elapsedTime / 30) * 0.8;
+  ```
+  - 以此動態提升敵人速度與生成頻率。
+  - 必須在 HUD 上**即時顯示**當前危險倍率（例如 `DANGER x1.42`）。
+- 難度基底倍率可疊加在 `dangerMultiplier` 之上（Casual < Standard < Extreme）。
+
+## 4. 狀態機與 RainyNightFrog SDK 串接
+
+- **標準場景結構**（不可省略選單／難度／結算流程）：
+  `BootScene` → `MainMenuScene` → `DifficultyScene` → `GameScene` → `GameOverModal`
+- 載入平台 SDK（路徑依部署調整）：
+  - `/sdk/rnf-i18n.js`
+  - `/sdk/rnf-game-packs.js`
+  - `/sdk/rnf-game-sdk.js`
+- **SDK 連動**：遊戲結束時彈出高畫質霓虹結算視窗，並自動執行：
+  ```js
+  RNF.submitScore(finalScore);
+  ```
+  推送分數至主站排行榜（可附 `metadata: { difficulty, rawScore, slug }`）。
+
+## 5. 範本與自查清單
+
+- 新建遊戲前，優先複製／對照：`public/games/_template/index.html`
+- 交付前自查：
+  - [ ] Phaser 3 CDN，無手動 rAF 主迴圈
+  - [ ] 位移用 dt 或 Arcade Physics
+  - [ ] 震屏 + 霓虹粒子（15～30）+ Tween + SFX
+  - [ ] Casual / Standard / Extreme
+  - [ ] `dangerMultiplier` 公式 + HUD 顯示
+  - [ ] 五段場景／結算流 + `RNF.submitScore`
+  - [ ] 若改平台虛擬遊戲多語系／SDK，仍須依「虛擬遊戲清單」規則檢查街機 10 + demos（本 `_template` 非上架清單，除外）

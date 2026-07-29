@@ -4,342 +4,1029 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Overdrive Cyber Pong · 超光速霓虹乒乓</title>
-
-  <script src="/sdk/rnf-i18n.js?v=20260725a"></script>
-  <script src="/sdk/rnf-game-packs.js?v=20260725a"></script>
-  <script src="/sdk/rnf-game-sdk.js?v=20260725b"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%; height: 100%;
+      background: #04060c; overflow: hidden;
+      font-family: "Segoe UI", "Microsoft JhengHei", system-ui, sans-serif;
+      touch-action: none; user-select: none;
+    }
+    #game-host { width: 100%; height: 100%; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.min.js"></script>
+  <script src="/sdk/rnf-i18n.js?v=20260730h"></script>
+  <script src="/sdk/rnf-game-packs.js?v=20260730h"></script>
+  <script src="/sdk/rnf-game-sdk.js?v=20260730h"></script>
 </head>
 <body>
+  <div id="game-host"></div>
 <script>
-RNF.init();
-var shell = RNF.buildShell({
-  title: "Overdrive Cyber Pong",
-  creator: "HyperPong_Studio",
-  subtitle: "曲球軌跡 · 重力井 · AI 難度 · 雙人對戰 · 觸控拖曳擋板",
-  width: 960,
-  height: 520,
-  bgmStyle: "pulse",
-  difficulties: (function () {
-    var loc = RNF.getLocale();
-    var zh = loc.indexOf("zh") === 0;
-    var cn = loc === "zh-CN";
-    return [
-      { id: "easy", label: RNF.t("diff.easy"), speedMult: 0.85, scoreMult: 1, ai: 0.75, desc: zh ? (cn ? "AI 较慢，先 5 分胜" : "AI 較慢，先 5 分勝") : "Slower AI — first to 5" },
-      { id: "normal", label: RNF.t("diff.normal"), speedMult: 1, scoreMult: 1.25, ai: 1, desc: zh ? (cn ? "平衡对战，先 7 分胜" : "平衡對戰，先 7 分勝") : "Balanced — first to 7" },
-      { id: "hard", label: RNF.t("diff.hard"), speedMult: 1.12, scoreMult: 1.6, ai: 1.35, desc: zh ? (cn ? "更快球速与更强 AI，先 9 分胜" : "更快球速與更強 AI，先 9 分勝") : "Faster ball & stronger AI — first to 9" },
-      { id: "versus", label: RNF.t("diff.versus"), speedMult: 1, scoreMult: 1.15, ai: 1, desc: zh ? (cn ? "本地双人同屏幕，先 7 分胜" : "本地雙人同螢幕，先 7 分勝") : "Local 2P same screen — first to 7" }
-    ];
-  })(),
-  highlights: ["曲球軌跡", "重力井", "觸控拖曳", "粒子拖尾", "雙人對戰"],
-  help: {
-    about: "霓虹風格的乒乓球對戰。曲球 spin 受擋板擊球點影響，重力井會偏轉軌跡。先達目標分數者獲勝。",
-    features: [
-      "主選單難度決定 AI 強度與勝利分數",
-      "曲球 spin 與動態重力場",
-      "擊球角度取決於碰板位置與擋板移動速度",
-      "手機可拖曳左側擋板，右側虛擬鍵控制（雙人模式）"
-    ],
-    controls: [
-      "W / S 或 ↑ / ↓：移動擋板",
-      "觸控：在左半場拖曳控制左擋板",
-      "雙人模式：左 W/S · 右 ↑/↓ 或右側觸控鍵",
-      "主選單選「雙人對戰」進入本地雙人"
-    ],
-    tips: [
-      "利用重力井製造意外反角",
-      "移動中擊球可施加更強曲球",
-      "困難 AI 會預測落點並提前站位"
-    ]
-  },
-  onStop: cleanup,
-  onStart: startGame
-});
+/**
+ * Overdrive Cyber Pong — Phaser 3 商業級電競重構
+ * Boot → MainMenu → Difficulty → Game → GameOverModal (+ Settings)
+ * Juice：弧線切球 · Squash&Stretch · 重力井／加速帶 · 進球光束
+ * Casual 緩速長板 · Standard 預測 AI · Extreme 光速＋黑洞
+ */
+(function () {
+  "use strict";
 
-var W = 960, H = 520;
-var ctx, particles, running, loopId, lastT, keys = {};
-var left, right, ball, scoreL, scoreR, gravityZones, animT = 0;
-var speedScale = 1, diffId = "normal", winScore = 7, aiMult = 1;
-var pointerY = null, rallyCount = 0, speedBurst = 0;
-var isVersus = false;
+  if (typeof RNF !== "undefined" && RNF.init) RNF.init();
 
-function cleanup() {
-  shell.detachKeyboard();
-  shell.detachTouchControls();
-  running = false;
-  if (loopId) cancelAnimationFrame(loopId);
-  loopId = null;
-  shell.canvas.removeEventListener("pointerdown", onPtrDown);
-  shell.canvas.removeEventListener("pointermove", onPtrMove);
-  shell.canvas.removeEventListener("pointerup", onPtrUp);
-  shell.canvas.removeEventListener("pointercancel", onPtrUp);
-  window.removeEventListener("keydown", onKeyDown);
-  window.removeEventListener("keyup", onKeyUp);
-}
+  var W = 960;
+  var H = 540;
+  var SETTINGS_KEY = "rnf:overdrive-cyber-pong:settings";
+  var WIN_SCORE = 7;
 
-function applyDifficulty() {
-  var d = shell.getDifficulty() || {};
-  diffId = d.id || "normal";
-  aiMult = d.ai || 1;
-  isVersus = diffId === "versus";
-  winScore = diffId === "easy" ? 5 : diffId === "hard" ? 9 : 7;
-}
-
-function resetBall(dir) {
-  var base = (240 + rallyCount * 8) * speedScale;
-  ball = {
-    x: W / 2, y: H / 2,
-    vx: dir * Math.min(base, 420), vy: (Math.random() - 0.5) * 140 * speedScale,
-    r: 9, spin: 0, trail: [], glow: "#fff"
+  var DIFF = {
+    casual: {
+      id: "casual",
+      label: "Casual 輕鬆",
+      desc: "球速平緩 · 長擋板 · AI 反應延遲",
+      color: "#67e8f9",
+      scoreMult: 1.0,
+      baseDanger: 1.0,
+      ballSpeed: 280,
+      paddleH: 110,
+      paddleSpd: 420,
+      aiLag: 0.22,
+      aiSpd: 260,
+      aiPredict: 0.35,
+      wellChance: 0.35,
+      wellAlways: false,
+      boostChance: 0.4
+    },
+    standard: {
+      id: "standard",
+      label: "Standard 電競",
+      desc: "標準球速 · 預測路徑 AI · 動態障礙",
+      color: "#a78bfa",
+      scoreMult: 1.35,
+      baseDanger: 1.25,
+      ballSpeed: 360,
+      paddleH: 88,
+      paddleSpd: 520,
+      aiLag: 0.08,
+      aiSpd: 420,
+      aiPredict: 0.85,
+      wellChance: 0.55,
+      wellAlways: false,
+      boostChance: 0.55
+    },
+    extreme: {
+      id: "extreme",
+      label: "Extreme 狂暴",
+      desc: "光速初速 · 短板 · 完美 AI · 中央黑洞",
+      color: "#f472b6",
+      scoreMult: 2.0,
+      baseDanger: 2.0,
+      ballSpeed: 480,
+      paddleH: 64,
+      paddleSpd: 580,
+      aiLag: 0.02,
+      aiSpd: 620,
+      aiPredict: 1.0,
+      wellChance: 1,
+      wellAlways: true,
+      boostChance: 0.7
+    }
   };
-  rallyCount = 0;
-}
 
-function startGame() {
-  cleanup();
-  speedScale = shell.getSpeedScale();
-  applyDifficulty();
-  ctx = shell.ctx; particles = shell.particles;
-  scoreL = 0; scoreR = 0; animT = 0; pointerY = null; speedBurst = 0;
-  left = { x: 24, y: 210, w: 14, h: 100, vy: 0, prevY: 210 };
-  right = { x: W - 38, y: 210, w: 14, h: 100, vy: 0, prevY: 210 };
-  gravityZones = [
-    { x: 320, y: 150, r: 72, str: 200, pulse: 0 },
-    { x: 640, y: 340, r: 68, str: -175, pulse: 1.2 },
-    { x: 480, y: 260, r: 50, str: 90, pulse: 2.4 }
-  ];
-  resetBall(Math.random() < 0.5 ? 1 : -1);
-  updateHud(); running = true; keys = {};
-  shell.attachKeyboard(keys);
-  if (!isVersus) {
-    shell.attachTouchControls({
-      keys: keys,
-      buttons: [
-        { code: "KeyW", label: "W", side: "left", hold: true },
-        { code: "KeyS", label: "S", side: "left", hold: true }
-      ],
-      swipe: { threshold: 30, up: "KeyW", down: "KeyS" }
+  var selectedDiff = "standard";
+  var gameSettings = loadSettings();
+
+  function loadSettings() {
+    var base = { sfx: true, shake: true };
+    try {
+      if (typeof RNF !== "undefined" && RNF.getSettings) {
+        var s = RNF.getSettings();
+        base.sfx = (s.sfxVolume == null ? 0.75 : s.sfxVolume) > 0.02;
+        base.shake = s.screenShake !== false;
+      }
+      var raw = localStorage.getItem(SETTINGS_KEY);
+      if (raw) Object.assign(base, JSON.parse(raw));
+    } catch (_e) {}
+    return base;
+  }
+
+  function saveSettings() {
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(gameSettings));
+      if (typeof RNF !== "undefined" && RNF.setSettings) {
+        RNF.setSettings({
+          sfxVolume: gameSettings.sfx ? 0.75 : 0,
+          screenShake: !!gameSettings.shake
+        });
+      }
+    } catch (_e) {}
+  }
+
+  var audioCtx = null;
+  function ensureAudio() {
+    if (!audioCtx) {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    }
+    if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+    return audioCtx;
+  }
+  function tone(freq, dur, type, vol, slide) {
+    if (!gameSettings.sfx) return;
+    var ctx = ensureAudio();
+    if (!ctx) return;
+    var t0 = ctx.currentTime;
+    var o = ctx.createOscillator();
+    var g = ctx.createGain();
+    o.type = type || "square";
+    o.frequency.setValueAtTime(freq, t0);
+    if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(40, slide), t0 + dur);
+    g.gain.setValueAtTime(vol || 0.1, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(t0); o.stop(t0 + dur + 0.02);
+  }
+  var SFX = {
+    click: function () { tone(520, 0.05, "triangle", 0.07); },
+    confirm: function () { tone(660, 0.07, "square", 0.09); tone(990, 0.08, "triangle", 0.07); },
+    hit: function () { tone(420, 0.05, "square", 0.09, 720); },
+    wall: function () { tone(280, 0.04, "triangle", 0.05); },
+    spin: function () { tone(540, 0.06, "sawtooth", 0.06, 880); },
+    well: function () { tone(120, 0.16, "sine", 0.08, 60); },
+    boost: function () { tone(700, 0.1, "sawtooth", 0.1, 1400); },
+    goal: function () {
+      tone(180, 0.12, "sawtooth", 0.14, 90);
+      tone(520, 0.1, "square", 0.1);
+      tone(780, 0.14, "triangle", 0.09);
+    },
+    win: function () { tone(660, 0.1, "square", 0.1); tone(880, 0.12, "triangle", 0.09); tone(1100, 0.18, "sine", 0.08); },
+    lose: function () { tone(200, 0.22, "sawtooth", 0.14, 70); },
+    toggle: function () { tone(440, 0.05, "triangle", 0.07); }
+  };
+
+  function doShake(cam, dur, intens) {
+    if (!gameSettings.shake || !cam) return;
+    cam.shake(dur, intens);
+  }
+
+  function neonBurst(scene, x, y, tint, count) {
+    var n = Phaser.Math.Clamp(count || 20, 15, 40);
+    var emitter = scene.add.particles(x, y, "spark", {
+      speed: { min: 80, max: 360 },
+      angle: { min: 0, max: 360 },
+      lifespan: { min: 240, max: 680 },
+      scale: { start: 1.2, end: 0 },
+      alpha: { start: 1, end: 0 },
+      gravityY: 30,
+      blendMode: "ADD",
+      tint: tint,
+      emitting: false
     });
-  } else {
-    shell.attachTouchControls({
-      keys: keys,
-      buttons: [
-        { code: "KeyW", label: "W", side: "left", hold: true },
-        { code: "KeyS", label: "S", side: "left", hold: true },
-        { code: "ArrowUp", label: "↑", side: "right", hold: true },
-        { code: "ArrowDown", label: "↓", side: "right", hold: true }
-      ]
+    emitter.explode(n);
+    scene.time.delayedCall(850, function () { if (emitter.destroy) emitter.destroy(); });
+  }
+
+  function makeTextures(scene) {
+    var g = scene.make.graphics({ x: 0, y: 0, add: false });
+
+    g.clear();
+    g.fillStyle(0x22d3ee, 1);
+    g.fillRoundedRect(0, 0, 16, 100, 6);
+    g.fillStyle(0xffffff, 0.45);
+    g.fillRoundedRect(3, 8, 4, 84, 2);
+    g.generateTexture("paddle-cyan", 16, 100);
+
+    g.clear();
+    g.fillStyle(0xf472b6, 1);
+    g.fillRoundedRect(0, 0, 16, 100, 6);
+    g.fillStyle(0xffffff, 0.35);
+    g.fillRoundedRect(9, 8, 4, 84, 2);
+    g.generateTexture("paddle-pink", 16, 100);
+
+    g.clear();
+    g.fillStyle(0xffffff, 1);
+    g.fillCircle(10, 10, 9);
+    g.fillStyle(0x67e8f9, 0.9);
+    g.fillCircle(10, 10, 6);
+    g.fillStyle(0xffffff, 0.7);
+    g.fillCircle(7, 7, 2.5);
+    g.generateTexture("ball", 20, 20);
+
+    g.clear();
+    g.fillStyle(0xffffff, 1);
+    g.fillCircle(3, 3, 3);
+    g.generateTexture("spark", 6, 6);
+
+    g.clear();
+    g.fillStyle(0xa78bfa, 0.35);
+    g.fillCircle(40, 40, 38);
+    g.lineStyle(3, 0xc4b5fd, 0.9);
+    g.strokeCircle(40, 40, 36);
+    g.lineStyle(2, 0x22d3ee, 0.7);
+    g.strokeCircle(40, 40, 18);
+    g.fillStyle(0x0ea5e9, 0.5);
+    g.fillCircle(40, 40, 8);
+    g.generateTexture("well", 80, 80);
+
+    g.clear();
+    g.fillStyle(0xfbbf24, 0.25);
+    g.fillRoundedRect(0, 0, 56, 120, 10);
+    g.lineStyle(2, 0xfde68a, 0.85);
+    g.strokeRoundedRect(1, 1, 54, 118, 10);
+    g.fillStyle(0xfbbf24, 0.55);
+    for (var i = 0; i < 4; i++) g.fillTriangle(8, 20 + i * 26, 48, 32 + i * 26, 8, 44 + i * 26);
+    g.generateTexture("boost", 56, 120);
+
+    g.destroy();
+  }
+
+  function pulseBtn(scene, targets) {
+    scene.tweens.add({
+      targets: targets, scale: 1.08, duration: 90, yoyo: true, ease: "Back.easeOut"
     });
   }
-  shell.canvas.addEventListener("pointerdown", onPtrDown);
-  shell.canvas.addEventListener("pointermove", onPtrMove);
-  shell.canvas.addEventListener("pointerup", onPtrUp);
-  shell.canvas.addEventListener("pointercancel", onPtrUp);
-  window.addEventListener("keydown", onKeyDown);
-  window.addEventListener("keyup", onKeyUp);
-  lastT = performance.now();
-  loopId = requestAnimationFrame(loop);
-}
 
-function canvasY(e) {
-  var rect = shell.canvas.getBoundingClientRect();
-  return (e.clientY - rect.top) * (H / rect.height);
-}
+  function makeButton(scene, x, y, label, color, onClick, width) {
+    var bw = width || 300;
+    var bg = scene.add.rectangle(x, y, bw, 50, color, 0.2)
+      .setStrokeStyle(2, color, 0.9)
+      .setInteractive({ useHandCursor: true });
+    var txt = scene.add.text(x, y, label, {
+      fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif",
+      fontSize: "18px", fontStyle: "bold", color: "#e2e8f0"
+    }).setOrigin(0.5);
+    bg.on("pointerover", function () {
+      scene.tweens.add({ targets: [bg, txt], scale: 1.05, duration: 120, ease: "Cubic.easeOut" });
+    });
+    bg.on("pointerout", function () {
+      scene.tweens.add({ targets: [bg, txt], scale: 1, duration: 120, ease: "Cubic.easeOut" });
+    });
+    bg.on("pointerdown", function () {
+      pulseBtn(scene, [bg, txt]);
+      SFX.click();
+      onClick();
+    });
+    return { bg: bg, txt: txt };
+  }
 
-var ptrActive = false;
-function onPtrDown(e) {
-  var x = (e.clientX - shell.canvas.getBoundingClientRect().left) * (W / shell.canvas.getBoundingClientRect().width);
-  if (x < W * 0.55) { ptrActive = true; pointerY = canvasY(e); }
-}
-function onPtrMove(e) { if (ptrActive) pointerY = canvasY(e); }
-function onPtrUp() { ptrActive = false; }
-
-function onKeyDown(e) { keys[e.code] = true; }
-function onKeyUp(e) { keys[e.code] = false; }
-
-function updateHud() {
-  var modeTxt = isVersus ? RNF.t("diff.versus") : (shell.getDifficulty() || {}).label || "AI";
-  shell.setHud(
-    '<div><span>' + RNF.t("hud.left") + '</span><b style="color:#22d3ee">' + scoreL + '</b></div>' +
-    '<div><span>' + RNF.t("hud.right") + '</span><b style="color:#f472b6">' + scoreR + '</b></div>' +
-    '<div><span>' + RNF.t("hud.target") + '</span><b>' + winScore + '</b></div>' +
-    '<div><span>' + RNF.t("hud.mode") + '</span><b style="font-size:.72rem">' + modeTxt + '</b></div>' +
-    '<div><span>' + RNF.t("hud.spin") + '</span><b>' + Math.abs(ball.spin).toFixed(1) + '</b></div>' +
-    '<div><span>Rally</span><b>' + rallyCount + '</b></div>'
-  );
-}
-
-function movePaddle(p, up, down, dt) {
-  var spd = 340 * speedScale;
-  p.prevY = p.y;
-  if (up) p.y -= spd * dt;
-  if (down) p.y += spd * dt;
-  p.vy = (p.y - p.prevY) / Math.max(dt, 0.001);
-  p.y = Math.max(16, Math.min(H - p.h - 16, p.y));
-}
-
-function aiMove(paddle, dt) {
-  var predictY = ball.y;
-  if (ball.vx > 0) {
-    var tHit = (paddle.x - ball.x) / (ball.vx || 1);
-    if (tHit > 0 && tHit < 3) {
-      predictY = ball.y + ball.vy * tHit + ball.spin * tHit * tHit * 18;
-      predictY += Math.sin(animT * 2) * (8 / aiMult);
+  /* ═══════════════ BootScene ═══════════════ */
+  class BootScene extends Phaser.Scene {
+    constructor() { super("BootScene"); }
+    create() {
+      makeTextures(this);
+      this.cameras.main.setBackgroundColor("#04060c");
+      this.cameras.main.fadeIn(320, 4, 6, 12);
+      var t = this.add.text(W / 2, H / 2 - 8, "OVERDRIVE CYBER PONG", {
+        fontFamily: "Segoe UI, sans-serif", fontSize: "26px", fontStyle: "bold", color: "#22d3ee"
+      }).setOrigin(0.5).setAlpha(0);
+      this.add.text(W / 2, H / 2 + 28, "Phaser 3 · RainyNightFrog", {
+        fontFamily: "Segoe UI, sans-serif", fontSize: "13px", color: "#64748b"
+      }).setOrigin(0.5);
+      this.tweens.add({ targets: t, alpha: 1, scale: 1.04, duration: 400, ease: "Back.easeOut" });
+      this.time.delayedCall(520, function () { this.scene.start("MainMenuScene"); }, [], this);
     }
   }
-  var target = predictY - paddle.h / 2;
-  var react = (diffId === "easy" ? 180 : diffId === "hard" ? 420 : 280) * aiMult * speedScale;
-  var err = (diffId === "easy" ? 28 : diffId === "hard" ? 6 : 14) / aiMult;
-  target += (Math.random() - 0.5) * err;
-  paddle.prevY = paddle.y;
-  if (paddle.y + paddle.h / 2 < target - 8) paddle.y += react * dt;
-  else if (paddle.y + paddle.h / 2 > target + 8) paddle.y -= react * dt;
-  paddle.vy = (paddle.y - paddle.prevY) / Math.max(dt, 0.001);
-  paddle.y = Math.max(16, Math.min(H - paddle.h - 16, paddle.y));
-}
 
-function hitPaddle(p, side) {
-  if (ball.x + ball.r <= p.x || ball.x - ball.r >= p.x + p.w) return false;
-  if (ball.y + ball.r < p.y || ball.y - ball.r > p.y + p.h) return false;
-  ball.vx = side * Math.abs(ball.vx) * 1.045;
-  var rel = (ball.y - (p.y + p.h / 2)) / (p.h / 2);
-  ball.vy += rel * 240 + p.vy * 0.35;
-  ball.spin += rel * 4 + p.vy * 0.02;
-  ball.x = side > 0 ? p.x + p.w + ball.r : p.x - ball.r;
-  rallyCount++;
-  speedBurst = 0.2;
-  RNF.sfx.combo(Math.min(rallyCount, 8));
-  shell.triggerShake(4 + rallyCount * 0.3, 0.1);
-  particles.burst(ball.x, ball.y, side > 0 ? "#22d3ee" : "#f472b6", 10);
-  return true;
-}
+  /* ═══════════════ MainMenuScene ═══════════════ */
+  class MainMenuScene extends Phaser.Scene {
+    constructor() { super("MainMenuScene"); }
+    create() {
+      ensureAudio();
+      this.cameras.main.setBackgroundColor("#060a14");
+      this.cameras.main.fadeIn(200, 4, 6, 12);
 
-function loop(now) {
-  if (!running) return;
-  var dt = Math.min(0.033, (now - lastT) / 1000);
-  lastT = now; animT += dt;
-  speedBurst = Math.max(0, speedBurst - dt);
+      var gfx = this.add.graphics().setAlpha(0.15);
+      gfx.lineStyle(1, 0x22d3ee, 1);
+      for (var x = 0; x < W; x += 48) gfx.lineBetween(x, 0, x, H);
+      for (var y = 0; y < H; y += 48) gfx.lineBetween(0, y, W, y);
 
-  if (pointerY != null && ptrActive) {
-    left.y += (pointerY - left.h / 2 - left.y) * Math.min(1, dt * 14);
-    left.y = Math.max(16, Math.min(H - left.h - 16, left.y));
-  } else {
-    movePaddle(left, keys["KeyW"], keys["KeyS"], dt);
-  }
+      for (var i = 0; i < 36; i++) {
+        var orb = this.add.circle(
+          Phaser.Math.Between(0, W), Phaser.Math.Between(0, H),
+          Phaser.Math.Between(1, 3), 0xf472b6, Phaser.Math.FloatBetween(0.12, 0.45)
+        );
+        this.tweens.add({
+          targets: orb, alpha: 0.08, duration: Phaser.Math.Between(700, 1600),
+          yoyo: true, repeat: -1, ease: "Sine.easeInOut"
+        });
+      }
 
-  if (isVersus) movePaddle(right, keys["ArrowUp"], keys["ArrowDown"], dt);
-  else aiMove(right, dt);
+      var badge = this.add.text(W / 2, 78, "RAINYNIGHTFROG · CYBER ARCADE", {
+        fontFamily: "Segoe UI, sans-serif", fontSize: "11px", fontStyle: "bold",
+        color: "#22d3ee", letterSpacing: 3
+      }).setOrigin(0.5).setAlpha(0);
 
-  gravityZones.forEach(function (z) {
-    z.pulse += dt;
-    var dx = ball.x - z.x, dy = ball.y - z.y, d = Math.sqrt(dx * dx + dy * dy);
-    if (d < z.r) {
-      var f = (1 - d / z.r) * z.str * dt;
-      ball.vy += (dy / (d || 1)) * f * 0.025;
-      ball.vx += (dx / (d || 1)) * f * 0.012;
-      if (shell.isHighQuality()) particles.trail(ball.x, ball.y, z.str > 0 ? "#22d3ee" : "#a78bfa");
+      var title = this.add.text(W / 2, 140, "OVERDRIVE CYBER PONG", {
+        fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif",
+        fontSize: "34px", fontStyle: "bold", color: "#ffffff"
+      }).setOrigin(0.5).setScale(0.65).setAlpha(0);
+
+      var sub = this.add.text(W / 2, 195, "超光速霓虹乒乓 · 弧線切球 · 重力井 · 賽博 AI", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+        fontSize: "15px", color: "#94a3b8"
+      }).setOrigin(0.5).setAlpha(0);
+
+      this.tweens.add({ targets: badge, alpha: 1, y: 88, duration: 400, ease: "Cubic.easeOut" });
+      this.tweens.add({ targets: title, alpha: 1, scale: 1, duration: 480, ease: "Back.easeOut", delay: 50 });
+      this.tweens.add({ targets: sub, alpha: 1, duration: 380, ease: "Cubic.easeOut", delay: 120 });
+
+      var self = this;
+      makeButton(this, W / 2, 300, "開始遊戲 START", 0x22d3ee, function () {
+        SFX.confirm();
+        self.cameras.main.fadeOut(160, 4, 6, 12);
+        self.time.delayedCall(170, function () { self.scene.start("DifficultyScene"); });
+      });
+      makeButton(this, W / 2, 370, "設定 SETTINGS", 0xa78bfa, function () {
+        self.scene.launch("SettingsScene");
+      });
+      makeButton(this, W / 2, 440, "操作說明", 0x64748b, function () {
+        if (self.helpTxt) return;
+        self.helpTxt = self.add.text(W / 2, 500,
+          "拖曳／W S／↑↓ 移動擋板 · 移動中擊球產生弧線切球 · 先達 7 分勝", {
+          fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+          fontSize: "13px", color: "#c4b5fd"
+        }).setOrigin(0.5).setAlpha(0);
+        this.tweens.add({ targets: self.helpTxt, alpha: 1, y: 492, duration: 280, ease: "Cubic.easeOut" });
+      }.bind(this), 220);
     }
-  });
+  }
 
-  ball.vy += ball.spin * dt * 48;
-  ball.vx *= 1 + dt * 0.02 * Math.min(rallyCount, 12);
-  ball.x += ball.vx * dt;
-  ball.y += ball.vy * dt;
+  /* ═══════════════ DifficultyScene ═══════════════ */
+  class DifficultyScene extends Phaser.Scene {
+    constructor() { super("DifficultyScene"); }
+    create() {
+      this.cameras.main.setBackgroundColor("#060a14");
+      this.cameras.main.fadeIn(160, 4, 6, 12);
 
-  if (ball.y - ball.r < 12) { ball.y = 12 + ball.r; ball.vy = Math.abs(ball.vy); RNF.sfx.hit(); }
-  if (ball.y + ball.r > H - 12) { ball.y = H - 12 - ball.r; ball.vy = -Math.abs(ball.vy); RNF.sfx.hit(); }
+      var head = this.add.text(W / 2, 70, "選擇難度", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+        fontSize: "34px", fontStyle: "bold", color: "#e2e8f0"
+      }).setOrigin(0.5).setScale(0.7).setAlpha(0);
+      this.tweens.add({ targets: head, alpha: 1, scale: 1, duration: 360, ease: "Back.easeOut" });
 
-  hitPaddle(left, 1);
-  hitPaddle(right, -1);
+      this.add.text(W / 2, 118, "單人挑戰賽博 AI · 未得分前每反彈球速 +5% · 先達 7 分", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+        fontSize: "14px", color: "#64748b"
+      }).setOrigin(0.5);
 
-  ball.trail.push({ x: ball.x, y: ball.y, spin: ball.spin });
-  if (ball.trail.length > 22) ball.trail.shift();
-  if (shell.isHighQuality()) particles.trail(ball.x, ball.y, "#a78bfa");
+      var self = this;
+      ["casual", "standard", "extreme"].forEach(function (key, i) {
+        var d = DIFF[key];
+        var col = Phaser.Display.Color.HexStringToColor(d.color).color;
+        var y = 190 + i * 88;
+        makeButton(self, W / 2, y, d.label, col, function () {
+          selectedDiff = key;
+          SFX.confirm();
+          self.cameras.main.fadeOut(160, 4, 6, 12);
+          self.time.delayedCall(170, function () {
+            self.scene.start("GameScene", { difficulty: key });
+          });
+        });
+        self.add.text(W / 2, y + 32, d.desc + " · 分數 x" + d.scoreMult.toFixed(2) + " · DANGER x" + d.baseDanger.toFixed(1), {
+          fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+          fontSize: "12px", color: "#94a3b8"
+        }).setOrigin(0.5);
+      });
 
-  if (ball.x < -30) {
-    scoreR++; RNF.sfx.score();
-    if (scoreR >= winScore) {
-      cleanup();
-      shell.gameOver(scoreL * 120 + rallyCount * 5, { winner: "right", difficulty: diffId, mode: isVersus ? "versus" : "ai" });
-      return;
+      makeButton(this, W / 2, 490, "返回", 0x475569, function () {
+        self.scene.start("MainMenuScene");
+      }, 160);
     }
-    resetBall(1);
   }
-  if (ball.x > W + 30) {
-    scoreL++; RNF.sfx.score();
-    if (scoreL >= winScore) {
-      cleanup();
-      shell.gameOver(scoreL * 120 + scoreR * 40 + rallyCount * 5, { winner: "left", difficulty: diffId, mode: isVersus ? "versus" : "ai" });
-      return;
+
+  /* ═══════════════ SettingsScene ═══════════════ */
+  class SettingsScene extends Phaser.Scene {
+    constructor() { super("SettingsScene"); }
+    create() {
+      var dim = this.add.rectangle(W / 2, H / 2, W, H, 0x02040a, 0.75).setInteractive().setDepth(100);
+      var panel = this.add.rectangle(W / 2, H / 2, 420, 300, 0x0b1220, 0.98)
+        .setStrokeStyle(2, 0x22d3ee, 0.85).setScale(0.75).setAlpha(0).setDepth(101);
+      var title = this.add.text(W / 2, H / 2 - 110, "設定選單", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+        fontSize: "26px", fontStyle: "bold", color: "#e2e8f0"
+      }).setOrigin(0.5).setAlpha(0).setDepth(102);
+
+      this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 300, ease: "Back.easeOut" });
+      this.tweens.add({ targets: title, alpha: 1, duration: 260, ease: "Cubic.easeOut", delay: 50 });
+
+      var self = this;
+      var sfxBtn = makeButton(this, W / 2, H / 2 - 20, gameSettings.sfx ? "音效：開" : "音效：關", 0x22d3ee, function () {
+        gameSettings.sfx = !gameSettings.sfx; saveSettings(); SFX.toggle();
+        sfxBtn.txt.setText(gameSettings.sfx ? "音效：開" : "音效：關");
+      }, 260);
+      sfxBtn.bg.setDepth(102); sfxBtn.txt.setDepth(103);
+
+      var shakeBtn = makeButton(this, W / 2, H / 2 + 50, gameSettings.shake ? "震屏：開" : "震屏：關", 0xa78bfa, function () {
+        gameSettings.shake = !gameSettings.shake; saveSettings(); SFX.toggle();
+        shakeBtn.txt.setText(gameSettings.shake ? "震屏：開" : "震屏：關");
+      }, 260);
+      shakeBtn.bg.setDepth(102); shakeBtn.txt.setDepth(103);
+
+      var closeBtn = makeButton(this, W / 2, H / 2 + 120, "關閉", 0x64748b, function () {
+        self.scene.stop("SettingsScene");
+      }, 180);
+      closeBtn.bg.setDepth(102); closeBtn.txt.setDepth(103);
+
+      dim.on("pointerdown", function () { self.scene.stop("SettingsScene"); });
     }
-    resetBall(-1);
   }
 
-  particles.update(dt);
-  draw(dt); updateHud();
-  loopId = requestAnimationFrame(loop);
-}
+  /* ═══════════════ GameScene ═══════════════ */
+  class GameScene extends Phaser.Scene {
+    constructor() { super("GameScene"); }
 
-function drawCurveHint() {
-  if (!shell.isHighQuality() || Math.abs(ball.spin) < 0.5) return;
-  ctx.save(); ctx.strokeStyle = "rgba(251,191,36,0.25)"; ctx.lineWidth = 1.5;
-  ctx.setLineDash([4, 6]); ctx.beginPath(); ctx.moveTo(ball.x, ball.y);
-  for (var t = 0; t < 1; t += 0.08) {
-    var px = ball.x + ball.vx * t * 0.15;
-    var py = ball.y + ball.vy * t * 0.15 + ball.spin * t * t * 80;
-    ctx.lineTo(px, py);
+    init(data) {
+      this.diffKey = (data && data.difficulty) || selectedDiff || "standard";
+      this.diff = DIFF[this.diffKey] || DIFF.standard;
+      selectedDiff = this.diffKey;
+      this.scoreL = 0;
+      this.scoreR = 0;
+      this.elapsed = 0;
+      this.dangerMultiplier = this.diff.baseDanger;
+      this.rally = 0;
+      this.maxRally = 0;
+      this.maxSpeed = 0;
+      this.bounceCount = 0;
+      this.spin = 0;
+      this.ended = false;
+      this.serveReady = true;
+      this.serveDir = 1;
+      this.playerVy = 0;
+      this.aiTargetY = H / 2;
+      this.aiTimer = 0;
+      this.pointerDragging = false;
+    }
+
+    create() {
+      ensureAudio();
+      this.cameras.main.setBackgroundColor("#050814");
+      this.cameras.main.fadeIn(180, 4, 6, 12);
+
+      this.physics.world.setBounds(0, 0, W, H);
+      this.physics.world.setBoundsCollision(false, false, true, true);
+
+      this.bgGfx = this.add.graphics().setDepth(0);
+      this.drawCourt();
+
+      // center dashed line
+      var dash = this.add.graphics().setDepth(1).setAlpha(0.35);
+      dash.lineStyle(3, 0x94a3b8, 1);
+      for (var y = 20; y < H; y += 28) dash.lineBetween(W / 2, y, W / 2, y + 14);
+
+      this.goalFlashL = this.add.rectangle(8, H / 2, 16, H, 0x22d3ee, 0).setDepth(5);
+      this.goalFlashR = this.add.rectangle(W - 8, H / 2, 16, H, 0xf472b6, 0).setDepth(5);
+
+      var ph = this.diff.paddleH;
+      this.player = this.physics.add.sprite(40, H / 2, "paddle-cyan");
+      this.player.setDisplaySize(16, ph);
+      this.player.body.setSize(16, 100);
+      this.player.body.setAllowGravity(false);
+      this.player.setImmovable(true);
+      this.player.setCollideWorldBounds(true);
+      this.player.body.setFriction(0);
+      this.player.setDepth(10);
+      this.lastPlayerY = this.player.y;
+
+      this.ai = this.physics.add.sprite(W - 40, H / 2, "paddle-pink");
+      this.ai.setDisplaySize(16, ph);
+      this.ai.body.setSize(16, 100);
+      this.ai.body.setAllowGravity(false);
+      this.ai.setImmovable(true);
+      this.ai.setCollideWorldBounds(true);
+      this.ai.body.setFriction(0);
+      this.ai.setDepth(10);
+      this.lastAiY = this.ai.y;
+
+      this.ball = this.physics.add.sprite(W / 2, H / 2, "ball");
+      this.ball.setCircle(9);
+      this.ball.setBounce(1, 1);
+      this.ball.setCollideWorldBounds(true);
+      this.ball.body.onWorldBounds = true;
+      this.ball.body.setAllowGravity(false);
+      this.ball.setDepth(12);
+      this.ball.setMaxVelocity(1400, 1400);
+      this.ball.body.setFriction(0, 0);
+
+      this.trail = this.add.particles(0, 0, "spark", {
+        follow: this.ball,
+        speed: { min: 10, max: 40 },
+        lifespan: { min: 180, max: 420 },
+        scale: { start: 0.9, end: 0 },
+        alpha: { start: 0.85, end: 0 },
+        blendMode: "ADD",
+        frequency: 18,
+        tint: [0x67e8f9, 0xa78bfa, 0xffffff]
+      }).setDepth(8);
+
+      this.hazards = [];
+      this.spawnHazards();
+
+      this.cursors = this.input.keyboard.createCursorKeys();
+      this.keys = this.input.keyboard.addKeys({
+        W: Phaser.Input.Keyboard.KeyCodes.W,
+        S: Phaser.Input.Keyboard.KeyCodes.S
+      });
+
+      this.input.on("pointerdown", this.onPointerDown, this);
+      this.input.on("pointermove", this.onPointerMove, this);
+      this.input.on("pointerup", this.onPointerUp, this);
+
+      this.physics.world.on("worldbounds", this.onWorldBounds, this);
+
+      this.hudScore = this.add.text(W / 2, 28, "0  —  0", {
+        fontFamily: "Consolas, monospace", fontSize: "36px", fontStyle: "bold", color: "#e2e8f0"
+      }).setOrigin(0.5).setDepth(30);
+
+      this.hudDanger = this.add.text(24, 20, "DANGER: x" + this.diff.baseDanger.toFixed(2), {
+        fontFamily: "Consolas, monospace", fontSize: "14px", fontStyle: "bold", color: "#f472b6"
+      }).setDepth(30);
+
+      this.hudRally = this.add.text(W - 24, 20, "RALLY 0", {
+        fontFamily: "Consolas, monospace", fontSize: "14px", color: "#67e8f9"
+      }).setOrigin(1, 0).setDepth(30);
+
+      this.hudSpeed = this.add.text(W / 2, 62, "SPD 0", {
+        fontFamily: "Consolas, monospace", fontSize: "13px", color: "#94a3b8"
+      }).setOrigin(0.5).setDepth(30);
+
+      this.hudTip = this.add.text(W / 2, H - 22, "單人挑戰 · 滑鼠／觸控拖曳 或 W/S／↑↓", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+        fontSize: "12px", color: "#64748b"
+      }).setOrigin(0.5).setDepth(30);
+
+      this.serveBall();
+    }
+
+    drawCourt() {
+      this.bgGfx.clear();
+      this.bgGfx.fillStyle(0x050814, 1);
+      this.bgGfx.fillRect(0, 0, W, H);
+      this.bgGfx.lineStyle(1, 0x22d3ee, 0.12);
+      for (var x = 0; x < W; x += 40) this.bgGfx.lineBetween(x, 0, x, H);
+      for (var y = 0; y < H; y += 40) this.bgGfx.lineBetween(0, y, W, y);
+      this.bgGfx.lineStyle(3, 0x22d3ee, 0.55);
+      this.bgGfx.strokeRect(4, 4, W - 8, H - 8);
+    }
+
+    spawnHazards() {
+      var self = this;
+      this.hazards.forEach(function (h) {
+        if (h.sprite && h.sprite.destroy) h.sprite.destroy();
+      });
+      this.hazards = [];
+
+      if (this.diff.wellAlways || Math.random() < this.diff.wellChance) {
+        var wy = Phaser.Math.Between(120, H - 120);
+        var well = this.add.image(W / 2, wy, "well").setDepth(3).setAlpha(0.85);
+        this.tweens.add({
+          targets: well, scale: 1.12, alpha: 0.55, duration: 900,
+          yoyo: true, repeat: -1, ease: "Sine.easeInOut"
+        });
+        this.hazards.push({ type: "well", sprite: well, r: 70, strength: 520 });
+      }
+
+      if (Math.random() < this.diff.boostChance) {
+        var side = Math.random() < 0.5 ? -1 : 1;
+        var bx = W / 2 + side * Phaser.Math.Between(90, 160);
+        var by = Phaser.Math.Between(100, H - 100);
+        var boost = this.add.image(bx, by, "boost").setDepth(3).setAlpha(0.8);
+        this.tweens.add({
+          targets: boost, alpha: 0.45, duration: 500, yoyo: true, repeat: -1
+        });
+        this.hazards.push({ type: "boost", sprite: boost, w: 56, h: 120, power: 1.35 });
+      }
+    }
+
+    onPointerDown(pointer) {
+      if (this.ended) return;
+      if (pointer.x < W * 0.55) this.pointerDragging = true;
+    }
+    onPointerMove(pointer) {
+      if (!this.pointerDragging || this.ended) return;
+      this.player.y = Phaser.Math.Clamp(pointer.y, this.diff.paddleH / 2 + 8, H - this.diff.paddleH / 2 - 8);
+    }
+    onPointerUp() {
+      this.pointerDragging = false;
+    }
+
+    onWorldBounds(body) {
+      if (body.gameObject !== this.ball || this.ended || this.serveReady) return;
+      if (body.blocked.up || body.blocked.down) {
+        SFX.wall();
+        this.applyBounceSpeed();
+        neonBurst(this, this.ball.x, this.ball.y, 0x94a3b8, 12);
+      }
+    }
+
+    serveBall() {
+      this.serveReady = true;
+      this.bounceCount = 0;
+      this.spin = 0;
+      this.rally = 0;
+      this.ball.setVelocity(0, 0);
+      this.ball.setPosition(W / 2, H / 2);
+      this.ball.setAlpha(0.4);
+      this.tweens.add({
+        targets: this.ball, alpha: 1, scale: 1.25, duration: 220, yoyo: true, ease: "Cubic.easeOut"
+      });
+
+      var self = this;
+      this.time.delayedCall(650, function () {
+        if (self.ended) return;
+        self.serveReady = false;
+        var spd = self.diff.ballSpeed;
+        var ang = Phaser.Math.FloatBetween(-0.35, 0.35);
+        self.ball.setVelocity(
+          Math.cos(ang) * spd * self.serveDir,
+          Math.sin(ang) * spd * 0.75
+        );
+        SFX.hit();
+      });
+    }
+
+    applyBounceSpeed() {
+      this.bounceCount++;
+      var body = this.ball.body;
+      var vx = body.velocity.x * 1.05;
+      var vy = body.velocity.y * 1.05;
+      var max = 1350;
+      var sp = Math.sqrt(vx * vx + vy * vy);
+      if (sp > max) {
+        vx = (vx / sp) * max;
+        vy = (vy / sp) * max;
+      }
+      this.ball.setVelocity(vx, vy);
+    }
+
+    squashPaddle(paddle) {
+      this.tweens.killTweensOf(paddle);
+      var baseSX = paddle.scaleX;
+      var baseSY = paddle.scaleY;
+      paddle.setScale(baseSX * 0.7, baseSY * 1.25);
+      this.tweens.add({
+        targets: paddle,
+        scaleX: baseSX,
+        scaleY: baseSY,
+        duration: 160,
+        ease: "Back.easeOut"
+      });
+    }
+
+    hitPaddle(paddle, isPlayer) {
+      if (this.serveReady || this.ended) return;
+
+      var half = this.diff.paddleH / 2;
+      var offset = Phaser.Math.Clamp((this.ball.y - paddle.y) / half, -1, 1);
+      var dir = isPlayer ? 1 : -1;
+      var base = this.diff.ballSpeed * Math.pow(1.05, this.bounceCount);
+      base = Math.min(base, 1200);
+
+      var paddleVy = isPlayer ? this.playerVy : (paddle.y - this.lastAiY) * 60;
+      this.spin = Phaser.Math.Clamp(paddleVy * 0.018 + offset * 40, -220, 220);
+
+      var angle = offset * 0.75;
+      var vx = Math.cos(angle) * base * dir;
+      var vy = Math.sin(angle) * base + this.spin * 0.35;
+      this.ball.setVelocity(vx, vy);
+      this.ball.x = paddle.x + dir * 22;
+
+      this.applyBounceSpeed();
+      this.rally++;
+      if (this.rally > this.maxRally) this.maxRally = this.rally;
+
+      this.squashPaddle(paddle);
+      doShake(this.cameras.main, 80, 0.008);
+      neonBurst(this, this.ball.x, this.ball.y, isPlayer ? 0x22d3ee : 0xf472b6, 15);
+      if (Math.abs(this.spin) > 60) SFX.spin();
+      else SFX.hit();
+    }
+
+    checkPaddleHits() {
+      var ball = this.ball;
+      var r = 10;
+      var ph = this.diff.paddleH / 2;
+      var pw = 10;
+
+      // player
+      if (
+        ball.x - r < this.player.x + pw &&
+        ball.x + r > this.player.x - pw &&
+        Math.abs(ball.y - this.player.y) < ph + r &&
+        ball.body.velocity.x < 0
+      ) {
+        this.hitPaddle(this.player, true);
+      }
+
+      // ai
+      if (
+        ball.x + r > this.ai.x - pw &&
+        ball.x - r < this.ai.x + pw &&
+        Math.abs(ball.y - this.ai.y) < ph + r &&
+        ball.body.velocity.x > 0
+      ) {
+        this.hitPaddle(this.ai, false);
+      }
+    }
+
+    applyHazards(dt) {
+      var self = this;
+      var ball = this.ball;
+      this.hazards.forEach(function (h) {
+        if (!h.sprite || !h.sprite.active) return;
+        if (h.type === "well") {
+          var dx = h.sprite.x - ball.x;
+          var dy = h.sprite.y - ball.y;
+          var dist = Math.sqrt(dx * dx + dy * dy) || 1;
+          if (dist < h.r) {
+            var pull = (1 - dist / h.r) * h.strength * dt;
+            ball.body.velocity.x += (dx / dist) * pull;
+            ball.body.velocity.y += (dy / dist) * pull;
+            if (Math.random() < 0.02) SFX.well();
+          }
+        } else if (h.type === "boost") {
+          if (
+            Math.abs(ball.x - h.sprite.x) < h.w / 2 &&
+            Math.abs(ball.y - h.sprite.y) < h.h / 2
+          ) {
+            if (!h.cooldown) {
+              h.cooldown = 0.45;
+              ball.body.velocity.x *= h.power;
+              ball.body.velocity.y *= h.power;
+              neonBurst(self, ball.x, ball.y, 0xfbbf24, 18);
+              SFX.boost();
+              doShake(self.cameras.main, 60, 0.006);
+            }
+          }
+          if (h.cooldown) h.cooldown = Math.max(0, h.cooldown - dt);
+        }
+      });
+
+      // continuous spin curve (neon arc)
+      if (Math.abs(this.spin) > 1) {
+        ball.body.velocity.y += this.spin * dt * 2.2;
+        this.spin *= Math.pow(0.92, dt * 60);
+      }
+    }
+
+    updateAI(dt) {
+      this.aiTimer -= dt;
+      if (this.aiTimer <= 0) {
+        this.aiTimer = this.diff.aiLag;
+        var predict = this.diff.aiPredict;
+        var target = this.ball.y;
+        if (this.ball.body.velocity.x > 0 && predict > 0) {
+          var t = (this.ai.x - this.ball.x) / Math.max(40, this.ball.body.velocity.x);
+          target = this.ball.y + this.ball.body.velocity.y * t * predict;
+          // bounce estimate against top/bottom
+          while (target < 20 || target > H - 20) {
+            if (target < 20) target = 40 - target;
+            if (target > H - 20) target = 2 * (H - 20) - target;
+          }
+        } else {
+          target = H / 2 + (Math.random() - 0.5) * 40;
+        }
+        this.aiTargetY = Phaser.Math.Clamp(target, this.diff.paddleH / 2 + 8, H - this.diff.paddleH / 2 - 8);
+      }
+
+      var dy = this.aiTargetY - this.ai.y;
+      var step = Phaser.Math.Clamp(dy, -this.diff.aiSpd * dt, this.diff.aiSpd * dt);
+      this.ai.y += step;
+      this.ai.y = Phaser.Math.Clamp(this.ai.y, this.diff.paddleH / 2 + 8, H - this.diff.paddleH / 2 - 8);
+    }
+
+    scoreGoal(scorer) {
+      if (this.ended || this.serveReady) return;
+      this.serveReady = true;
+      this.ball.setVelocity(0, 0);
+
+      var playerScored = scorer === "player";
+      if (playerScored) this.scoreL++;
+      else this.scoreR++;
+
+      var flash = playerScored ? this.goalFlashR : this.goalFlashL;
+      flash.setAlpha(0.95);
+      this.tweens.add({ targets: flash, alpha: 0, duration: 420, ease: "Cubic.easeOut" });
+
+      // full-screen beam shockwave
+      var beam = this.add.rectangle(
+        playerScored ? W - 4 : 4,
+        H / 2,
+        8,
+        H,
+        playerScored ? 0x22d3ee : 0xf472b6,
+        0.9
+      ).setDepth(40);
+      this.tweens.add({
+        targets: beam,
+        scaleX: 40,
+        alpha: 0,
+        duration: 380,
+        ease: "Cubic.easeOut",
+        onComplete: function () { beam.destroy(); }
+      });
+
+      neonBurst(this, playerScored ? W - 30 : 30, this.ball.y, playerScored ? 0x22d3ee : 0xf472b6, 28);
+      doShake(this.cameras.main, 200, 0.02);
+      SFX.goal();
+
+      this.hudScore.setText(this.scoreL + "  —  " + this.scoreR);
+      this.tweens.add({
+        targets: this.hudScore, scale: 1.25, duration: 120, yoyo: true, ease: "Back.easeOut"
+      });
+
+      this.serveDir = playerScored ? -1 : 1;
+      this.spawnHazards();
+
+      var self = this;
+      this.time.delayedCall(700, function () {
+        if (self.scoreL >= WIN_SCORE || self.scoreR >= WIN_SCORE) self.endMatch();
+        else self.serveBall();
+      });
+    }
+
+    endMatch() {
+      if (this.ended) return;
+      this.ended = true;
+      this.ball.setVelocity(0, 0);
+      var won = this.scoreL >= WIN_SCORE;
+      if (won) SFX.win();
+      else SFX.lose();
+
+      var raw =
+        this.scoreL * 1000 +
+        this.maxRally * 120 +
+        Math.floor(this.maxSpeed) +
+        (won ? 2500 : 0);
+      var finalScore = Math.floor(raw * this.diff.scoreMult * this.dangerMultiplier);
+
+      var meta = {
+        difficulty: this.diff.id,
+        rawScore: raw,
+        slug: "overdrive-cyber-pong",
+        playerScore: this.scoreL,
+        aiScore: this.scoreR,
+        maxRally: this.maxRally,
+        maxSpeed: Math.floor(this.maxSpeed),
+        won: won
+      };
+      try {
+        if (typeof RNF !== "undefined" && RNF.submitScore) RNF.submitScore(finalScore, meta);
+      } catch (_e) {}
+
+      this.scene.launch("GameOverModal", {
+        score: finalScore,
+        won: won,
+        diff: this.diff,
+        scoreL: this.scoreL,
+        scoreR: this.scoreR,
+        maxRally: this.maxRally,
+        maxSpeed: Math.floor(this.maxSpeed),
+        danger: this.dangerMultiplier
+      });
+    }
+
+    update(_t, delta) {
+      if (this.ended) return;
+      var dt = Math.min(delta, 40) / 1000;
+      this.elapsed += dt;
+
+      // danger curve (skill formula) stacked on base
+      this.dangerMultiplier =
+        this.diff.baseDanger * (1 + Math.log(1 + this.elapsed / 30) * 0.8);
+
+      // player keyboard
+      var move = 0;
+      if (this.keys.W.isDown || this.cursors.up.isDown) move -= 1;
+      if (this.keys.S.isDown || this.cursors.down.isDown) move += 1;
+      if (move !== 0 && !this.pointerDragging) {
+        this.player.y += move * this.diff.paddleSpd * dt;
+      }
+      this.player.y = Phaser.Math.Clamp(
+        this.player.y,
+        this.diff.paddleH / 2 + 8,
+        H - this.diff.paddleH / 2 - 8
+      );
+      this.playerVy = (this.player.y - this.lastPlayerY) / Math.max(dt, 0.001);
+      this.lastPlayerY = this.player.y;
+      this.lastAiY = this.ai.y;
+
+      this.updateAI(dt);
+
+      if (!this.serveReady) {
+        this.checkPaddleHits();
+        this.applyHazards(dt);
+
+        var sp = Math.sqrt(
+          this.ball.body.velocity.x * this.ball.body.velocity.x +
+          this.ball.body.velocity.y * this.ball.body.velocity.y
+        );
+        if (sp > this.maxSpeed) this.maxSpeed = sp;
+
+        if (this.ball.x < -20) this.scoreGoal("ai");
+        else if (this.ball.x > W + 20) this.scoreGoal("player");
+      }
+
+      this.hudDanger.setText("DANGER: x" + this.dangerMultiplier.toFixed(2));
+      this.hudRally.setText("RALLY " + this.rally + " · MAX " + this.maxRally);
+      this.hudSpeed.setText("SPD " + Math.floor(this.maxSpeed) + " · Bounce+" + this.bounceCount);
+    }
   }
-  ctx.stroke(); ctx.setLineDash([]); ctx.restore();
-}
 
-function draw(dt) {
-  ctx.save(); shell.applyShake(ctx);
-  var bg = ctx.createLinearGradient(0, 0, W, H);
-  bg.addColorStop(0, "#060810"); bg.addColorStop(1, "#0a0e18");
-  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  /* ═══════════════ GameOverModal ═══════════════ */
+  class GameOverModal extends Phaser.Scene {
+    constructor() { super("GameOverModal"); }
+    init(data) { this.payload = data || {}; }
 
-  ctx.strokeStyle = "rgba(34,211,238,0.12)"; ctx.setLineDash([8, 14]);
-  ctx.beginPath(); ctx.moveTo(W / 2, 0); ctx.lineTo(W / 2, H); ctx.stroke();
-  ctx.setLineDash([]);
+    create() {
+      var score = this.payload.score || 0;
+      var won = !!this.payload.won;
+      var diff = this.payload.diff || DIFF.standard;
 
-  gravityZones.forEach(function (z) {
-    var pulse = 0.7 + Math.sin(z.pulse * 2) * 0.3;
-    var g = ctx.createRadialGradient(z.x, z.y, 0, z.x, z.y, z.r);
-    g.addColorStop(0, z.str > 0 ? "rgba(34,211,238," + (0.22 * pulse) + ")" : "rgba(167,139,250," + (0.22 * pulse) + ")");
-    g.addColorStop(1, "transparent");
-    ctx.fillStyle = g;
-    ctx.beginPath(); ctx.arc(z.x, z.y, z.r * pulse, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = z.str > 0 ? "rgba(34,211,238,0.35)" : "rgba(167,139,250,0.35)";
-    ctx.stroke();
-    ctx.fillStyle = "#94a3b8"; ctx.font = "10px sans-serif"; ctx.textAlign = "center";
-    ctx.fillText(z.str > 0 ? RNF.t("label.attract") : RNF.t("label.repel"), z.x, z.y + 4);
-  });
+      this.add.rectangle(W / 2, H / 2, W, H, 0x02040a, 0.75).setInteractive().setDepth(70);
+      var panel = this.add.rectangle(W / 2, H / 2, 500, 400, 0x0b1220, 0.97)
+        .setStrokeStyle(2, won ? 0x22d3ee : 0xf43f5e, 0.95).setScale(0.7).setAlpha(0).setDepth(71);
 
-  drawCurveHint();
+      var badge = this.add.text(W / 2, H / 2 - 160, won ? "> MATCH_WON" : "> MATCH_LOST", {
+        fontFamily: "Consolas, monospace", fontSize: "14px", fontStyle: "bold",
+        color: won ? "#67e8f9" : "#f87171", letterSpacing: 2
+      }).setOrigin(0.5).setAlpha(0).setDepth(72);
 
-  ball.trail.forEach(function (t, i) {
-    var a = (i + 1) / ball.trail.length;
-    ctx.fillStyle = "rgba(34,211,238," + a * 0.45 + ")";
-    ctx.shadowBlur = 10; ctx.shadowColor = "#22d3ee";
-    ctx.beginPath(); ctx.arc(t.x, t.y, ball.r * a * 0.75, 0, Math.PI * 2); ctx.fill();
-  });
-  ctx.shadowBlur = 0;
+      var title = this.add.text(W / 2, H / 2 - 120, won ? "超光速勝利" : "矩陣防線崩潰", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+        fontSize: "28px", fontStyle: "bold", color: "#ffffff"
+      }).setOrigin(0.5).setAlpha(0).setDepth(72);
 
-  ctx.fillStyle = "#22d3ee"; ctx.shadowBlur = 16; ctx.shadowColor = "#22d3ee";
-  ctx.beginPath(); ctx.roundRect(left.x, left.y, left.w, left.h, 4); ctx.fill();
-  ctx.fillStyle = "#f472b6"; ctx.shadowColor = "#f472b6";
-  ctx.beginPath(); ctx.roundRect(right.x, right.y, right.w, right.h, 4); ctx.fill();
+      var scoreTxt = this.add.text(W / 2, H / 2 - 45, score.toLocaleString(), {
+        fontFamily: "Consolas, monospace", fontSize: "50px", fontStyle: "bold", color: "#22d3ee"
+      }).setOrigin(0.5).setScale(0.4).setAlpha(0).setDepth(72);
 
-  ctx.fillStyle = "#fff"; ctx.shadowBlur = 18; ctx.shadowColor = "#fff";
-  ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r + (speedBurst > 0 ? 2 : 0), 0, Math.PI * 2); ctx.fill();
-  ctx.shadowBlur = 0;
+      var meta = this.add.text(W / 2, H / 2 + 30,
+        diff.label +
+        "\n比分 " + (this.payload.scoreL || 0) + " : " + (this.payload.scoreR || 0) +
+        " · 最高球速 " + (this.payload.maxSpeed || 0) +
+        "\n最長對打 RALLY " + (this.payload.maxRally || 0) +
+        " · DANGER x" + Number(this.payload.danger || 1).toFixed(2) +
+        "\n已執行 RNF.submitScore → 排行榜", {
+        fontFamily: "Consolas, Microsoft JhengHei, monospace",
+        fontSize: "13px", color: "#94a3b8", align: "center", lineSpacing: 6
+      }).setOrigin(0.5).setAlpha(0).setDepth(72);
 
-  if (speedBurst > 0) {
-    ctx.fillStyle = "rgba(251,191,36,0.15)"; ctx.fillRect(0, 0, W, H);
+      this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 380, ease: "Back.easeOut" });
+      this.tweens.add({ targets: [badge, title, meta], alpha: 1, duration: 300, ease: "Cubic.easeOut", delay: 80 });
+      this.tweens.add({ targets: scoreTxt, alpha: 1, scale: 1, duration: 480, ease: "Back.easeOut", delay: 100 });
+
+      neonBurst(this, W / 2, H / 2 - 45, won ? 0x22d3ee : 0xf43f5e, 22);
+
+      var self = this;
+      var retry = makeButton(this, W / 2 - 110, H / 2 + 140, "再試一次", 0x22d3ee, function () {
+        SFX.confirm();
+        self.scene.stop("GameOverModal");
+        self.scene.stop("GameScene");
+        self.scene.start("GameScene", { difficulty: selectedDiff });
+      }, 180);
+      retry.bg.setDepth(73); retry.txt.setDepth(74);
+
+      var settings = makeButton(this, W / 2 + 110, H / 2 + 140, "設定選單", 0xa78bfa, function () {
+        self.scene.launch("SettingsScene");
+      }, 180);
+      settings.bg.setDepth(73); settings.txt.setDepth(74);
+
+      var menu = makeButton(this, W / 2, H / 2 + 200, "主選單", 0x64748b, function () {
+        SFX.click();
+        self.scene.stop("GameOverModal");
+        self.scene.stop("SettingsScene");
+        self.scene.stop("GameScene");
+        self.scene.start("MainMenuScene");
+      }, 200);
+      menu.bg.setDepth(73); menu.txt.setDepth(74);
+    }
   }
 
-  particles.draw(ctx);
-  ctx.restore();
-}
+  var config = {
+    type: Phaser.WEBGL,
+    parent: "game-host",
+    width: W,
+    height: H,
+    backgroundColor: "#04060c",
+    banner: false,
+    physics: {
+      default: "arcade",
+      arcade: { gravity: { y: 0 }, debug: false }
+    },
+    scale: {
+      mode: Phaser.Scale.FIT,
+      autoCenter: Phaser.Scale.CENTER_BOTH
+    },
+    fps: { target: 144, forceSet: false, smoothStep: true },
+    scene: [BootScene, MainMenuScene, DifficultyScene, GameScene, GameOverModal, SettingsScene]
+  };
+
+  try {
+    window.__OVERDRIVE_CYBER_PONG__ = new Phaser.Game(config);
+  } catch (_e) {
+    config.type = Phaser.AUTO;
+    window.__OVERDRIVE_CYBER_PONG__ = new Phaser.Game(config);
+  }
+})();
 </script>
 </body>
 </html>

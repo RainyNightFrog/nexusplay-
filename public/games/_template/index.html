@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>RNF Phaser Template · Neon Orb Strike</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%; height: 100%;
+      background: #04060c; overflow: hidden;
+      font-family: "Segoe UI", "Microsoft JhengHei", system-ui, sans-serif;
+    }
+    #game-host {
+      width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.min.js"></script>
+  <script src="/sdk/rnf-i18n.js?v=20260725a"></script>
+  <script src="/sdk/rnf-game-packs.js?v=20260725a"></script>
+  <script src="/sdk/rnf-game-sdk.js?v=20260725b"></script>
+</head>
+<body>
+  <div id="game-host"></div>
+<script>
+/**
+ * RainyNightFrog Phaser 3 Skill 範本
+ * Boot → MainMenu → Difficulty → Game → GameOverModal
+ * Juice：震屏 / 霓虹粒子 / Tween / Web Audio
+ * 難度：Casual / Standard / Extreme + dangerMultiplier HUD
+ */
+(function () {
+  "use strict";
+
+  if (typeof RNF !== "undefined" && RNF.init) RNF.init();
+
+  var W = 960;
+  var H = 540;
+  var DIFF_PRESETS = {
+    casual: { id: "casual", label: "Casual 輕鬆", base: 0.75, scoreMult: 1.0, color: "#67e8f9" },
+    standard: { id: "standard", label: "Standard 電競", base: 1.0, scoreMult: 1.25, color: "#a78bfa" },
+    extreme: { id: "extreme", label: "Extreme 狂暴", base: 1.45, scoreMult: 1.75, color: "#f472b6" }
+  };
+  var selectedDiff = "standard";
+
+  /* ── Web Audio 賽博音效 ── */
+  var audioCtx = null;
+  function ensureAudio() {
+    if (!audioCtx) {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    }
+    if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+    return audioCtx;
+  }
+  function beep(freq, dur, type, vol, slide) {
+    var ctx = ensureAudio();
+    if (!ctx) return;
+    var t0 = ctx.currentTime;
+    var o = ctx.createOscillator();
+    var g = ctx.createGain();
+    o.type = type || "square";
+    o.frequency.setValueAtTime(freq, t0);
+    if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(40, slide), t0 + dur);
+    g.gain.setValueAtTime(vol || 0.12, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(t0); o.stop(t0 + dur + 0.02);
+  }
+  var SFX = {
+    click: function () { beep(520, 0.06, "triangle", 0.08); },
+    confirm: function () { beep(660, 0.08, "square", 0.1); beep(880, 0.1, "square", 0.08); },
+    jump: function () { beep(280, 0.1, "sawtooth", 0.09, 520); },
+    score: function () { beep(740, 0.07, "square", 0.1); beep(980, 0.09, "triangle", 0.08); },
+    hit: function () { beep(180, 0.12, "sawtooth", 0.14, 60); },
+    explode: function () { beep(120, 0.22, "sawtooth", 0.16, 40); beep(90, 0.28, "triangle", 0.1, 30); },
+    over: function () { beep(220, 0.18, "sawtooth", 0.12, 80); beep(140, 0.35, "triangle", 0.1, 50); }
+  };
+
+  function makeTextures(scene) {
+    var g = scene.make.graphics({ x: 0, y: 0, add: false });
+
+    g.clear();
+    g.fillStyle(0x22d3ee, 1);
+    g.fillCircle(16, 16, 14);
+    g.fillStyle(0xffffff, 0.55);
+    g.fillCircle(11, 11, 5);
+    g.generateTexture("player", 32, 32);
+
+    g.clear();
+    g.fillStyle(0xf472b6, 1);
+    g.fillTriangle(16, 2, 30, 28, 2, 28);
+    g.fillStyle(0xffffff, 0.35);
+    g.fillCircle(16, 16, 4);
+    g.generateTexture("enemy", 32, 32);
+
+    g.clear();
+    g.fillStyle(0xfbbf24, 1);
+    g.fillCircle(10, 10, 9);
+    g.fillStyle(0xffffff, 0.5);
+    g.fillCircle(7, 7, 3);
+    g.generateTexture("orb", 20, 20);
+
+    g.clear();
+    g.fillStyle(0x67e8f9, 1);
+    g.fillCircle(4, 4, 4);
+    g.generateTexture("spark-cyan", 8, 8);
+
+    g.clear();
+    g.fillStyle(0xa78bfa, 1);
+    g.fillCircle(4, 4, 4);
+    g.generateTexture("spark-violet", 8, 8);
+
+    g.clear();
+    g.fillStyle(0xf472b6, 1);
+    g.fillCircle(4, 4, 4);
+    g.generateTexture("spark-pink", 8, 8);
+
+    g.clear();
+    g.fillStyle(0xfbbf24, 1);
+    g.fillCircle(4, 4, 4);
+    g.generateTexture("spark-gold", 8, 8);
+
+    g.destroy();
+  }
+
+  function neonBurst(scene, x, y, key, count) {
+    var n = Phaser.Math.Clamp(count || 20, 15, 30);
+    var emitter = scene.add.particles(x, y, key, {
+      speed: { min: 80, max: 280 },
+      angle: { min: 0, max: 360 },
+      lifespan: { min: 280, max: 620 },
+      scale: { start: 1.1, end: 0 },
+      alpha: { start: 1, end: 0 },
+      gravityY: 120,
+      blendMode: "ADD",
+      emitting: false
+    });
+    emitter.explode(n);
+    scene.time.delayedCall(700, function () { emitter.destroy(); });
+  }
+
+  function pulseButton(scene, target) {
+    scene.tweens.add({
+      targets: target,
+      scale: 1.08,
+      duration: 90,
+      yoyo: true,
+      ease: "Back.easeOut"
+    });
+  }
+
+  function makeMenuButton(scene, x, y, label, fill, onClick, width) {
+    var bw = width || 280;
+    var bg = scene.add.rectangle(x, y, bw, 52, fill, 0.22)
+      .setStrokeStyle(2, fill, 0.85)
+      .setInteractive({ useHandCursor: true });
+    var txt = scene.add.text(x, y, label, {
+      fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif",
+      fontSize: "20px",
+      fontStyle: "bold",
+      color: "#e2e8f0"
+    }).setOrigin(0.5);
+    bg.on("pointerover", function () {
+      scene.tweens.add({ targets: [bg, txt], scale: 1.05, duration: 120, ease: "Cubic.easeOut" });
+    });
+    bg.on("pointerout", function () {
+      scene.tweens.add({ targets: [bg, txt], scale: 1, duration: 120, ease: "Cubic.easeOut" });
+    });
+    bg.on("pointerdown", function () {
+      pulseButton(scene, bg);
+      pulseButton(scene, txt);
+      SFX.click();
+      onClick();
+    });
+    return { bg: bg, txt: txt };
+  }
+
+  /* ═══════════════ BootScene ═══════════════ */
+  class BootScene extends Phaser.Scene {
+    constructor() { super("BootScene"); }
+    preload() {}
+    create() {
+      makeTextures(this);
+      this.cameras.main.fadeIn(400, 4, 6, 12);
+      this.time.delayedCall(350, function () {
+        this.scene.start("MainMenuScene");
+      }, [], this);
+      this.add.text(W / 2, H / 2, "RAINYNIGHTFROG", {
+        fontFamily: "Segoe UI, sans-serif",
+        fontSize: "28px",
+        fontStyle: "bold",
+        color: "#22d3ee"
+      }).setOrigin(0.5);
+      this.add.text(W / 2, H / 2 + 36, "Phaser 3 Skill Boot…", {
+        fontFamily: "Segoe UI, sans-serif",
+        fontSize: "14px",
+        color: "#64748b"
+      }).setOrigin(0.5);
+    }
+  }
+
+  /* ═══════════════ MainMenuScene ═══════════════ */
+  class MainMenuScene extends Phaser.Scene {
+    constructor() { super("MainMenuScene"); }
+    create() {
+      ensureAudio();
+      this.cameras.main.setBackgroundColor("#060a14");
+      this.add.rectangle(W / 2, H / 2, W, H, 0x060a14);
+      for (var i = 0; i < 40; i++) {
+        var star = this.add.circle(
+          Phaser.Math.Between(0, W),
+          Phaser.Math.Between(0, H),
+          Phaser.Math.Between(1, 2),
+          0x22d3ee,
+          Phaser.Math.FloatBetween(0.15, 0.55)
+        );
+        this.tweens.add({
+          targets: star,
+          alpha: 0.1,
+          duration: Phaser.Math.Between(800, 1800),
+          yoyo: true,
+          repeat: -1,
+          ease: "Sine.easeInOut"
+        });
+      }
+
+      var badge = this.add.text(W / 2, 90, "RNF PHASER TEMPLATE", {
+        fontFamily: "Segoe UI, sans-serif",
+        fontSize: "12px",
+        fontStyle: "bold",
+        color: "#22d3ee",
+        letterSpacing: 4
+      }).setOrigin(0.5).setAlpha(0);
+
+      var title = this.add.text(W / 2, 150, "NEON ORB STRIKE", {
+        fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif",
+        fontSize: "48px",
+        fontStyle: "bold",
+        color: "#ffffff"
+      }).setOrigin(0.5).setScale(0.6).setAlpha(0);
+
+      var sub = this.add.text(W / 2, 210, "賽博電競示範 · 打擊感四要素 · 動態危險倍率", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+        fontSize: "16px",
+        color: "#94a3b8"
+      }).setOrigin(0.5).setAlpha(0);
+
+      this.tweens.add({ targets: badge, alpha: 1, y: 100, duration: 450, ease: "Cubic.easeOut" });
+      this.tweens.add({ targets: title, alpha: 1, scale: 1, duration: 520, ease: "Back.easeOut", delay: 80 });
+      this.tweens.add({ targets: sub, alpha: 1, duration: 400, ease: "Cubic.easeOut", delay: 160 });
+
+      var self = this;
+      makeMenuButton(this, W / 2, 320, "開始遊戲 START", 0x22d3ee, function () {
+        SFX.confirm();
+        self.cameras.main.fadeOut(220, 4, 6, 12);
+        self.time.delayedCall(230, function () {
+          self.scene.start("DifficultyScene");
+        });
+      });
+      makeMenuButton(this, W / 2, 390, "操作說明", 0xa78bfa, function () {
+        if (self.help) return;
+        self.help = self.add.text(W / 2, 470,
+          "← →／A D 移動 · 空白／↑ 跳躍 · 收集金幣閃避三角敵", {
+          fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+          fontSize: "14px",
+          color: "#c4b5fd"
+        }).setOrigin(0.5).setAlpha(0);
+        self.tweens.add({ targets: self.help, alpha: 1, y: 460, duration: 280, ease: "Cubic.easeOut" });
+      });
+    }
+  }
+
+  /* ═══════════════ DifficultyScene ═══════════════ */
+  class DifficultyScene extends Phaser.Scene {
+    constructor() { super("DifficultyScene"); }
+    create() {
+      this.cameras.main.setBackgroundColor("#060a14");
+      this.cameras.main.fadeIn(200, 4, 6, 12);
+
+      var head = this.add.text(W / 2, 100, "選擇難度", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+        fontSize: "36px",
+        fontStyle: "bold",
+        color: "#e2e8f0"
+      }).setOrigin(0.5).setScale(0.7).setAlpha(0);
+      this.tweens.add({ targets: head, alpha: 1, scale: 1, duration: 400, ease: "Back.easeOut" });
+
+      this.add.text(W / 2, 150, "三段階梯 · 進入關卡後仍會隨時間提升危險倍率", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+        fontSize: "14px",
+        color: "#64748b"
+      }).setOrigin(0.5);
+
+      var self = this;
+      var keys = ["casual", "standard", "extreme"];
+      keys.forEach(function (key, i) {
+        var d = DIFF_PRESETS[key];
+        var color = Phaser.Display.Color.HexStringToColor(d.color).color;
+        makeMenuButton(self, W / 2, 230 + i * 70, d.label, color, function () {
+          selectedDiff = key;
+          SFX.confirm();
+          self.cameras.main.fadeOut(200, 4, 6, 12);
+          self.time.delayedCall(210, function () {
+            self.scene.start("GameScene", { difficulty: key });
+          });
+        });
+      });
+    }
+  }
+
+  /* ═══════════════ GameScene ═══════════════ */
+  class GameScene extends Phaser.Scene {
+    constructor() { super("GameScene"); }
+
+    init(data) {
+      this.diffKey = (data && data.difficulty) || selectedDiff || "standard";
+      this.diff = DIFF_PRESETS[this.diffKey] || DIFF_PRESETS.standard;
+      this.score = 0;
+      this.elapsedTime = 0;
+      this.dangerMultiplier = 1;
+      this.spawnAcc = 0;
+      this.alive = true;
+      this.orbAcc = 0;
+    }
+
+    create() {
+      ensureAudio();
+      this.cameras.main.setBackgroundColor("#050814");
+      this.cameras.main.fadeIn(250, 4, 6, 12);
+
+      // 背景網格感
+      var gfx = this.add.graphics().setAlpha(0.12);
+      gfx.lineStyle(1, 0x22d3ee, 1);
+      for (var x = 0; x < W; x += 40) gfx.lineBetween(x, 0, x, H);
+      for (var y = 0; y < H; y += 40) gfx.lineBetween(0, y, W, y);
+
+      this.physics.world.setBounds(0, 0, W, H);
+
+      this.player = this.physics.add.sprite(W * 0.25, H - 80, "player");
+      this.player.setCollideWorldBounds(true);
+      this.player.setBounce(0.08);
+      this.player.setDragX(900);
+      this.player.setMaxVelocity(420, 900);
+      this.player.body.setSize(26, 26);
+
+      this.platforms = this.physics.add.staticGroup();
+      this.platforms.create(W / 2, H - 18, "player").setDisplaySize(W + 40, 36).setTint(0x0ea5e9).refreshBody().setAlpha(0.85);
+      this.platforms.create(180, 380, "player").setDisplaySize(160, 18).setTint(0xa78bfa).refreshBody().setAlpha(0.7);
+      this.platforms.create(780, 300, "player").setDisplaySize(180, 18).setTint(0xa78bfa).refreshBody().setAlpha(0.7);
+      this.platforms.create(480, 220, "player").setDisplaySize(140, 18).setTint(0xf472b6).refreshBody().setAlpha(0.7);
+
+      this.physics.add.collider(this.player, this.platforms);
+
+      this.enemies = this.physics.add.group();
+      this.orbs = this.physics.add.group();
+
+      this.physics.add.overlap(this.player, this.orbs, this.collectOrb, null, this);
+      this.physics.add.overlap(this.player, this.enemies, this.hitEnemy, null, this);
+
+      this.cursors = this.input.keyboard.createCursorKeys();
+      this.keys = this.input.keyboard.addKeys("W,A,S,D,SPACE");
+
+      // HUD
+      this.hudScore = this.add.text(24, 18, "SCORE 0", {
+        fontFamily: "Segoe UI, sans-serif", fontSize: "18px", fontStyle: "bold", color: "#67e8f9"
+      }).setScrollFactor(0).setDepth(20);
+      this.hudDanger = this.add.text(24, 46, "DANGER x1.00", {
+        fontFamily: "Segoe UI, sans-serif", fontSize: "16px", fontStyle: "bold", color: "#f472b6"
+      }).setScrollFactor(0).setDepth(20);
+      this.hudDiff = this.add.text(W - 24, 18, this.diff.label, {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif", fontSize: "14px", color: this.diff.color
+      }).setOrigin(1, 0).setScrollFactor(0).setDepth(20);
+      this.hudHint = this.add.text(W / 2, 18, "收集金幣 · 閃避敵機", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif", fontSize: "13px", color: "#64748b"
+      }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(20);
+
+      this.spawnEnemy();
+      this.spawnOrb();
+    }
+
+    update(_time, delta) {
+      if (!this.alive) return;
+
+      var dt = delta / 1000;
+      this.elapsedTime += dt;
+
+      // 動態難度遞增公式（Skill 規範）
+      this.dangerMultiplier = 1 + Math.log(1 + this.elapsedTime / 30) * 0.8;
+      var threat = this.dangerMultiplier * this.diff.base;
+
+      this.hudDanger.setText("DANGER x" + this.dangerMultiplier.toFixed(2));
+      this.hudScore.setText("SCORE " + this.score.toLocaleString());
+
+      // 玩家移動（Arcade Physics + 輸入；速度不直接寫死像素／幀）
+      var left = this.cursors.left.isDown || this.keys.A.isDown;
+      var right = this.cursors.right.isDown || this.keys.D.isDown;
+      var jump = this.cursors.up.isDown || this.cursors.space.isDown || this.keys.W.isDown || this.keys.SPACE.isDown;
+      var body = this.player.body;
+
+      if (left) this.player.setAccelerationX(-1600);
+      else if (right) this.player.setAccelerationX(1600);
+      else this.player.setAccelerationX(0);
+
+      if (jump && body.blocked.down) {
+        this.player.setVelocityY(-520);
+        SFX.jump();
+        neonBurst(this, this.player.x, this.player.y + 14, "spark-cyan", 16);
+      }
+
+      // 生成頻率隨危險倍率提升
+      this.spawnAcc += dt;
+      var spawnEvery = Math.max(0.35, 1.35 / threat);
+      if (this.spawnAcc >= spawnEvery) {
+        this.spawnAcc = 0;
+        this.spawnEnemy();
+      }
+      this.orbAcc += dt;
+      if (this.orbAcc >= Math.max(0.6, 1.8 / Math.sqrt(threat))) {
+        this.orbAcc = 0;
+        this.spawnOrb();
+      }
+
+      // 敵人朝玩家推進（速度 × threat × dt 解耦於幀率）
+      var self = this;
+      this.enemies.getChildren().forEach(function (e) {
+        if (!e.active) return;
+        var angle = Phaser.Math.Angle.Between(e.x, e.y, self.player.x, self.player.y);
+        var spd = e.getData("baseSpeed") * threat;
+        e.setVelocity(Math.cos(angle) * spd, Math.sin(angle) * spd);
+        e.rotation += dt * 2.5;
+        if (e.y > H + 40 || e.x < -60 || e.x > W + 60) e.destroy();
+      });
+    }
+
+    spawnEnemy() {
+      var side = Phaser.Math.Between(0, 3);
+      var x = side === 0 ? -20 : side === 1 ? W + 20 : Phaser.Math.Between(40, W - 40);
+      var y = side === 2 ? -20 : side === 3 ? H + 20 : Phaser.Math.Between(40, H - 80);
+      var e = this.enemies.create(x, y, "enemy");
+      e.setData("baseSpeed", Phaser.Math.Between(70, 110));
+      e.setDepth(5);
+      e.setBlendMode(Phaser.BlendModes.ADD);
+    }
+
+    spawnOrb() {
+      var x = Phaser.Math.Between(60, W - 60);
+      var y = Phaser.Math.Between(60, H - 100);
+      var orb = this.orbs.create(x, y, "orb");
+      orb.setBounce(0.6);
+      orb.setCollideWorldBounds(true);
+      orb.setVelocity(Phaser.Math.Between(-40, 40), Phaser.Math.Between(-20, 20));
+      orb.setBlendMode(Phaser.BlendModes.ADD);
+      this.tweens.add({
+        targets: orb,
+        scale: 1.25,
+        duration: 420,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut"
+      });
+      this.time.delayedCall(8000, function () {
+        if (orb && orb.active) orb.destroy();
+      });
+    }
+
+    collectOrb(_player, orb) {
+      if (!this.alive || !orb.active) return;
+      var gain = Math.floor(100 * this.diff.scoreMult * (0.85 + this.dangerMultiplier * 0.15));
+      this.score += gain;
+      orb.destroy();
+
+      SFX.score();
+      this.cameras.main.shake(100, 0.01);
+      neonBurst(this, orb.x, orb.y, "spark-gold", Phaser.Math.Between(18, 28));
+
+      var floater = this.add.text(orb.x, orb.y, "+" + gain, {
+        fontFamily: "Segoe UI, sans-serif",
+        fontSize: "22px",
+        fontStyle: "bold",
+        color: "#fbbf24"
+      }).setOrigin(0.5).setDepth(30);
+      this.tweens.add({
+        targets: floater,
+        y: orb.y - 60,
+        alpha: 0,
+        scale: 1.35,
+        duration: 520,
+        ease: "Cubic.easeOut",
+        onComplete: function () { floater.destroy(); }
+      });
+    }
+
+    hitEnemy(_player, enemy) {
+      if (!this.alive || !enemy.active) return;
+      enemy.destroy();
+      SFX.hit();
+      SFX.explode();
+      this.cameras.main.shake(160, 0.018);
+      neonBurst(this, this.player.x, this.player.y, "spark-pink", 28);
+      neonBurst(this, this.player.x, this.player.y, "spark-violet", 18);
+      this.gameOver();
+    }
+
+    gameOver() {
+      if (!this.alive) return;
+      this.alive = false;
+      this.player.setVelocity(0, 0);
+      this.player.setAcceleration(0, 0);
+      this.physics.pause();
+      SFX.over();
+
+      var raw = this.score;
+      var finalScore = Math.floor(raw * (this.diff.scoreMult || 1));
+      var meta = {
+        slug: "_template",
+        difficulty: this.diff.id,
+        rawScore: raw,
+        dangerPeak: Number(this.dangerMultiplier.toFixed(2)),
+        elapsed: Math.floor(this.elapsedTime)
+      };
+
+      try {
+        if (typeof RNF !== "undefined" && RNF.submitScore) {
+          RNF.submitScore(finalScore, meta);
+        }
+      } catch (_e) {}
+
+      this.scene.launch("GameOverModal", {
+        score: finalScore,
+        rawScore: raw,
+        diff: this.diff,
+        danger: this.dangerMultiplier,
+        elapsed: this.elapsedTime
+      });
+    }
+  }
+
+  /* ═══════════════ GameOverModal ═══════════════ */
+  class GameOverModal extends Phaser.Scene {
+    constructor() { super("GameOverModal"); }
+
+    init(data) {
+      this.payload = data || {};
+    }
+
+    create() {
+      var score = this.payload.score || 0;
+      var raw = this.payload.rawScore || score;
+      var diff = this.payload.diff || DIFF_PRESETS.standard;
+      var danger = this.payload.danger || 1;
+      var elapsed = this.payload.elapsed || 0;
+
+      var dim = this.add.rectangle(W / 2, H / 2, W, H, 0x02040a, 0.72).setInteractive();
+      var panel = this.add.rectangle(W / 2, H / 2, 440, 340, 0x0b1220, 0.96)
+        .setStrokeStyle(2, 0x22d3ee, 0.9)
+        .setScale(0.7)
+        .setAlpha(0);
+
+      var badge = this.add.text(W / 2, H / 2 - 130, "GAME OVER", {
+        fontFamily: "Segoe UI, sans-serif",
+        fontSize: "14px",
+        fontStyle: "bold",
+        color: "#22d3ee",
+        letterSpacing: 3
+      }).setOrigin(0.5).setAlpha(0);
+
+      var title = this.add.text(W / 2, H / 2 - 90, "霓虹結算", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+        fontSize: "32px",
+        fontStyle: "bold",
+        color: "#ffffff"
+      }).setOrigin(0.5).setAlpha(0);
+
+      var scoreTxt = this.add.text(W / 2, H / 2 - 20, score.toLocaleString(), {
+        fontFamily: "Segoe UI, sans-serif",
+        fontSize: "56px",
+        fontStyle: "bold",
+        color: "#67e8f9"
+      }).setOrigin(0.5).setScale(0.4).setAlpha(0);
+
+      var meta = this.add.text(W / 2, H / 2 + 45,
+        diff.label + " · 倍率 x" + (diff.scoreMult || 1).toFixed(2) +
+        " · DANGER x" + Number(danger).toFixed(2) +
+        " · " + Math.floor(elapsed) + "s" +
+        (raw !== score ? " · RAW " + raw.toLocaleString() : ""), {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+        fontSize: "13px",
+        color: "#94a3b8",
+        align: "center",
+        wordWrap: { width: 380 }
+      }).setOrigin(0.5).setAlpha(0);
+
+      var uploaded = this.add.text(W / 2, H / 2 + 85, "已執行 RNF.submitScore → 主站排行榜", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+        fontSize: "12px",
+        color: "#a78bfa"
+      }).setOrigin(0.5).setAlpha(0);
+
+      this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 380, ease: "Back.easeOut" });
+      this.tweens.add({ targets: [badge, title, meta, uploaded], alpha: 1, duration: 320, ease: "Cubic.easeOut", delay: 80 });
+      this.tweens.add({
+        targets: scoreTxt,
+        alpha: 1,
+        scale: 1,
+        duration: 480,
+        ease: "Back.easeOut",
+        delay: 120
+      });
+
+      neonBurst(this, W / 2, H / 2 - 20, "spark-cyan", 24);
+      neonBurst(this, W / 2, H / 2 - 20, "spark-violet", 18);
+
+      var self = this;
+      makeMenuButton(this, W / 2 - 110, H / 2 + 135, "再來一次", 0x22d3ee, function () {
+        SFX.confirm();
+        self.scene.stop("GameOverModal");
+        self.scene.stop("GameScene");
+        self.scene.start("GameScene", { difficulty: selectedDiff });
+      }, 180);
+      makeMenuButton(this, W / 2 + 110, H / 2 + 135, "主選單", 0xa78bfa, function () {
+        SFX.click();
+        self.scene.stop("GameOverModal");
+        self.scene.stop("GameScene");
+        self.scene.start("MainMenuScene");
+      }, 180);
+
+      void dim;
+    }
+  }
+
+  var config = {
+    type: Phaser.AUTO,
+    parent: "game-host",
+    width: W,
+    height: H,
+    backgroundColor: "#04060c",
+    physics: {
+      default: "arcade",
+      arcade: { gravity: { y: 1100 }, debug: false }
+    },
+    scale: {
+      mode: Phaser.Scale.FIT,
+      autoCenter: Phaser.Scale.CENTER_BOTH
+    },
+    scene: [BootScene, MainMenuScene, DifficultyScene, GameScene, GameOverModal]
+  };
+
+  window.__RNF_PHASER_TEMPLATE__ = new Phaser.Game(config);
+})();
+</script>
+</body>
+</html>

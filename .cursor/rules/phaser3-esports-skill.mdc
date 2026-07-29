@@ -1,0 +1,18 @@
+---
+description: Phaser 3 電競遊戲開發 Skill（public/games 強制規範）
+globs: public/games/**/*.html
+alwaysApply: false
+---
+
+# Phaser 3 電競遊戲開發 Skill
+
+在 `public/games/` 生成或修改 HTML5 遊戲時遵守本規範。完整條文見 `.cursorrules`。參考實作：`public/games/_template/index.html`。
+
+## 強制摘要
+
+1. **引擎**：Phaser 3 CDN（`phaser@3/dist/phaser.min.js`）；禁止新建／重寫時用手動 rAF Vanilla Canvas。位移必須用 **dt** 或 **Arcade Physics**。
+2. **Juice 四要素**：震屏 `cameras.main.shake(100, 0.01)`；霓虹粒子 15～30 + Alpha 衰減；UI／得分 Tween（`Cubic.easeOut`／`Back.easeOut`）；關鍵操作 Web Audio／`RNF.sfx`。
+3. **難度**：Casual／Standard／Extreme；`dangerMultiplier = 1 + Math.log(1 + elapsedTime / 30) * 0.8`；HUD 即時顯示危險倍率。
+4. **場景**：`BootScene` → `MainMenuScene` → `DifficultyScene` → `GameScene` → `GameOverModal`；結束時 `RNF.submitScore(finalScore)`。
+
+既有 10 款街機僅小修可不整檔遷移；新建、大改或要求電競打擊感時必須 Phaser 3。`_template` 非上架清單。

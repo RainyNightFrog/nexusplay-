@@ -7,1244 +7,1188 @@
   global.RNF_GAME_PACKS = {
   "cyber-bubble-pop": {
     "zh-HK": {
-      "subtitle": "彈道預覽 · 閃電／黑洞／炸彈 · 連鎖 Combo · 頂部下壓 · 觸控瞄準",
+      "subtitle": "雷射瞄準 · 雷電／黑洞 · 連擊星塵 · 動態危險倍率 · 觸控發射",
       "highlights": [
-        "四段難度",
-        "特殊泡泡",
-        "連鎖消除",
+        "三段難度",
+        "雷電／黑洞",
+        "連擊震屏",
         "頂部下壓",
-        "觸控就緒"
+        "排行榜"
       ],
       "help": {
-        "about": "經典泡泡龍的霓虹重製版。發射泡泡與上方同色泡泡相鄰三顆以上即可消除並得分，連鎖消除可觸發震屏與加分。",
+        "about": "Phaser 3 賽博泡泡龍。同色 ≥3 相鄰消除得分；雷電貫穿整行、黑洞吸附 3×3；切斷連結的泡泡會重力掉落。",
         "features": [
-          "四段難度：初始列數、頂部下壓速度、發射冷卻與警戒線高度",
-          "閃電球消除整行、黑洞球吸收周圍、炸彈球清除範圍（困難+）",
-          "彈道預覽含牆壁反彈，連鎖限時內維持 Combo 倍率",
-          "桌面鍵盤＋手機虛擬鍵／畫面拖曳瞄準"
+          "Casual 長瞄準線慢下壓／Standard 極速／Extreme 每 5 秒下壓＋迷霧泡泡",
+          "霓虹雷射彈道預測含牆壁反彈",
+          "連擊震屏、同色星塵、階梯音效與掉落拖尾",
+          "結算自動 RNF.submitScore 上傳排行榜"
         ],
         "controls": [
-          "← →：調整發射角度",
-          "空白鍵／觸控「射」：發射泡泡",
-          "手機：在發射區拖曳可快速調整角度"
+          "滑鼠／觸控拖曳瞄準，放開發射",
+          "← → 微調角度 · 空白鍵發射",
+          "主選單可開關音效與震屏"
         ],
         "tips": [
-          "閃電球：消除整行並產生連鎖",
-          "黑洞球：吸收周圍同色與鄰近泡泡",
-          "炸彈球（困難+）：清除小範圍泡泡",
-          "頂部定時下壓，勿讓泡泡觸及底線"
+          "雷電泡泡：消除整行並可觸發連鎖",
+          "黑洞泡泡：吸附清除周圍 3×3",
+          "危險倍率上升會縮短壓陣間隔",
+          "勿讓泡泡壓過底線警戒線"
         ]
       }
     },
     "zh-CN": {
-      "subtitle": "弹道预览 · 闪电／黑洞／炸弹 · 连锁 Combo · 顶部下压 · 触控瞄准",
+      "subtitle": "镭射瞄准 · 雷电／黑洞 · 连击星尘 · 动态危险倍率 · 触控发射",
       "highlights": [
-        "四段难度",
-        "特殊泡泡",
-        "连锁消除",
+        "三段难度",
+        "雷电／黑洞",
+        "连击震屏",
         "顶部下压",
-        "触控就绪"
+        "排行榜"
       ],
       "help": {
-        "about": "经典泡泡龙的霓虹重制版。发射泡泡与上方同色泡泡相邻三颗以上即可消除并得分，连锁消除可触发震屏与加分。",
+        "about": "Phaser 3 赛博泡泡龙。同色 ≥3 相邻消除得分；雷电贯穿整行、黑洞吸附 3×3；切断连接的泡泡会重力掉落。",
         "features": [
-          "四段难度：初始列数、顶部下压速度、发射冷却与警戒线高度",
-          "闪电球消除整行、黑洞球吸收周围、炸弹球清除范围（困难+）",
-          "弹道预览含墙壁反弹，连锁限时内维持 Combo 倍率",
-          "桌面键盘＋手机虚拟键／画面拖曳瞄准"
+          "Casual 长瞄准线慢下压／Standard 极速／Extreme 每 5 秒下压＋迷雾泡泡",
+          "霓虹镭射弹道预测含墙壁反弹",
+          "连击震屏、同色星尘、阶梯音效与掉落拖尾",
+          "结算自动 RNF.submitScore 上传排行榜"
         ],
         "controls": [
-          "← →：调整发射角度",
-          "空格／触控「射」：发射泡泡",
-          "手机：在发射区拖曳可快速调整角度"
+          "鼠标／触控拖曳瞄准，松开发射",
+          "← → 微调角度 · 空格发射",
+          "主菜单可开关音效与震屏"
         ],
         "tips": [
-          "闪电球：消除整行并产生连锁",
-          "黑洞球：吸收周围同色与邻近泡泡",
-          "炸弹球（困难+）：清除小范围泡泡",
-          "顶部定时下压，勿让泡泡触及底线"
+          "雷电泡泡：消除整行并可触发连锁",
+          "黑洞泡泡：吸附清除周围 3×3",
+          "危险倍率上升会缩短压阵间隔",
+          "勿让泡泡压过底线警戒线"
         ]
       }
     },
     "en": {
-      "subtitle": "Aim preview · Lightning / black hole / bomb · Chain combos · Ceiling push · Touch aim",
+      "subtitle": "Laser aim · Lightning / black hole · Combo stardust · Dynamic danger · Touch fire",
       "highlights": [
-        "4 difficulties",
-        "Special bubbles",
-        "Chain clears",
+        "3 difficulties",
+        "Lightning / void",
+        "Combo shake",
         "Ceiling push",
-        "Touch ready"
+        "Leaderboard"
       ],
       "help": {
-        "about": "A neon remake of Bubble Shooter. Match 3+ same-color bubbles to clear them. Chains trigger screen shake and bonus points.",
+        "about": "Phaser 3 cyber bubble shooter. Match 3+ same colors. Lightning clears a row; black hole clears a 3×3. Floating bubbles fall with gravity trails.",
         "features": [
-          "Four difficulties: starting rows, ceiling speed, fire cooldown, and danger line",
-          "Lightning clears a row; black hole pulls nearby bubbles; bombs clear an area (Hard+)",
-          "Aim preview with wall bounce; keep chaining to hold combo multiplier",
-          "Keyboard on desktop; virtual buttons / drag-to-aim on mobile"
+          "Casual long aim + slow drop / Standard / Extreme 5s push + fog bubbles",
+          "Neon laser path prediction with wall bounces",
+          "Combo shake, colored stardust, ladder SFX, fall trails",
+          "Game Over auto-calls RNF.submitScore"
         ],
         "controls": [
-          "← →: Adjust aim angle",
-          "Space / touch Fire: Shoot",
-          "Mobile: drag in the aim zone to fine-tune angle"
+          "Drag to aim, release to shoot",
+          "← → fine-tune · Space to fire",
+          "Menu toggles SFX and screen shake"
         ],
         "tips": [
-          "Lightning: clear a whole row and start a chain",
-          "Black hole: absorb same-color and nearby bubbles",
-          "Bomb (Hard+): clear a small area",
-          "The ceiling pushes down on a timer — don’t let bubbles hit the bottom"
+          "Lightning: clear an entire row",
+          "Black hole: clear a 3×3 neighborhood",
+          "Rising danger shortens ceiling intervals",
+          "Don't let bubbles cross the danger line"
         ]
       }
     },
     "es": {
-      "subtitle": "Vista previa · Rayo / agujero negro / bomba · Combos en cadena · Techo · Apuntar táctil",
+      "subtitle": "Mira láser · Rayo / agujero negro · Combo · Peligro dinámico · Táctil",
       "highlights": [
-        "4 dificultades",
-        "Burbujas especiales",
-        "Cadenas",
+        "3 dificultades",
+        "Rayo / vacío",
+        "Combo shake",
         "Techo",
-        "Táctil listo"
+        "Clasificación"
       ],
       "help": {
-        "about": "Remake neón de Bubble Shooter. Empareja 3+ burbujas del mismo color para eliminarlas. Las cadenas sacuden la pantalla y dan puntos extra.",
+        "about": "Bubble shooter ciber en Phaser 3. Empareja 3+. Rayo limpia fila; agujero negro limpia 3×3. Las sueltas caen con estela.",
         "features": [
-          "Cuatro dificultades: filas iniciales, velocidad del techo, enfriamiento y línea de peligro",
-          "El rayo limpia una fila; el agujero negro atrae cercanas; las bombas limpian un área (Difícil+)",
-          "Vista previa con rebote en paredes; encadena para mantener el multiplicador",
-          "Teclado en escritorio; botones virtuales / arrastrar para apuntar en móvil"
+          "Casual mira larga / Standard / Extreme empuje 5s + niebla",
+          "Predicción láser con rebotes",
+          "Shake, partículas, SFX en escalera y estelas",
+          "Game Over llama RNF.submitScore"
         ],
         "controls": [
-          "← →: ajustar ángulo",
-          "Espacio / tocar Disparo: disparar",
-          "Móvil: arrastra en la zona de mira para afinar el ángulo"
+          "Arrastra para apuntar, suelta para disparar",
+          "← → afinar · Espacio disparar",
+          "Menú: SFX y screen shake"
         ],
         "tips": [
-          "Rayo: limpia toda una fila y empieza una cadena",
-          "Agujero negro: absorbe del mismo color y cercanas",
-          "Bomba (Difícil+): limpia un área pequeña",
-          "El techo baja con el tiempo — no dejes que toquen el fondo"
+          "Rayo: limpia toda la fila",
+          "Agujero negro: limpia 3×3",
+          "El peligro acorta el intervalo del techo",
+          "No cruces la línea de peligro"
         ]
       }
     }
   },
-  "cyber-neon-runner": {
+"cyber-neon-runner": {
     "zh-HK": {
-      "subtitle": "跳躍／滑行／雷射破障 · 道具與 Combo · 里程碑事件 · 手機觸控就緒",
+      "subtitle": "視差城市 · 跳躍／滑行／雷射 · Squash · 護盾 · 追蹤飛彈",
       "highlights": [
-        "多型障礙",
-        "護盾磁鐵加速",
-        "Combo 倍率",
-        "里程碑事件",
-        "手機三鍵"
+        "三段難度",
+        "視差滾動",
+        "雷射碎裂",
+        "二段跳",
+        "排行榜"
       ],
       "help": {
-        "about": "在 Night City 無盡奔跑。跳躍與滑行閃避多型障礙，雷射摧毀可破障礙，收集金幣維持 Combo，撿取護盾／磁鐵／加速道具，挑戰更遠里程碑。",
+        "about": "Phaser 3 賽博霓虹無盡跑酷。跳躍、滑行閃避障礙，雷射擊碎無人機與可破障礙。距離越遠捲軸越快、危險倍率越高。",
         "features": [
-          "矮欄、高牆、空中無人機、雷射門、移動平台等多型障礙",
-          "護盾、磁鐵、加速短時道具與金幣 Combo 倍率",
-          "距離里程碑觸發限時挑戰與霓虹爆發",
-          "雷射有冷卻與彈藥，需節奏運用",
-          "桌面鍵鼠與手機虛擬鍵／上滑跳下潤滑皆可"
+          "Casual 預設護盾／Standard 標準密度／Extreme 限彈＋追蹤飛彈",
+          "三層視差城市背景營造速度感",
+          "起跳落地 Squash&Stretch；滑行碰撞箱減半＋擦地火花",
+          "擊碎震屏與 25 粒子；撞擊無護盾觸發 Game Over"
         ],
         "controls": [
-          "空白／W／↑／觸控「跳」：跳躍（可短按二段氣躍）",
-          "↓／S／觸控「滑」：滑行躲高障與雷射門下緣",
-          "Z／觸控「射」：發射雷射摧毀可破障礙",
-          "手機亦可在畫面上滑＝跳、下滑＝滑行"
+          "↑／W：跳躍（可二段跳）",
+          "↓／S：滑行",
+          "空白／F／點擊：發射雷射",
+          "觸控：上滑跳、下滑滑、點擊射"
         ],
         "tips": [
-          "護盾可擋一次致命撞擊；磁鐵自動吸金幣",
-          "連續拾金維持 Combo，斷線會重置倍率",
-          "雷射門必須滑行或跳躍通過，無法擊破",
-          "極限難度反應窗更緊、障礙更密"
+          "高牆需滑行通過",
+          "護盾可擋一次致命撞擊",
+          "Extreme 注意限彈與追蹤飛彈"
         ]
       }
     },
     "zh-CN": {
-      "subtitle": "跳跃／滑行／激光破障 · 道具与 Combo · 里程碑事件 · 手机触控就绪",
+      "subtitle": "视差城市 · 跳跃／滑行／镭射 · Squash · 护盾 · 追踪飞弹",
       "highlights": [
-        "多型障碍",
-        "护盾磁铁加速",
-        "Combo 倍率",
-        "里程碑事件",
-        "手机三键"
+        "三段难度",
+        "视差滚动",
+        "镭射碎裂",
+        "二段跳",
+        "排行榜"
       ],
       "help": {
-        "about": "在 Night City 无尽奔跑。跳跃与滑行闪避多型障碍，激光摧毁可破障碍，收集金币维持 Combo，捡取护盾／磁铁／加速道具，挑战更远里程碑。",
+        "about": "Phaser 3 赛博霓虹无尽跑酷。跳跃、滑行闪避障碍，镭射击碎无人机与可破障碍。距离越远卷轴越快、危险倍率越高。",
         "features": [
-          "矮栏、高墙、空中无人机、激光门、移动平台等多型障碍",
-          "护盾、磁铁、加速短时道具与金币 Combo 倍率",
-          "距离里程碑触发限时挑战与霓虹爆发",
-          "激光有冷却与弹药，需节奏运用",
-          "桌面键鼠与手机虚拟键／上滑跳下润滑皆可"
+          "Casual 预设护盾／Standard 标准密度／Extreme 限弹＋追踪飞弹",
+          "三层视差城市背景营造速度感",
+          "起跳落地 Squash&Stretch；滑行碰撞箱减半＋擦地火花",
+          "击碎震屏与 25 粒子；撞击无护盾触发 Game Over"
         ],
         "controls": [
-          "空格／W／↑／触控「跳」：跳跃（可短按二段气跃）",
-          "↓／S／触控「滑」：滑行躲高障与激光门下缘",
-          "Z／触控「射」：发射激光摧毁可破障碍",
-          "手机亦可在画面上滑＝跳、下滑＝滑行"
+          "↑／W：跳跃（可二段跳）",
+          "↓／S：滑行",
+          "空格／F／点击：发射镭射",
+          "触控：上滑跳、下滑滑、点击射"
         ],
         "tips": [
-          "护盾可挡一次致命撞击；磁铁自动吸金币",
-          "连续拾金维持 Combo，断线会重置倍率",
-          "激光门必须滑行或跳跃通过，无法击破",
-          "极限难度反应窗更紧、障碍更密"
+          "高墙需滑行通过",
+          "护盾可挡一次致命撞击",
+          "Extreme 注意限弹与追踪飞弹"
         ]
       }
     },
     "en": {
-      "subtitle": "Jump / slide / laser · Power-ups & combos · Milestone events · Touch ready",
+      "subtitle": "Parallax city · Jump / slide / laser · Squash · Shield · Homing missiles",
       "highlights": [
-        "Varied hazards",
-        "Shield magnet boost",
-        "Combo multiplier",
-        "Milestones",
-        "3 mobile keys"
+        "3 difficulties",
+        "Parallax",
+        "Laser shatter",
+        "Double jump",
+        "Leaderboard"
       ],
       "help": {
-        "about": "Endless run through Night City. Jump and slide past hazards, laser breakables, collect coins for combos, and grab shield / magnet / boost pickups for longer runs.",
+        "about": "Phaser 3 cyber neon endless runner. Jump and slide past hazards; laser drones and breakables. Longer runs ramp scroll speed and DANGER.",
         "features": [
-          "Low barriers, high walls, drones, laser gates, moving platforms, and more",
-          "Shield, magnet, and speed boosts plus coin combo multipliers",
-          "Distance milestones trigger timed challenges and neon bursts",
-          "Laser has cooldown and ammo — use it rhythmically",
-          "Desktop keys and mobile virtual buttons / swipe gestures"
+          "Casual starter shield / Standard density / Extreme limited ammo + missiles",
+          "Triple-layer parallax city for speed feel",
+          "Jump/land squash & stretch; slide halves hitbox + ground sparks",
+          "Shatter shake + 25 particles; no shield = Game Over"
         ],
         "controls": [
-          "Space / W / ↑ / Jump: jump (tap again for a short air hop)",
-          "↓ / S / Slide: slide under high hazards and laser gates",
-          "Z / Fire: shoot laser to destroy breakables",
-          "Mobile: swipe up = jump, swipe down = slide"
+          "↑ / W: jump (double jump available)",
+          "↓ / S: slide",
+          "Space / F / tap: fire laser",
+          "Touch: swipe up jump, swipe down slide, tap shoot"
         ],
         "tips": [
-          "Shield blocks one fatal hit; magnet pulls coins",
-          "Keep collecting coins to hold your combo — missing resets it",
-          "Laser gates must be slid or jumped — they can’t be destroyed",
-          "Extreme tightens reaction windows and densifies hazards"
+          "Slide under tall walls",
+          "Shield blocks one fatal hit",
+          "Extreme: watch ammo and homing missiles"
         ]
       }
     },
     "es": {
-      "subtitle": "Salto / desliz / láser · Potenciadores y combos · Hitos · Táctil listo",
+      "subtitle": "Ciudad paralaje · Salto / desliz / láser · Squash · Escudo · Misiles",
       "highlights": [
-        "Obstáculos variados",
-        "Escudo imán boost",
-        "Multiplicador combo",
-        "Hitos",
-        "3 teclas móvil"
+        "3 dificultades",
+        "Paralaje",
+        "Láser rompe",
+        "Doble salto",
+        "Clasificación"
       ],
       "help": {
-        "about": "Carrera infinita por Night City. Salta y deslízate, rompe obstáculos con láser, recoge monedas para combos y potencias escudo / imán / boost.",
+        "about": "Runner neón infinito en Phaser 3. Salta y deslízate; el láser destroza drones. A más distancia, más velocidad y DANGER.",
         "features": [
-          "Barreras bajas, muros altos, drones, puertas láser, plataformas móviles y más",
-          "Escudo, imán y boost de velocidad más multiplicadores de monedas",
-          "Los hitos de distancia lanzan retos cronometrados y ráfagas neón",
-          "El láser tiene enfriamiento y munición — úsalo con ritmo",
-          "Teclas de escritorio y botones virtuales / gestos en móvil"
+          "Casual con escudo / Standard / Extreme munición limitada + misiles",
+          "Paralaje de 3 capas para sensación de velocidad",
+          "Squash al saltar/aterrizar; desliz reduce hitbox + chispas",
+          "Rotura con shake y 25 partículas; sin escudo = Game Over"
         ],
         "controls": [
-          "Espacio / W / ↑ / Saltar: salto (otra pulsación = salto aéreo corto)",
-          "↓ / S / Deslizar: deslízate bajo obstáculos altos y puertas láser",
-          "Z / Disparo: láser para destruir rompibles",
-          "Móvil: deslizar arriba = salto, abajo = desliz"
+          "↑ / W: salto (doble salto)",
+          "↓ / S: deslizar",
+          "Espacio / F / toque: láser",
+          "Táctil: deslizar arriba/abajo; toque dispara"
         ],
         "tips": [
-          "El escudo bloquea un golpe mortal; el imán atrae monedas",
-          "Sigue recogiendo monedas para mantener el combo",
-          "Las puertas láser hay que saltarlas o deslizarlas — no se destruyen",
-          "Extremo acorta la ventana de reacción y densifica obstáculos"
+          "Deslízate bajo muros altos",
+          "El escudo bloquea un golpe fatal",
+          "En Extreme cuida munición y misiles"
         ]
       }
     }
   },
-  "galactic-invader-2026": {
+"galactic-invader-2026": {
     "zh-HK": {
-      "subtitle": "四段武器升級 · 護盾 · Boss 彈幕與血條 · 觸控移動＋射擊",
+      "subtitle": "散彈升級 · 護盾／核爆 · 巨型 Boss · 動態危險倍率 · 觸控拖曳",
       "highlights": [
-        "BOSS 波",
-        "武器升級",
-        "護盾道具",
-        "彈幕模式",
-        "觸控就緒"
+        "三段難度",
+        "散彈激光",
+        "護盾核爆",
+        "Boss 多階段",
+        "排行榜"
       ],
       "help": {
-        "about": "復古射擊的星際強化版。操控戰機射擊，消滅入侵者與 BOSS，保衛 2026 地球防線。",
+        "about": "Phaser 3 星際侵略者 2026。操控戰機掃蕩編隊與巨型賽博 Boss。武器可進化散射，護盾擋彈，B 鍵核爆清屏。",
         "features": [
-          "四段難度：敵人移動、射擊頻率與 HP 同步提升",
-          "武器 Lv1～4：單發、雙發、三向、穿透雷射",
-          "護盾可吸收多次敵彈，擊破敵人掉落升級",
-          "每 5 波巨型 BOSS，多段彈幕模式與血條震屏",
-          "桌面鍵盤＋手機虛擬方向鍵／連射鍵"
+          "Casual 預設護盾高掉落／Standard 標準／Extreme 追蹤彈＋邊界雷射",
+          "擊中敵機星塵爆裂與微震屏",
+          "每清完 3 波出現多階段 Boss 與動態血條",
+          "生存時間提升 DANGER，結算上傳排行榜"
         ],
         "controls": [
-          "← → 或 A D：移動戰機",
-          "空白鍵／觸控「射」：連續射擊",
-          "手機：左側方向鍵、右側射擊鍵"
+          "拖曳／←→／A D：移動 · 空白：射擊",
+          "B：釋放電磁核爆（清屏）",
+          "主選單可開關音效與震屏"
         ],
         "tips": [
-          "護盾可吸收敵彈，被擊中會降級武器",
-          "每 5 波出現 BOSS，注意散彈與追蹤彈",
-          "穿透雷射可一次命中多個目標"
+          "拾取綠／藍／金球升級散射、護盾、核爆",
+          "護盾可擋 2 次，破裂有藍色衝擊波",
+          "Boss 血量下降會切換彈幕階段"
         ]
       }
     },
     "zh-CN": {
-      "subtitle": "四段武器升级 · 护盾 · Boss 弹幕与血条 · 触控移动＋射击",
+      "subtitle": "散弹升级 · 护盾／核爆 · 巨型 Boss · 动态危险倍率 · 触控拖曳",
       "highlights": [
-        "BOSS 波",
-        "武器升级",
-        "护盾道具",
-        "弹幕模式",
-        "触控就绪"
+        "三段难度",
+        "散弹激光",
+        "护盾核爆",
+        "Boss 多阶段",
+        "排行榜"
       ],
       "help": {
-        "about": "复古射击的星际强化版。操控战机射击，消灭入侵者与 BOSS，保卫 2026 地球防线。",
+        "about": "Phaser 3 星际侵略者 2026。操控战机扫荡编队与巨型赛博 Boss。武器可进化散射，护盾挡弹，B 键核爆清屏。",
         "features": [
-          "四段难度：敌人移动、射击频率与 HP 同步提升",
-          "武器 Lv1～4：单发、双发、三向、穿透激光",
-          "护盾可吸收多次敌弹，击破敌人掉落升级",
-          "每 5 波巨型 BOSS，多段弹幕模式与血条震屏",
-          "桌面键盘＋手机虚拟方向键／连射键"
+          "Casual 预设护盾高掉落／Standard 标准／Extreme 追踪弹＋边界镭射",
+          "击中敌机星尘爆裂与微震屏",
+          "每清完 3 波出现多阶段 Boss 与动态血条",
+          "生存时间提升 DANGER，结算上传排行榜"
         ],
         "controls": [
-          "← → 或 A D：移动战机",
-          "空格／触控「射」：连续射击",
-          "手机：左侧方向键、右侧射击键"
+          "拖曳／←→／A D：移动 · 空格：射击",
+          "B：释放电磁核爆（清屏）",
+          "主菜单可开关音效与震屏"
         ],
         "tips": [
-          "护盾可吸收敌弹，被击中会降级武器",
-          "每 5 波出现 BOSS，注意散弹与追踪弹",
-          "穿透激光可一次命中多个目标"
+          "拾取绿／蓝／金球升级散射、护盾、核爆",
+          "护盾可挡 2 次，破裂有蓝色冲击波",
+          "Boss 血量下降会切换弹幕阶段"
         ]
       }
     },
     "en": {
-      "subtitle": "4 weapon tiers · Shield · Boss barrages · Touch move + fire",
+      "subtitle": "Spread upgrades · Shield / bomb · Giant boss · Dynamic danger · Touch drag",
       "highlights": [
-        "Boss waves",
-        "Weapon upgrades",
-        "Shield pickups",
-        "Barrage patterns",
-        "Touch ready"
+        "3 difficulties",
+        "Spread lasers",
+        "Shield & bomb",
+        "Multi-phase boss",
+        "Leaderboard"
       ],
       "help": {
-        "about": "A retro shooter upgraded for the stars. Pilot your craft, wipe out invaders and bosses, and hold the 2026 Earth line.",
+        "about": "Phaser 3 Galactic Invader 2026. Pilot your fighter through formations and a cyber titan boss. Spread weapons, shield hits, and B for EM bomb clear.",
         "features": [
-          "Four difficulties: enemy speed, fire rate, and HP scale together",
-          "Weapons Lv1–4: single, dual, triple spread, piercing laser",
-          "Shield absorbs multiple hits; downed foes drop upgrades",
-          "Every 5 waves a giant boss with multi-pattern barrages and HP bar",
-          "Desktop keyboard plus mobile D-pad / autofire"
+          "Casual start shield + high drops / Standard / Extreme homing + wall lasers",
+          "Hit sparks and micro screen shake",
+          "Boss every 3 cleared waves with dynamic HP bar",
+          "Survival raises DANGER; scores upload via RNF"
         ],
         "controls": [
-          "← → or A D: move",
-          "Space / Fire: continuous fire",
-          "Mobile: left D-pad, right fire button"
+          "Drag / arrows / A D: move · Space: fire",
+          "B: EM bomb clear",
+          "Menu toggles SFX and screen shake"
         ],
         "tips": [
-          "Shields absorb shots; getting hit can downgrade your weapon",
-          "Bosses every 5 waves — watch spreads and homing shots",
-          "Piercing laser can hit multiple targets in a line"
+          "Pickups upgrade spread, shield, bombs",
+          "Shield blocks 2 hits with a blue shockwave",
+          "Boss phases change as HP drops"
         ]
       }
     },
     "es": {
-      "subtitle": "4 niveles de arma · Escudo · Barrages de jefe · Mover + disparar táctil",
+      "subtitle": "Disparo en abanico · Escudo / bomba · Boss · Peligro · Arrastre",
       "highlights": [
-        "Oleadas jefe",
-        "Mejoras de arma",
-        "Escudos",
-        "Patrones de disparo",
-        "Táctil listo"
+        "3 dificultades",
+        "Láser abanico",
+        "Escudo y bomba",
+        "Boss por fases",
+        "Clasificación"
       ],
       "help": {
-        "about": "Shooter retro mejorado para las estrellas. Pilota, elimina invasores y jefes, y defiende la línea terrestre 2026.",
+        "about": "Invader galáctico en Phaser 3. Destruye formaciones y un boss ciber. Armas en abanico, escudo y bomba EM con B.",
         "features": [
-          "Cuatro dificultades: velocidad, cadencia y PV del enemigo escalan juntos",
-          "Armas Nv1–4: simple, dual, triple abanico, láser perforante",
-          "El escudo absorbe varios impactos; los enemigos sueltan mejoras",
-          "Cada 5 oleadas un jefe gigante con barrages y barra de PV",
-          "Teclado de escritorio más D-pad / autodísparo móvil"
+          "Casual con escudo / Standard / Extreme homing + láseres laterales",
+          "Chispas y micro-shake al impactar",
+          "Boss cada 3 oleadas con barra de vida",
+          "El tiempo sube DANGER; RNF.submitScore"
         ],
         "controls": [
-          "← → o A D: mover",
-          "Espacio / Disparo: fuego continuo",
-          "Móvil: D-pad izquierda, disparo derecha"
+          "Arrastra / flechas / A D: mover · Espacio: disparar",
+          "B: bomba EM",
+          "Menú: SFX y screen shake"
         ],
         "tips": [
-          "Los escudos absorben; al recibir daño puedes bajar de arma",
-          "Jefes cada 5 oleadas — cuidado con abanicos y misiles",
-          "El láser perforante puede golpear varios en línea"
+          "Recoge upgrades de abanico, escudo y bombas",
+          "El escudo aguanta 2 golpes",
+          "El boss cambia de fase según la vida"
         ]
       }
     }
   },
-  "memory-matrix-glitch": {
+"memory-matrix-glitch": {
     "zh-HK": {
-      "subtitle": "限時配對 · Glitch 翻轉 · 連擊倍率 · 炸彈懲罰 · 觸控翻牌",
+      "subtitle": "矩陣翻牌 · 3D 翻轉 · Combo · Glitch Overload · 代碼雨",
       "highlights": [
-        "Glitch 特效",
-        "連擊音階",
-        "限時關卡",
-        "炸彈卡",
-        "觸控翻牌"
+        "三段難度",
+        "3D 翻牌",
+        "配對星塵",
+        "Glitch 衝擊",
+        "排行榜"
       ],
       "help": {
-        "about": "駭客風格的記憶翻牌。限時內配對相同圖案，連續配對可累積 Combo 與分數倍率。配對錯誤或翻到炸彈會受到懲罰。",
+        "about": "Phaser 3 駭客矩陣記憶翻牌。限時內配對相同符號解密矩陣。連擊越高音階越高；Extreme 會觸發 Glitch Overload 短暫遮蔽卡牌。",
         "features": [
-          "四段難度調整卡片數、限時與炸彈機率",
-          "極限模式強化 Glitch 故障翻轉與掃描線",
-          "連續配對觸發音階遞升與連擊加成",
-          "炸彈卡扣時並重置連擊；錯配扣秒（困難以上）",
-          "通關加時並進入下一階段，清空全部配對即過關"
+          "Casual 4×4 無懲罰／Standard 4×6 Combo／Extreme 6×6＋每 15 秒盲區",
+          "卡牌 X 軸 3D 翻轉與霓虹描邊",
+          "配對爆發黑客粒子；失敗紅光 Glitch 震屏",
+          "剩餘時間越少代碼雨越快，最後 5 秒紅光心跳"
         ],
         "controls": [
-          "滑鼠／觸控：點擊卡片翻開",
-          "Enter：快速翻開第一張未配對卡",
-          "手機可直接點擊卡片，無需虛擬鍵"
+          "滑鼠點擊／觸控翻開卡牌",
+          "一次最多翻兩張進行配對",
+          "主選單可開關音效與震屏"
         ],
         "tips": [
-          "記住已翻開位置，維持連擊可大幅加分",
-          "炸彈卡標有 ⚠，翻到會損失時間",
-          "完美通關（零錯配）有額外獎勵",
-          "越後面的關卡卡片越多、時間越緊"
+          "開局短暫預覽所有卡面",
+          "維持 Combo 可大幅加分",
+          "Extreme 注意 Glitch Overload 節奏"
         ]
       }
     },
     "zh-CN": {
-      "subtitle": "限时配对 · Glitch 翻转 · 连击倍率 · 炸弹惩罚 · 触控翻牌",
+      "subtitle": "矩阵翻牌 · 3D 翻转 · Combo · Glitch Overload · 代码雨",
       "highlights": [
-        "Glitch 特效",
-        "连击音阶",
-        "限时关卡",
-        "炸弹卡",
-        "触控翻牌"
+        "三段难度",
+        "3D 翻牌",
+        "配对星尘",
+        "Glitch 冲击",
+        "排行榜"
       ],
       "help": {
-        "about": "黑客风格的记忆翻牌。限时内配对相同图案，连续配对可累积 Combo 与分数倍率。配对错误或翻到炸弹会受到惩罚。",
+        "about": "Phaser 3 黑客矩阵记忆翻牌。限时内配对相同符号解密矩阵。连击越高音阶越高；Extreme 会触发 Glitch Overload 短暂遮蔽卡牌。",
         "features": [
-          "四段难度调整卡片数、限时与炸弹几率",
-          "极限模式强化 Glitch 故障翻转与扫描线",
-          "连续配对触发音阶递升与连击加成",
-          "炸弹卡扣时并重置连击；错配扣秒（困难以上）",
-          "通关加时并进入下一阶段，清空全部配对即过关"
+          "Casual 4×4 无惩罚／Standard 4×6 Combo／Extreme 6×6＋每 15 秒盲区",
+          "卡牌 X 轴 3D 翻转与霓虹描边",
+          "配对爆发黑客粒子；失败红光 Glitch 震屏",
+          "剩余时间越少代码雨越快，最后 5 秒红光心跳"
         ],
         "controls": [
-          "鼠标／触控：点击卡片翻开",
-          "Enter：快速翻开第一张未配对卡",
-          "手机可直接点击卡片，无需虚拟键"
+          "鼠标点击／触控翻开卡牌",
+          "一次最多翻两张进行配对",
+          "主菜单可开关音效与震屏"
         ],
         "tips": [
-          "记住已翻开位置，维持连击可大幅加分",
-          "炸弹卡标有 ⚠，翻到会损失时间",
-          "完美通关（零错配）有额外奖励",
-          "越后面的关卡卡片越多、时间越紧"
+          "开局短暂预览所有卡面",
+          "维持 Combo 可大幅加分",
+          "Extreme 注意 Glitch Overload 节奏"
         ]
       }
     },
     "en": {
-      "subtitle": "Timed matching · Glitch flips · Combo multiplier · Bomb penalty · Touch flip",
+      "subtitle": "Matrix match · 3D flip · Combo · Glitch Overload · Code rain",
       "highlights": [
-        "Glitch FX",
-        "Combo tones",
-        "Timed stages",
-        "Bomb cards",
-        "Touch flip"
+        "3 difficulties",
+        "3D flip",
+        "Match sparks",
+        "Glitch fail",
+        "Leaderboard"
       ],
       "help": {
-        "about": "Hacker-styled memory match. Pair identical icons before time runs out. Streaks build combo multipliers; mismatches and bombs punish you.",
+        "about": "Phaser 3 hacker memory match. Pair symbols before time runs out. Combos raise pitch; Extreme blinds the board with Glitch Overload.",
         "features": [
-          "Four difficulties change card count, timer, and bomb chance",
-          "Extreme ramps glitch flips and scanline FX",
-          "Streaks climb a tone scale with combo bonuses",
-          "Bomb cards burn time and reset combo; mismatches cost seconds (Hard+)",
-          "Clear a stage for bonus time and the next round"
+          "Casual 4×4 no penalty / Standard 4×6 combo / Extreme 6×6 + blind every 15s",
+          "Card scaleX 3D flip with neon stroke",
+          "Match particles; fail red glitch + shake",
+          "Low time speeds the code rain; last 5s red pulse"
         ],
         "controls": [
-          "Mouse / touch: tap a card to flip",
-          "Enter: quickly flip the first unmatched card",
-          "On mobile, tap cards directly — no virtual pad needed"
+          "Click / tap cards to flip",
+          "Flip two cards to attempt a match",
+          "Menu toggles SFX and screen shake"
         ],
         "tips": [
-          "Remember flipped positions — long streaks score big",
-          "Bombs are marked ⚠ — flipping one costs time",
-          "Perfect clears (zero mistakes) earn extras",
-          "Later stages add more cards and tighter timers"
+          "Brief peek at start",
+          "Keep combos for big scores",
+          "Watch Glitch Overload timing on Extreme"
         ]
       }
     },
     "es": {
-      "subtitle": "Emparejar a tiempo · Giros glitch · Combo · Penalización bomba · Tocar para voltear",
+      "subtitle": "Match matriz · Flip 3D · Combo · Glitch Overload · Lluvia código",
       "highlights": [
-        "FX glitch",
-        "Tonos combo",
-        "Fases cronometradas",
-        "Cartas bomba",
-        "Volteo táctil"
+        "3 dificultades",
+        "Flip 3D",
+        "Chispas match",
+        "Fallo glitch",
+        "Clasificación"
       ],
       "help": {
-        "about": "Memory match estilo hacker. Empareja iconos iguales antes de que acabe el tiempo. Las rachas suben el multiplicador; errores y bombas penalizan.",
+        "about": "Memory hacker en Phaser 3. Empareja símbolos a tiempo. Combos suben el tono; Extreme ciega el tablero con Glitch Overload.",
         "features": [
-          "Cuatro dificultades cambian cartas, temporizador y bombas",
-          "Extremo aumenta giros glitch y efecto scanline",
-          "Las rachas suben escala tonal con bonus de combo",
-          "Las bombas queman tiempo y reinician combo; errores cuestan segundos (Difícil+)",
-          "Limpiar una fase da tiempo extra y la siguiente ronda"
+          "Casual 4×4 / Standard 4×6 / Extreme 6×6 + ceguera cada 15s",
+          "Flip scaleX 3D con borde neón",
+          "Partículas al acertar; glitch rojo al fallar",
+          "Menos tiempo = lluvia más rápida; últimos 5s pulso rojo"
         ],
         "controls": [
-          "Ratón / toque: toca una carta para voltear",
-          "Enter: voltea rápido la primera carta sin emparejar",
-          "En móvil toca las cartas directamente — sin pad virtual"
+          "Clic / toque para voltear",
+          "Voltea dos cartas para emparejar",
+          "Menú: SFX y screen shake"
         ],
         "tips": [
-          "Recuerda posiciones volteadas — rachas largas puntúan mucho",
-          "Las bombas llevan ⚠ — voltear una cuesta tiempo",
-          "Limpiezas perfectas (cero errores) dan extras",
-          "Fases posteriores: más cartas y menos tiempo"
+          "Vista previa al inicio",
+          "Mantén combos para más puntos",
+          "En Extreme vigila el Overload"
         ]
       }
     }
   },
-  "neon-snake-extreme": {
+"neon-snake-extreme": {
     "zh-HK": {
-      "subtitle": "方向鍵／WASD 移動 · Shift 氮氣加速 · 連擊累積倍率 · 瀕死子彈時間",
+      "subtitle": "WASD／方向鍵／滑動轉向 · Combo · Bullet Time · 動態危險倍率",
       "highlights": [
-        "四段難度",
-        "子彈時間",
-        "排行榜",
-        "靈敏度／速度"
+        "三段難度",
+        "Bullet Time",
+        "霓虹拖尾",
+        "排行榜"
       ],
       "help": {
-        "about": "經典貪食蛇的賽博電競版。吃食物讓蛇身變長、分數提高；連續吃可累積連擊倍率。靠近危險時會觸發子彈時間慢動作。",
+        "about": "Phaser 3 霓虹極速貪食蛇。吃食物成長與得分，連擊累積 Combo；靠近牆壁或自身身體 1 格時觸發 Bullet Time 慢動作。",
         "features": [
-          "四段難度選擇，結算分數依難度加成並上傳排行榜",
-          "瀕死子彈時間慢動作，爭取反應時間",
-          "困難以上出現障礙磚、金色 ★ 食物與 Combo 食物",
-          "設定可調操作靈敏度與遊戲速度"
+          "Casual 穿牆／Standard 極速／Extreme 縮小地圖＋黑洞",
+          "危險倍率隨時間對數遞增，HUD 即時顯示",
+          "震屏、星塵爆裂、蛇尾霓虹拖尾與死亡白閃",
+          "結算自動 RNF.submitScore 上傳排行榜"
         ],
         "controls": [
-          "↑↓←→ 或 WASD：控制蛇的移動方向",
-          "Shift：氮氣加速（消耗氮氣條，鬆開後緩慢回復）",
-          "困難以上：地圖會出現靜態障礙磚，撞到即失敗"
+          "↑↓←→ 或 WASD：轉向",
+          "手機：觸控滑動轉向（Swipe）",
+          "主選單可開關音效與震屏"
         ],
         "tips": [
-          "金色 ★ 食物得分為一般食物的 3 倍",
-          "Combo 食物（黃色）可延長連擊計時",
-          "主選單可調難度與操作靈敏度／遊戲速度",
-          "結算分數會依難度加成並上傳排行榜（需登入）"
+          "連續進食維持 Combo，分數倍率更高",
+          "Extreme 黑洞與縮小場地請預留轉彎空間",
+          "險境 Bullet Time 約 0.3 秒，把握修正方向",
+          "結算分數含難度加成，登入後可上全球榜"
         ]
       }
     },
     "zh-CN": {
-      "subtitle": "方向键／WASD 移动 · Shift 氮气加速 · 连击累积倍率 · 濒死子弹时间",
+      "subtitle": "WASD／方向键／滑动转向 · Combo · Bullet Time · 动态危险倍率",
       "highlights": [
-        "四段难度",
-        "子弹时间",
-        "排行榜",
-        "灵敏度／速度"
+        "三段难度",
+        "Bullet Time",
+        "霓虹拖尾",
+        "排行榜"
       ],
       "help": {
-        "about": "经典贪吃蛇的赛博电竞版。吃食物让蛇身变长、分数提高；连续吃可累积连击倍率。靠近危险时会触发子弹时间慢动作。",
+        "about": "Phaser 3 霓虹极速贪吃蛇。吃食物成长与得分，连击累积 Combo；靠近墙壁或自身身体 1 格时触发 Bullet Time 慢动作。",
         "features": [
-          "四段难度选择，结算分数依难度加成并上传排行榜",
-          "濒死子弹时间慢动作，争取反应时间",
-          "困难以上出现障碍砖、金色 ★ 食物与 Combo 食物",
-          "设置可调操作灵敏度与游戏速度"
+          "Casual 穿墙／Standard 极速／Extreme 缩小地图＋黑洞",
+          "危险倍率随时间对数递增，HUD 即时显示",
+          "震屏、星尘爆裂、蛇尾霓虹拖尾与死亡白闪",
+          "结算自动 RNF.submitScore 上传排行榜"
         ],
         "controls": [
-          "↑↓←→ 或 WASD：控制蛇的移动方向",
-          "Shift：氮气加速（消耗氮气条，松开后缓慢回复）",
-          "困难以上：地图会出现静态障碍砖，撞到即失败"
+          "↑↓←→ 或 WASD：转向",
+          "手机：触控滑动转向（Swipe）",
+          "主菜单可开关音效与震屏"
         ],
         "tips": [
-          "金色 ★ 食物得分为一般食物的 3 倍",
-          "Combo 食物（黄色）可延长连击计时",
-          "主菜单可调难度与操作灵敏度／游戏速度",
-          "结算分数会依难度加成并上传排行榜（需登录）"
+          "连续进食维持 Combo，分数倍率更高",
+          "Extreme 黑洞与缩小场地请预留转弯空间",
+          "险境 Bullet Time 约 0.3 秒，把握修正方向",
+          "结算分数含难度加成，登录后可上全球榜"
         ]
       }
     },
     "en": {
-      "subtitle": "Arrows / WASD · Shift nitro · Combo multiplier · Near-death bullet time",
+      "subtitle": "WASD / arrows / swipe · Combo · Bullet Time · Dynamic danger",
       "highlights": [
-        "4 difficulties",
-        "Bullet time",
-        "Leaderboard",
-        "Sensitivity / speed"
+        "3 difficulties",
+        "Bullet Time",
+        "Neon trail",
+        "Leaderboard"
       ],
       "help": {
-        "about": "Classic snake with a cyber-esports twist. Eat to grow and score; chain eats for combo multipliers. Near danger triggers bullet-time slow-mo.",
+        "about": "Phaser 3 neon snake. Eat to grow and score; chain combos. Near a wall or your body (1 cell) triggers Bullet Time.",
         "features": [
-          "Four difficulties with score multipliers uploaded to the leaderboard",
-          "Near-death bullet time gives you a reaction window",
-          "Hard+ adds obstacle bricks, golden ★ food, and combo food",
-          "Settings tune control sensitivity and game speed"
+          "Casual wrap / Standard speed / Extreme shrink map + black holes",
+          "Danger multiplier scales with log time; shown on HUD",
+          "Shake, stardust bursts, neon trail, death white flash",
+          "Game Over auto-calls RNF.submitScore"
         ],
         "controls": [
-          "↑↓←→ or WASD: steer",
-          "Shift: nitro boost (drains the nitro bar; regenerates when released)",
-          "Hard+: static obstacle bricks — hit one and you’re done"
+          "Arrows or WASD: turn",
+          "Mobile: swipe to turn",
+          "Menu toggles SFX and screen shake"
         ],
         "tips": [
-          "Golden ★ food is worth 3× normal food",
-          "Yellow combo food extends your streak timer",
-          "Use the main menu for difficulty, sensitivity, and speed",
-          "Final score is difficulty-boosted and needs login for global ranks"
+          "Keep eating to hold Combo multipliers",
+          "Extreme black holes need early turns",
+          "Bullet Time lasts ~0.3s — correct your line",
+          "Scores include difficulty boost; login for global ranks"
         ]
       }
     },
     "es": {
-      "subtitle": "Flechas / WASD · Shift nitro · Multiplicador combo · Bullet time al límite",
+      "subtitle": "WASD / flechas / swipe · Combo · Bullet Time · Peligro dinámico",
       "highlights": [
-        "4 dificultades",
-        "Bullet time",
-        "Clasificación",
-        "Sensibilidad / velocidad"
+        "3 dificultades",
+        "Bullet Time",
+        "Estela neón",
+        "Clasificación"
       ],
       "help": {
-        "about": "Snake clásico con giro ciber-esports. Come para crecer y sumar; encadena comidas para combos. Cerca del peligro se activa bullet time.",
+        "about": "Snake neón en Phaser 3. Come para crecer y sumar; combos en cadena. Cerca de muro o cuerpo (1 celda) activa Bullet Time.",
         "features": [
-          "Cuatro dificultades con multiplicadores subidos a la clasificación",
-          "Bullet time al borde de la muerte te da margen de reacción",
-          "Difícil+ añade ladrillos, comida dorada ★ y comida combo",
-          "Ajustes de sensibilidad y velocidad"
+          "Casual wrap / Standard / Extreme mapa reducido + agujeros negros",
+          "Multiplicador de peligro logarítmico en el HUD",
+          "Shake, partículas, estela neón y flash de muerte",
+          "Game Over llama RNF.submitScore automáticamente"
         ],
         "controls": [
-          "↑↓←→ o WASD: dirigir",
-          "Shift: nitro (gasta barra; se regenera al soltar)",
-          "Difícil+: ladrillos estáticos — chocar es fin"
+          "Flechas o WASD: girar",
+          "Móvil: deslizar para girar",
+          "Menú: SFX y screen shake"
         ],
         "tips": [
-          "La comida ★ dorada vale 3× la normal",
-          "La comida combo amarilla alarga el temporizador de racha",
-          "Usa el menú para dificultad, sensibilidad y velocidad",
-          "La puntuación final se multiplica por dificultad; login para ranking global"
+          "Sigue comiendo para mantener el Combo",
+          "En Extreme gira pronto ante agujeros negros",
+          "Bullet Time ~0.3s para corregir rumbo",
+          "La puntuación incluye boost; login para ranking global"
         ]
       }
     }
   },
   "neon-tetromino-rush": {
     "zh-HK": {
-      "subtitle": "幽靈預覽 · 保留 · 五格預覽 · 霓虹狂熱 · 連消 Combo · 手機虛擬鍵",
+      "subtitle": "Ghost 預覽 · Hard Drop · Hold · Tetris 彩虹光波 · 垃圾行",
       "highlights": [
-        "五格預覽",
-        "霓虹狂熱",
-        "連消 Combo",
-        "難度垃圾行",
-        "手機虛擬鍵"
+        "三段難度",
+        "Ghost 預覽",
+        "Hard Drop",
+        "Tetris 光波",
+        "排行榜"
       ],
       "help": {
-        "about": "經典方塊堆疊的霓虹電競版。消除整行得分，堆頂即失敗。困難越高掉落越快，極限還會週期性推入垃圾行。",
+        "about": "Phaser 3 霓虹方塊衝刺。10×20 標準盤面、7 種方塊與 7-Bag。幽靈落點、硬降震屏、消行光波，Tetris 觸發彩虹脈衝。",
         "features": [
-          "幽靈預覽落點、C 保留、空白鍵硬降震屏",
-          "五格 Next 預覽與 7-Bag 公平隨機",
-          "連消 Combo 倍率與霓虹方塊加分",
-          "霓虹狂熱：連消蓄滿後短時雙倍分與光波特效",
-          "困難／極限難度週期垃圾行施壓"
+          "Casual 慢速無限 Hold／Standard 每塊 Hold 一次／Extreme 極速＋每 20 秒垃圾行",
+          "Hard Drop 光束拖尾、震屏與底部粒子",
+          "消行白光炸裂；四行消除彩虹光波＋強震屏",
+          "Level 隨消行提升，下落速度指數加快並顯示 DANGER"
         ],
         "controls": [
-          "← →：移動（長按連移）",
-          "↑／Z：逆時針旋轉 · X：順時針旋轉",
-          "↓：軟降 · 空白：硬降",
-          "C：保留（每顆限一次）",
-          "手機：左側移動／右側旋轉、軟降、硬降、保留"
+          "←→／A D：移動 · ↑／W／Z：旋轉 · ↓／S：軟降",
+          "空白：Hard Drop · C／Shift：Hold",
+          "手機：底欄虛擬鍵或滑動（點擊旋轉、下滑硬降）"
         ],
         "tips": [
-          "一次消多行分數更高，連消維持 Combo 倍率",
-          "霓虹方塊（發光格）消行額外加分",
-          "狂熱期間分數加倍，把握節奏衝榜"
+          "一次消越多行分數越高",
+          "Tetris（四行）獎勵最大",
+          "Extreme 注意底部湧出的缺口垃圾行"
         ]
       }
     },
     "zh-CN": {
-      "subtitle": "幽灵预览 · 保留 · 五格预览 · 霓虹狂热 · 连消 Combo · 手机虚拟键",
+      "subtitle": "Ghost 预览 · Hard Drop · Hold · Tetris 彩虹光波 · 垃圾行",
       "highlights": [
-        "五格预览",
-        "霓虹狂热",
-        "连消 Combo",
-        "难度垃圾行",
-        "手机虚拟键"
+        "三段难度",
+        "Ghost 预览",
+        "Hard Drop",
+        "Tetris 光波",
+        "排行榜"
       ],
       "help": {
-        "about": "经典方块堆叠的霓虹电竞版。消除整行得分，堆顶即失败。困难越高掉落越快，极限还会周期性推入垃圾行。",
+        "about": "Phaser 3 霓虹方块冲刺。10×20 标准盘面、7 种方块与 7-Bag。幽灵落点、硬降震屏、消行光波，Tetris 触发彩虹脉冲。",
         "features": [
-          "幽灵预览落点、C 保留、空格键硬降震屏",
-          "五格 Next 预览与 7-Bag 公平随机",
-          "连消 Combo 倍率与霓虹方块加分",
-          "霓虹狂热：连消蓄满后短时双倍分与光波特效",
-          "困难／极限难度周期垃圾行施压"
+          "Casual 慢速无限 Hold／Standard 每块 Hold 一次／Extreme 极速＋每 20 秒垃圾行",
+          "Hard Drop 光束拖尾、震屏与底部粒子",
+          "消行白光炸裂；四行消除彩虹光波＋强震屏",
+          "Level 随消行提升，下落速度指数加快并显示 DANGER"
         ],
         "controls": [
-          "← →：移动（长按连移）",
-          "↑／Z：逆时针旋转 · X：顺时针旋转",
-          "↓：软降 · 空格：硬降",
-          "C：保留（每颗限一次）",
-          "手机：左侧移动／右侧旋转、软降、硬降、保留"
+          "←→／A D：移动 · ↑／W／Z：旋转 · ↓／S：软降",
+          "空格：Hard Drop · C／Shift：Hold",
+          "手机：底栏虚拟键或滑动（点击旋转、下滑硬降）"
         ],
         "tips": [
-          "一次消多行分数更高，连消维持 Combo 倍率",
-          "霓虹方块（发光格）消行额外加分",
-          "狂热期间分数加倍，把握节奏冲榜"
+          "一次消越多行分数越高",
+          "Tetris（四行）奖励最大",
+          "Extreme 注意底部涌出的缺口垃圾行"
         ]
       }
     },
     "en": {
-      "subtitle": "Ghost · Hold · 5-piece preview · Neon frenzy · Line combos · Mobile pad",
+      "subtitle": "Ghost preview · Hard drop · Hold · Tetris rainbow · Garbage",
       "highlights": [
-        "5-piece preview",
-        "Neon frenzy",
-        "Line combos",
-        "Garbage rows",
-        "Mobile pad"
+        "3 difficulties",
+        "Ghost piece",
+        "Hard drop",
+        "Tetris wave",
+        "Leaderboard"
       ],
       "help": {
-        "about": "Neon esports tetris. Clear lines to score; top out to lose. Higher difficulties drop faster; Extreme periodically pushes garbage rows.",
+        "about": "Phaser 3 neon tetris. Standard 10×20, 7 pieces, 7-bag. Ghost landing, hard-drop shake, line-clear waves; Tetris fires a rainbow pulse.",
         "features": [
-          "Ghost placement, C-hold, hard-drop shake",
-          "Five-piece Next preview with fair 7-bag randomizer",
-          "Back-to-back line combos and glowing neon-cell bonuses",
-          "Neon frenzy: fill the meter for a short double-score light wave",
-          "Hard / Extreme push periodic garbage rows"
+          "Casual slow infinite hold / Standard one hold per piece / Extreme speed + garbage every 20s",
+          "Hard drop beam trail, shake, contact particles",
+          "Line clears flash white; Tetris rainbow + heavy shake",
+          "Level rises with lines; gravity speeds up with DANGER HUD"
         ],
         "controls": [
-          "← →: move (hold to DAS)",
-          "↑ / Z: CCW rotate · X: CW rotate",
-          "↓: soft drop · Space: hard drop",
-          "C: hold (once per piece)",
-          "Mobile: move on the left; rotate / soft / hard / hold on the right"
+          "←→ / A D: move · ↑ / W / Z: rotate · ↓ / S: soft drop",
+          "Space: hard drop · C / Shift: hold",
+          "Mobile: bottom virtual keys or swipe (tap rotate, swipe down hard drop)"
         ],
         "tips": [
-          "Multi-line clears score more; keep combos alive",
-          "Glowing neon cells add bonus points when cleared",
-          "During frenzy, scores double — push the board hard"
+          "More lines at once = higher score",
+          "Tetris (4 lines) pays the most",
+          "Extreme garbage rows rise with a random gap"
         ]
       }
     },
     "es": {
-      "subtitle": "Fantasma · Hold · Vista 5 piezas · Frenesí neón · Combos de línea · Pad móvil",
+      "subtitle": "Ghost · Hard drop · Hold · Arcoíris Tetris · Basura",
       "highlights": [
-        "Vista 5 piezas",
-        "Frenesí neón",
-        "Combos de línea",
-        "Filas basura",
-        "Pad móvil"
+        "3 dificultades",
+        "Pieza ghost",
+        "Hard drop",
+        "Onda Tetris",
+        "Clasificación"
       ],
       "help": {
-        "about": "Tetris neón de esports. Limpia líneas para puntuar; top out = derrota. Más dificultad = cae más rápido; Extremo empuja filas basura.",
+        "about": "Tetris neón en Phaser 3. Tablero 10×20, 7 piezas, bolsa 7. Ghost, hard drop con shake y ondas al limpiar; Tetris lanza pulso arcoíris.",
         "features": [
-          "Colocación fantasma, hold con C, temblor al hard-drop",
-          "Vista Next de cinco piezas con randomizer 7-bag justo",
-          "Combos de líneas seguidas y bonus de celdas neón",
-          "Frenesí neón: llena el medidor para doble puntuación breve",
-          "Difícil / Extremo empujan filas basura periódicas"
+          "Casual lento hold infinito / Standard un hold / Extreme + basura cada 20s",
+          "Hard drop con estela, shake y partículas",
+          "Líneas en blanco; Tetris arcoíris + shake fuerte",
+          "Level sube con líneas; DANGER en HUD"
         ],
         "controls": [
-          "← →: mover (mantén para DAS)",
-          "↑ / Z: rotar CCW · X: rotar CW",
-          "↓: soft drop · Espacio: hard drop",
-          "C: hold (una vez por pieza)",
-          "Móvil: mover a la izquierda; rotar / soft / hard / hold a la derecha"
+          "←→ / A D: mover · ↑ / W / Z: rotar · ↓ / S: soft",
+          "Espacio: hard drop · C / Shift: hold",
+          "Móvil: botones inferiores o swipe"
         ],
         "tips": [
-          "Limpiar varias líneas puntúa más; mantén el combo vivo",
-          "Las celdas neón brillantes dan bonus al limpiarlas",
-          "Durante el frenesí la puntuación se duplica — aprieta el tablero"
+          "Más líneas a la vez = más puntos",
+          "Tetris (4) es el mayor premio",
+          "En Extreme suben filas basura con hueco"
         ]
       }
     }
   },
-  "overdrive-cyber-pong": {
+"overdrive-cyber-pong": {
     "zh-HK": {
-      "subtitle": "曲球軌跡 · 重力井 · AI 難度 · 雙人對戰 · 觸控拖曳擋板",
+      "subtitle": "弧線切球 · 重力井 · 賽博 AI · 光速遞增 · 進球光束",
       "highlights": [
-        "曲球軌跡",
+        "三段難度",
+        "弧線切球",
         "重力井",
-        "觸控拖曳",
-        "粒子拖尾",
-        "雙人對戰"
+        "Squash 擊球",
+        "排行榜"
       ],
       "help": {
-        "about": "霓虹風格的乒乓球對戰。曲球 spin 受擋板擊球點影響，重力井會偏轉軌跡。先達目標分數者獲勝。",
+        "about": "Phaser 3 超光速霓虹乒乓。單人挑戰賽博 AI 擋板，移動中擊球可產生霓虹弧線切球；中央重力井／加速帶會彎曲或噴射球體。先達 7 分獲勝。",
         "features": [
-          "主選單難度決定 AI 強度與勝利分數",
-          "曲球 spin 與動態重力場",
-          "擊球角度取決於碰板位置與擋板移動速度",
-          "手機可拖曳左側擋板，右側虛擬鍵控制（雙人模式）"
+          "Casual 緩速長板／Standard 預測 AI／Extreme 光速短板＋中央黑洞",
+          "擊球 Squash&Stretch、15 粒子與輕震屏",
+          "未得分前每反彈球速 +5%；進球全屏光束巨震",
+          "HUD 即時顯示 DANGER 危險倍率"
         ],
         "controls": [
-          "W / S 或 ↑ / ↓：移動擋板",
-          "觸控：在左半場拖曳控制左擋板",
-          "雙人模式：左 W/S · 右 ↑/↓ 或右側觸控鍵",
-          "主選單選「雙人對戰」進入本地雙人"
+          "滑鼠／手指拖曳上下移動擋板",
+          "鍵盤 W／S 或 ↑／↓",
+          "主選單可開關音效與震屏"
         ],
         "tips": [
-          "利用重力井製造意外反角",
-          "移動中擊球可施加更強曲球",
-          "困難 AI 會預測落點並提前站位"
+          "移動中擊球切線更強",
+          "利用重力井製造反角",
+          "Extreme 注意中央黑洞拉扯"
         ]
       }
     },
     "zh-CN": {
-      "subtitle": "曲球轨迹 · 重力井 · AI 难度 · 双人对战 · 触控拖曳挡板",
+      "subtitle": "弧线切球 · 重力井 · 赛博 AI · 光速递增 · 进球光束",
       "highlights": [
-        "曲球轨迹",
+        "三段难度",
+        "弧线切球",
         "重力井",
-        "触控拖曳",
-        "粒子拖尾",
-        "双人对战"
+        "Squash 击球",
+        "排行榜"
       ],
       "help": {
-        "about": "霓虹风格的乒乓球对战。曲球 spin 受挡板击球点影响，重力井会偏转轨迹。先达目标分数者获胜。",
+        "about": "Phaser 3 超光速霓虹乒乓。单人挑战赛博 AI 挡板，移动中击球可产生霓虹弧线切球；中央重力井／加速带会弯曲或喷射球体。先达 7 分获胜。",
         "features": [
-          "主菜单难度决定 AI 强度与胜利分数",
-          "曲球 spin 与动态重力场",
-          "击球角度取决于碰板位置与挡板移动速度",
-          "手机可拖曳左侧挡板，右侧虚拟键控制（双人模式）"
+          "Casual 缓速长板／Standard 预测 AI／Extreme 光速短板＋中央黑洞",
+          "击球 Squash&Stretch、15 粒子与轻震屏",
+          "未得分前每反弹球速 +5%；进球全屏光束巨震",
+          "HUD 即时显示 DANGER 危险倍率"
         ],
         "controls": [
-          "W / S 或 ↑ / ↓：移动挡板",
-          "触控：在左半场拖曳控制左挡板",
-          "双人模式：左 W/S · 右 ↑/↓ 或右侧触控键",
-          "主菜单选「双人对战」进入本地双人"
+          "鼠标／手指拖曳上下移动挡板",
+          "键盘 W／S 或 ↑／↓",
+          "主菜单可开关音效与震屏"
         ],
         "tips": [
-          "利用重力井制造意外反角",
-          "移动中击球可施加更强曲球",
-          "困难 AI 会预测落点并提前站位"
+          "移动中击球切线更强",
+          "利用重力井制造反角",
+          "Extreme 注意中央黑洞拉扯"
         ]
       }
     },
     "en": {
-      "subtitle": "Curveball · Gravity wells · AI tiers · Local versus · Touch-drag paddles",
+      "subtitle": "Spin curve · Gravity well · Cyber AI · Speed ramp · Goal beam",
       "highlights": [
-        "Curveball",
-        "Gravity wells",
-        "Touch drag",
-        "Particle trails",
-        "Versus"
+        "3 difficulties",
+        "Spin curve",
+        "Gravity well",
+        "Squash hit",
+        "Leaderboard"
       ],
       "help": {
-        "about": "Neon pong with spin from paddle contact and gravity wells that bend the ball. First to the target score wins.",
+        "about": "Phaser 3 overdrive neon pong. Solo vs cyber AI. Moving hits add neon spin arcs; wells and boost pads bend or jet the ball. First to 7 wins.",
         "features": [
-          "Menu difficulty sets AI strength and win score",
-          "Spin curveballs and dynamic gravity fields",
-          "Hit angle depends on contact point and paddle motion",
-          "Mobile: drag the left paddle; right virtual keys in versus"
+          "Casual slow long paddle / Standard predictive AI / Extreme light-speed + black hole",
+          "Hit squash & stretch, 15 particles, light shake",
+          "+5% ball speed per bounce until a goal; goal beam mega-shake",
+          "HUD shows live DANGER multiplier"
         ],
         "controls": [
-          "W / S or ↑ / ↓: move paddle",
-          "Touch: drag in the left half to move the left paddle",
-          "Versus: left W/S · right ↑/↓ or right touch keys",
-          "Pick Versus on the main menu for local 2P"
+          "Drag mouse / finger to move paddle",
+          "Keyboard W/S or ↑/↓",
+          "Menu toggles SFX and screen shake"
         ],
         "tips": [
+          "Move while hitting for stronger spin",
           "Use gravity wells for surprise angles",
-          "Moving while hitting applies stronger spin",
-          "Hard AI predicts landing spots and pre-positions"
+          "Watch the Extreme center black hole"
         ]
       }
     },
     "es": {
-      "subtitle": "Efecto · Pozos de gravedad · Niveles de IA · Versus local · Arrastrar paletas",
+      "subtitle": "Efecto curva · Pozo gravedad · IA cyber · Velocidad · Haz gol",
       "highlights": [
-        "Efecto",
-        "Pozos de gravedad",
-        "Arrastre táctil",
-        "Estelas",
-        "Versus"
+        "3 dificultades",
+        "Efecto curva",
+        "Pozo gravedad",
+        "Squash golpe",
+        "Clasificación"
       ],
       "help": {
-        "about": "Pong neón con efecto según el contacto y pozos de gravedad que tuercen la bola. Primero en llegar a la puntuación gana.",
+        "about": "Pong neón overdrive en Phaser 3. Solo vs IA cyber. Golpear en movimiento añade efecto; pozos y boosts tuercen o disparan la bola. Primero a 7 gana.",
         "features": [
-          "La dificultad del menú fija fuerza de IA y puntuación objetivo",
-          "Efectos curveball y campos de gravedad dinámicos",
-          "El ángulo depende del punto de contacto y el movimiento de la pala",
-          "Móvil: arrastra la pala izquierda; teclas virtuales derechas en versus"
+          "Casual lento / Standard IA predictiva / Extreme luz + agujero negro",
+          "Squash & stretch, 15 partículas y shake ligero",
+          "+5% velocidad por rebote hasta gol; haz de gol con mega-shake",
+          "HUD muestra DANGER en vivo"
         ],
         "controls": [
-          "W / S o ↑ / ↓: mover pala",
-          "Táctil: arrastra en la mitad izquierda para la pala izquierda",
-          "Versus: izquierda W/S · derecha ↑/↓ o teclas táctiles derechas",
-          "Elige Versus en el menú para 2P local"
+          "Arrastra ratón / dedo para mover pala",
+          "Teclado W/S o ↑/↓",
+          "Menú: SFX y screen shake"
         ],
         "tips": [
-          "Usa pozos de gravedad para ángulos sorpresa",
-          "Moverte al golpear aplica más efecto",
-          "La IA difícil predice el aterrizaje y se adelanta"
+          "Muévete al golpear para más efecto",
+          "Usa pozos para ángulos sorpresa",
+          "En Extreme vigila el agujero central"
         ]
       }
     }
   },
-  "quantum-tic-tac-toe": {
+"quantum-tic-tac-toe": {
     "zh-HK": {
-      "subtitle": "5×5 連五 · 量子糾纏落子 · 限時回合 · AI 難度 · 連勝統計 · 觸控落子",
+      "subtitle": "3×3／5×5 · Minimax AI · 限時心跳 · 量子落子 · 連線雷射",
       "highlights": [
-        "量子糾纏",
-        "5×5 連五",
-        "限時回合",
-        "連勝紀錄",
-        "觸控落子"
+        "三段難度",
+        "單人／雙人",
+        "Minimax AI",
+        "限時心跳",
+        "連勝統計"
       ],
       "help": {
-        "about": "5×5 量子棋盤上的連五對決。每局擁有量子充能，可一次在兩格放置糾纏態，下回合自動坍縮為你的棋子。與 AI 輪流落子，先連成五子者獲勝。",
+        "about": "Phaser 3 量子過三關。經典 3×3 或 Extreme 5×5 四子連珠；對抗賽博 AI（Minimax）或雙人同屏。落子帶量子疊加特效，連線觸發雷射爆裂。",
         "features": [
-          "四段難度縮短回合限時並強化 AI",
-          "量子模式（Q／觸控「量」）：選兩格糾纏，對手回合後坍縮",
-          "困難以上 AI 會連五、擋招並搶佔要位",
-          "連勝紀錄與勝率統計顯示於 HUD",
-          "觸控直接點格落子"
+          "Casual 無限時基礎 AI／Standard 10 秒高級 AI／Extreme 5×5 四子 5 秒滿級算力",
+          "量子落子：Glitch 閃爍＋彈簧 Tween＋霓虹粒子",
+          "倒數最後 3 秒心跳音效與紅光脈衝",
+          "連勝提升 AI 速度與 Combo 倍率，結算上傳排行榜"
         ],
         "controls": [
-          "滑鼠／觸控：在空格落子",
-          "Q 或觸控「量」：進入量子模式，再點兩格放置糾纏",
-          "每回合倒數結束前必須落子，逾時判負"
+          "滑鼠／觸控點空格落子",
+          "單人模式你為 X，AI 為 O",
+          "主選單可開關音效與震屏"
         ],
         "tips": [
-          "量子落子可同時威脅兩條線，但會消耗充能",
-          "困難 AI 會優先連五與阻擋",
-          "連勝越高，結算分數加成越多"
+          "Standard／Extreme 逾時判負",
+          "連勝越高，危險倍率與得分越高",
+          "Extreme 需先連成四子"
         ]
       }
     },
     "zh-CN": {
-      "subtitle": "5×5 连五 · 量子纠缠落子 · 限时回合 · AI 难度 · 连胜统计 · 触控落子",
+      "subtitle": "3×3／5×5 · Minimax AI · 限时心跳 · 量子落子 · 连线镭射",
       "highlights": [
-        "量子纠缠",
-        "5×5 连五",
-        "限时回合",
-        "连胜纪录",
-        "触控落子"
+        "三段难度",
+        "单人／双人",
+        "Minimax AI",
+        "限时心跳",
+        "连胜统计"
       ],
       "help": {
-        "about": "5×5 量子棋盘上的连五对决。每局拥有量子充能，可一次在两格放置纠缠态，下回合自动坍缩为你的棋子。与 AI 轮流落子，先连成五子者获胜。",
+        "about": "Phaser 3 量子过三关。经典 3×3 或 Extreme 5×5 四子连珠；对抗赛博 AI（Minimax）或双人同屏。落子带量子叠加特效，连线触发镭射爆裂。",
         "features": [
-          "四段难度缩短回合限时并强化 AI",
-          "量子模式（Q／触控「量」）：选两格纠缠，对手回合后坍缩",
-          "困难以上 AI 会连五、挡招并抢占要位",
-          "连胜纪录与胜率统计显示于 HUD",
-          "触控直接点格落子"
+          "Casual 无限时基础 AI／Standard 10 秒高级 AI／Extreme 5×5 四子 5 秒满级算力",
+          "量子落子：Glitch 闪烁＋弹簧 Tween＋霓虹粒子",
+          "倒数最后 3 秒心跳音效与红光脉冲",
+          "连胜提升 AI 速度与 Combo 倍率，结算上传排行榜"
         ],
         "controls": [
-          "鼠标／触控：在空格落子",
-          "Q 或触控「量」：进入量子模式，再点两格放置纠缠",
-          "每回合倒数结束前必须落子，逾时判负"
+          "鼠标／触控点空格落子",
+          "单人模式你为 X，AI 为 O",
+          "主菜单可开关音效与震屏"
         ],
         "tips": [
-          "量子落子可同时威胁两条线，但会消耗充能",
-          "困难 AI 会优先连五与阻挡",
-          "连胜越高，结算分数加成越多"
+          "Standard／Extreme 超时判负",
+          "连胜越高，危险倍率与得分越高",
+          "Extreme 需先连成四子"
         ]
       }
     },
     "en": {
-      "subtitle": "5×5 five-in-a-row · Quantum entangle · Timed turns · AI · Win streaks · Touch",
+      "subtitle": "3×3 / 5×5 · Minimax AI · Timed heartbeat · Quantum place · Win laser",
       "highlights": [
-        "Quantum entangle",
-        "5×5 five-in-a-row",
-        "Timed turns",
-        "Win streaks",
-        "Touch place"
+        "3 difficulties",
+        "Solo / local duo",
+        "Minimax AI",
+        "Timed pulse",
+        "Win streak"
       ],
       "help": {
-        "about": "Five-in-a-row on a 5×5 quantum board. Spend charge to place an entangled pair that collapses into your mark next turn. Beat the AI before the clock.",
+        "about": "Phaser 3 quantum tic-tac-toe. Classic 3×3 or Extreme 5×5 (4-in-a-row). Face Minimax AI or play local 2P. Quantum place FX and laser win bursts.",
         "features": [
-          "Four difficulties shorten turn timers and strengthen AI",
-          "Quantum mode (Q / Quantum button): pick two cells; they collapse after the opponent’s turn",
-          "Hard+ AI goes for five, blocks threats, and contests key cells",
-          "Win streak and win-rate stats on the HUD",
-          "Tap cells directly on touch devices"
+          "Casual no timer / Standard 10s advanced AI / Extreme 5×5 4-in-a-row 5s max AI",
+          "Quantum place: glitch + spring tween + neon particles",
+          "Last 3s heartbeat SFX and red pulse",
+          "Win streaks boost AI speed and combo; scores upload via RNF"
         ],
         "controls": [
-          "Mouse / touch: place on an empty cell",
-          "Q or Quantum: enter quantum mode, then tap two cells",
-          "Place before the turn timer ends or you lose the turn"
+          "Click / tap empty cells",
+          "Solo: you are X, AI is O",
+          "Menu toggles SFX and screen shake"
         ],
         "tips": [
-          "Quantum threats can pressure two lines at once but spend charge",
-          "Hard AI prioritizes making five and blocking you",
-          "Longer win streaks boost settlement score"
+          "Standard / Extreme: timeout loses the turn's player",
+          "Higher streaks raise danger and score",
+          "Extreme needs four in a row"
         ]
       }
     },
     "es": {
-      "subtitle": "5×5 cinco en raya · Entrelazo cuántico · Turnos cronometrados · IA · Rachas · Táctil",
+      "subtitle": "3×3 / 5×5 · IA Minimax · Temporizador · Colocación cuántica · Láser",
       "highlights": [
-        "Entrelazo cuántico",
-        "5×5 cinco en raya",
-        "Turnos a tiempo",
-        "Rachas",
-        "Colocar táctil"
+        "3 dificultades",
+        "Solo / dúo local",
+        "IA Minimax",
+        "Pulso a tiempo",
+        "Racha"
       ],
       "help": {
-        "about": "Cinco en raya en un tablero 5×5 cuántico. Gasta carga para colocar un par entrelazado que colapsa en tu marca al siguiente turno. Vence a la IA antes del reloj.",
+        "about": "Tres en raya cuántico en Phaser 3. 3×3 clásico o Extreme 5×5 (4 en línea). IA Minimax o 2P local. FX cuánticos y láser al ganar.",
         "features": [
-          "Cuatro dificultades acortan el temporizador y refuerzan la IA",
-          "Modo cuántico (Q / botón Quantum): elige dos celdas; colapsan tras el turno rival",
-          "IA Difícil+ busca cinco, bloquea amenazas y disputa celdas clave",
-          "Racha de victorias y win-rate en el HUD",
-          "Toca celdas directamente en dispositivos táctiles"
+          "Casual sin tiempo / Standard 10s / Extreme 5×5 4 en línea 5s",
+          "Colocación: glitch + tween + partículas",
+          "Últimos 3s: latido y pulso rojo",
+          "Rachas suben velocidad IA y combo; RNF.submitScore"
         ],
         "controls": [
-          "Ratón / toque: colocar en celda vacía",
-          "Q o Quantum: modo cuántico, luego toca dos celdas",
-          "Coloca antes de que acabe el temporizador o pierdes el turno"
+          "Clic / toque en celdas vacías",
+          "Solo: tú X, IA O",
+          "Menú: SFX y screen shake"
         ],
         "tips": [
-          "Las amenazas cuánticas pueden presionar dos líneas a la vez pero gastan carga",
-          "La IA difícil prioriza hacer cinco y bloquearte",
-          "Rachas más largas suben la puntuación de cierre"
+          "Standard / Extreme: timeout pierde",
+          "Más racha = más peligro y puntos",
+          "Extreme: cuatro en línea"
         ]
       }
     }
   },
-  "rainy-frog-dash": {
+"rainy-frog-dash": {
     "zh-HK": {
-      "subtitle": "二段跳 · 滑翔 · 護盾／火箭 · 雨夜霓虹天際 · 手機觸控就緒",
+      "subtitle": "管道飛躍 · 二段跳 · 護盾／火箭 · 金雨滴 Combo · 暴風危險曲線",
       "highlights": [
-        "多段障礙編隊",
-        "護盾火箭道具",
-        "Combo 金幣",
-        "天氣相位",
-        "手機三鍵"
+        "三段難度",
+        "二段跳躍",
+        "護盾火箭",
+        "金雨滴",
+        "排行榜"
       ],
       "help": {
-        "about": "雨夜霓虹賽道跑酷。固定跳躍高度，難度越高移速與障礙密度越大。收集金幣維持 Combo，撿護盾與火箭衝刺更遠。",
+        "about": "Phaser 3 雨夜飛天蛙。穿過霓虹管道飛躍前進，收集金雨滴維持 Combo；護盾可擋一次撞擊，火箭提供 3 秒無敵衝刺。",
         "features": [
-          "閘門、低橫樑、無人機、懸空雷射、編隊組合等豐富障礙",
-          "護盾可擋一次撞擊（Z 或撿取）；火箭短時加速",
-          "金幣 Combo 倍率；距離越遠場景越密",
-          "雨勢相位：細雨 → 暴雨 → 霓虹狂潮",
-          "桌面鍵鼠與手機虛擬鍵／點擊跳躍皆可"
+          "Casual 寬隙平緩重力／Standard 標準／Extreme 窄隙移動管＋暴風加速",
+          "跳躍擠壓拉伸、俯衝姿勢、腳下青色水花",
+          "動態傾斜雨絲與距離遞增危險倍率",
+          "結算自動 RNF.submitScore 上傳排行榜"
         ],
         "controls": [
-          "空白／W／↑／觸控「跳」：跳躍（可二段跳）",
-          "長按跳躍鍵：空中滑翔減速下落",
-          "Z／觸控「盾」：啟動護盾（冷卻 7 秒）",
-          "點擊畫面空白處亦可跳躍"
+          "空白／↑／W／滑鼠點擊／觸控：跳躍",
+          "空中可再跳一次（二段跳）",
+          "主選單可開關音效與震屏"
         ],
         "tips": [
-          "開局有熱身時間，先熟悉節奏",
-          "護盾被破後有短暫無敵幀",
-          "火箭期間分數與移速提升，把握撿取時機"
+          "穿過管道後會重置跳躍次數",
+          "護盾破裂有短暫無敵",
+          "火箭期間全速衝刺並帶焰火拖尾"
         ]
       }
     },
     "zh-CN": {
-      "subtitle": "二段跳 · 滑翔 · 护盾／火箭 · 雨夜霓虹天际 · 手机触控就绪",
+      "subtitle": "管道飞跃 · 二段跳 · 护盾／火箭 · 金雨滴 Combo · 暴风危险曲线",
       "highlights": [
-        "多段障碍编队",
-        "护盾火箭道具",
-        "Combo 金币",
-        "天气相位",
-        "手机三键"
+        "三段难度",
+        "二段跳跃",
+        "护盾火箭",
+        "金雨滴",
+        "排行榜"
       ],
       "help": {
-        "about": "雨夜霓虹赛道跑酷。固定跳跃高度，难度越高移速与障碍密度越大。收集金币维持 Combo，捡护盾与火箭冲刺更远。",
+        "about": "Phaser 3 雨夜飞天蛙。穿过霓虹管道飞跃前进，收集金雨滴维持 Combo；护盾可挡一次撞击，火箭提供 3 秒无敌冲刺。",
         "features": [
-          "闸门、低横梁、无人机、悬空激光、编队组合等丰富障碍",
-          "护盾可挡一次撞击（Z 或捡取）；火箭短时加速",
-          "金币 Combo 倍率；距离越远场景越密",
-          "雨势相位：细雨 → 暴雨 → 霓虹狂潮",
-          "桌面键鼠与手机虚拟键／点击跳跃皆可"
+          "Casual 宽隙平缓重力／Standard 标准／Extreme 窄隙移动管＋暴风加速",
+          "跳跃挤压拉伸、俯冲姿势、脚下青色水花",
+          "动态倾斜雨丝与距离递增危险倍率",
+          "结算自动 RNF.submitScore 上传排行榜"
         ],
         "controls": [
-          "空格／W／↑／触控「跳」：跳跃（可二段跳）",
-          "长按跳跃键：空中滑翔减速下落",
-          "Z／触控「盾」：启动护盾（冷却 7 秒）",
-          "点击画面空白处亦可跳跃"
+          "空格／↑／W／鼠标点击／触控：跳跃",
+          "空中可再跳一次（二段跳）",
+          "主菜单可开关音效与震屏"
         ],
         "tips": [
-          "开局有热身时间，先熟悉节奏",
-          "护盾被破后有短暂无敌帧",
-          "火箭期间分数与移速提升，把握捡取时机"
+          "穿过管道后会重置跳跃次数",
+          "护盾破裂有短暂无敌",
+          "火箭期间全速冲刺并带焰火拖尾"
         ]
       }
     },
     "en": {
-      "subtitle": "Double jump · Glide · Shield / rocket · Rainy neon skyline · Touch ready",
+      "subtitle": "Pipe dash · Double jump · Shield / rocket · Gold drops · Storm danger",
       "highlights": [
-        "Formation hazards",
+        "3 difficulties",
+        "Double jump",
         "Shield & rocket",
-        "Coin combos",
-        "Weather phases",
-        "3 mobile keys"
+        "Gold drops",
+        "Leaderboard"
       ],
       "help": {
-        "about": "Side-scrolling rainy neon parkour. Jump height is fixed; higher difficulties raise speed and density. Collect coins for combos; grab shields and rockets to go farther.",
+        "about": "Phaser 3 rainy frog flyer. Weave through neon pipes, collect gold raindrops for combos. Shield blocks one hit; rocket grants 3s invincible boost.",
         "features": [
-          "Gates, low beams, drones, floating lasers, and formation packs",
-          "Shield blocks one hit (Z or pickup); rocket grants a short boost",
-          "Coin combo multiplier; density rises with distance",
-          "Weather phases: drizzle → storm → neon surge",
-          "Desktop keys and mobile virtual buttons / tap-to-jump"
+          "Casual wide gaps / Standard / Extreme narrow moving pipes + storm speed",
+          "Jump squash-stretch, dive pose, cyan splash particles",
+          "Slanted rain and distance-based DANGER scaling",
+          "Game Over auto-calls RNF.submitScore"
         ],
         "controls": [
-          "Space / W / ↑ / Jump: jump (double jump available)",
-          "Hold jump: glide and slow your fall",
-          "Z / Shield: activate shield (7s cooldown)",
-          "Tap empty canvas space to jump"
+          "Space / ↑ / W / click / tap: jump",
+          "One mid-air double jump",
+          "Menu toggles SFX and screen shake"
         ],
         "tips": [
-          "Warm-up time at the start — learn the rhythm",
-          "Broken shields grant a brief invulnerability frame",
-          "Rockets raise score and speed — time your pickups"
+          "Clearing a pipe refreshes jumps",
+          "Shield break grants brief i-frames",
+          "Rocket adds speed and flame trail"
         ]
       }
     },
     "es": {
-      "subtitle": "Doble salto · Planeo · Escudo / cohete · Cielo neón lluvioso · Táctil listo",
+      "subtitle": "Tubos · Doble salto · Escudo / cohete · Gotas oro · Peligro tormenta",
       "highlights": [
-        "Formaciones",
+        "3 dificultades",
+        "Doble salto",
         "Escudo y cohete",
-        "Combos de monedas",
-        "Fases climáticas",
-        "3 teclas móvil"
+        "Gotas oro",
+        "Clasificación"
       ],
       "help": {
-        "about": "Parkour lateral bajo lluvia neón. Altura de salto fija; más dificultad = más velocidad y densidad. Monedas para combos; escudos y cohetes para llegar más lejos.",
+        "about": "Rana voladora en Phaser 3. Cruza tubos neón, recoge gotas doradas. Escudo bloquea un golpe; cohete 3s invencible.",
         "features": [
-          "Puertas, vigas bajas, drones, láseres flotantes y formaciones",
-          "El escudo bloquea un golpe (Z o recogida); el cohete da un boost corto",
-          "Multiplicador de monedas; la densidad sube con la distancia",
-          "Clima: llovizna → tormenta → oleada neón",
-          "Teclas de escritorio y botones virtuales / toque para saltar"
+          "Casual huecos anchos / Standard / Extreme tubos móviles + tormenta",
+          "Salto squash-stretch, picado y salpicaduras cian",
+          "Lluvia inclinada y DANGER por distancia",
+          "Game Over llama RNF.submitScore"
         ],
         "controls": [
-          "Espacio / W / ↑ / Saltar: salto (doble salto disponible)",
-          "Mantén salto: planea y frena la caída",
-          "Z / Escudo: activar escudo (enfriamiento 7s)",
-          "Toca el lienzo vacío para saltar"
+          "Espacio / ↑ / W / clic / toque: saltar",
+          "Un doble salto en el aire",
+          "Menú: SFX y screen shake"
         ],
         "tips": [
-          "Hay calentamiento al inicio — aprende el ritmo",
-          "Escudos rotos dan un frame breve de invulnerabilidad",
-          "Los cohetes suben puntuación y velocidad — elige el momento"
+          "Pasar un tubo reinicia saltos",
+          "Romper escudo da i-frames",
+          "El cohete da velocidad y estela"
         ]
       }
     }
   },
-  "void-brick-breaker": {
+"void-brick-breaker": {
     "zh-HK": {
-      "subtitle": "多球分裂 · 雷射擋板 · 黑洞磁力 · 爆炸／鋼鐵磚 · 手機拖曳＋虛擬鍵",
+      "subtitle": "Arcade 反彈 · 多球／雷射／磁力 · 動態危險倍率 · 觸控拖曳",
       "highlights": [
-        "四段難度",
-        "多球／雷射",
-        "特殊磚塊",
-        "Combo 連破",
-        "觸控就緒"
+        "三段難度",
+        "多球分裂",
+        "雷射底板",
+        "磁力吸附",
+        "排行榜"
       ],
       "help": {
-        "about": "虛空矩陣中的經典打磚塊。用擋板反彈球體擊碎磚塊，清空可破壞磚即可過關。",
+        "about": "Phaser 3 虛空打磚塊。Arcade Physics 精確反彈，擊碎磚塊過關。道具含多球、雷射板與磁力吸附。",
         "features": [
-          "四段難度：球速、磚塊 HP、道具掉落率同步調整",
-          "多球分裂、磁力吸附、雷射連射、加寬擋板、黏球、額外生命",
-          "鋼鐵磚僅雷射可破、爆炸磚連鎖、金磚高分獎勵",
-          "連續破磚 Combo 倍率加分與霓虹粒子",
-          "桌面鍵盤＋手機拖曳擋板／虛擬方向鍵／發射鍵"
+          "Casual 長板慢球高掉落／Standard 極速／Extreme 短板＋移動黑洞磚",
+          "磚塊碎裂震屏、彈性縮放與同色星塵",
+          "底板擠壓拉伸與依擊中位置計算反彈角",
+          "反彈次數提升球速與 DANGER，結算上傳排行榜"
         ],
         "controls": [
-          "← → 或 A D：移動擋板",
-          "空白鍵／觸控「射」：發射雷射（有冷卻）",
-          "手機：在畫面上拖曳可快速定位擋板"
+          "滑鼠／手指拖曳底板，或 A D／方向鍵",
+          "點擊／空白：發射球或雷射",
+          "磁力吸附後再點擊重新選擇角度發射"
         ],
         "tips": [
-          "多球道具可同時破壞多排磚塊",
-          "磁力道具讓球偏向擋板方向",
-          "爆炸磚會震傷周圍磚塊，善用連鎖清場",
-          "鋼鐵灰磚需用雷射擊破"
+          "多球可同時清多排",
+          "雷射板兩端雙發射線貫穿磚塊",
+          "Extreme 黑洞磚會左右移動，預判落點"
         ]
       }
     },
     "zh-CN": {
-      "subtitle": "多球分裂 · 激光挡板 · 黑洞磁力 · 爆炸／钢铁砖 · 手机拖曳＋虚拟键",
+      "subtitle": "Arcade 反弹 · 多球／镭射／磁力 · 动态危险倍率 · 触控拖曳",
       "highlights": [
-        "四段难度",
-        "多球／激光",
-        "特殊砖块",
-        "Combo 连破",
-        "触控就绪"
+        "三段难度",
+        "多球分裂",
+        "镭射底板",
+        "磁力吸附",
+        "排行榜"
       ],
       "help": {
-        "about": "虚空矩阵中的经典打砖块。用挡板反弹球体击碎砖块，清空可破坏砖即可过关。",
+        "about": "Phaser 3 虚空打砖块。Arcade Physics 精确反弹，击碎砖块过关。道具含多球、镭射板与磁力吸附。",
         "features": [
-          "四段难度：球速、砖块 HP、道具掉落率同步调整",
-          "多球分裂、磁力吸附、激光连射、加宽挡板、黏球、额外生命",
-          "钢铁砖仅激光可破、爆炸砖连锁、金砖高分奖励",
-          "连续破砖 Combo 倍率加分与霓虹粒子",
-          "桌面键盘＋手机拖曳挡板／虚拟方向键／发射键"
+          "Casual 长板慢球高掉落／Standard 极速／Extreme 短板＋移动黑洞砖",
+          "砖块碎裂震屏、弹性缩放与同色星尘",
+          "底板挤压拉伸与依击中位置计算反弹角",
+          "反弹次数提升球速与 DANGER，结算上传排行榜"
         ],
         "controls": [
-          "← → 或 A D：移动挡板",
-          "空格／触控「射」：发射激光（有冷却）",
-          "手机：在画面上拖曳可快速定位挡板"
+          "鼠标／手指拖曳底板，或 A D／方向键",
+          "点击／空格：发射球或镭射",
+          "磁力吸附后再点击重新选择角度发射"
         ],
         "tips": [
-          "多球道具可同时破坏多排砖块",
-          "磁力道具让球偏向挡板方向",
-          "爆炸砖会震伤周围砖块，善用连锁清场",
-          "钢铁灰砖需用激光击破"
+          "多球可同时清多排",
+          "镭射板两端双发射线贯穿砖块",
+          "Extreme 黑洞砖会左右移动，预判落点"
         ]
       }
     },
     "en": {
-      "subtitle": "Multi-ball · Laser paddle · Magnet · Explosive / steel bricks · Touch drag + pad",
+      "subtitle": "Arcade bounce · Multi / laser / magnet · Dynamic danger · Touch drag",
       "highlights": [
-        "4 difficulties",
-        "Multi-ball / laser",
-        "Special bricks",
-        "Break combos",
-        "Touch ready"
+        "3 difficulties",
+        "Multi-ball",
+        "Laser paddle",
+        "Magnet catch",
+        "Leaderboard"
       ],
       "help": {
-        "about": "Classic brick breaker in a void matrix. Bounce the ball off your paddle, clear destroyable bricks, and advance.",
+        "about": "Phaser 3 void brick breaker with Arcade Physics. Break bricks to clear stages. Power-ups: multi-ball, laser paddle, magnet catch.",
         "features": [
-          "Four difficulties scale ball speed, brick HP, and power-up rate",
-          "Multi-ball, magnet, laser volleys, wide paddle, sticky ball, extra life",
-          "Steel bricks need lasers; explosives chain; gold bricks score big",
-          "Break combos with neon particles",
-          "Desktop keys plus mobile drag / D-pad / fire"
+          "Casual long paddle / Standard / Extreme short paddle + moving void bricks",
+          "Brick shatter shake, elastic scale, colored stardust",
+          "Paddle squash-stretch and angle from hit position",
+          "Bounces raise speed and DANGER; scores upload via RNF"
         ],
         "controls": [
-          "← → or A D: move paddle",
-          "Space / Fire: shoot laser (cooldown)",
-          "Mobile: drag on the canvas to reposition the paddle quickly"
+          "Drag paddle or use A/D / arrows",
+          "Click / Space: launch ball or fire lasers",
+          "Magnet sticks the ball — click again to relaunch"
         ],
         "tips": [
-          "Multi-ball can wipe several rows at once",
-          "Magnet pulls the ball toward the paddle",
-          "Explosives damage neighbors — chain them for clears",
-          "Gray steel bricks only fall to lasers"
+          "Multi-ball clears multiple rows",
+          "Laser paddle fires twin beams",
+          "Extreme void bricks slide sideways"
         ]
       }
     },
     "es": {
-      "subtitle": "Multibola · Pala láser · Imán · Ladrillos explosivos / acero · Arrastre + pad",
+      "subtitle": "Rebote Arcade · Multi / láser / imán · Peligro dinámico · Arrastre",
       "highlights": [
-        "4 dificultades",
-        "Multibola / láser",
-        "Ladrillos especiales",
-        "Combos",
-        "Táctil listo"
+        "3 dificultades",
+        "Multibola",
+        "Pala láser",
+        "Imán",
+        "Clasificación"
       ],
       "help": {
-        "about": "Brick breaker clásico en una matriz del vacío. Rebota la bola en la pala, limpia ladrillos destructibles y avanza.",
+        "about": "Brick breaker void en Phaser 3 con Arcade Physics. Rompe ladrillos. Power-ups: multibola, pala láser e imán.",
         "features": [
-          "Cuatro dificultades escalan velocidad, PV de ladrillo y rate de power-ups",
-          "Multibola, imán, ráfagas láser, pala ancha, bola pegajosa, vida extra",
-          "El acero necesita láser; los explosivos encadenan; el oro puntúa mucho",
-          "Combos de rotura con partículas neón",
-          "Teclas de escritorio más arrastre / D-pad / disparo móvil"
+          "Casual pala larga / Standard / Extreme pala corta + ladrillos void móviles",
+          "Rotura con shake, escala elástica y partículas",
+          "Squash-stretch y ángulo según impacto",
+          "Los rebotes suben velocidad y DANGER; RNF.submitScore"
         ],
         "controls": [
-          "← → o A D: mover pala",
-          "Espacio / Disparo: láser (enfriamiento)",
-          "Móvil: arrastra en el lienzo para reposicionar la pala rápido"
+          "Arrastra la pala o A/D / flechas",
+          "Clic / Espacio: lanzar o láser",
+          "El imán pega la bola — clic para relanzar"
         ],
         "tips": [
-          "Multibola puede limpiar varias filas a la vez",
-          "El imán atrae la bola hacia la pala",
-          "Los explosivos dañan vecinos — encadénalos",
-          "Los ladrillos grises de acero solo caen con láser"
+          "Multibola limpia varias filas",
+          "La pala láser dispara dos haces",
+          "En Extreme los void se mueven"
         ]
       }
     }
