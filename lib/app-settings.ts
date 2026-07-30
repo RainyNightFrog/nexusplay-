@@ -13,19 +13,25 @@ export type AppSettings = {
   showMatureContent: boolean;
 };
 
+export function getDefaultAppSettings(options?: {
+  disableCosmeticFx?: boolean;
+}): AppSettings {
+  return {
+    language: "zh-HK",
+    reduceMotion: false,
+    disableCosmeticFx: options?.disableCosmeticFx ?? false,
+    hideMySupporterFx: false,
+    forumEmailDigest: true,
+    forumReplyNotify: true,
+    gameAutoplay: false,
+    showMatureContent: true,
+  };
+}
+
 export const APP_SETTINGS_STORAGE_KEY = "rainynightfrog-app-settings";
 const LEGACY_APP_SETTINGS_STORAGE_KEY = "nexusplay-app-settings";
 
-export const DEFAULT_APP_SETTINGS: AppSettings = {
-  language: "zh-HK",
-  reduceMotion: false,
-  disableCosmeticFx: false,
-  hideMySupporterFx: false,
-  forumEmailDigest: true,
-  forumReplyNotify: true,
-  gameAutoplay: false,
-  showMatureContent: true,
-};
+export const DEFAULT_APP_SETTINGS: AppSettings = getDefaultAppSettings();
 
 export function readAppSettingsRaw(): string | null {
   if (typeof window === "undefined") return null;
@@ -46,28 +52,32 @@ export function readAppSettingsRaw(): string | null {
   return legacy;
 }
 
-export function parseAppSettings(raw: string | null): AppSettings {
-  if (!raw) return { ...DEFAULT_APP_SETTINGS };
+export function parseAppSettings(
+  raw: string | null,
+  defaults: AppSettings = DEFAULT_APP_SETTINGS
+): AppSettings {
+  if (!raw) return { ...defaults };
 
   try {
     const parsed = JSON.parse(raw) as Partial<AppSettings> & {
       theme?: unknown;
       compactLayout?: unknown;
     };
-    const { theme: _ignoredTheme, compactLayout: _ignoredCompactLayout, ...rest } =
-      parsed;
+    const rest = { ...parsed };
+    delete rest.theme;
+    delete rest.compactLayout;
     const rawLanguage = rest.language as string | undefined;
     const language =
       rawLanguage === "zh-Hant" || rawLanguage === "zh-TW"
         ? ("zh-HK" as AppLanguage)
         : rest.language;
     return {
-      ...DEFAULT_APP_SETTINGS,
+      ...defaults,
       ...rest,
       ...(language ? { language } : {}),
     };
   } catch {
-    return { ...DEFAULT_APP_SETTINGS };
+    return { ...defaults };
   }
 }
 

@@ -1280,7 +1280,7 @@
     "reduceMotion": "Reduce motion",
     "reduceMotionDesc": "Reduce page animations and transitions to ease motion sickness",
     "disableCosmeticFx": "Disable avatar & title effects",
-    "disableCosmeticFxDesc": "Hide animated avatar frames, supporter glows, and title lightning on this device to save power",
+    "disableCosmeticFxDesc": "Hide animated avatar frames, supporter glows, and title lightning on this device to save power. Mobile defaults to off, and you can enable title and avatar effects here anytime.",
     "hideMySupporterFx": "Hide my supporter effects",
     "hideMySupporterFxDesc": "Turn off VIP / SVIP / LEGEND glow and badge on your own avatar (this device only)",
     "resetTitle": "Reset to defaults",
@@ -1706,6 +1706,31 @@
     "cyber-neon-runner": {
       "badge": "Virtual arcade",
       "description": "Jump, slide and laser through Night City. Shields, magnets, boosts and milestone events — endless neon runner, touch ready."
+    },
+    "cyber-blade-dash": {
+      "title": "Cyber Blade Dash",
+      "badge": "Virtual arcade",
+      "description": "Wield a neon blade to carve through hostile drones, chain hyper-speed slashes and burst dashes, then absorb energy cores to keep the run alive."
+    },
+    "neon-pinball-frenzy": {
+      "title": "Neon Pinball Frenzy",
+      "badge": "Virtual arcade",
+      "description": "Keep the plasma ball in play, slam color-shifting bumpers and nudge into Fever as combo rebounds turn the whole arena into a neon score storm."
+    },
+    "void-rhythm-beat": {
+      "title": "Void Rhythm Beat",
+      "badge": "Virtual arcade",
+      "description": "Hit four-lane void pulses with D / F / J / K, stack Perfect timing and protect your sync meter while the beat accelerates with danger."
+    },
+    "astro-gravity-runner": {
+      "title": "Astro Gravity Runner",
+      "badge": "Virtual arcade",
+      "description": "Flip gravity between twin star lanes, dodge pulse obstacles and collect stellar cores in an endless runner that grows faster every second."
+    },
+    "cyber-rogue-dungeon": {
+      "title": "Cyber Rogue Dungeon",
+      "badge": "Virtual arcade",
+      "description": "Survive a cyber dungeon swarm with auto-target fire, gather XP cores to upgrade your weapon level and outlast escalating machine waves."
     }
   },
   "errors": {

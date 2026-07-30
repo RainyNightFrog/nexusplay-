@@ -264,14 +264,6 @@ export function ChatMessageList({
                 showSupporterFx ? "pt-3.5" : "pt-1.5"
               )}
             >
-              {showSupporterFx && (
-                <SupporterAvatarInsignia
-                  tier={supporterTier}
-                  size="xs"
-                  supporterLifetime={supporterTier === "lifetime"}
-                  className="z-30 scale-[0.85]"
-                />
-              )}
               <div
                 className={cn(
                   "relative mx-auto inline-flex overflow-visible",
@@ -280,6 +272,14 @@ export function ChatMessageList({
                     supporterAvatarRingClassByTierLite[supporterTier]
                 )}
               >
+              {showSupporterFx && (
+                <SupporterAvatarInsignia
+                  tier={supporterTier}
+                  size="xs"
+                  supporterLifetime={supporterTier === "lifetime"}
+                  className="z-30 scale-[0.85]"
+                />
+              )}
               <button
                 type="button"
                 onClick={() => onAuthorClick?.(message)}

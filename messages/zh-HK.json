@@ -1280,7 +1280,7 @@
     "reduceMotion": "減少動態效果",
     "reduceMotionDesc": "降低頁面動畫與過渡效果，減輕暈動症不適",
     "disableCosmeticFx": "關閉頭像與稱號特效",
-    "disableCosmeticFxDesc": "本機不顯示頭像框動畫、支持者光環與稱號雷電，可提升效能並省電",
+    "disableCosmeticFxDesc": "本機不顯示頭像框動畫、支持者光環與稱號雷電；手機版預設為關閉，如想開啟稱號與頭像特效可在此手動調整",
     "hideMySupporterFx": "隱藏我的支持者特效",
     "hideMySupporterFxDesc": "關閉自己頭像上的 VIP／SVIP／LEGEND 光環與角標（僅影響本機顯示）",
     "resetTitle": "恢復預設",
@@ -1706,6 +1706,31 @@
     "cyber-neon-runner": {
       "badge": "虛擬電競",
       "description": "多型障礙、護盾磁鐵加速道具、金幣 Combo 倍率與里程碑事件；雷射彈藥節奏破障。桌面鍵鼠與手機觸控皆可在 Night City 衝刺到黎明！"
+    },
+    "cyber-blade-dash": {
+      "title": "賽博光刃切擊",
+      "badge": "虛擬電競",
+      "description": "揮舞霓虹光刃斬破敵方無人機，接上超高速突進與連續斬擊，並吸收能量核心維持整場壓制節奏。"
+    },
+    "neon-pinball-frenzy": {
+      "title": "霓虹狂暴彈珠台",
+      "badge": "虛擬電競",
+      "description": "守住高能鋼珠、猛撞變色 Bumper，利用震台與連續反彈疊高 Fever 狂熱分數，讓整個競技場化成霓虹彈分風暴。"
+    },
+    "void-rhythm-beat": {
+      "title": "虛空節奏拍點",
+      "badge": "虛擬電競",
+      "description": "跟隨虛空四軌脈衝按下 D / F / J / K，以 Perfect 節拍堆高連擊，同時守住同步值迎戰不斷加速的危險節奏。"
+    },
+    "astro-gravity-runner": {
+      "title": "星際重力翻轉者",
+      "badge": "虛擬電競",
+      "description": "在雙層星軌間翻轉重力、穿越脈衝障礙並收集星核，於越跑越快的無盡競速中維持極限生存。"
+    },
+    "cyber-rogue-dungeon": {
+      "title": "賽博地牢倖存者",
+      "badge": "虛擬電競",
+      "description": "在賽博地牢中一邊走位一邊自動索敵開火，吸收 XP 核心提升武器等級，撐過愈來愈兇猛的機械怪潮。"
     }
   },
   "errors": {

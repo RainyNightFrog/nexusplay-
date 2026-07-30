@@ -61,17 +61,20 @@ export function ApStoreNavButton() {
           void refreshBalance();
         }}
         className={cn(
-          "relative inline-flex min-h-10 items-center gap-1 rounded-full border border-amber-400/35",
-          "bg-amber-500/10 px-2.5 py-2 text-xs font-semibold text-amber-100 touch-manipulation",
+          "relative inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-amber-400/35",
+          "bg-amber-500/10 text-xs font-semibold text-amber-100 touch-manipulation",
           "shadow-[0_0_12px_rgba(251,191,36,0.15)] transition hover:border-amber-400/55 hover:bg-amber-500/15",
-          "md:min-h-0 md:gap-1.5 md:px-3 md:py-1.5 md:text-sm md:shadow-[0_0_16px_rgba(251,191,36,0.2)]"
+          "md:size-auto md:min-h-0 md:gap-1.5 md:px-3 md:py-1.5 md:text-sm md:shadow-[0_0_16px_rgba(251,191,36,0.2)]"
         )}
         aria-label={t("navLabel")}
       >
         <Coins className="size-3.5 text-amber-300" />
-        <span className="tabular-nums">
+        <span className="hidden tabular-nums md:inline">
           {balance == null ? "—" : balance}
-          <span className="ml-0.5 hidden sm:inline">AP</span>
+          <span className="ml-0.5">AP</span>
+        </span>
+        <span className="absolute -right-1 -top-1 flex min-w-[18px] items-center justify-center rounded-full bg-amber-400 px-1 text-[10px] font-bold leading-none text-zinc-950 md:hidden">
+          {balance == null ? "—" : balance > 99 ? "99+" : balance}
         </span>
       </button>
       <ApStoreModal

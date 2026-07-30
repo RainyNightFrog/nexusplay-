@@ -20,6 +20,94 @@ export type VirtualGameSeed = {
   daysAgo: number;
 };
 
+export type NewPhaserGameEntry = {
+  id: string;
+  slug: string;
+  titleKey: string;
+  badgeKey: string;
+  descriptionKey: string;
+  coverUrl: string;
+  category: string;
+  tags: string[];
+  isFeatured: boolean;
+  isRecommended: boolean;
+  releaseDate: string;
+  engine: string;
+};
+
+export const NEW_PHASER_GAMES: NewPhaserGameEntry[] = [
+  {
+    id: "cyber-blade-dash",
+    slug: "cyber-blade-dash",
+    titleKey: "games.cyber-blade-dash.title",
+    badgeKey: "games.cyber-blade-dash.badge",
+    descriptionKey: "games.cyber-blade-dash.description",
+    coverUrl: "/games/cyber-blade-dash/cover.svg",
+    category: "action",
+    tags: ["Cyberpunk", "Action", "Phaser3", "Arcade"],
+    isFeatured: true,
+    isRecommended: true,
+    releaseDate: "2026-05-01",
+    engine: "Phaser 3 (WebGL)",
+  },
+  {
+    id: "neon-pinball-frenzy",
+    slug: "neon-pinball-frenzy",
+    titleKey: "games.neon-pinball-frenzy.title",
+    badgeKey: "games.neon-pinball-frenzy.badge",
+    descriptionKey: "games.neon-pinball-frenzy.description",
+    coverUrl: "/games/neon-pinball-frenzy/cover.svg",
+    category: "casual",
+    tags: ["Neon", "Pinball", "Physics", "Phaser3"],
+    isFeatured: false,
+    isRecommended: true,
+    releaseDate: "2026-05-01",
+    engine: "Phaser 3 (WebGL)",
+  },
+  {
+    id: "void-rhythm-beat",
+    slug: "void-rhythm-beat",
+    titleKey: "games.void-rhythm-beat.title",
+    badgeKey: "games.void-rhythm-beat.badge",
+    descriptionKey: "games.void-rhythm-beat.description",
+    coverUrl: "/games/void-rhythm-beat/cover.svg",
+    category: "rhythm",
+    tags: ["Rhythm", "Sci-Fi", "Audio", "Phaser3"],
+    isFeatured: true,
+    isRecommended: false,
+    releaseDate: "2026-05-01",
+    engine: "Phaser 3 (WebGL)",
+  },
+  {
+    id: "astro-gravity-runner",
+    slug: "astro-gravity-runner",
+    titleKey: "games.astro-gravity-runner.title",
+    badgeKey: "games.astro-gravity-runner.badge",
+    descriptionKey: "games.astro-gravity-runner.description",
+    coverUrl: "/games/astro-gravity-runner/cover.svg",
+    category: "runner",
+    tags: ["Space", "Runner", "Gravity", "Phaser3"],
+    isFeatured: false,
+    isRecommended: true,
+    releaseDate: "2026-05-01",
+    engine: "Phaser 3 (WebGL)",
+  },
+  {
+    id: "cyber-rogue-dungeon",
+    slug: "cyber-rogue-dungeon",
+    titleKey: "games.cyber-rogue-dungeon.title",
+    badgeKey: "games.cyber-rogue-dungeon.badge",
+    descriptionKey: "games.cyber-rogue-dungeon.description",
+    coverUrl: "/games/cyber-rogue-dungeon/cover.svg",
+    category: "roguelike",
+    tags: ["Roguelike", "Dungeon", "Strategy", "Phaser3"],
+    isFeatured: true,
+    isRecommended: true,
+    releaseDate: "2026-05-01",
+    engine: "Phaser 3 (WebGL)",
+  },
+];
+
 export const VIRTUAL_GAMES_SEED: VirtualGameSeed[] = [
   {
     slug: "neon-snake-extreme",

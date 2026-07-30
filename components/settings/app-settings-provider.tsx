@@ -13,10 +13,12 @@ import {
   APP_SETTINGS_STORAGE_KEY,
   applyAppSettings,
   DEFAULT_APP_SETTINGS,
+  getDefaultAppSettings,
   parseAppSettings,
   readAppSettingsRaw,
   type AppSettings,
 } from "@/lib/app-settings";
+import { isMobileDevice } from "@/lib/pwa";
 
 type AppSettingsContextValue = {
   settings: AppSettings;
@@ -32,10 +34,18 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const stored = parseAppSettings(readAppSettingsRaw());
-    setSettings(stored);
+    const stored = parseAppSettings(
+      readAppSettingsRaw(),
+      getDefaultAppSettings({
+        // 手機／平板首次進站預設關閉外觀特效，之後可在設定頁自行開啟。
+        disableCosmeticFx: isMobileDevice(),
+      })
+    );
     applyAppSettings(stored);
-    setReady(true);
+    queueMicrotask(() => {
+      setSettings(stored);
+      setReady(true);
+    });
   }, []);
 
   useEffect(() => {
@@ -52,7 +62,11 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const resetSettings = useCallback(() => {
-    setSettings({ ...DEFAULT_APP_SETTINGS });
+    setSettings(
+      getDefaultAppSettings({
+        disableCosmeticFx: isMobileDevice(),
+      })
+    );
   }, []);
 
   const value = useMemo(

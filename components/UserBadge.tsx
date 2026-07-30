@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useLocale } from "next-intl";
 import type { EquippedTitle } from "@/lib/titles";
 import { getTitleDisplayClass } from "@/lib/titles";
@@ -9,6 +10,7 @@ import {
   isSvipLikeTier,
   supporterUsernameClassByTier,
 } from "@/lib/supporter-tier";
+import { useAppSettings } from "@/components/settings/app-settings-provider";
 import { adminRoleRainbowTextClass } from "@/lib/admin-display-role";
 import { SupporterBadge } from "@/components/supporter/supporter-badge";
 import { cn } from "@/lib/utils";
@@ -87,7 +89,6 @@ export function UserBadge({
   titleClassName,
   nameColorClass = null,
   layout = "inline",
-  animateTitle = true,
   maxTitleWidth = "max-w-[5.5rem]",
   showSupporterBadge = true,
   preferNameColor = false,
@@ -95,6 +96,7 @@ export function UserBadge({
   fallbackRoleRainbow = false,
 }: UserBadgeProps) {
   const locale = useLocale();
+  const { settings, ready } = useAppSettings();
   const supporterTier = getSupporterDisplayTier(
     isSupporter,
     supporterBadge,
@@ -113,12 +115,18 @@ export function UserBadge({
   const wrapRnfFrame = Boolean(
     title && isRainyNightFrogTitleClass(title.css_class)
   );
+  const resolvedAnimateTitle = useMemo(() => {
+    if (!ready) return false;
+    if (settings.reduceMotion || settings.disableCosmeticFx) return false;
+    // 桌面版全站稱號預設開啟動畫；手機版是否開啟則交由設定頁控制。
+    return true;
+  }, [ready, settings.disableCosmeticFx, settings.reduceMotion]);
 
   const titleClass = title
     ? cn(
         "font-semibold tracking-wide",
         getTitleDisplayClass(title.css_class, title.rarity_tier, {
-          animate: animateTitle,
+          animate: resolvedAnimateTitle,
         }),
         titleClassName
       )
@@ -171,7 +179,7 @@ export function UserBadge({
       <span
         className={cn(
           "title-rainynightfrog-frame",
-          !animateTitle && "title-fx-static"
+          !resolvedAnimateTitle && "title-fx-static"
         )}
       >
         {inner}

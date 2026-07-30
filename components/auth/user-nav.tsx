@@ -85,7 +85,7 @@ export function UserNav() {
       : t("rolePlayer");
 
   return (
-    <div className="flex items-center gap-1 md:gap-2">
+    <div className="flex items-center gap-0.5 md:gap-2">
       <NotificationBell />
       <div
         className={cn(
@@ -100,7 +100,7 @@ export function UserNav() {
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         className={cn(
-          "relative flex size-10 items-center justify-center rounded-full touch-manipulation",
+          "relative flex size-9 items-center justify-center rounded-full touch-manipulation",
           "border border-cyan-400/30 bg-gradient-to-br from-cyan-500/30 to-violet-600/40",
           "shadow-md shadow-cyan-500/20 transition-transform hover:scale-105",
           "md:size-9",

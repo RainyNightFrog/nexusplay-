@@ -1025,7 +1025,7 @@
     "reduceMotion": "减少动态效果",
     "reduceMotionDesc": "降低页面动画与过渡效果，减轻晕动症不适",
     "disableCosmeticFx": "关闭头像与称号特效",
-    "disableCosmeticFxDesc": "本机不显示头像框动画、支持者光环与称号闪电，可提升性能并省电",
+    "disableCosmeticFxDesc": "本机不显示头像框动画、支持者光环与称号闪电；手机版默认关闭，如想开启称号与头像特效可在此手动调整",
     "hideMySupporterFx": "隐藏我的支持者特效",
     "hideMySupporterFxDesc": "关闭自己头像上的 VIP／SVIP／LEGEND 光环与角标（仅影响本机显示）",
     "resetTitle": "恢复默认",

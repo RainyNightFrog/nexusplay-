@@ -38,13 +38,13 @@ export function NotificationBell() {
     rejected: t("kindRejected"),
   };
 
-  const loadNotifications = useCallback(async () => {
+  const loadNotifications = useCallback(async (nextFilter: NotificationFilter = filter) => {
     if (!profile) return;
 
     setLoading(true);
     try {
       const query =
-        filter === "all" ? "" : `?kind=${encodeURIComponent(filter)}`;
+        nextFilter === "all" ? "" : `?kind=${encodeURIComponent(nextFilter)}`;
       const response = await fetch(`/api/auth/notifications${query}`);
       if (!response.ok) return;
 
@@ -63,13 +63,11 @@ export function NotificationBell() {
   }, [filter, profile]);
 
   useEffect(() => {
-    if (!profile) {
-      setNotifications([]);
-      setUnreadCount(0);
-      return;
-    }
-
-    void loadNotifications();
+    if (!profile) return;
+    const timer = window.setTimeout(() => {
+      void loadNotifications();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [profile, loadNotifications]);
 
   useVisibleInterval(
@@ -78,12 +76,6 @@ export function NotificationBell() {
     },
     profile ? 90_000 : null
   );
-
-  useEffect(() => {
-    if (open) {
-      void loadNotifications();
-    }
-  }, [filter, open, loadNotifications]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -101,6 +93,13 @@ export function NotificationBell() {
     setOpen(nextOpen);
     if (nextOpen) {
       await loadNotifications();
+    }
+  }
+
+  function handleFilterChange(nextFilter: NotificationFilter) {
+    setFilter(nextFilter);
+    if (open) {
+      void loadNotifications(nextFilter);
     }
   }
 
@@ -141,7 +140,7 @@ export function NotificationBell() {
         type="button"
         onClick={() => void handleOpen()}
         className={cn(
-          "relative flex size-10 items-center justify-center rounded-full touch-manipulation",
+          "relative flex size-9 items-center justify-center rounded-full touch-manipulation",
           "border border-white/10 bg-white/5 text-zinc-300",
           "transition-colors hover:border-cyan-400/30 hover:bg-white/10 hover:text-white",
           "md:size-9"
@@ -179,7 +178,7 @@ export function NotificationBell() {
           <div className="border-b border-white/5 px-3 py-2">
             <NotificationFilterBar
               value={filter}
-              onChange={setFilter}
+              onChange={handleFilterChange}
               unreadByKind={unreadByKind}
               labels={filterLabels}
               size="sm"

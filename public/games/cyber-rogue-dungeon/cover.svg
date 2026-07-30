@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#19120a" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+  </defs>
+  <rect width="960" height="540" fill="url(#bg)" />
+  <g opacity="0.18" stroke="#fbbf24">
+    <path d="M0 90h960M0 190h960M0 290h960M0 390h960" />
+    <path d="M100 0v540M260 0v540M420 0v540M580 0v540M740 0v540M900 0v540" />
+  </g>
+  <circle cx="480" cy="270" r="42" fill="#fbbf24" />
+  <circle cx="350" cy="220" r="28" fill="#fb7185" />
+  <circle cx="620" cy="320" r="28" fill="#a78bfa" />
+  <circle cx="320" cy="340" r="16" fill="#34d399" />
+  <circle cx="650" cy="200" r="16" fill="#34d399" />
+  <text x="480" y="110" text-anchor="middle" fill="#f8fafc" font-size="34" font-family="Segoe UI, Microsoft JhengHei, sans-serif" font-weight="700">CYBER ROGUE DUNGEON</text>
+  <text x="480" y="152" text-anchor="middle" fill="#fcd34d" font-size="24" font-family="Segoe UI, Microsoft JhengHei, sans-serif">ýZ0bX</text>
+</svg>

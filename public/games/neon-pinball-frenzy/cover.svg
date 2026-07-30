@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#12081f" />
+      <stop offset="100%" stop-color="#1e293b" />
+    </linearGradient>
+  </defs>
+  <rect width="960" height="540" fill="url(#bg)" />
+  <g opacity="0.18" stroke="#f472b6">
+    <path d="M0 90h960M0 190h960M0 290h960M0 390h960" />
+    <path d="M100 0v540M260 0v540M420 0v540M580 0v540M740 0v540M900 0v540" />
+  </g>
+  <circle cx="480" cy="230" r="42" fill="#fbbf24" />
+  <circle cx="320" cy="280" r="28" fill="#22d3ee" opacity="0.9" />
+  <circle cx="640" cy="280" r="28" fill="#a78bfa" opacity="0.9" />
+  <rect x="300" y="390" width="140" height="24" rx="12" fill="#22d3ee" transform="rotate(-18 370 402)" />
+  <rect x="520" y="390" width="140" height="24" rx="12" fill="#a78bfa" transform="rotate(18 590 402)" />
+  <text x="480" y="138" text-anchor="middle" fill="#f8fafc" font-size="34" font-family="Segoe UI, Microsoft JhengHei, sans-serif" font-weight="700">NEON PINBALL FRENZY</text>
+  <text x="480" y="180" text-anchor="middle" fill="#f472b6" font-size="24" font-family="Segoe UI, Microsoft JhengHei, sans-serif">yÂ´Hàð</text>
+</svg>

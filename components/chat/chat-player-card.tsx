@@ -339,22 +339,21 @@ export function ChatPlayerCard({
         <div className="flex flex-col gap-3 sm:gap-4">
           <div className="flex w-full flex-col items-center gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
             <div className="flex flex-col items-center gap-3 sm:flex-row sm:gap-5">
-              {/* LEGEND／VIP 角標用正常排版，避免 Dialog overflow 裁切絕對定位 */}
               <div
                 className={cn(
-                  "relative flex shrink-0 flex-col items-center gap-1.5 overflow-visible px-4 pb-3",
-                  displaySupporterTier !== "none" ? "pt-2" : "pt-1"
+                  "relative flex shrink-0 items-center justify-center overflow-visible px-4 pb-3",
+                  displaySupporterTier !== "none" ? "pt-5" : "pt-1"
                 )}
               >
-                {displaySupporterTier !== "none" && (
-                  <SupporterAvatarInsignia
-                    tier={displaySupporterTier}
-                    size="md"
-                    supporterLifetime={supporterLifetime}
-                    className="!static !left-auto !top-auto !z-auto !translate-x-0 !translate-y-0"
-                  />
-                )}
                 <div className="relative overflow-visible p-4">
+                  {displaySupporterTier !== "none" && (
+                    <SupporterAvatarInsignia
+                      tier={displaySupporterTier}
+                      size="md"
+                      supporterLifetime={supporterLifetime}
+                      className="!-translate-y-[calc(100%-2px)] sm:!-translate-y-[calc(100%-10px)]"
+                    />
+                  )}
                   <div
                     className={cn(
                       "relative inline-flex",
@@ -412,7 +411,6 @@ export function ChatPlayerCard({
                     }
                     supporterLifetime={showSupporterFx && supporterLifetime}
                     showSupporterBadge={false}
-                    animateTitle={false}
                     nameColorClass={nameColorClass}
                     usernameClassName="text-lg font-semibold text-zinc-100 sm:text-xl"
                     titleClassName="text-xs sm:text-sm"
