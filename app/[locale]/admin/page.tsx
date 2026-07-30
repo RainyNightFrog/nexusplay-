@@ -81,6 +81,10 @@ import type {
   GameApprovalStatus,
 } from "@/lib/admin-service";
 import { cn } from "@/lib/utils";
+import {
+  getNewPhaserExposureScore,
+  isNewPhaserGameSlug,
+} from "@/lib/virtual-games-seed-data";
 
 const DELETE_VIOLATION_PRESETS = [
   "copyright",
@@ -92,6 +96,7 @@ const DELETE_VIOLATION_PRESETS = [
 ] as const;
 
 type DeleteViolationPreset = (typeof DELETE_VIOLATION_PRESETS)[number];
+type AdminGameScopeFilter = "all" | "phaser";
 
 type AdminStats = {
   pendingGames: number;
@@ -127,6 +132,15 @@ function statusBadgeClass(status: GameApprovalStatus | FeedbackStatus) {
 export default function AdminPage() {
   const t = useTranslations("admin");
   const locale = useLocale();
+  const phaserBadgeLabel = t.has("curationPhaserBadge")
+    ? t("curationPhaserBadge")
+    : "RNF Phaser 3";
+  const gamesFilterAllLabel = t.has("gamesFilterAll")
+    ? t("gamesFilterAll")
+    : "All games";
+  const gamesFilterPhaserLabel = t.has("gamesFilterPhaser")
+    ? t("gamesFilterPhaser")
+    : "Phaser spotlight only";
 
   const [pageError, setPageError] = useState<string | null>(null);
   const [pageSuccess, setPageSuccess] = useState<string | null>(null);
@@ -141,6 +155,8 @@ export default function AdminPage() {
   const [gameFilter, setGameFilter] = useState<GameApprovalStatus | "all">(
     "pending"
   );
+  const [gameScopeFilter, setGameScopeFilter] =
+    useState<AdminGameScopeFilter>("all");
   const [feedbackFilter, setFeedbackFilter] = useState<FeedbackStatus | "all">(
     "unread"
   );
@@ -456,6 +472,17 @@ export default function AdminPage() {
     return map[action] ?? action;
   };
 
+  const visibleGames = (
+    gameScopeFilter === "phaser"
+      ? games.filter((game) => isNewPhaserGameSlug(game.slug))
+      : games
+  ).slice().sort((a, b) => {
+    const phaserDelta =
+      getNewPhaserExposureScore(b.slug) - getNewPhaserExposureScore(a.slug);
+    if (phaserDelta !== 0) return phaserDelta;
+    return 0;
+  });
+
   return (
     <AdminShell title={t("title")} description={t("description")}>
       {pageError && (
@@ -620,11 +647,37 @@ export default function AdminPage() {
               />
               {t("refresh")}
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setGameScopeFilter("phaser")}
+              className={cn(
+                "border-cyan-400/30",
+                gameScopeFilter === "phaser"
+                  ? "bg-cyan-500/20 text-cyan-100"
+                  : "bg-transparent text-cyan-200"
+              )}
+            >
+              {gamesFilterPhaserLabel}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setGameScopeFilter("all")}
+              className={cn(
+                "border-white/10",
+                gameScopeFilter === "all"
+                  ? "bg-white/10 text-zinc-100"
+                  : "bg-transparent text-zinc-300"
+              )}
+            >
+              {gamesFilterAllLabel}
+            </Button>
           </div>
 
           {loadingGames ? (
             <AdminLoadingState spinnerClassName="text-amber-400" />
-          ) : games.length === 0 ? (
+          ) : visibleGames.length === 0 ? (
             <Card className="border-white/10 bg-zinc-900/40">
               <CardContent className="py-12 text-center text-sm text-zinc-500">
                 {t("emptyGames")}
@@ -632,94 +685,104 @@ export default function AdminPage() {
             </Card>
           ) : (
             <div className="space-y-4">
-              {games.map((game, index) => (
-                <motion.div
-                  key={game.id}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.04 }}
-                >
-                  <Card className="overflow-hidden border-white/10 bg-zinc-900/60">
-                    <CardContent className="flex flex-col items-center gap-4 p-4 text-center sm:flex-row sm:items-start sm:justify-center">
-                      <div className="relative h-24 w-full max-w-xs shrink-0 overflow-hidden rounded-xl sm:h-20 sm:w-32">
-                        <Image
-                          src={game.cover_url}
-                          alt={game.title}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center justify-center gap-2">
-                          <h3 className="font-semibold text-white">{game.title}</h3>
-                          <Badge
-                            className={cn(
-                              "border",
-                              statusBadgeClass(game.status)
-                            )}
-                          >
-                            {gameStatusLabel(game.status)}
-                          </Badge>
-                          <Badge className="border-white/10 bg-white/5 text-zinc-400">
-                            {game.category}
-                          </Badge>
-                        </div>
-                        <p className="mt-2 line-clamp-2 text-sm text-zinc-400">
-                          {game.description}
-                        </p>
-                        <p className="mt-2 text-xs text-zinc-500">
-                          {t("gameCreated")} · {formatDate(game.created_at, locale)}
-                        </p>
-                      </div>
-                      <div className="flex shrink-0 flex-wrap justify-center gap-2 sm:flex-col">
-                        {game.status === "pending" && (
-                          <>
-                            <Button
-                              size="sm"
-                              disabled={actionId === `game-${game.id}`}
-                              onClick={() => void handleGameAction(game, "approved")}
-                              className="bg-emerald-600 hover:bg-emerald-500"
-                            >
-                              {actionId === `game-${game.id}` ? (
-                                <Loader2 className="size-4 animate-spin" />
-                              ) : (
-                                <CheckCircle2 className="size-4" />
+              {visibleGames.map((game, index) => (
+                (() => {
+                  const isNewPhaser = isNewPhaserGameSlug(game.slug);
+                  return (
+                    <motion.div
+                      key={game.id}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.04 }}
+                    >
+                      <Card className="overflow-hidden border-white/10 bg-zinc-900/60">
+                        <CardContent className="flex flex-col items-center gap-4 p-4 text-center sm:flex-row sm:items-start sm:justify-center">
+                          <div className="relative h-24 w-full max-w-xs shrink-0 overflow-hidden rounded-xl sm:h-20 sm:w-32">
+                            <Image
+                              src={game.cover_url}
+                              alt={game.title}
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center justify-center gap-2">
+                              <h3 className="font-semibold text-white">{game.title}</h3>
+                              {isNewPhaser && (
+                                <Badge className="border-cyan-400/30 bg-cyan-500/10 text-cyan-100">
+                                  {phaserBadgeLabel}
+                                </Badge>
                               )}
-                              {t("approve")}
-                            </Button>
+                              <Badge
+                                className={cn(
+                                  "border",
+                                  statusBadgeClass(game.status)
+                                )}
+                              >
+                                {gameStatusLabel(game.status)}
+                              </Badge>
+                              <Badge className="border-white/10 bg-white/5 text-zinc-400">
+                                {game.category}
+                              </Badge>
+                            </div>
+                            <p className="mt-2 line-clamp-2 text-sm text-zinc-400">
+                              {game.description}
+                            </p>
+                            <p className="mt-2 text-xs text-zinc-500">
+                              {t("gameCreated")} · {formatDate(game.created_at, locale)}
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 flex-wrap justify-center gap-2 sm:flex-col">
+                            {game.status === "pending" && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  disabled={actionId === `game-${game.id}`}
+                                  onClick={() => void handleGameAction(game, "approved")}
+                                  className="bg-emerald-600 hover:bg-emerald-500"
+                                >
+                                  {actionId === `game-${game.id}` ? (
+                                    <Loader2 className="size-4 animate-spin" />
+                                  ) : (
+                                    <CheckCircle2 className="size-4" />
+                                  )}
+                                  {t("approve")}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={actionId === `game-${game.id}`}
+                                  onClick={() => setRejectTarget(game)}
+                                  className="border-rose-400/30 text-rose-300 hover:bg-rose-500/10"
+                                >
+                                  <XCircle className="size-4" />
+                                  {t("reject")}
+                                </Button>
+                              </>
+                            )}
                             <Button
                               size="sm"
                               variant="outline"
-                              disabled={actionId === `game-${game.id}`}
-                              onClick={() => setRejectTarget(game)}
-                              className="border-rose-400/30 text-rose-300 hover:bg-rose-500/10"
+                              disabled={
+                                actionId === `delete-${game.id}` ||
+                                actionId === `game-${game.id}`
+                              }
+                              onClick={() => {
+                                setDeletePreset(null);
+                                setDeleteReason("");
+                                setDeleteTarget(game);
+                              }}
+                              className="border-rose-400/25 bg-rose-500/5 text-rose-300 hover:border-rose-400/40 hover:bg-rose-500/10"
                             >
-                              <XCircle className="size-4" />
-                              {t("reject")}
+                              <Trash2 className="size-4" />
+                              {t("deleteGame")}
                             </Button>
-                          </>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={
-                            actionId === `delete-${game.id}` ||
-                            actionId === `game-${game.id}`
-                          }
-                          onClick={() => {
-                            setDeletePreset(null);
-                            setDeleteReason("");
-                            setDeleteTarget(game);
-                          }}
-                          className="border-rose-400/25 bg-rose-500/5 text-rose-300 hover:border-rose-400/40 hover:bg-rose-500/10"
-                        >
-                          <Trash2 className="size-4" />
-                          {t("deleteGame")}
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  );
+                })()
               ))}
             </div>
           )}

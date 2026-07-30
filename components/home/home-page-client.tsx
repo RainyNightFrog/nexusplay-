@@ -37,6 +37,7 @@ import { FeaturedGames } from "@/components/home/featured-games";
 import { AnnouncementMarquee } from "@/components/home/announcement-marquee";
 import { HomePersonalizedSections } from "@/components/home/home-personalized-sections";
 import { HomeSupporterSection } from "@/components/home/home-supporter-section";
+import { GameCard } from "@/components/home/game-card";
 import { PriceFilterSidebar } from "@/components/home/price-filter-sidebar";
 import {
   BentoGameGrid,
@@ -62,6 +63,10 @@ import { ALL_CATEGORY } from "@/lib/home-copy";
 import { useGameI18n } from "@/hooks/use-game-i18n";
 import { useGameFavoriteActions } from "@/hooks/use-game-favorite-actions";
 import { cn } from "@/lib/utils";
+import {
+  getFeaturedGames,
+  getRecommendedGames,
+} from "@/lib/virtual-games-seed-data";
 
 function isDefaultHomeQuery(
   category: FilterCategory,
@@ -75,6 +80,15 @@ function isDefaultHomeQuery(
     sort === "latest" &&
     priceFilter === "all"
   );
+}
+
+function sortGamesBySlugOrder(games: Game[], orderedSlugs: string[]) {
+  const rank = new Map(orderedSlugs.map((slug, index) => [slug, index]));
+  return [...games].sort((a, b) => {
+    const left = rank.get(a.slug ?? "") ?? Number.MAX_SAFE_INTEGER;
+    const right = rank.get(b.slug ?? "") ?? Number.MAX_SAFE_INTEGER;
+    return left - right;
+  });
 }
 
 type HomePageClientProps = {
@@ -289,6 +303,60 @@ export function HomePageClient({ initialGames }: HomePageClientProps) {
   const activeSortLabel = t(`sort.${sort}`);
   const activePriceFilterLabel = t(`priceFilter.${priceFilter}`);
   const categoryLabel = (value: FilterCategory) => localizedTag(value);
+  const phaserFeaturedEyebrow = t.has("phaserFeaturedEyebrow")
+    ? t("phaserFeaturedEyebrow")
+    : "New Phaser 3 spotlight";
+  const phaserFeaturedTitle = t.has("phaserFeaturedTitle")
+    ? t("phaserFeaturedTitle")
+    : "Fresh esports arcade drops";
+  const phaserFeaturedDesc = t.has("phaserFeaturedDesc")
+    ? t("phaserFeaturedDesc")
+    : "Handpicked Phaser 3 releases with neon combat, rhythm pressure, and survival intensity.";
+  const recommendedEyebrow = t.has("recommendedEyebrow")
+    ? t("recommendedEyebrow")
+    : "Recommended for you";
+  const recommendedTitle = t.has("recommendedTitle")
+    ? t("recommendedTitle")
+    : "More virtual picks";
+  const recommendedDesc = t.has("recommendedDesc")
+    ? t("recommendedDesc")
+    : "A rotating set of arcade favorites selected from the virtual creator lineup.";
+  const featuredSeedSlugs = useMemo(
+    () => getFeaturedGames().map((game) => game.slug),
+    []
+  );
+  const recommendedSeedSlugs = useMemo(
+    () => getRecommendedGames().map((game) => game.slug),
+    []
+  );
+  const featuredSeedSlugSet = useMemo(
+    () => new Set(featuredSeedSlugs),
+    [featuredSeedSlugs]
+  );
+  const recommendedSeedSlugSet = useMemo(
+    () => new Set(recommendedSeedSlugs),
+    [recommendedSeedSlugs]
+  );
+  const featuredShowcaseGames = useMemo(
+    () =>
+      sortGamesBySlugOrder(
+        games.filter((game) => featuredSeedSlugSet.has(game.slug ?? "")),
+        featuredSeedSlugs
+      ).slice(0, 6),
+    [games, featuredSeedSlugs, featuredSeedSlugSet]
+  );
+  const recommendedShowcaseGames = useMemo(
+    () =>
+      sortGamesBySlugOrder(
+        games.filter(
+          (game) =>
+            recommendedSeedSlugSet.has(game.slug ?? "") &&
+            !featuredSeedSlugSet.has(game.slug ?? "")
+        ),
+        recommendedSeedSlugs
+      ).slice(0, 8),
+    [games, recommendedSeedSlugs, recommendedSeedSlugSet, featuredSeedSlugSet]
+  );
   const selectedTagsLabel = useMemo(
     () => selectedTags.map((tag) => localizedTag(tag)).join(" · "),
     [selectedTags, localizedTag]
@@ -463,6 +531,67 @@ export function HomePageClient({ initialGames }: HomePageClientProps) {
           favoriteBusyId={favoriteBusyId}
           onFavoriteClick={(gameId) => void handleFavoriteClick(gameId)}
         />
+
+        {featuredShowcaseGames.length > 0 && (
+          <section className="pb-12">
+            <div className="mb-6 text-center">
+              <div className="mb-2 inline-flex items-center justify-center gap-2 text-sm font-medium text-cyan-400">
+                <Sparkles className="size-4" />
+                {phaserFeaturedEyebrow}
+              </div>
+              <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+                {phaserFeaturedTitle}
+              </h2>
+              <p className="mt-1 text-sm text-zinc-500">
+                {phaserFeaturedDesc}
+              </p>
+            </div>
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+              {featuredShowcaseGames.map((game, index) => (
+                <GameCard
+                  key={game.id}
+                  game={game}
+                  index={index}
+                  hotPick={index === 0}
+                  favoriteCount={favoriteCounts[game.id]}
+                  favorited={favoritedIds.has(game.id)}
+                  favoriteBusy={favoriteBusyId === game.id}
+                  onFavoriteClick={() => void handleFavoriteClick(game.id)}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {recommendedShowcaseGames.length > 0 && (
+          <section className="pb-12">
+            <div className="mb-6 text-center">
+              <div className="mb-2 inline-flex items-center justify-center gap-2 text-sm font-medium text-fuchsia-400">
+                <Zap className="size-4" />
+                {recommendedEyebrow}
+              </div>
+              <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+                {recommendedTitle}
+              </h2>
+              <p className="mt-1 text-sm text-zinc-500">
+                {recommendedDesc}
+              </p>
+            </div>
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              {recommendedShowcaseGames.map((game, index) => (
+                <GameCard
+                  key={game.id}
+                  game={game}
+                  index={index}
+                  favoriteCount={favoriteCounts[game.id]}
+                  favorited={favoritedIds.has(game.id)}
+                  favoriteBusy={favoriteBusyId === game.id}
+                  onFavoriteClick={() => void handleFavoriteClick(game.id)}
+                />
+              ))}
+            </div>
+          </section>
+        )}
 
         <HomeSupporterSection />
 

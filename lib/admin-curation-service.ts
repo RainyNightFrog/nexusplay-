@@ -3,6 +3,7 @@ import { createServerSupabase } from "@/lib/supabase-server";
 export type AdminCurationGameRecord = {
   id: number;
   title: string;
+  slug: string | null;
   coverUrl: string;
   category: string;
   publishStatus: string;
@@ -18,7 +19,7 @@ export async function listAdminCurationGames(): Promise<AdminCurationGameRecord[
   const { data, error } = await supabase
     .from("games")
     .select(
-      "id, title, cover_url, category, publish_status, status, is_featured, featured_badge, featured_sort, plays_count"
+      "id, title, slug, cover_url, category, publish_status, status, is_featured, featured_badge, featured_sort, plays_count"
     )
     .eq("status", "approved")
     .order("is_featured", { ascending: false })
@@ -30,6 +31,7 @@ export async function listAdminCurationGames(): Promise<AdminCurationGameRecord[
   return (data ?? []).map((game) => ({
     id: game.id as number,
     title: game.title as string,
+    slug: (game.slug as string | null) ?? null,
     coverUrl: game.cover_url as string,
     category: game.category as string,
     publishStatus: game.publish_status as string,
@@ -63,7 +65,7 @@ export async function updateAdminGameCuration(params: {
     .update(patch)
     .eq("id", params.gameId)
     .select(
-      "id, title, cover_url, category, publish_status, status, is_featured, featured_badge, featured_sort, plays_count"
+      "id, title, slug, cover_url, category, publish_status, status, is_featured, featured_badge, featured_sort, plays_count"
     )
     .maybeSingle();
 
@@ -73,6 +75,7 @@ export async function updateAdminGameCuration(params: {
   return {
     id: data.id as number,
     title: data.title as string,
+    slug: (data.slug as string | null) ?? null,
     coverUrl: data.cover_url as string,
     category: data.category as string,
     publishStatus: data.publish_status as string,

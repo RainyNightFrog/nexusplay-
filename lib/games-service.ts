@@ -4,6 +4,7 @@ import { createServerSupabase } from "@/lib/supabase-server";
 import { mapRecordToGame } from "@/lib/games-data";
 import type { Game, SortOption } from "@/lib/games";
 import type { GamePriceFilterParams } from "@/lib/game-price-filter";
+import { getNewPhaserExposureScore } from "@/lib/virtual-games-seed-data";
 
 export type GetGamesOptions = {
   category?: string;
@@ -116,6 +117,19 @@ async function queryGamesFromDb(options: GetGamesOptions = {}): Promise<Game[]> 
     const aFeatured = a.featured ? 1 : 0;
     const bFeatured = b.featured ? 1 : 0;
     if (aFeatured !== bFeatured) return bFeatured - aFeatured;
+
+    const aBoost = getNewPhaserExposureScore(a.slug);
+    const bBoost = getNewPhaserExposureScore(b.slug);
+    if (aBoost !== bBoost) return bBoost - aBoost;
+
+    if (sort === "views") {
+      return (b.players ?? 0) - (a.players ?? 0);
+    }
+
+    if (sort === "rating") {
+      return (b.ratingAvg ?? 0) - (a.ratingAvg ?? 0);
+    }
+
     return 0;
   });
 }

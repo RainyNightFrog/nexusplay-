@@ -8,6 +8,7 @@ export type FeedbackStatus = "unread" | "resolved";
 export type AdminGameRecord = {
   id: number;
   title: string;
+  slug?: string | null;
   description: string;
   category: string;
   cover_url: string;
@@ -55,7 +56,7 @@ export async function listAdminGames(
   let query = supabase
     .from("games")
     .select(
-      "id, title, description, category, cover_url, creator_id, created_at, publish_status, status, rejection_reason"
+      "id, title, slug, description, category, cover_url, creator_id, created_at, publish_status, status, rejection_reason"
     )
     .order("created_at", { ascending: false });
 
@@ -91,7 +92,7 @@ export async function updateGameApproval(
     .update(updates)
     .eq("id", gameId)
     .select(
-      "id, title, description, category, cover_url, creator_id, created_at, publish_status, status, rejection_reason"
+      "id, title, slug, description, category, cover_url, creator_id, created_at, publish_status, status, rejection_reason"
     )
     .maybeSingle();
 

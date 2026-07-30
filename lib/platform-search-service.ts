@@ -3,6 +3,7 @@ import type { Game } from "@/lib/games";
 import { resolveEquippedTitles } from "@/lib/equipped-title-service";
 import type { EquippedTitle } from "@/lib/titles";
 import { createServerSupabase } from "@/lib/supabase-server";
+import { getNewPhaserExposureScore } from "@/lib/virtual-games-seed-data";
 
 export type SearchCreatorResult = {
   id: string;
@@ -34,6 +35,23 @@ function gameMatchesQuery(game: Game, normalized: string) {
     .toLowerCase();
 
   return haystack.includes(normalized);
+}
+
+function searchRank(game: Game, normalized: string) {
+  var score = 0;
+  const title = game.title.toLowerCase();
+  const slug = (game.slug ?? "").toLowerCase();
+
+  if (title === normalized || slug === normalized) score += 120;
+  else if (title.startsWith(normalized) || slug.startsWith(normalized)) score += 80;
+  else if (title.includes(normalized)) score += 45;
+
+  score += getNewPhaserExposureScore(game.slug) * 2;
+  score += game.featured ? 12 : 0;
+  score += Math.min(game.players ?? 0, 50_000) / 5000;
+  score += Math.min(game.ratingAvg ?? 0, 5) * 3;
+
+  return score;
 }
 
 async function fetchGamesMatchingText(
@@ -118,6 +136,7 @@ export async function searchPlatform(
 
   const games = [...gameMap.values()]
     .filter((game) => gameMatchesQuery(game, normalized))
+    .sort((a, b) => searchRank(b, normalized) - searchRank(a, normalized))
     .slice(0, limit);
 
   const creatorCounts = new Map<string, number>();

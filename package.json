@@ -96,6 +96,8 @@
     "db:seed": "node scripts/seed-platform.mjs",
     "db:seed-rnf-followers": "node scripts/seed-rainynightfrog-followers.mjs",
     "db:seed-virtual-games": "npx tsx scripts/seed-virtual-games.ts",
+    "db:seed-5-new-games": "node scripts/run-seed-5-new-games.mjs",
+    "db:feature-phaser-games": "node scripts/run-feature-5-new-phaser-games.mjs",
     "upload:void-gacha": "npx tsx scripts/upload-void-gacha-zip.ts",
     "db:assign-creator": "node scripts/assign-game-creator.mjs",
     "db:admin": "node scripts/run-admin-control-center.mjs",

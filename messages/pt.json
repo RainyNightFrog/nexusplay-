@@ -298,7 +298,6 @@
     "supporterWallLoading": "Carregando apoiadores…",
     "supporterCount": "{count} apoiadores",
     "supporterWallLegendTitle": "LEGEND",
-
     "supporterWallSvipTitle": "SVIP",
     "supporterWallVipTitle": "VIP",
     "supporterPerkBadge": "Distintivo exclusivo",
@@ -383,7 +382,13 @@
     "emptyHintPrice": "Tente outra faixa de preço ou limpe o filtro.",
     "viewAllPrices": "Ver todos os preços",
     "hotPickBadge": "Hot Pick",
-    "upcomingBadge": "🚀 Coming Soon"
+    "upcomingBadge": "🚀 Coming Soon",
+    "phaserFeaturedEyebrow": "New Phaser 3 spotlight",
+    "phaserFeaturedTitle": "Fresh esports arcade drops",
+    "phaserFeaturedDesc": "Handpicked Phaser 3 releases with neon combat, rhythm pressure, and survival intensity.",
+    "recommendedEyebrow": "Recommended for you",
+    "recommendedTitle": "More virtual picks",
+    "recommendedDesc": "A rotating set of arcade favorites selected from the virtual creator lineup."
   },
   "game": {
     "communityForum": "Fórum da comunidade",
@@ -2738,5 +2743,32 @@
     "settings_desc": "Adicione a RainyNightFrog ao ecrã inicial para jogar sem barra de endereço",
     "unavailable": "Instalação rápida indisponível. Use Chrome ou Safari.",
     "banner_close": "Fechar"
+  },
+  "games": {
+    "cyber-blade-dash": {
+      "title": "Cyber Blade Dash",
+      "badge": "Virtual arcade",
+      "description": "Wield a neon blade to carve through hostile drones, chain hyper-speed slashes and burst dashes, then absorb energy cores to keep the run alive."
+    },
+    "neon-pinball-frenzy": {
+      "title": "Neon Pinball Frenzy",
+      "badge": "Virtual arcade",
+      "description": "Keep the plasma ball in play, slam color-shifting bumpers and nudge into Fever as combo rebounds turn the whole arena into a neon score storm."
+    },
+    "void-rhythm-beat": {
+      "title": "Void Rhythm Beat",
+      "badge": "Virtual arcade",
+      "description": "Hit four-lane void pulses with D / F / J / K, stack Perfect timing and protect your sync meter while the beat accelerates with danger."
+    },
+    "astro-gravity-runner": {
+      "title": "Astro Gravity Runner",
+      "badge": "Virtual arcade",
+      "description": "Flip gravity between twin star lanes, dodge pulse obstacles and collect stellar cores in an endless runner that grows faster every second."
+    },
+    "cyber-rogue-dungeon": {
+      "title": "Cyber Rogue Dungeon",
+      "badge": "Virtual arcade",
+      "description": "Survive a cyber dungeon swarm with auto-target fire, gather XP cores to upgrade your weapon level and outlast escalating machine waves."
+    }
   }
 }

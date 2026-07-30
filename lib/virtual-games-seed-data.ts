@@ -108,7 +108,30 @@ export const NEW_PHASER_GAMES: NewPhaserGameEntry[] = [
   },
 ];
 
-export const VIRTUAL_GAMES_SEED: VirtualGameSeed[] = [
+export const NEW_PHASER_GAME_PRIORITY = new Map(
+  NEW_PHASER_GAMES.map((game, index) => {
+    const base = NEW_PHASER_GAMES.length - index;
+    const featuredBoost = game.isFeatured ? 20 : 0;
+    const recommendedBoost = game.isRecommended ? 10 : 0;
+    return [game.slug, base + featuredBoost + recommendedBoost];
+  })
+);
+
+export function getNewPhaserExposureScore(slug?: string | null): number {
+  if (!slug) return 0;
+  return NEW_PHASER_GAME_PRIORITY.get(slug) ?? 0;
+}
+
+export const NEW_PHASER_GAME_SLUGS = NEW_PHASER_GAMES.map((game) => game.slug);
+
+const NEW_PHASER_GAME_SLUG_SET = new Set(NEW_PHASER_GAME_SLUGS);
+
+export function isNewPhaserGameSlug(slug?: string | null): boolean {
+  if (!slug) return false;
+  return NEW_PHASER_GAME_SLUG_SET.has(slug);
+}
+
+export const EXISTING_VIRTUAL_GAMES: VirtualGameSeed[] = [
   {
     slug: "neon-snake-extreme",
     title: "Neon Snake Extreme",
@@ -270,6 +293,55 @@ export const VIRTUAL_GAMES_SEED: VirtualGameSeed[] = [
     daysAgo: 4,
   },
 ];
+
+export const VIRTUAL_GAMES_SEED: VirtualGameSeed[] = [...EXISTING_VIRTUAL_GAMES];
+
+const FEATURED_EXISTING_SLUGS = new Set([
+  "rainy-frog-dash",
+  "neon-tetromino-rush",
+  "cyber-neon-runner",
+]);
+
+const RECOMMENDED_EXISTING_SLUGS = new Set([
+  "void-brick-breaker",
+  "rainy-frog-dash",
+  "neon-tetromino-rush",
+  "galactic-invader-2026",
+  "cyber-neon-runner",
+]);
+
+function toUnifiedEntry(game: VirtualGameSeed): NewPhaserGameEntry {
+  return {
+    id: game.slug,
+    slug: game.slug,
+    titleKey: `games.${game.slug}.title`,
+    badgeKey: `games.${game.slug}.badge`,
+    descriptionKey: `games.${game.slug}.description`,
+    coverUrl: `/games/${game.slug}/cover.svg`,
+    category: game.category,
+    tags: [...game.tags],
+    isFeatured: FEATURED_EXISTING_SLUGS.has(game.slug),
+    isRecommended: RECOMMENDED_EXISTING_SLUGS.has(game.slug),
+    releaseDate: new Date(Date.now() - game.daysAgo * 86_400_000)
+      .toISOString()
+      .slice(0, 10),
+    engine: "Phaser 3 (WebGL)",
+  };
+}
+
+export const ALL_VIRTUAL_GAME_ENTRIES: NewPhaserGameEntry[] = [
+  ...EXISTING_VIRTUAL_GAMES.map(toUnifiedEntry),
+  ...NEW_PHASER_GAMES,
+];
+
+export const getFeaturedGames = () =>
+  ALL_VIRTUAL_GAME_ENTRIES.filter((game) => game.isFeatured);
+
+export const getRecommendedGames = () =>
+  ALL_VIRTUAL_GAME_ENTRIES.filter((game) => game.isRecommended);
+
+export const getGamesByCategory = (category: string) =>
+  ALL_VIRTUAL_GAME_ENTRIES.filter((game) => game.category === category);
 
 export const VIRTUAL_GAMES_SEED_BY_SLUG = new Map(
   VIRTUAL_GAMES_SEED.map((game) => [game.slug, game])

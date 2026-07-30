@@ -24,14 +24,33 @@ import type { AdminCurationGameRecord } from "@/lib/admin-curation-service";
 import { AdminPanelFrame } from "@/components/admin/admin-panel-frame";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 import { cn } from "@/lib/utils";
+import {
+  getNewPhaserExposureScore,
+  isNewPhaserGameSlug,
+} from "@/lib/virtual-games-seed-data";
+
+type CurationFilterMode = "all" | "phaser";
 
 export function AdminCurationPanel() {
   const t = useTranslations("admin");
+  const phaserBadgeLabel = t.has("curationPhaserBadge")
+    ? t("curationPhaserBadge")
+    : "RNF Phaser 3";
+  const phaserHintLabel = t.has("curationPhaserHint")
+    ? t("curationPhaserHint")
+    : "New Phaser spotlight batch";
+  const filterAllLabel = t.has("curationFilterAll")
+    ? t("curationFilterAll")
+    : "All approved";
+  const filterPhaserLabel = t.has("curationFilterPhaser")
+    ? t("curationFilterPhaser")
+    : "Phaser spotlight";
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [games, setGames] = useState<AdminCurationGameRecord[]>([]);
   const [savingId, setSavingId] = useState<number | null>(null);
+  const [filterMode, setFilterMode] = useState<CurationFilterMode>("phaser");
   const [drafts, setDrafts] = useState<
     Record<number, { featuredBadge: string; featuredSort: string }>
   >({});
@@ -130,6 +149,17 @@ export function AdminCurationPanel() {
     }));
   }
 
+  const visibleGames = (
+    filterMode === "phaser"
+      ? games.filter((game) => isNewPhaserGameSlug(game.slug))
+      : games
+  ).slice().sort((a, b) => {
+    const phaserDelta =
+      getNewPhaserExposureScore(b.slug) - getNewPhaserExposureScore(a.slug);
+    if (phaserDelta !== 0) return phaserDelta;
+    return b.featuredSort - a.featuredSort;
+  });
+
   return (
     <AdminPanelFrame
       title={t("tabCuration")}
@@ -149,19 +179,56 @@ export function AdminCurationPanel() {
           <CardDescription>{t("curationListDesc")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 text-sm text-cyan-100">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge className="border border-cyan-400/30 bg-cyan-500/15 text-cyan-100">
+                  {phaserBadgeLabel}
+                </Badge>
+                <span>{phaserHintLabel}</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setFilterMode("phaser")}
+                  className={cn(
+                    "border-cyan-400/30 bg-transparent text-cyan-100",
+                    filterMode === "phaser" && "bg-cyan-500/20"
+                  )}
+                >
+                  {filterPhaserLabel}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setFilterMode("all")}
+                  className={cn(
+                    "border-white/15 bg-transparent text-zinc-100",
+                    filterMode === "all" && "bg-white/10"
+                  )}
+                >
+                  {filterAllLabel}
+                </Button>
+              </div>
+            </div>
+          </div>
           {loading ? (
             <AdminLoadingState spinnerClassName="text-yellow-400" minHeightClassName="min-h-0" />
-          ) : games.length === 0 ? (
+          ) : visibleGames.length === 0 ? (
             <p className="py-8 text-center text-sm text-zinc-500">
               {t("curationEmpty")}
             </p>
           ) : (
-            games.map((game) => {
+            visibleGames.map((game) => {
               const draft = drafts[game.id] ?? {
                 featuredBadge: "",
                 featuredSort: "0",
               };
               const isSaving = savingId === game.id;
+              const isNewPhaser = isNewPhaserGameSlug(game.slug);
 
               return (
                 <div
@@ -180,12 +247,18 @@ export function AdminCurationPanel() {
                             {t("curationFeatured")}
                           </Badge>
                         )}
+                        {isNewPhaser && (
+                          <Badge className="border border-cyan-400/30 bg-cyan-500/10 text-cyan-100">
+                            {phaserBadgeLabel}
+                          </Badge>
+                        )}
                         <Badge className="border border-white/10 bg-white/5 text-zinc-300">
                           {game.publishStatus}
                         </Badge>
                       </div>
                       <p className="mt-0.5 text-xs text-zinc-500">
                         {game.category} · {game.playsCount} {t("curationPlays")}
+                        {isNewPhaser ? ` · ${phaserHintLabel}` : ""}
                       </p>
                     </div>
                     <Button
