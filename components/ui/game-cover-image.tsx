@@ -9,7 +9,11 @@ type GameCoverImageProps = Omit<ImageProps, "src" | "alt"> & {
 
 function shouldUseUnoptimized(src: string) {
   const normalized = src.split("?")[0]?.toLowerCase() ?? "";
-  return normalized.endsWith(".svg");
+  return (
+    normalized.endsWith(".svg") ||
+    normalized.startsWith("/covers/") ||
+    /\/games\/[^/]+\/cover\.(png|jpe?g|webp)$/.test(normalized)
+  );
 }
 
 export function GameCoverImage({

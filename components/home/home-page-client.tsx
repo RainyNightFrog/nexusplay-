@@ -317,10 +317,10 @@ export function HomePageClient({ initialGames }: HomePageClientProps) {
     : "Recommended for you";
   const recommendedTitle = t.has("recommendedTitle")
     ? t("recommendedTitle")
-    : "More virtual picks";
+    : "More featured picks";
   const recommendedDesc = t.has("recommendedDesc")
     ? t("recommendedDesc")
-    : "A rotating set of arcade favorites selected from the virtual creator lineup.";
+    : "A rotating set of arcade favorites selected from the creator lineup.";
   const featuredSeedSlugs = useMemo(
     () => getFeaturedGames().map((game) => game.slug),
     []

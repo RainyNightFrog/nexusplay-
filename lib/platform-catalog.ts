@@ -271,7 +271,7 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
     categories: ["動作", "2D"],
     description:
       "揮舞霓虹光刃切碎敵方無人機，解放超高速突進與連續斬擊，在能量核心之間維持零失誤壓制。",
-    coverPath: "/games/cyber-blade-dash/cover.svg",
+    coverPath: "/games/cyber-blade-dash/cover.png",
     playsCount: 8_460,
     likesCount: 412,
     sharesCount: 268,
@@ -297,7 +297,7 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
     categories: ["休閒", "物理"],
     description:
       "操控雙擋板守住高能鋼珠，撞擊變色 Bumper 疊高 Fever 狂熱分數，讓整個場館陷入霓虹反彈風暴。",
-    coverPath: "/games/neon-pinball-frenzy/cover.svg",
+    coverPath: "/games/neon-pinball-frenzy/cover.png",
     playsCount: 6_920,
     likesCount: 305,
     sharesCount: 214,
@@ -322,7 +322,7 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
     categories: ["音樂節奏", "休閒"],
     description:
       "跟隨虛空四軌脈衝按下 D / F / J / K，以 Perfect 疊高連擊，同步值每秒都在危險倍率中被放大考驗。",
-    coverPath: "/games/void-rhythm-beat/cover.svg",
+    coverPath: "/games/void-rhythm-beat/cover.png",
     playsCount: 7_880,
     likesCount: 438,
     sharesCount: 322,
@@ -348,7 +348,7 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
     categories: ["平台跳躍", "科幻"],
     description:
       "在雙層星軌間翻轉重力閃避脈衝障礙，收集星核維持里程分數，越跑越快的節奏將玩家逼入極限。",
-    coverPath: "/games/astro-gravity-runner/cover.svg",
+    coverPath: "/games/astro-gravity-runner/cover.png",
     playsCount: 7_120,
     likesCount: 341,
     sharesCount: 229,
@@ -373,7 +373,7 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
     categories: ["RPG", "Roguelike"],
     description:
       "深入賽博地牢對抗機械怪潮，自動索敵火力隨 XP 模組升級暴漲，生存越久危險倍率越殘暴。",
-    coverPath: "/games/cyber-rogue-dungeon/cover.svg",
+    coverPath: "/games/cyber-rogue-dungeon/cover.png",
     playsCount: 8_140,
     likesCount: 476,
     sharesCount: 337,

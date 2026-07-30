@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { GameCoverImage } from "@/components/ui/game-cover-image";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Globe, Heart, UserRound } from "lucide-react";
@@ -203,7 +203,7 @@ export default function CreatorPageClient({
                   )}
                 >
                   <div className="relative aspect-video">
-                    <Image
+                    <GameCoverImage
                       src={game.coverUrl}
                       alt={game.title}
                       fill

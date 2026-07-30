@@ -1,20 +1,31 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#19120a" />
+      <stop offset="0%" stop-color="#1b120b" />
+      <stop offset="58%" stop-color="#111827" />
       <stop offset="100%" stop-color="#0f172a" />
     </linearGradient>
+    <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fef3c7" stop-opacity="0.9" />
+      <stop offset="70%" stop-color="#fbbf24" stop-opacity="0.45" />
+      <stop offset="100%" stop-color="#f59e0b" stop-opacity="0" />
+    </radialGradient>
   </defs>
-  <rect width="960" height="540" fill="url(#bg)" />
-  <g opacity="0.18" stroke="#fbbf24">
-    <path d="M0 90h960M0 190h960M0 290h960M0 390h960" />
-    <path d="M100 0v540M260 0v540M420 0v540M580 0v540M740 0v540M900 0v540" />
+  <rect width="960" height="600" fill="url(#bg)" />
+  <g opacity="0.16" stroke="#fbbf24" stroke-width="2">
+    <path d="M0 102h960M0 198h960M0 294h960M0 390h960M0 486h960" />
+    <path d="M90 0v600M234 0v600M378 0v600M522 0v600M666 0v600M810 0v600" />
   </g>
-  <circle cx="480" cy="270" r="42" fill="#fbbf24" />
-  <circle cx="350" cy="220" r="28" fill="#fb7185" />
-  <circle cx="620" cy="320" r="28" fill="#a78bfa" />
-  <circle cx="320" cy="340" r="16" fill="#34d399" />
-  <circle cx="650" cy="200" r="16" fill="#34d399" />
-  <text x="480" y="110" text-anchor="middle" fill="#f8fafc" font-size="34" font-family="Segoe UI, Microsoft JhengHei, sans-serif" font-weight="700">CYBER ROGUE DUNGEON</text>
-  <text x="480" y="152" text-anchor="middle" fill="#fcd34d" font-size="24" font-family="Segoe UI, Microsoft JhengHei, sans-serif">ýZ0bX</text>
+  <circle cx="480" cy="286" r="96" fill="url(#coreGlow)" />
+  <circle cx="480" cy="286" r="38" fill="#fbbf24" />
+  <circle cx="332" cy="220" r="26" fill="#fb7185" opacity="0.95" />
+  <circle cx="634" cy="334" r="26" fill="#a78bfa" opacity="0.95" />
+  <circle cx="320" cy="360" r="16" fill="#34d399" opacity="0.95" />
+  <circle cx="662" cy="196" r="16" fill="#34d399" opacity="0.95" />
+  <path d="M352 250l34 22-6 39 35-20 35 20-6-39 34-22-39-7-24-31-24 31z" fill="#fde68a" opacity="0.88" />
+  <path d="M560 214l18 12-4 22 20-11 20 11-4-22 18-12-22-4-12-18-12 18z" fill="#c4b5fd" opacity="0.86" />
+  <rect x="96" y="76" width="158" height="34" rx="17" fill="#22170f" stroke="#fbbf24" stroke-width="2" opacity="0.92" />
+  <text x="175" y="99" text-anchor="middle" fill="#fde68a" font-size="17" font-family="Segoe UI, Microsoft JhengHei, sans-serif" font-weight="700">VIRTUAL ARCADE</text>
+  <text x="480" y="114" text-anchor="middle" fill="#f8fafc" font-size="33" font-family="Segoe UI, Microsoft JhengHei, sans-serif" font-weight="800" letter-spacing="1.4">CYBER ROGUE DUNGEON</text>
+  <text x="480" y="158" text-anchor="middle" fill="#fcd34d" font-size="24" font-family="Segoe UI, Microsoft JhengHei, sans-serif" font-weight="700">&#36093;&#21338;&#22320;&#29282;&#20518;&#23384;&#32773;</text>
 </svg>

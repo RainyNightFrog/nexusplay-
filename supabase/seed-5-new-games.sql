@@ -50,7 +50,7 @@ new_games as (
         'astro-gravity-runner',
         '翻轉重力穿越星際裂縫，在失重跑道中閃避脈衝陷阱並連續衝刺破關。',
         'Platformer',
-        '/games/astro-gravity-runner/cover.svg',
+        '/games/astro-gravity-runner/cover.png',
         '/games/astro-gravity-runner/index.html'
       ),
       (
@@ -58,7 +58,7 @@ new_games as (
         'cyber-blade-dash',
         '揮舞霓虹光刃切碎敵方無人機，連續斬擊累積超光速連段與終結爆發。',
         'Action',
-        '/games/cyber-blade-dash/cover.svg',
+        '/games/cyber-blade-dash/cover.png',
         '/games/cyber-blade-dash/index.html'
       ),
       (
@@ -66,7 +66,7 @@ new_games as (
         'cyber-rogue-dungeon',
         '深入賽博地牢對抗失控機械潮，收集模組升級火力並撐過逐層強化的倖存挑戰。',
         'Roguelike',
-        '/games/cyber-rogue-dungeon/cover.svg',
+        '/games/cyber-rogue-dungeon/cover.png',
         '/games/cyber-rogue-dungeon/index.html'
       ),
       (
@@ -74,7 +74,7 @@ new_games as (
         'neon-pinball-frenzy',
         '擊發高能鋼珠衝擊霓虹目標板，在多重反彈與連鎖加分中引爆全場狂熱模式。',
         'Arcade',
-        '/games/neon-pinball-frenzy/cover.svg',
+        '/games/neon-pinball-frenzy/cover.png',
         '/games/neon-pinball-frenzy/index.html'
       ),
       (
@@ -82,7 +82,7 @@ new_games as (
         'void-rhythm-beat',
         '跟隨虛空脈衝敲擊節奏光軌，以 Perfect 連擊壓制失序雜訊並刷新最高分。',
         'Rhythm',
-        '/games/void-rhythm-beat/cover.svg',
+        '/games/void-rhythm-beat/cover.png',
         '/games/void-rhythm-beat/index.html'
       )
   ) as seed(title, slug, description, category, cover_url, game_url)

@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { GameCoverImage } from "@/components/ui/game-cover-image";
 import { useCallback, useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import {
@@ -318,7 +318,7 @@ export function AdminAnalyticsPanel({ onError }: AdminAnalyticsPanelProps) {
                         {index + 1}
                       </div>
                       <div className="relative size-14 shrink-0 overflow-hidden rounded-lg">
-                        <Image
+                        <GameCoverImage
                           src={game.coverUrl}
                           alt={game.title}
                           fill

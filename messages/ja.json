@@ -387,8 +387,8 @@
     "phaserFeaturedTitle": "Fresh esports arcade drops",
     "phaserFeaturedDesc": "Handpicked Phaser 3 releases with neon combat, rhythm pressure, and survival intensity.",
     "recommendedEyebrow": "Recommended for you",
-    "recommendedTitle": "More virtual picks",
-    "recommendedDesc": "A rotating set of arcade favorites selected from the virtual creator lineup."
+    "recommendedTitle": "More featured picks",
+    "recommendedDesc": "A rotating set of arcade favorites selected from the creator lineup."
   },
   "game": {
     "communityForum": "コミュニティフォーラム",
@@ -1234,43 +1234,43 @@
       "description": "未来のビッグデータ統計とギャンブル戦略が融合した頭脳戦。ネオンに彩られたサイバー夜の街で、独自の012マトリックスとフルコース対戦戦略で相手の次の一手を読め。確率の世界で、王はあなただけ。"
     },
     "neon-snake-extreme": {
-      "badge": "Virtual arcade",
+      "badge": "Neon arcade",
       "description": "Five food types, moving hazards, nitro boost and bullet-time slow-mo; combo multipliers plus touch D-pad / swipe steering. Four difficulties — chase a new record!"
     },
     "cyber-bubble-pop": {
-      "badge": "Virtual arcade",
+      "badge": "Neon arcade",
       "description": "Aim preview, ceiling push, lightning / black-hole / bomb specials and timed chain combos. A cyber-esports remake of Bubble Shooter — touch ready."
     },
     "quantum-tic-tac-toe": {
-      "badge": "Virtual arcade",
+      "badge": "Neon arcade",
       "description": "5×5 five-in-a-row with quantum entanglement dual placement and timed turns; four AI tiers, win-streak stats and touch placement."
     },
     "void-brick-breaker": {
-      "badge": "Virtual arcade",
+      "badge": "Neon arcade",
       "description": "Multi-ball / laser / magnet / sticky power-ups, explosive and steel bricks, break combos and stardust particles. Four-difficulty void breaker with drag + virtual pad."
     },
     "rainy-frog-dash": {
-      "badge": "Virtual arcade",
+      "badge": "Neon arcade",
       "description": "Rainy neon parkour: double jump, glide, shield and rocket pickups, coin combos, formation hazards and weather phases. Touch ready!"
     },
     "neon-tetromino-rush": {
-      "badge": "Virtual arcade",
+      "badge": "Neon arcade",
       "description": "Ghost preview, hold, five-piece next queue, neon fever and line combos. Harder difficulties drop faster — Extreme pushes garbage rows."
     },
     "galactic-invader-2026": {
-      "badge": "Virtual arcade",
+      "badge": "Neon arcade",
       "description": "Four weapon tiers, shields, boss barrages and HP bars. Defend Earth 2026 with keyboard or touch move + fire."
     },
     "memory-matrix-glitch": {
-      "badge": "Virtual arcade",
+      "badge": "Neon arcade",
       "description": "Timed memory matching with glitch flips, combo multipliers and bomb penalties. Clear stages before the clock runs out."
     },
     "overdrive-cyber-pong": {
-      "badge": "Virtual arcade",
+      "badge": "Neon arcade",
       "description": "Curveball spin, gravity wells, AI tiers and local versus. Touch-drag paddles for neon arcade rallies."
     },
     "cyber-neon-runner": {
-      "badge": "Virtual arcade",
+      "badge": "Neon arcade",
       "description": "Jump, slide and laser through Night City. Shields, magnets, boosts and milestone events — endless neon runner, touch ready."
     }
   },
@@ -2747,27 +2747,27 @@
   "games": {
     "cyber-blade-dash": {
       "title": "Cyber Blade Dash",
-      "badge": "Virtual arcade",
+      "badge": "Neon arcade",
       "description": "Wield a neon blade to carve through hostile drones, chain hyper-speed slashes and burst dashes, then absorb energy cores to keep the run alive."
     },
     "neon-pinball-frenzy": {
       "title": "Neon Pinball Frenzy",
-      "badge": "Virtual arcade",
+      "badge": "Neon arcade",
       "description": "Keep the plasma ball in play, slam color-shifting bumpers and nudge into Fever as combo rebounds turn the whole arena into a neon score storm."
     },
     "void-rhythm-beat": {
       "title": "Void Rhythm Beat",
-      "badge": "Virtual arcade",
+      "badge": "Neon arcade",
       "description": "Hit four-lane void pulses with D / F / J / K, stack Perfect timing and protect your sync meter while the beat accelerates with danger."
     },
     "astro-gravity-runner": {
       "title": "Astro Gravity Runner",
-      "badge": "Virtual arcade",
+      "badge": "Neon arcade",
       "description": "Flip gravity between twin star lanes, dodge pulse obstacles and collect stellar cores in an endless runner that grows faster every second."
     },
     "cyber-rogue-dungeon": {
       "title": "Cyber Rogue Dungeon",
-      "badge": "Virtual arcade",
+      "badge": "Neon arcade",
       "description": "Survive a cyber dungeon swarm with auto-target fire, gather XP cores to upgrade your weapon level and outlast escalating machine waves."
     }
   }

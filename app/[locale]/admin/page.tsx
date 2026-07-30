@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { GameCoverImage } from "@/components/ui/game-cover-image";
 import { useCallback, useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { motion } from "framer-motion";
@@ -698,7 +698,7 @@ export default function AdminPage() {
                       <Card className="overflow-hidden border-white/10 bg-zinc-900/60">
                         <CardContent className="flex flex-col items-center gap-4 p-4 text-center sm:flex-row sm:items-start sm:justify-center">
                           <div className="relative h-24 w-full max-w-xs shrink-0 overflow-hidden rounded-xl sm:h-20 sm:w-32">
-                            <Image
+                            <GameCoverImage
                               src={game.cover_url}
                               alt={game.title}
                               fill

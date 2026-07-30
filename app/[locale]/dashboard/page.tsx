@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import Image from "next/image";
+import { GameCoverImage } from "@/components/ui/game-cover-image";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { motion } from "framer-motion";
@@ -689,7 +689,7 @@ export default function CreatorDashboardPage() {
                       >
                         <div className="flex min-w-0 flex-1 items-center gap-4">
                           <div className="relative size-16 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-zinc-800">
-                            <Image
+                            <GameCoverImage
                               src={game.cover_url}
                               alt={game.title}
                               fill

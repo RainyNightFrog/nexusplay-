@@ -1,20 +1,32 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#12081f" />
-      <stop offset="100%" stop-color="#1e293b" />
+      <stop offset="0%" stop-color="#14071c" />
+      <stop offset="60%" stop-color="#1d1231" />
+      <stop offset="100%" stop-color="#0f172a" />
     </linearGradient>
+    <radialGradient id="ballGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fde68a" stop-opacity="0.9" />
+      <stop offset="60%" stop-color="#fbbf24" stop-opacity="0.55" />
+      <stop offset="100%" stop-color="#f59e0b" stop-opacity="0" />
+    </radialGradient>
   </defs>
-  <rect width="960" height="540" fill="url(#bg)" />
-  <g opacity="0.18" stroke="#f472b6">
-    <path d="M0 90h960M0 190h960M0 290h960M0 390h960" />
-    <path d="M100 0v540M260 0v540M420 0v540M580 0v540M740 0v540M900 0v540" />
+  <rect width="960" height="600" fill="url(#bg)" />
+  <g opacity="0.16" stroke="#f472b6" stroke-width="2">
+    <path d="M0 100h960M0 196h960M0 292h960M0 388h960M0 484h960" />
+    <path d="M90 0v600M234 0v600M378 0v600M522 0v600M666 0v600M810 0v600" />
   </g>
-  <circle cx="480" cy="230" r="42" fill="#fbbf24" />
-  <circle cx="320" cy="280" r="28" fill="#22d3ee" opacity="0.9" />
-  <circle cx="640" cy="280" r="28" fill="#a78bfa" opacity="0.9" />
-  <rect x="300" y="390" width="140" height="24" rx="12" fill="#22d3ee" transform="rotate(-18 370 402)" />
-  <rect x="520" y="390" width="140" height="24" rx="12" fill="#a78bfa" transform="rotate(18 590 402)" />
-  <text x="480" y="138" text-anchor="middle" fill="#f8fafc" font-size="34" font-family="Segoe UI, Microsoft JhengHei, sans-serif" font-weight="700">NEON PINBALL FRENZY</text>
-  <text x="480" y="180" text-anchor="middle" fill="#f472b6" font-size="24" font-family="Segoe UI, Microsoft JhengHei, sans-serif">yÂ´Hàð</text>
+  <path d="M172 426c72-116 153-179 243-190 95-11 174 34 226 69 54 35 102 55 146 44" fill="none" stroke="#22d3ee" stroke-width="12" stroke-linecap="round" opacity="0.85" />
+  <path d="M208 448c58-69 123-108 195-115 85-8 151 28 200 58 46 29 91 44 138 36" fill="none" stroke="#a78bfa" stroke-width="8" stroke-linecap="round" opacity="0.8" />
+  <circle cx="536" cy="250" r="74" fill="url(#ballGlow)" />
+  <circle cx="536" cy="250" r="28" fill="#fde68a" />
+  <circle cx="316" cy="292" r="26" fill="#22d3ee" opacity="0.92" />
+  <circle cx="678" cy="326" r="26" fill="#a78bfa" opacity="0.92" />
+  <circle cx="420" cy="356" r="18" fill="#f472b6" opacity="0.9" />
+  <rect x="240" y="382" width="172" height="24" rx="12" fill="#22d3ee" transform="rotate(-22 326 394)" />
+  <rect x="548" y="378" width="172" height="24" rx="12" fill="#a78bfa" transform="rotate(22 634 390)" />
+  <rect x="96" y="76" width="158" height="34" rx="17" fill="#1e1633" stroke="#f472b6" stroke-width="2" opacity="0.92" />
+  <text x="175" y="99" text-anchor="middle" fill="#f9a8d4" font-size="17" font-family="Segoe UI, Microsoft JhengHei, sans-serif" font-weight="700">VIRTUAL ARCADE</text>
+  <text x="480" y="142" text-anchor="middle" fill="#f8fafc" font-size="34" font-family="Segoe UI, Microsoft JhengHei, sans-serif" font-weight="800" letter-spacing="1.5">NEON PINBALL FRENZY</text>
+  <text x="480" y="186" text-anchor="middle" fill="#f472b6" font-size="24" font-family="Segoe UI, Microsoft JhengHei, sans-serif" font-weight="700">&#38651;&#34425;&#29378;&#26292;&#24448;&#29664;&#21488;</text>
 </svg>
