@@ -1,6 +1,7 @@
 "use client";
 
 import { GameCoverImage } from "@/components/ui/game-cover-image";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Globe, Heart, UserRound } from "lucide-react";
