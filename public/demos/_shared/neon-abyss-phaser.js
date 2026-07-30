@@ -255,7 +255,7 @@
       var self = this;
       this.hazards.getChildren().slice().forEach(function (h) {
         if (!h.active) return;
-        var d = h.getData();
+        var d = h.data.values;
         if (d.type === "laser" && !d.active) {
           d.warn -= dt;
           h.setAlpha(0.25 + Math.sin(self.elapsed * 18) * 0.2);

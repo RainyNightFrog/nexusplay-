@@ -9,6 +9,7 @@
   var DEFAULT_SETTINGS = {
     sfxVolume: 0.75,
     bgmVolume: 0.45,
+    masterVolume: 0.75,
     screenShake: true,
     quality: "high",
     qualityUserChosen: false,
@@ -292,21 +293,130 @@
   var RESIZE_TYPES = ["rainynightfrog:resize", "nexusplay:resize"];
   var SHOW_MENU_MESSAGE = "rainynightfrog:show-menu";
   var SHOW_MENU_ALIASES = [SHOW_MENU_MESSAGE, "RNF_SHOW_MENU", "nexusplay:show-menu"];
+  var SET_VOLUME_ALIASES = ["rainynightfrog:set-volume", "RNF_SET_VOLUME", "nexusplay:set-volume"];
   var shellReturnToMenu = null;
+  var OVERLAY_SCENE_KEYS = [
+    "GameOverModal",
+    "SettingsScene",
+    "LeaderboardScene",
+    "DifficultyScene",
+    "ModeScene",
+    "GameScene",
+  ];
 
-  function invokeReturnToMenu() {
-    if (!shellReturnToMenu) return false;
+  function findPhaserGameInstance() {
     try {
-      shellReturnToMenu();
+      if (global.__RNF_DEMO_GAME__ && global.__RNF_DEMO_GAME__.scene) {
+        return global.__RNF_DEMO_GAME__;
+      }
+    } catch (_e0) {}
+    try {
+      if (global.Phaser && global.Phaser.GAMES && global.Phaser.GAMES.length) {
+        return global.Phaser.GAMES[0];
+      }
+    } catch (_e) {}
+    try {
+      var keys = Object.keys(global);
+      for (var i = 0; i < keys.length; i++) {
+        var k = keys[i];
+        if (!k || k.indexOf("__") !== 0) continue;
+        var v = global[k];
+        if (
+          v &&
+          typeof v === "object" &&
+          v.scene &&
+          v.canvas &&
+          typeof v.scene.start === "function"
+        ) {
+          return v;
+        }
+      }
+    } catch (_e2) {}
+    return null;
+  }
+
+  function returnPhaserToMainMenu(game) {
+    if (!game || !game.scene || typeof game.scene.start !== "function") return false;
+    try {
+      for (var i = 0; i < OVERLAY_SCENE_KEYS.length; i++) {
+        var key = OVERLAY_SCENE_KEYS[i];
+        try {
+          if (game.scene.getScene && game.scene.getScene(key)) {
+            game.scene.stop(key);
+          }
+        } catch (_stop) {}
+      }
+      if (game.scene.getScene && !game.scene.getScene("MainMenuScene")) {
+        return false;
+      }
+      game.scene.start("MainMenuScene");
       return true;
     } catch (_e) {
       return false;
     }
   }
 
+  function setShowMenuHandler(handler) {
+    shellReturnToMenu = typeof handler === "function" ? handler : null;
+  }
+
+  function invokeReturnToMenu() {
+    if (shellReturnToMenu) {
+      try {
+        shellReturnToMenu();
+        return true;
+      } catch (_e) {}
+    }
+    var game = findPhaserGameInstance();
+    if (game && returnPhaserToMainMenu(game)) return true;
+    return false;
+  }
+
   function isShowMenuMessage(type) {
     return SHOW_MENU_ALIASES.indexOf(type) >= 0;
   }
+
+  function isSetVolumeMessage(type) {
+    return SET_VOLUME_ALIASES.indexOf(type) >= 0;
+  }
+
+  function getGameVolume() {
+    var m = settings.masterVolume;
+    if (typeof m !== "number" || isNaN(m)) {
+      m = typeof settings.sfxVolume === "number" ? settings.sfxVolume : 0.75;
+    }
+    return Math.max(0, Math.min(1, m));
+  }
+
+  function scaleVolume(vol) {
+    return (Number(vol) || 0) * getGameVolume();
+  }
+
+  function applyGameVolume(volume) {
+    var v = Math.max(0, Math.min(1, Number(volume)));
+    if (isNaN(v)) v = 0.75;
+    try {
+      global.__RNF_GAME_VOLUME__ = v;
+    } catch (_e) {}
+    setSettings({
+      masterVolume: v,
+      sfxVolume: v,
+      bgmVolume: Math.min(1, Math.round(v * 60) / 100),
+    });
+    try {
+      var game = findPhaserGameInstance();
+      if (game && game.sound && typeof game.sound.volume === "number") {
+        game.sound.volume = v;
+      }
+    } catch (_p) {}
+    return v;
+  }
+
+  try {
+    if (typeof global.__RNF_GAME_VOLUME__ !== "number") {
+      global.__RNF_GAME_VOLUME__ = getGameVolume();
+    }
+  } catch (_initVol) {}
   var API_PROXY_REQUEST = "rainynightfrog:api-proxy-request";
   var API_PROXY_RESPONSE = "rainynightfrog:api-proxy-response";
   var STORAGE_GET = "rainynightfrog:storage-get";
@@ -901,6 +1011,10 @@
         invokeReturnToMenu();
         return;
       }
+      if (isSetVolumeMessage(data.type)) {
+        applyGameVolume(data.volume);
+        return;
+      }
       if (RESIZE_TYPES.indexOf(data.type) === -1) return;
       applyEmbedLayout(data.width, data.height, data.expanded);
     });
@@ -914,9 +1028,13 @@
 
   function submitScore(score, metadata) {
     var meta = metadata || {};
+    var finalScore = Math.floor(Number(score) || 0);
+    try {
+      pushLocalScore(finalScore, meta);
+    } catch (_e) {}
     var payload = {
       type: "RNF_SUBMIT_SCORE",
-      score: Math.floor(Number(score) || 0),
+      score: finalScore,
       timestamp: Date.now(),
       metadata: meta,
     };
@@ -1789,7 +1907,11 @@
     },
     getSettings: getSettings,
     setSettings: setSettings,
+    getGameVolume: getGameVolume,
+    setGameVolume: applyGameVolume,
+    scaleVolume: scaleVolume,
     submitScore: submitScore,
+    pushLocalScore: pushLocalScore,
     saveData: saveData,
     loadLocalSave: loadLocalSave,
     buildShell: buildShell,
@@ -1805,6 +1927,8 @@
     getTuning: getTuning,
     getGameId: function () { return gameId; },
     showMainMenu: invokeReturnToMenu,
+    setShowMenuHandler: setShowMenuHandler,
+    onShowMenu: setShowMenuHandler,
     isHighQuality: isHighQuality,
     t: rnfT,
     getLocale: rnfLocale,

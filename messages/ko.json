@@ -129,7 +129,10 @@
     "backToGameMenu": "게임 메뉴로 돌아가기",
     "backToGameMenuDone": "게임 메뉴로 돌아갔습니다 — 난이도를 다시 선택할 수 있습니다",
     "backToGameMenuFailed": "게임에 연결할 수 없습니다. 페이지를 새로고침한 뒤 다시 시도하세요",
-    "copySubdomainUrl": "Copy URL"
+    "gameVolume": "게임 볼륨",
+    "gameVolumeMute": "음소거",
+    "gameVolumeUnmute": "음소거 해제",
+    "gameVolumeClose": "볼륨 닫기","copySubdomainUrl": "Copy URL"
   },
   "home": {
     "statsPlaying": "플레이 중",

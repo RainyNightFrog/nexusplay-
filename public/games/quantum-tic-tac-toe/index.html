@@ -17,7 +17,9 @@
   <script src="/sdk/phaser.min.js"></script>
   <script src="/sdk/rnf-i18n.js?v=20260730c"></script>
   <script src="/sdk/rnf-game-packs.js?v=20260730c"></script>
-  <script src="/sdk/rnf-game-sdk.js?v=20260730c"></script>
+  <script src="/sdk/rnf-game-sdk.js?v=20260731e"></script>
+  <script src="/games/_shared/rnf-phaser-leaderboard.js?v=20260731b"></script>
+  <script src="/games/_shared/rnf-phaser-help.js?v=20260731d"></script>
 </head>
 <body>
   <div id="game-host"></div>
@@ -136,8 +138,15 @@
     if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
     return audioCtx;
   }
+    function rnfGameVolMul() {
+    try {
+      if (typeof RNF !== "undefined" && RNF.getGameVolume) return RNF.getGameVolume();
+      if (typeof window !== "undefined" && typeof window.__RNF_GAME_VOLUME__ === "number") return window.__RNF_GAME_VOLUME__;
+    } catch (_e) {}
+    return 1;
+  }
   function tone(freq, dur, type, vol, slide) {
-    if (!gameSettings.sfx) return;
+    if (!gameSettings.sfx || rnfGameVolMul() <= 0) return;
     var ctx = ensureAudio();
     if (!ctx) return;
     var t0 = ctx.currentTime;
@@ -146,7 +155,7 @@
     o.type = type || "square";
     o.frequency.setValueAtTime(freq, t0);
     if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(40, slide), t0 + dur);
-    g.gain.setValueAtTime(vol || 0.1, t0);
+    g.gain.setValueAtTime((vol || 0.1) * rnfGameVolMul(), t0);
     g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
     o.connect(g); g.connect(ctx.destination);
     o.start(t0); o.stop(t0 + dur + 0.02);
@@ -461,15 +470,14 @@
       makeButton(this, W / 2, 370, "設定 SETTINGS", 0xa78bfa, function () {
         self.scene.launch("SettingsScene");
       });
-      makeButton(this, W / 2, 440, "操作說明", 0x64748b, function () {
-        if (self.helpTxt) return;
-        self.helpTxt = self.add.text(W / 2, 500,
-          "點格落子 · 單人戰 AI 或雙人同屏 · 連線即勝 · Extreme 為 5×5 四子連珠", {
-          fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
-          fontSize: "13px", color: "#c4b5fd"
-        }).setOrigin(0.5).setAlpha(0);
-        self.tweens.add({ targets: self.helpTxt, alpha: 1, y: 492, duration: 280, ease: "Cubic.easeOut" });
-      }, 220);
+      makeButton(this, W / 2, 440, "排行榜", 0x34d399, function () {
+        self.scene.start("LeaderboardScene", { difficulty: (typeof selectedDiff !== "undefined" && selectedDiff) ? selectedDiff : "standard" });
+      });
+      makeButton(this, W / 2, 504, "操作說明", 0x64748b, function () {
+        if (window.RNFPhaserHelp && RNFPhaserHelp.showHelpOverlay) {
+          RNFPhaserHelp.showHelpOverlay(self, "點格落子 · 單人戰 AI 或雙人同屏 · 連線即勝 · Extreme 為 5×5 四子連珠", { W: W, H: H });
+        }
+      }, 240);
     }
   }
 
@@ -1019,6 +1027,29 @@
   }
 
   /* ═══════════════ Game Over ═══════════════ */
+
+  /* ═══════════════ LeaderboardScene（本遊戲獨立排行榜） ═══════════════ */
+  var LeaderboardScene = (window.RNFPhaserLeaderboard && RNFPhaserLeaderboard.createLeaderboardScene)
+    ? RNFPhaserLeaderboard.createLeaderboardScene({
+        Phaser: Phaser,
+        makeButton: makeButton,
+        W: W,
+        H: H,
+        accent: 0x22d3ee,
+        returnScene: "MainMenuScene",
+        getDefaultDiff: function () {
+          return (typeof selectedDiff !== "undefined" && selectedDiff) ? selectedDiff : "standard";
+        }
+      })
+    : class LeaderboardSceneMissing extends Phaser.Scene {
+        constructor() { super("LeaderboardScene"); }
+        create() {
+          this.add.text(W / 2, H / 2, "排行榜模組未載入", {
+            fontFamily: "Microsoft JhengHei, Segoe UI", fontSize: "18px", color: "#f472b6"
+          }).setOrigin(0.5);
+        }
+      };
+
   class GameOverModal extends Phaser.Scene {
     constructor() { super("GameOverModal"); }
     init(data) { this.payload = data || {}; }
@@ -1029,7 +1060,7 @@
       var diff = this.payload.diff || DIFF.standard;
 
       this.add.rectangle(W / 2, H / 2, W, H, 0x02040a, 0.72).setInteractive().setDepth(70);
-      var panel = this.add.rectangle(W / 2, H / 2, 480, 400, 0x0b1220, 0.97)
+      var panel = this.add.rectangle(W / 2, H / 2, 480, 460, 0x0b1220, 0.97)
         .setStrokeStyle(2, 0x22d3ee, 0.95).setScale(0.7).setAlpha(0).setDepth(71);
 
       var badge = this.add.text(W / 2, H / 2 - 160, "MATCH OVER", {
@@ -1064,7 +1095,7 @@
       neonBurst(this, W / 2, H / 2 - 50, 0x22d3ee, 22);
 
       var self = this;
-      var retry = makeButton(this, W / 2 - 110, H / 2 + 140, "再試一次", 0x22d3ee, function () {
+      var retry = makeButton(this, W / 2 - 110, H / 2 + 110, "再試一次", 0x22d3ee, function () {
         SFX.confirm();
         self.scene.stop("GameOverModal");
         self.scene.stop("GameScene");
@@ -1072,19 +1103,22 @@
       }, 180);
       retry.bg.setDepth(73); retry.txt.setDepth(74);
 
-      var settings = makeButton(this, W / 2 + 110, H / 2 + 140, "設定選單", 0xa78bfa, function () {
-        self.scene.launch("SettingsScene");
+      var settings = makeButton(this, W / 2 + 110, H / 2 + 110, "排行榜", 0x34d399, function () {
+        SFX.click();
+        self.scene.stop("GameOverModal");
+        try { self.scene.stop("SettingsScene"); } catch (_e) {}
+        self.scene.stop("GameScene");
+        self.scene.start("LeaderboardScene", { difficulty: (typeof selectedDiff !== "undefined" && selectedDiff) ? selectedDiff : "standard" });
       }, 180);
       settings.bg.setDepth(73); settings.txt.setDepth(74);
 
-      var menu = makeButton(this, W / 2, H / 2 + 200, "主選單", 0x64748b, function () {
+      var menu = makeButton(this, W / 2, H / 2 + 172, "主選單", 0x64748b, function () {
         SFX.click();
         self.scene.stop("GameOverModal");
         self.scene.stop("SettingsScene");
         self.scene.stop("GameScene");
         self.scene.start("MainMenuScene");
       }, 200);
-      menu.bg.setDepth(73); menu.txt.setDepth(74);
     }
   }
 
@@ -1100,7 +1134,7 @@
       autoCenter: Phaser.Scale.CENTER_BOTH
     },
     fps: { target: 144, forceSet: false, smoothStep: true },
-    scene: [BootScene, MainMenuScene, ModeScene, DifficultyScene, GameScene, GameOverModal, SettingsScene]
+    scene: [BootScene, MainMenuScene, ModeScene, DifficultyScene, GameScene, GameOverModal, LeaderboardScene, SettingsScene]
   };
 
   try {

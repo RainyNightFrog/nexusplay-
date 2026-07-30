@@ -129,7 +129,10 @@
     "backToGameMenu": "Voltar ao menu do jogo",
     "backToGameMenuDone": "Voltou ao menu do jogo — pode escolher a dificuldade de novo",
     "backToGameMenuFailed": "Não foi possível contactar o jogo. Atualize a página e tente novamente",
-    "copySubdomainUrl": "Copy URL"
+    "gameVolume": "Volume do jogo",
+    "gameVolumeMute": "Silenciar",
+    "gameVolumeUnmute": "Ativar som",
+    "gameVolumeClose": "Fechar volume","copySubdomainUrl": "Copy URL"
   },
   "home": {
     "statsPlaying": "jogando",

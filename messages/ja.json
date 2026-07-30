@@ -129,7 +129,10 @@
     "backToGameMenu": "ゲームメニューに戻る",
     "backToGameMenuDone": "ゲームメニューに戻りました — 難易度を選び直せます",
     "backToGameMenuFailed": "ゲームに接続できません。ページを更新して再試行してください",
-    "copySubdomainUrl": "Copy URL"
+    "gameVolume": "ゲーム音量",
+    "gameVolumeMute": "ミュート",
+    "gameVolumeUnmute": "ミュート解除",
+    "gameVolumeClose": "音量を閉じる","copySubdomainUrl": "Copy URL"
   },
   "home": {
     "statsPlaying": "プレイ中",

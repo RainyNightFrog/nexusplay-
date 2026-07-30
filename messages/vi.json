@@ -129,7 +129,10 @@
     "backToGameMenu": "Về menu trò chơi",
     "backToGameMenuDone": "Đã về menu trò chơi — có thể chọn lại độ khó",
     "backToGameMenuFailed": "Không kết nối được trò chơi. Tải lại trang và thử lại",
-    "copySubdomainUrl": "Copy URL"
+    "gameVolume": "Âm lượng game",
+    "gameVolumeMute": "Tắt tiếng",
+    "gameVolumeUnmute": "Bật tiếng",
+    "gameVolumeClose": "Đóng âm lượng","copySubdomainUrl": "Copy URL"
   },
   "home": {
     "statsPlaying": "đang chơi",

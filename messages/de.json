@@ -129,7 +129,10 @@
     "backToGameMenu": "Zurück zum Spielmenü",
     "backToGameMenuDone": "Zurück im Spielmenü — Schwierigkeit erneut wählbar",
     "backToGameMenuFailed": "Spiel nicht erreichbar. Seite neu laden und erneut versuchen",
-    "copySubdomainUrl": "Copy URL"
+    "gameVolume": "Spiel-Lautstärke",
+    "gameVolumeMute": "Stumm",
+    "gameVolumeUnmute": "Ton an",
+    "gameVolumeClose": "Lautstärke schließen","copySubdomainUrl": "Copy URL"
   },
   "home": {
     "statsPlaying": "spielen",

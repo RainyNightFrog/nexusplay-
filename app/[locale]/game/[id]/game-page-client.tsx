@@ -43,6 +43,7 @@ import { isDirectlyPlayable } from "@/lib/games-data";
 import { buildEmbedCode, sandboxForEmbedUrl } from "@/lib/iframe-sandbox";
 import { isSafeEmbedUrl } from "@/lib/embed-url";
 import { postShowGameMenu } from "@/lib/rainynightfrog-embed-sdk";
+import { GameVolumeControl } from "@/components/game/game-volume-control";
 import { TAG_COLORS, type Game } from "@/lib/games";
 import { buildGameHref } from "@/lib/game-path";
 import { isNumericGameId } from "@/lib/game-slug";
@@ -797,6 +798,9 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
                         </span>
                       </Button>
                     )}
+                    {showGameMenuButton && (
+                      <GameVolumeControl iframeRef={iframeRef} compact />
+                    )}
                     {game.tipsEnabled && (
                       <Button
                         variant="outline"
@@ -1061,6 +1065,9 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
                         <Gamepad2 className="size-3.5" />
                         {tc("backToGameMenu")}
                       </Button>
+                    )}
+                    {showGameMenuButton && (
+                      <GameVolumeControl iframeRef={iframeRef} />
                     )}
                     {game.tipsEnabled && (
                       <Button

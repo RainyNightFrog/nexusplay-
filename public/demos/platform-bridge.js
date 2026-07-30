@@ -781,7 +781,29 @@
     "RNF_SHOW_MENU",
     "nexusplay:show-menu",
   ];
+  var SET_VOLUME_TYPES = [
+    "rainynightfrog:set-volume",
+    "RNF_SET_VOLUME",
+    "nexusplay:set-volume",
+  ];
   var showMenuHandler = null;
+
+  function applyShellVolume(volume) {
+    var v = Math.max(0, Math.min(1, Number(volume)));
+    if (isNaN(v)) return;
+    try {
+      window.__RNF_GAME_VOLUME__ = v;
+    } catch (_e) {}
+    try {
+      if (window.RNF && typeof RNF.setGameVolume === "function") {
+        RNF.setGameVolume(v);
+      }
+    } catch (_r) {}
+    try {
+      var game = window.__RNF_DEMO_GAME__;
+      if (game && game.sound) game.sound.volume = v;
+    } catch (_p) {}
+  }
 
   function invokeShowMenu() {
     if (typeof showMenuHandler === "function") {
@@ -806,13 +828,47 @@
         return true;
       }
     }
+    // Phaser demo 後備：回到 MainMenuScene
+    try {
+      var game = window.__RNF_DEMO_GAME__;
+      if (game && game.scene && typeof game.scene.start === "function") {
+        ["GameOverModal", "LeaderboardScene", "DifficultyScene", "GameScene"].forEach(function (key) {
+          try {
+            if (game.scene.getScene(key)) game.scene.stop(key);
+          } catch (_s) {}
+        });
+        game.scene.start("MainMenuScene");
+        return true;
+      }
+    } catch (_p) {}
     return false;
   }
 
   window.addEventListener("message", function (e) {
-    if (e.origin !== location.origin) return;
+    // 主站／play 子網域皆可能為父頁；以 source===parent 為準，再放寬同源或 rainynightfrog 根域
+    if (!e || e.source !== window.parent) return;
+    var sameOrigin = e.origin === location.origin;
+    var okParent = sameOrigin;
+    if (!okParent) {
+      try {
+        var oh = new URL(e.origin).hostname;
+        var lh = location.hostname;
+        okParent =
+          oh === lh ||
+          oh.endsWith(".localhost") ||
+          lh.endsWith(".localhost") ||
+          oh.endsWith("rainynightfrog.com") ||
+          lh.endsWith("rainynightfrog.com");
+      } catch (_o) {}
+    }
+    if (!okParent) return;
     var d = e.data;
-    if (!d || !includesType(SHOW_MENU_TYPES, d.type)) return;
+    if (!d || !d.type) return;
+    if (includesType(SET_VOLUME_TYPES, d.type)) {
+      applyShellVolume(d.volume);
+      return;
+    }
+    if (!includesType(SHOW_MENU_TYPES, d.type)) return;
     invokeShowMenu();
   });
 

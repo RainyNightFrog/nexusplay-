@@ -50,13 +50,19 @@
   function beep(freq, dur, type, vol, slide) {
     var ctx = ensureAudio();
     if (!ctx) return;
+    var master = 1;
+    try {
+      if (typeof window.RNF !== "undefined" && RNF.getGameVolume) master = RNF.getGameVolume();
+      else if (typeof window.__RNF_GAME_VOLUME__ === "number") master = window.__RNF_GAME_VOLUME__;
+    } catch (_e) {}
+    if (master <= 0) return;
     var t0 = ctx.currentTime;
     var o = ctx.createOscillator();
     var g = ctx.createGain();
     o.type = type || "square";
     o.frequency.setValueAtTime(freq, t0);
     if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(40, slide), t0 + dur);
-    g.gain.setValueAtTime(vol || 0.1, t0);
+    g.gain.setValueAtTime((vol || 0.1) * master, t0);
     g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
     o.connect(g);
     g.connect(ctx.destination);
@@ -93,7 +99,12 @@
         scale: 0.2,
         duration: Phaser.Math.Between(280, 520),
         ease: "Cubic.easeOut",
-        onComplete: function (tw, tgt) { tgt.destroy(); }
+        onComplete: function (_tw, targets) {
+          var list = Array.isArray(targets) ? targets : [targets];
+          for (var j = 0; j < list.length; j++) {
+            if (list[j] && typeof list[j].destroy === "function") list[j].destroy();
+          }
+        }
       });
     }
   }
@@ -350,8 +361,16 @@
 
         if (window.PlatformBridge) {
           PlatformBridge.onShowMenu(function () {
-            if (self.scene.isActive()) return;
-            self.scene.start("MainMenuScene");
+            var game = window.__RNF_DEMO_GAME__;
+            if (!game || !game.scene) return;
+            try {
+              ["GameOverModal", "LeaderboardScene", "DifficultyScene", "GameScene"].forEach(function (key) {
+                try {
+                  if (game.scene.getScene(key)) game.scene.stop(key);
+                } catch (_e) {}
+              });
+            } catch (_e2) {}
+            game.scene.start("MainMenuScene");
           });
         }
       }
@@ -408,13 +427,18 @@
           return;
         }
         var legacy = DIFF_PRESETS[registry.difficulty].legacy;
+        this.add.text(W / 2, 108, "本遊戲獨立排行榜 · 與其他作品互不影響", {
+          fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif", fontSize: "13px", color: "#64748b"
+        }).setOrigin(0.5);
         PlatformBridge.fetchLeaderboard(12, legacy).then(function (entries) {
           if (!entries || !entries.length) {
             list.setText("尚無紀錄，完成一局即可上榜");
             return;
           }
           list.setText(entries.slice(0, 10).map(function (e, i) {
-            return (i + 1) + ". " + (e.displayName || e.name || "Player") + "  —  " + (e.score || 0).toLocaleString() + "  [" + (e.grade || "—") + "]";
+            var name = e.playerName || e.displayName || e.name || "Player";
+            var src = e.local || e.source === "local" ? " ·本機" : "";
+            return (i + 1) + ". " + name + "  —  " + (e.score || 0).toLocaleString() + "  [" + (e.grade || "—") + "]" + src;
           }).join("\n"));
         }).catch(function () {
           list.setText("排行榜載入失敗");
@@ -530,6 +554,9 @@
       scene: scenes
     };
     var game = new Phaser.Game(config);
+    // 供平台健康檢查／除錯讀取目前 demo 實例（不影響玩法）
+    global.__RNF_DEMO_GAME__ = game;
+    if (opts && opts.slug) global["__RNF_DEMO_" + String(opts.slug).toUpperCase().replace(/-/g, "_") + "__"] = game;
     return { game: game, shell: shell, registry: shell.registry };
   }
 

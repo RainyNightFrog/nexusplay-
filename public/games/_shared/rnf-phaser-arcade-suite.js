@@ -23,13 +23,19 @@
   function beep(freq, dur, type, vol, slide) {
     var ctx = ensureAudio();
     if (!ctx) return;
+    var master = 1;
+    try {
+      if (typeof window.RNF !== "undefined" && RNF.getGameVolume) master = RNF.getGameVolume();
+      else if (typeof window.__RNF_GAME_VOLUME__ === "number") master = window.__RNF_GAME_VOLUME__;
+    } catch (_e) {}
+    if (master <= 0) return;
     var t0 = ctx.currentTime;
     var osc = ctx.createOscillator();
     var gain = ctx.createGain();
     osc.type = type || "square";
     osc.frequency.setValueAtTime(freq, t0);
     if (slide) osc.frequency.exponentialRampToValueAtTime(Math.max(40, slide), t0 + dur);
-    gain.gain.setValueAtTime(vol || 0.09, t0);
+    gain.gain.setValueAtTime((vol || 0.09) * master, t0);
     gain.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
     osc.connect(gain);
     gain.connect(ctx.destination);
@@ -832,16 +838,14 @@
           self.cameras.main.fadeOut(220, 4, 6, 12);
           self.time.delayedCall(230, function () { self.scene.start("DifficultyScene"); });
         });
-        makeMenuButton(this, W / 2, 388, "操作說明", 0xa78bfa, function () {
-          if (self.helpTxt) return;
-          self.helpTxt = self.add.text(W / 2, 468, cfg.help, {
-            fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
-            fontSize: "14px",
-            color: "#c4b5fd",
-            wordWrap: { width: 760 },
-            align: "center"
-          }).setOrigin(0.5).setAlpha(0);
-          self.tweens.add({ targets: self.helpTxt, alpha: 1, y: 456, duration: 280, ease: "Cubic.easeOut" });
+        makeMenuButton(this, W / 2, 378, "排行榜", 0x34d399, function () {
+          SFX.click();
+          self.scene.start("LeaderboardScene", { difficulty: selectedDiff || "standard" });
+        });
+        makeMenuButton(this, W / 2, 438, "操作說明", 0xa78bfa, function () {
+          if (window.RNFPhaserHelp && RNFPhaserHelp.showHelpOverlay) {
+            RNFPhaserHelp.showHelpOverlay(self, cfg.help, { W: W, H: H, accent: cfg.accent });
+          }
         });
       }
     }
@@ -943,7 +947,11 @@
           elapsed: Math.floor(this.elapsedTime)
         };
         try {
-          if (typeof RNF !== "undefined" && RNF.submitScore) RNF.submitScore(finalScore, meta);
+          if (window.RNFPhaserLeaderboard && RNFPhaserLeaderboard.submitRun) {
+            RNFPhaserLeaderboard.submitRun(finalScore, meta);
+          } else if (typeof RNF !== "undefined" && RNF.submitScore) {
+            RNF.submitScore(finalScore, meta);
+          }
         } catch (_e) {}
         this.scene.launch("GameOverModal", {
           score: finalScore,
@@ -967,22 +975,22 @@
         var danger = this.payload.danger || 1;
         var elapsed = this.payload.elapsed || 0;
         this.add.rectangle(W / 2, H / 2, W, H, 0x02040a, 0.72).setInteractive();
-        var panel = this.add.rectangle(W / 2, H / 2, 460, 350, 0x0b1220, 0.96)
+        var panel = this.add.rectangle(W / 2, H / 2, 480, 460, 0x0b1220, 0.96)
           .setStrokeStyle(2, cfg.accent, 0.9)
           .setScale(0.7)
           .setAlpha(0);
-        var badge = this.add.text(W / 2, H / 2 - 130, "GAME OVER", {
+        var badge = this.add.text(W / 2, H / 2 - 168, "GAME OVER", {
           fontFamily: "Segoe UI, sans-serif", fontSize: "14px", fontStyle: "bold", color: "#22d3ee", letterSpacing: 3
         }).setOrigin(0.5).setAlpha(0);
-        var title = this.add.text(W / 2, H / 2 - 92, this.payload.title || cfg.titleZh, {
-          fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif", fontSize: "28px", fontStyle: "bold", color: "#ffffff"
+        var title = this.add.text(W / 2, H / 2 - 128, this.payload.title || cfg.titleZh, {
+          fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif", fontSize: "26px", fontStyle: "bold", color: "#ffffff"
         }).setOrigin(0.5).setAlpha(0);
-        var scoreTxt = this.add.text(W / 2, H / 2 - 22, score.toLocaleString(), {
-          fontFamily: "Segoe UI, sans-serif", fontSize: "56px", fontStyle: "bold", color: "#67e8f9"
+        var scoreTxt = this.add.text(W / 2, H / 2 - 48, score.toLocaleString(), {
+          fontFamily: "Segoe UI, sans-serif", fontSize: "52px", fontStyle: "bold", color: "#67e8f9"
         }).setOrigin(0.5).setScale(0.4).setAlpha(0);
         var meta = this.add.text(
           W / 2,
-          H / 2 + 44,
+          H / 2 + 20,
           diff.label + " · DANGER x" + Number(danger).toFixed(2) + " · " + Math.floor(elapsed) + "s" +
           (raw !== score ? " · RAW " + raw.toLocaleString() : ""),
           {
@@ -990,10 +998,10 @@
             fontSize: "13px",
             color: "#94a3b8",
             align: "center",
-            wordWrap: { width: 380 }
+            wordWrap: { width: 400 }
           }
         ).setOrigin(0.5).setAlpha(0);
-        var uploaded = this.add.text(W / 2, H / 2 + 82, "已執行 RNF.submitScore → 主站排行榜", {
+        var uploaded = this.add.text(W / 2, H / 2 + 52, "分數已送交本遊戲獨立排行榜", {
           fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
           fontSize: "12px",
           color: "#a78bfa"
@@ -1001,26 +1009,59 @@
         this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 380, ease: "Back.easeOut" });
         this.tweens.add({ targets: [badge, title, meta, uploaded], alpha: 1, duration: 320, ease: "Cubic.easeOut", delay: 80 });
         this.tweens.add({ targets: scoreTxt, alpha: 1, scale: 1, duration: 480, ease: "Back.easeOut", delay: 120 });
-        neonBurst(this, W / 2, H / 2 - 20, "spark-cyan", 24);
-        neonBurst(this, W / 2, H / 2 - 20, "spark-violet", 18);
+        neonBurst(this, W / 2, H / 2 - 48, "spark-cyan", 24);
+        neonBurst(this, W / 2, H / 2 - 48, "spark-violet", 18);
         var self = this;
-        makeMenuButton(this, W / 2 - 110, H / 2 + 138, "再來一次", cfg.accent, function () {
+        // 兩排按鈕：全部落在面板內（面板半高 230，最底按鈕中心 +170）
+        makeMenuButton(this, W / 2 - 110, H / 2 + 110, "再來一次", cfg.accent, function () {
           SFX.confirm();
           self.scene.stop("GameOverModal");
           self.scene.stop("GameScene");
           self.scene.start("GameScene", { difficulty: selectedDiff });
         }, 180);
-        makeMenuButton(this, W / 2 + 110, H / 2 + 138, "主選單", 0xa78bfa, function () {
+        makeMenuButton(this, W / 2 + 110, H / 2 + 110, "排行榜", 0x34d399, function () {
+          SFX.click();
+          self.scene.stop("GameOverModal");
+          self.scene.stop("GameScene");
+          self.scene.start("LeaderboardScene", { difficulty: selectedDiff || "standard" });
+        }, 180);
+        makeMenuButton(this, W / 2, H / 2 + 172, "主選單", 0xa78bfa, function () {
           SFX.click();
           self.scene.stop("GameOverModal");
           self.scene.stop("GameScene");
           self.scene.start("MainMenuScene");
-        }, 180);
+        }, 200);
       }
     }
 
+    var LeaderboardScene = null;
+    if (window.RNFPhaserLeaderboard && RNFPhaserLeaderboard.createLeaderboardScene) {
+      LeaderboardScene = RNFPhaserLeaderboard.createLeaderboardScene({
+        Phaser: Phaser,
+        makeButton: makeMenuButton,
+        W: W,
+        H: H,
+        accent: cfg.accent,
+        returnScene: "MainMenuScene",
+        getDefaultDiff: function () { return selectedDiff || "standard"; }
+      });
+    } else {
+      LeaderboardScene = class LeaderboardSceneFallback extends Phaser.Scene {
+        constructor() { super("LeaderboardScene"); }
+        create() {
+          this.add.text(W / 2, H / 2, "排行榜模組未載入", {
+            fontFamily: "Microsoft JhengHei, Segoe UI", fontSize: "18px", color: "#f472b6"
+          }).setOrigin(0.5);
+          var self = this;
+          makeMenuButton(this, W / 2, H - 60, "返回", 0x64748b, function () {
+            self.scene.start("MainMenuScene");
+          }, 180);
+        }
+      };
+    }
+
     if (typeof RNF !== "undefined" && RNF.init) RNF.init();
-    return new Phaser.Game({
+    var game = new Phaser.Game({
       type: Phaser.WEBGL,
       parent: "game-host",
       width: W,
@@ -1034,8 +1075,21 @@
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH
       },
-      scene: [BootScene, MainMenuScene, DifficultyScene, GameScene, GameOverModal]
+      scene: [BootScene, MainMenuScene, DifficultyScene, GameScene, GameOverModal, LeaderboardScene]
     });
+    if (typeof RNF !== "undefined" && RNF.setShowMenuHandler) {
+      RNF.setShowMenuHandler(function () {
+        try {
+          ["GameOverModal", "LeaderboardScene", "DifficultyScene", "GameScene", "SettingsScene"].forEach(function (key) {
+            try {
+              if (game.scene.getScene(key)) game.scene.stop(key);
+            } catch (_e) {}
+          });
+          game.scene.start("MainMenuScene");
+        } catch (_e2) {}
+      });
+    }
+    return game;
   }
 
   window.RNFArcadeSuite = {

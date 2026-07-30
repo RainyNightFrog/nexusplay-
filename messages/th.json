@@ -129,7 +129,10 @@
     "backToGameMenu": "กลับเมนูเกม",
     "backToGameMenuDone": "กลับเมนูเกมแล้ว — เลือกความยากได้อีกครั้ง",
     "backToGameMenuFailed": "เชื่อมต่อเกมไม่ได้ รีเฟรชหน้าแล้วลองใหม่",
-    "copySubdomainUrl": "Copy URL"
+    "gameVolume": "ระดับเสียงเกม",
+    "gameVolumeMute": "ปิดเสียง",
+    "gameVolumeUnmute": "เปิดเสียง",
+    "gameVolumeClose": "ปิดระดับเสียง","copySubdomainUrl": "Copy URL"
   },
   "home": {
     "statsPlaying": "กำลังเล่น",

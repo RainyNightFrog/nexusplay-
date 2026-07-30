@@ -276,23 +276,46 @@ export const RAINYNIGHTFROG_STORAGE_GET_RESPONSE_MESSAGE =
 export const RAINYNIGHTFROG_STORAGE_SET_MESSAGE = "rainynightfrog:storage-set";
 export const RAINYNIGHTFROG_SHOW_MENU_MESSAGE = "rainynightfrog:show-menu";
 export const RNF_SHOW_MENU_MESSAGE = "RNF_SHOW_MENU";
+export const RAINYNIGHTFROG_SET_VOLUME_MESSAGE = "rainynightfrog:set-volume";
+export const RNF_SET_VOLUME_MESSAGE = "RNF_SET_VOLUME";
+
+function resolveIframePostOrigin(
+  iframe: HTMLIFrameElement | null | undefined
+): string {
+  try {
+    const src = iframe?.getAttribute("src") || iframe?.src || "";
+    return src
+      ? new URL(src, window.location.href).origin
+      : window.location.origin;
+  } catch {
+    return typeof window !== "undefined" ? window.location.origin : "*";
+  }
+}
 
 export function postShowGameMenu(
   iframe: HTMLIFrameElement | null | undefined
 ): boolean {
   const target = iframe?.contentWindow;
   if (!target) return false;
-  let targetOrigin = "*";
-  try {
-    const src = iframe?.getAttribute("src") || iframe?.src || "";
-    targetOrigin = src
-      ? new URL(src, window.location.href).origin
-      : window.location.origin;
-  } catch {
-    targetOrigin = window.location.origin;
-  }
+  const targetOrigin = resolveIframePostOrigin(iframe);
   target.postMessage({ type: RAINYNIGHTFROG_SHOW_MENU_MESSAGE }, targetOrigin);
   target.postMessage({ type: RNF_SHOW_MENU_MESSAGE }, targetOrigin);
+  return true;
+}
+
+/** 只調整 iframe 內遊戲音量（0～1），不影響主站／系統音量 */
+export function postSetGameVolume(
+  iframe: HTMLIFrameElement | null | undefined,
+  volume: number
+): boolean {
+  const target = iframe?.contentWindow;
+  if (!target) return false;
+  const v = Math.max(0, Math.min(1, Number(volume)));
+  if (Number.isNaN(v)) return false;
+  const targetOrigin = resolveIframePostOrigin(iframe);
+  const payload = { type: RAINYNIGHTFROG_SET_VOLUME_MESSAGE, volume: v };
+  target.postMessage(payload, targetOrigin);
+  target.postMessage({ type: RNF_SET_VOLUME_MESSAGE, volume: v }, targetOrigin);
   return true;
 }
 

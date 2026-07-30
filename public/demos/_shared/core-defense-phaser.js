@@ -137,7 +137,7 @@
       var self = this;
       this.enemies.getChildren().slice().forEach(function (e) {
         if (!e.active) return;
-        var d = e.getData();
+        var d = e.data.values;
         d.t += d.spd * d.slow * threat * dt;
         while (d.t >= 1 && d.idx < self.path.length - 1) { d.t -= 1; d.idx += 1; }
         var a = self.path[d.idx];
@@ -166,11 +166,11 @@
           this.enemies.getChildren().forEach(function (e) {
             if (!e.active) return;
             var dist = Phaser.Math.Distance.Between(tile.x, tile.y, e.x, e.y);
-            if (dist <= tw.def.range && e.getData().idx > (best === 999 ? -1 : target.getData().idx)) {
+            if (dist <= tw.def.range && e.data.values.idx > (best === 999 ? -1 : target.data.values.idx)) {
               // prefer closest to core
             }
             if (dist <= tw.def.range) {
-              if (!target || e.getData().idx >= target.getData().idx) target = e;
+              if (!target || e.data.values.idx >= target.data.values.idx) target = e;
             }
           });
           if (!target) continue;
@@ -194,13 +194,13 @@
       SFX.beat();
       var line = this.add.line(0, 0, tile.x, tile.y, enemy.x, enemy.y, def.color, 0.85).setDepth(9);
       this.tweens.add({ targets: line, alpha: 0, duration: 100, onComplete: function () { line.destroy(); } });
-      var d = enemy.getData();
+      var d = enemy.data.values;
       d.hp -= def.dmg;
       if (def.slow) d.slow = Math.min(d.slow, def.slow);
       if (def.aoe) {
         var self = this;
         this.enemies.getChildren().forEach(function (e) {
-          if (e.active && Phaser.Math.Distance.Between(enemy.x, enemy.y, e.x, e.y) < def.aoe) e.getData().hp -= def.dmg * 0.5;
+          if (e.active && Phaser.Math.Distance.Between(enemy.x, enemy.y, e.x, e.y) < def.aoe) e.data.values.hp -= def.dmg * 0.5;
         });
         Kit.neonBurst(this, enemy.x, enemy.y, def.color, 16);
       }
