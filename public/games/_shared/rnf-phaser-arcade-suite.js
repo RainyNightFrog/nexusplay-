@@ -76,6 +76,13 @@
     g.generateTexture("paddle", 48, 32);
 
     g.clear();
+    g.fillStyle(0x22d3ee, 1);
+    g.fillRoundedRect(0, 4, 120, 16, 7);
+    g.fillStyle(0xffffff, 0.4);
+    g.fillRoundedRect(10, 7, 36, 6, 3);
+    g.generateTexture("flipper", 120, 24);
+
+    g.clear();
     g.fillStyle(0xf472b6, 1);
     g.fillTriangle(16, 2, 30, 28, 2, 28);
     g.fillStyle(0xffffff, 0.32);
@@ -181,12 +188,13 @@
 
   function makeMenuButton(scene, x, y, label, fill, onClick, width) {
     var bw = width || 300;
-    var bg = scene.add.rectangle(x, y, bw, 54, fill, 0.2)
+    var bh = width && width <= 220 ? 44 : 50;
+    var bg = scene.add.rectangle(x, y, bw, bh, fill, 0.2)
       .setStrokeStyle(2, fill, 0.85)
       .setInteractive({ useHandCursor: true });
     var txt = scene.add.text(x, y, label, {
       fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif",
-      fontSize: "20px",
+      fontSize: bw <= 220 ? "16px" : "18px",
       fontStyle: "bold",
       color: "#e2e8f0"
     }).setOrigin(0.5);
@@ -375,108 +383,566 @@
       title: "NEON PINBALL FRENZY",
       titleZh: "霓虹狂暴彈珠台",
       accent: 0xf472b6,
-      help: "← → / A D 控制雙擋板，Space 震台，讓高能鋼珠連續撞擊目標板。",
-      objective: "守住鋼珠 · 連撞 Bumper · 追求 Fever",
+      help: "←／A 左擋板、→／D 右擋板揮擊；Space 震台（連震 3 次 TILT）。撞 Bumper、擊破目標牆、點亮 R·N·F、打遊走核心完成任務；連撞進 Fever，大獎可觸發雙球。",
+      objective: "任務連破 · 目標牆 · Fever · 雙球狂潮",
       scoreVerb: "HITS",
       startState: function (scene) {
         scene.physics.world.setBounds(0, 0, W, H);
-        scene.topWall = scene.add.rectangle(W / 2, 8, W, 16, 0x0f172a);
-        scene.leftWall = scene.add.rectangle(8, H / 2, 16, H, 0x0f172a);
-        scene.rightWall = scene.add.rectangle(W - 8, H / 2, 16, H, 0x0f172a);
-        scene.physics.add.existing(scene.topWall, true);
-        scene.physics.add.existing(scene.leftWall, true);
-        scene.physics.add.existing(scene.rightWall, true);
-        scene.leftFlipper = scene.physics.add.sprite(W / 2 - 120, H - 74, "paddle").setImmovable(true);
-        scene.rightFlipper = scene.physics.add.sprite(W / 2 + 120, H - 74, "paddle").setImmovable(true);
+        scene.physics.world.gravity.y = 800;
+
+        // 場館氛圍線
+        scene.add.rectangle(W / 2, H / 2, W - 48, H - 36, 0x07101c, 0.55).setStrokeStyle(2, 0xf472b6, 0.25);
+        scene.add.rectangle(W / 2, 88, 220, 56, 0x0b1220, 0.5).setStrokeStyle(1, 0xfbbf24, 0.55);
+        scene.add.text(W / 2, 72, "SKILL SHOT", {
+          fontFamily: "Segoe UI, sans-serif", fontSize: "11px", fontStyle: "bold", color: "#fbbf24"
+        }).setOrigin(0.5);
+
+        scene.topWall = scene.add.rectangle(W / 2, 10, W - 40, 20, 0x0f172a).setStrokeStyle(2, 0xf472b6, 0.45);
+        scene.leftWall = scene.add.rectangle(14, H / 2 - 20, 28, H - 40, 0x0f172a).setStrokeStyle(2, 0x22d3ee, 0.35);
+        scene.rightWall = scene.add.rectangle(W - 14, H / 2 - 20, 28, H - 40, 0x0f172a).setStrokeStyle(2, 0xa78bfa, 0.35);
+        scene.leftShelf = scene.add.rectangle(150, H - 28, 260, 56, 0x111827).setStrokeStyle(2, 0x334155, 0.8);
+        scene.rightShelf = scene.add.rectangle(W - 150, H - 28, 260, 56, 0x111827).setStrokeStyle(2, 0x334155, 0.8);
+        scene.leftSling = scene.add.rectangle(210, H - 150, 70, 18, 0x22d3ee, 0.35).setAngle(-28).setStrokeStyle(2, 0x22d3ee, 0.8);
+        scene.rightSling = scene.add.rectangle(W - 210, H - 150, 70, 18, 0xa78bfa, 0.35).setAngle(28).setStrokeStyle(2, 0xa78bfa, 0.8);
+        [scene.topWall, scene.leftWall, scene.rightWall, scene.leftShelf, scene.rightShelf].forEach(function (wall) {
+          scene.physics.add.existing(wall, true);
+        });
+        scene.physics.add.existing(scene.leftSling, true);
+        scene.physics.add.existing(scene.rightSling, true);
+
+        scene.leftFlipper = scene.physics.add.sprite(W / 2 - 78, H - 78, "flipper").setImmovable(true);
+        scene.rightFlipper = scene.physics.add.sprite(W / 2 + 78, H - 78, "flipper").setImmovable(true);
         scene.leftFlipper.body.allowGravity = false;
         scene.rightFlipper.body.allowGravity = false;
+        scene.leftFlipper.body.setSize(118, 18);
+        scene.rightFlipper.body.setSize(118, 18);
         scene.leftFlipper.setTint(0x22d3ee);
         scene.rightFlipper.setTint(0xa78bfa);
-        scene.ball = scene.physics.add.sprite(W / 2, H - 130, "ball");
-        scene.ball.setBounce(1, 1);
-        scene.ball.setCollideWorldBounds(false);
-        scene.ball.body.allowGravity = false;
-        scene.ball.setVelocity(240, -280);
-        scene.ball.setMaxVelocity(520, 520);
+        scene.leftFlipper.setAngle(12);
+        scene.rightFlipper.setAngle(-12);
+
+        scene.balls = scene.physics.add.group();
+        scene.spawnPinball = function (x, y, vx, vy) {
+          var ball = scene.balls.create(x, y, "ball");
+          ball.setCircle(10);
+          ball.setBounce(0.68, 0.68);
+          ball.setCollideWorldBounds(false);
+          ball.setMaxVelocity(740, 740);
+          if (typeof ball.setDamping === "function") ball.setDamping(true);
+          ball.setDrag(4, 4);
+          ball.setVelocity(vx, vy);
+          ball.setTint(0xfde68a);
+          ball.setData("serveGrace", 0.55);
+          return ball;
+        };
+        // 從右側發射道送出，避免出生在中央落球縫直接出局
+        scene.spawnPinball(W - 70, H - 210, -320, -360);
+
         scene.ballLives = 3;
         scene.hitCombo = 0;
-        scene.spawnTimer = 0;
+        scene.feverTimer = 0;
+        scene.feverMult = 1;
+        scene.playMult = 1;
+        scene.tiltCount = 0;
+        scene.tiltCool = 0;
+        scene.tilted = 0;
+        scene.tiltDecay = 0;
+        scene.comboIdle = 0;
+        scene.leftKickCool = 0;
+        scene.rightKickCool = 0;
+        scene.prevTouchLeft = false;
+        scene.prevTouchRight = false;
+        scene.touchLeft = false;
+        scene.touchRight = false;
+        scene.skillShotOpen = true;
+        scene.skillShotTimer = 2.4;
+        scene.jackpot = 2500;
+        scene.missionIndex = 0;
+        scene.missionProgress = 0;
+        scene.missions = [
+          { id: "bump", label: "撞擊 Bumper", need: 6, reward: "BUMPER" },
+          { id: "drops", label: "擊破目標牆", need: 3, unit: "DROP" },
+          { id: "letters", label: "點亮 R·N·F", need: 3, unit: "LANE" },
+          { id: "orbit", label: "打中遊走核心", need: 3, unit: "CORE" },
+          { id: "hold", label: "Fever 續航", need: 4, unit: "SEC" }
+        ];
+        scene.letterLit = [false, false, false];
+        scene.dropCleared = 0;
+        scene.orbitHits = 0;
+        scene.feverHoldAcc = 0;
+        scene.multiballTimer = 0;
+        scene.bonusOrbTimer = 0;
+        scene.bumperColors = [0x22d3ee, 0xf472b6, 0xa78bfa, 0xfbbf24, 0x34d399];
+
+        function award(base, x, y, tag, color) {
+          var gain = Math.floor(base * scene.diff.scoreMult * scene.feverMult * scene.playMult * (0.85 + scene.dangerMultiplier * 0.15));
+          scene.score += gain;
+          scene.jackpot = Math.min(20000, scene.jackpot + Math.floor(gain * 0.08));
+          uiFloat(scene, x, y, (tag ? tag + " " : "") + "+" + gain, color || "#f472b6");
+          return gain;
+        }
+
+        function advanceMission(amount, sourceId) {
+          var m = scene.missions[scene.missionIndex];
+          if (!m) return;
+          if (m.id === "bump" && sourceId !== "bump") return;
+          if (m.id === "drops" && sourceId !== "drops") return;
+          if (m.id === "letters" && sourceId !== "letters") return;
+          if (m.id === "orbit" && sourceId !== "orbit") return;
+          if (m.id === "hold" && sourceId !== "hold") return;
+          scene.missionProgress += amount;
+          if (scene.missionProgress >= m.need) {
+            var bonus = Math.floor((1200 + scene.missionIndex * 350 + scene.jackpot * 0.15) * scene.diff.scoreMult * scene.playMult);
+            scene.score += bonus;
+            scene.playMult = Math.min(5, scene.playMult + 0.25);
+            SFX.score();
+            scene.cameras.main.shake(140, 0.018);
+            neonBurst(scene, W / 2, 160, "spark-gold", 28);
+            uiFloat(scene, W / 2, 150, "任務完成 +" + bonus, "#fbbf24");
+            scene.missionIndex = (scene.missionIndex + 1) % scene.missions.length;
+            scene.missionProgress = 0;
+            scene.feverHoldAcc = 0;
+            if (scene.missionIndex % 2 === 0) {
+              scene.multiballTimer = 10;
+              if (scene.balls.countActive(true) < 2) {
+                scene.spawnPinball(W / 2 - 120, 210, -140, -300);
+                scene.spawnPinball(W / 2 + 120, 210, 140, -300);
+              }
+              uiFloat(scene, W / 2, 200, "MULTIBALL!", "#67e8f9");
+              SFX.explode();
+            }
+            refreshMissionHud();
+          } else {
+            refreshMissionHud();
+          }
+        }
+
+        function refreshMissionHud() {
+          var m = scene.missions[scene.missionIndex];
+          scene.missionHud.setText("任務 " + (scene.missionIndex + 1) + "/5  " + m.label + "  " + scene.missionProgress + "/" + m.need);
+        }
+
+        scene.awardPin = award;
+        scene.advanceMission = advanceMission;
+
+        // Bumper
         scene.bumpers = scene.physics.add.staticGroup();
         [
-          [W / 2, 150, 0x22d3ee],
-          [W / 2 - 160, 220, 0xf472b6],
-          [W / 2 + 160, 220, 0xa78bfa],
-          [W / 2 - 80, 320, 0xfbbf24],
-          [W / 2 + 80, 320, 0x34d399]
-        ].forEach(function (item) {
-          var bumper = scene.bumpers.create(item[0], item[1], "ball").setDisplaySize(34, 34).refreshBody();
-          bumper.setTint(item[2]);
+          [W / 2 - 40, 175],
+          [W / 2 + 40, 175],
+          [W / 2 - 175, 250],
+          [W / 2 + 175, 250],
+          [W / 2, 310]
+        ].forEach(function (item, idx) {
+          var bumper = scene.bumpers.create(item[0], item[1], "ball").setDisplaySize(36, 36).refreshBody();
+          bumper.setTint(scene.bumperColors[idx]);
+          bumper.setData("baseTint", scene.bumperColors[idx]);
+          bumper.setData("hitCool", 0);
         });
-        scene.physics.add.collider(scene.ball, scene.topWall);
-        scene.physics.add.collider(scene.ball, scene.leftWall);
-        scene.physics.add.collider(scene.ball, scene.rightWall);
-        scene.physics.add.collider(scene.ball, scene.bumpers, function (ball, bumper) {
+
+        // 目標牆（Drop targets）
+        scene.dropTargets = scene.physics.add.staticGroup();
+        scene.dropStates = [true, true, true];
+        [-54, 0, 54].forEach(function (ox, idx) {
+          var drop = scene.dropTargets.create(W / 2 + ox, 118, "bumper-bar");
+          drop.setDisplaySize(48, 16).refreshBody();
+          drop.setTint(0xf472b6);
+          drop.setData("idx", idx);
+          drop.setData("alive", true);
+        });
+
+        // R N F 滾道燈
+        scene.letterZones = [];
+        scene.letterLabels = [];
+        ["R", "N", "F"].forEach(function (ch, idx) {
+          var x = W / 2 - 120 + idx * 120;
+          var zone = scene.add.rectangle(x, 52, 56, 22, 0x0f172a, 0.7).setStrokeStyle(2, 0x64748b, 0.9);
+          scene.physics.add.existing(zone, true);
+          zone.body.setSize(56, 22);
+          zone.setData("idx", idx);
+          scene.letterZones.push(zone);
+          var lab = scene.add.text(x, 52, ch, {
+            fontFamily: "Segoe UI, sans-serif", fontSize: "16px", fontStyle: "bold", color: "#64748b"
+          }).setOrigin(0.5);
+          scene.letterLabels.push(lab);
+        });
+
+        // 遊走核心
+        scene.orbitCore = scene.physics.add.sprite(W / 2, 240, "xp");
+        scene.orbitCore.setDisplaySize(22, 22);
+        scene.orbitCore.body.allowGravity = false;
+        scene.orbitCore.setImmovable(true);
+        scene.orbitCore.setTint(0x34d399);
+        scene.orbitAngle = 0;
+        scene.orbitHitCool = 0;
+
+        // 旋轉加分器（視覺）
+        scene.spinner = scene.add.rectangle(W / 2 - 220, 340, 28, 28, 0xfbbf24, 0.85).setStrokeStyle(2, 0xfde68a, 1);
+        scene.physics.add.existing(scene.spinner, true);
+        scene.spinnerHitCool = 0;
+
+        scene.bonusOrbs = scene.physics.add.group();
+
+        scene.missionHud = scene.add.text(W / 2, H - 14, "", {
+          fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+          fontSize: "13px",
+          fontStyle: "bold",
+          color: "#e2e8f0"
+        }).setOrigin(0.5, 1).setDepth(25);
+        scene.modeHud = scene.add.text(W / 2, 36, "", {
+          fontFamily: "Segoe UI, sans-serif", fontSize: "12px", fontStyle: "bold", color: "#94a3b8"
+        }).setOrigin(0.5, 0).setDepth(25);
+        refreshMissionHud();
+
+        function onBumper(ball, bumper) {
+          if (bumper.getData("hitCool") > 0) return;
+          bumper.setData("hitCool", 0.08);
           scene.hitCombo += 1;
-          var gain = Math.floor((75 + scene.hitCombo * 12) * scene.diff.scoreMult * (0.85 + scene.dangerMultiplier * 0.15));
-          scene.score += gain;
+          scene.comboIdle = 0;
+          if (scene.hitCombo >= 8) {
+            scene.feverTimer = Math.max(scene.feverTimer, 5);
+            scene.feverMult = 2;
+          }
+          var angle = Phaser.Math.Angle.Between(bumper.x, bumper.y, ball.x, ball.y);
+          var threatNow = scene.dangerMultiplier * scene.diff.base;
+          var power = (350 + Math.min(scene.hitCombo, 18) * 10) * (0.92 + threatNow * 0.05);
+          ball.setVelocity(Math.cos(angle) * power, Math.sin(angle) * power - 50);
+          award(80 + scene.hitCombo * 12, bumper.x, bumper.y - 18, scene.feverMult > 1 ? "FEVER" : "", scene.feverMult > 1 ? "#fbbf24" : "#f472b6");
           SFX.pinball();
-          scene.cameras.main.shake(100, 0.01);
-          neonBurst(scene, bumper.x, bumper.y, "spark-pink", Phaser.Math.Between(16, 24));
-          uiFloat(scene, bumper.x, bumper.y - 18, "+" + gain, "#f472b6");
-          var vx = ball.body.velocity.x;
-          var vy = ball.body.velocity.y;
-          ball.setVelocity(vx * 1.02, vy * 1.02);
+          scene.cameras.main.shake(90, 0.01);
+          neonBurst(scene, bumper.x, bumper.y, scene.feverMult > 1 ? "spark-gold" : "spark-pink", Phaser.Math.Between(16, 24));
+          scene.tweens.add({ targets: bumper, scale: 1.22, duration: 70, yoyo: true, ease: "Back.easeOut" });
+          advanceMission(1, "bump");
+        }
+
+        function onDrop(ball, drop) {
+          if (!drop.getData("alive")) return;
+          drop.setData("alive", false);
+          drop.setActive(false).setVisible(false);
+          drop.body.enable = false;
+          scene.dropStates[drop.getData("idx")] = false;
+          scene.dropCleared += 1;
+          award(220, drop.x, drop.y - 16, "DROP", "#fb7185");
+          SFX.slash();
+          neonBurst(scene, drop.x, drop.y, "spark-pink", 20);
+          advanceMission(1, "drops");
+          var allDown = scene.dropStates.every(function (v) { return !v; });
+          if (allDown) {
+            var jp = Math.floor(scene.jackpot * scene.playMult * scene.diff.scoreMult);
+            scene.score += jp;
+            uiFloat(scene, W / 2, 130, "JACKPOT +" + jp, "#fbbf24");
+            neonBurst(scene, W / 2, 130, "spark-gold", 30);
+            SFX.explode();
+            scene.cameras.main.shake(180, 0.022);
+            scene.jackpot = 2500;
+            scene.feverTimer = Math.max(scene.feverTimer, 6);
+            scene.feverMult = 2;
+            scene.time.delayedCall(700, function () {
+              scene.dropTargets.getChildren().forEach(function (d, i) {
+                d.setData("alive", true);
+                d.setActive(true).setVisible(true);
+                d.body.enable = true;
+                scene.dropStates[i] = true;
+              });
+            });
+          }
+        }
+
+        scene.physics.add.collider(scene.balls, scene.topWall);
+        scene.physics.add.collider(scene.balls, scene.leftWall);
+        scene.physics.add.collider(scene.balls, scene.rightWall);
+        scene.physics.add.collider(scene.balls, scene.leftShelf);
+        scene.physics.add.collider(scene.balls, scene.rightShelf);
+        scene.physics.add.collider(scene.balls, scene.leftSling, function (ball) {
+          if (!ball || !ball.body || typeof ball.setVelocity !== "function") return;
+          ball.setVelocity(Math.abs(ball.body.velocity.x) + 180, -Math.abs(ball.body.velocity.y) - 160);
+          SFX.dash();
+          neonBurst(scene, scene.leftSling.x, scene.leftSling.y, "spark-cyan", 15);
+        });
+        scene.physics.add.collider(scene.balls, scene.rightSling, function (ball) {
+          if (!ball || !ball.body || typeof ball.setVelocity !== "function") return;
+          ball.setVelocity(-(Math.abs(ball.body.velocity.x) + 180), -Math.abs(ball.body.velocity.y) - 160);
+          SFX.dash();
+          neonBurst(scene, scene.rightSling.x, scene.rightSling.y, "spark-violet", 15);
+        });
+        scene.physics.add.collider(scene.balls, scene.bumpers, onBumper);
+        scene.physics.add.collider(scene.balls, scene.dropTargets, onDrop);
+        scene.physics.add.collider(scene.balls, scene.leftFlipper);
+        scene.physics.add.collider(scene.balls, scene.rightFlipper);
+        scene.physics.add.overlap(scene.balls, scene.orbitCore, function (ball) {
+          if (scene.orbitHitCool > 0) return;
+          scene.orbitHitCool = 0.35;
+          scene.orbitHits += 1;
+          award(160, scene.orbitCore.x, scene.orbitCore.y - 18, "CORE", "#34d399");
+          SFX.score();
+          neonBurst(scene, scene.orbitCore.x, scene.orbitCore.y, "spark-green", 20);
+          ball.setVelocity(ball.body.velocity.x * 0.4 + Phaser.Math.Between(-120, 120), -320);
+          advanceMission(1, "orbit");
+        });
+        scene.physics.add.overlap(scene.balls, scene.spinner, function (ball) {
+          if (scene.spinnerHitCool > 0) return;
+          scene.spinnerHitCool = 0.25;
+          scene.spinner.rotation += 1.2;
+          award(70, scene.spinner.x, scene.spinner.y - 16, "SPIN", "#fde68a");
+          SFX.pinball();
+          ball.setVelocityY(ball.body.velocity.y - 80);
+        });
+        scene.letterZones.forEach(function (zone) {
+          scene.physics.add.overlap(scene.balls, zone, function () {
+            var idx = zone.getData("idx");
+            if (scene.letterLit[idx]) return;
+            scene.letterLit[idx] = true;
+            zone.setStrokeStyle(2, 0x67e8f9, 1);
+            scene.letterLabels[idx].setColor("#67e8f9");
+            award(150, zone.x, zone.y + 18, "LANE", "#67e8f9");
+            SFX.confirm();
+            advanceMission(1, "letters");
+            if (scene.letterLit.every(Boolean)) {
+              scene.playMult = Math.min(5, scene.playMult + 0.5);
+              award(800, W / 2, 70, "RNF", "#22d3ee");
+              neonBurst(scene, W / 2, 60, "spark-cyan", 26);
+              scene.time.delayedCall(900, function () {
+                scene.letterLit = [false, false, false];
+                scene.letterZones.forEach(function (z, i) {
+                  z.setStrokeStyle(2, 0x64748b, 0.9);
+                  scene.letterLabels[i].setColor("#64748b");
+                });
+              });
+            }
+          });
+        });
+        scene.physics.add.overlap(scene.balls, scene.bonusOrbs, function (ball, orb) {
+          if (!orb.active) return;
+          orb.destroy();
+          award(300, orb.x, orb.y, "ORB", "#a78bfa");
+          SFX.score();
+          neonBurst(scene, orb.x, orb.y, "spark-violet", 22);
+          scene.feverTimer = Math.max(scene.feverTimer, 3.5);
+          scene.feverMult = 2;
+        });
+
+        scene.input.on("pointerdown", function (pointer) {
+          if (pointer.x < W / 2) scene.touchLeft = true;
+          else scene.touchRight = true;
+        });
+        scene.input.on("pointerup", function () {
+          if (scene.input.manager.pointers.filter(function (p) { return p.isDown; }).length === 0) {
+            scene.touchLeft = false;
+            scene.touchRight = false;
+          }
         });
       },
       updateState: function (scene, dt, threat) {
-        var left = scene.cursors.left.isDown || scene.keys.A.isDown;
-        var right = scene.cursors.right.isDown || scene.keys.D.isDown;
-        var nudge = Phaser.Input.Keyboard.JustDown(scene.cursors.space) || Phaser.Input.Keyboard.JustDown(scene.keys.SPACE);
-        scene.leftFlipper.y = left ? H - 92 : H - 74;
-        scene.rightFlipper.y = right ? H - 92 : H - 74;
-        scene.leftFlipper.setAngle(left ? -24 : 18);
-        scene.rightFlipper.setAngle(right ? 24 : -18);
-        scene.physics.world.collide(scene.ball, scene.leftFlipper, function () {
-          scene.ball.setVelocityY(-Math.abs(scene.ball.body.velocity.y) - 90);
-          scene.ball.setVelocityX(scene.ball.body.velocity.x - 30);
-          SFX.pinball();
-          neonBurst(scene, scene.leftFlipper.x, scene.leftFlipper.y, "spark-cyan", 16);
+        scene.bumpers.getChildren().forEach(function (bumper) {
+          var cool = bumper.getData("hitCool") || 0;
+          if (cool > 0) bumper.setData("hitCool", cool - dt);
+          bumper.setTint(scene.feverMult > 1 ? 0xfbbf24 : bumper.getData("baseTint"));
         });
-        scene.physics.world.collide(scene.ball, scene.rightFlipper, function () {
-          scene.ball.setVelocityY(-Math.abs(scene.ball.body.velocity.y) - 90);
-          scene.ball.setVelocityX(scene.ball.body.velocity.x + 30);
-          SFX.pinball();
-          neonBurst(scene, scene.rightFlipper.x, scene.rightFlipper.y, "spark-violet", 16);
-        });
-        if (nudge) {
-          scene.ball.setVelocity(scene.ball.body.velocity.x + Phaser.Math.Between(-70, 70), scene.ball.body.velocity.y - 60);
-          SFX.dash();
-          scene.cameras.main.shake(100, 0.01);
+
+        if (scene.orbitHitCool > 0) scene.orbitHitCool -= dt;
+        if (scene.spinnerHitCool > 0) scene.spinnerHitCool -= dt;
+        scene.orbitAngle += dt * (1.1 + threat * 0.25);
+        scene.orbitCore.x = W / 2 + Math.cos(scene.orbitAngle) * (150 + Math.sin(scene.orbitAngle * 0.7) * 30);
+        scene.orbitCore.y = 245 + Math.sin(scene.orbitAngle * 1.35) * 70;
+        scene.orbitCore.body.reset(scene.orbitCore.x, scene.orbitCore.y);
+        scene.spinner.rotation += dt * 1.5;
+
+        if (scene.skillShotOpen) {
+          scene.skillShotTimer -= dt;
+          var skillHit = false;
+          scene.balls.getChildren().forEach(function (ball) {
+            if (!ball.active) return;
+            if (ball.y < 100 && Math.abs(ball.x - W / 2) < 110 && ball.body.velocity.y < 0) skillHit = true;
+          });
+          if (skillHit) {
+            scene.skillShotOpen = false;
+            scene.awardPin(600, W / 2, 90, "SKILL", "#fbbf24");
+            SFX.confirm();
+            neonBurst(scene, W / 2, 88, "spark-gold", 24);
+            scene.feverTimer = Math.max(scene.feverTimer, 3);
+            scene.feverMult = 2;
+          } else if (scene.skillShotTimer <= 0) {
+            scene.skillShotOpen = false;
+          }
         }
-        scene.spawnTimer += dt;
-        if (scene.spawnTimer >= Math.max(1.25, 3.2 / threat)) {
-          scene.spawnTimer = 0;
-          scene.bumpers.getChildren().forEach(function (bumper) {
-            bumper.setTint(Phaser.Display.Color.RandomRGB().color);
+
+        if (scene.feverTimer > 0) {
+          scene.feverTimer -= dt;
+          scene.feverHoldAcc += dt;
+          if (scene.feverHoldAcc >= 1) {
+            scene.feverHoldAcc -= 1;
+            scene.advanceMission(1, "hold");
+          }
+          if (scene.feverTimer <= 0) {
+            scene.feverTimer = 0;
+            scene.feverMult = 1;
+            scene.feverHoldAcc = 0;
+          }
+        }
+
+        scene.comboIdle += dt;
+        if (scene.comboIdle > 1.6) {
+          scene.hitCombo = Math.max(0, scene.hitCombo - 1);
+          scene.comboIdle = 0.4;
+        }
+
+        if (scene.tiltCool > 0) scene.tiltCool -= dt;
+        if (scene.tilted > 0) scene.tilted -= dt;
+        if (scene.leftKickCool > 0) scene.leftKickCool -= dt;
+        if (scene.rightKickCool > 0) scene.rightKickCool -= dt;
+        if (scene.multiballTimer > 0) scene.multiballTimer -= dt;
+
+        scene.bonusOrbTimer += dt;
+        if (scene.bonusOrbTimer >= Math.max(4.5, 9 / threat)) {
+          scene.bonusOrbTimer = 0;
+          var orb = scene.bonusOrbs.create(Phaser.Math.Between(120, W - 120), 70, "xp");
+          orb.setTint(0xa78bfa);
+          orb.setDisplaySize(18, 18);
+          orb.body.allowGravity = false;
+          orb.setVelocity(Phaser.Math.Between(-40, 40), 55 + threat * 10);
+        }
+        scene.bonusOrbs.getChildren().forEach(function (orb) {
+          if (orb.active && orb.y > H - 40) orb.destroy();
+        });
+
+        var leftHeld = !scene.tilted && (scene.cursors.left.isDown || scene.keys.A.isDown || scene.touchLeft);
+        var rightHeld = !scene.tilted && (scene.cursors.right.isDown || scene.keys.D.isDown || scene.touchRight);
+        var leftJust = !scene.tilted && (
+          Phaser.Input.Keyboard.JustDown(scene.cursors.left) ||
+          Phaser.Input.Keyboard.JustDown(scene.keys.A) ||
+          (leftHeld && !scene.prevTouchLeft)
+        );
+        var rightJust = !scene.tilted && (
+          Phaser.Input.Keyboard.JustDown(scene.cursors.right) ||
+          Phaser.Input.Keyboard.JustDown(scene.keys.D) ||
+          (rightHeld && !scene.prevTouchRight)
+        );
+        scene.prevTouchLeft = leftHeld;
+        scene.prevTouchRight = rightHeld;
+        var nudge = Phaser.Input.Keyboard.JustDown(scene.cursors.space) || Phaser.Input.Keyboard.JustDown(scene.keys.SPACE);
+
+        var leftY = leftHeld ? H - 96 : H - 78;
+        var rightY = rightHeld ? H - 96 : H - 78;
+        scene.leftFlipper.setAngle(leftHeld ? -26 : 14);
+        scene.rightFlipper.setAngle(rightHeld ? 26 : -14);
+        scene.leftFlipper.body.reset(scene.leftFlipper.x, leftY);
+        scene.rightFlipper.body.reset(scene.rightFlipper.x, rightY);
+        scene.leftFlipper.y = leftY;
+        scene.rightFlipper.y = rightY;
+
+        function tryKick(flipper, side, justPressed, held, coolKey) {
+          if (!held || scene[coolKey] > 0) return;
+          var kicked = false;
+          scene.balls.getChildren().forEach(function (ball) {
+            if (!ball.active || kicked) return;
+            var dx = ball.x - flipper.x;
+            var dy = ball.y - flipper.y;
+            if (Math.abs(dx) > 78 || dy < -28 || dy > 40) return;
+            var fallingOnPad = ball.body.velocity.y > 40;
+            if (!justPressed && !fallingOnPad) return;
+            kicked = true;
+            scene[coolKey] = justPressed ? 0.14 : 0.2;
+            var power = justPressed ? 540 : 280;
+            var outward = side === "left" ? -1 : 1;
+            var hitBias = Phaser.Math.Clamp(dx / 70, -1, 1);
+            ball.setVelocity(
+              ball.body.velocity.x * 0.2 + outward * 100 + hitBias * 150,
+              -power
+            );
+            SFX.pinball();
+            neonBurst(scene, flipper.x, flipper.y, side === "left" ? "spark-cyan" : "spark-violet", justPressed ? 22 : 15);
+            if (justPressed) {
+              scene.cameras.main.shake(80, 0.01);
+              scene.tweens.add({ targets: flipper, scaleY: 1.15, duration: 70, yoyo: true, ease: "Cubic.easeOut" });
+            }
           });
         }
-        if (scene.ball.y > H + 30) {
+
+        scene.physics.world.collide(scene.balls, scene.leftFlipper, function () {
+          tryKick(scene.leftFlipper, "left", leftJust, leftHeld, "leftKickCool");
+        });
+        scene.physics.world.collide(scene.balls, scene.rightFlipper, function () {
+          tryKick(scene.rightFlipper, "right", rightJust, rightHeld, "rightKickCool");
+        });
+        if (leftJust) tryKick(scene.leftFlipper, "left", true, true, "leftKickCool");
+        if (rightJust) tryKick(scene.rightFlipper, "right", true, true, "rightKickCool");
+
+        if (nudge && scene.tiltCool <= 0 && scene.tilted <= 0) {
+          scene.tiltCool = 0.28;
+          scene.tiltCount += 1;
+          scene.tiltDecay = 0;
+          scene.balls.getChildren().forEach(function (ball) {
+            if (!ball.active) return;
+            ball.setVelocity(
+              ball.body.velocity.x + Phaser.Math.Between(-110, 110),
+              ball.body.velocity.y - 90
+            );
+          });
+          SFX.dash();
+          scene.cameras.main.shake(120, 0.016);
+          if (scene.tiltCount >= 3) {
+            scene.tilted = 2.8;
+            scene.tiltCount = 0;
+            scene.hitCombo = 0;
+            scene.feverTimer = 0;
+            scene.feverMult = 1;
+            SFX.hit();
+            uiFloat(scene, W / 2, H / 2, "TILT!", "#fb7185");
+          }
+        }
+        if (scene.tilted <= 0 && scene.tiltCool <= 0) {
+          scene.tiltDecay += dt;
+          if (scene.tiltDecay > 2.2) {
+            scene.tiltCount = Math.max(0, scene.tiltCount - 1);
+            scene.tiltDecay = 0;
+          }
+        }
+
+        var drained = false;
+        scene.balls.getChildren().forEach(function (ball) {
+          if (!ball.active) return;
+          var grace = ball.getData("serveGrace") || 0;
+          if (grace > 0) {
+            ball.setData("serveGrace", grace - dt);
+            // 發球保護：避免一出生就掉進中央縫
+            if (ball.y > H - 100 && Math.abs(ball.x - W / 2) < 70) {
+              ball.setVelocity(ball.body.velocity.x * 0.4 + (ball.x < W / 2 ? -120 : 120), -420);
+              ball.y = H - 160;
+              ball.body.reset(ball.x, ball.y);
+            }
+          }
+          if (ball.y > H + 36) {
+            ball.destroy();
+            drained = true;
+          } else {
+            var speed = ball.body.velocity.length();
+            var maxSpeed = 560 + threat * 40;
+            if (speed > maxSpeed) ball.body.velocity.scale(maxSpeed / speed);
+          }
+        });
+        if (drained && scene.balls.countActive(true) === 0) {
           scene.ballLives -= 1;
           scene.hitCombo = 0;
+          scene.feverTimer = 0;
+          scene.feverMult = 1;
+          scene.playMult = Math.max(1, scene.playMult - 0.25);
+          scene.skillShotOpen = true;
+          scene.skillShotTimer = 2.4;
           SFX.hit();
-          scene.cameras.main.shake(160, 0.018);
-          neonBurst(scene, scene.ball.x, H - 20, "spark-pink", 22);
+          scene.cameras.main.shake(180, 0.02);
+          neonBurst(scene, W / 2, H - 24, "spark-pink", 24);
           if (scene.ballLives <= 0) {
             scene.gameOver();
             return;
           }
-          scene.ball.setPosition(W / 2, H - 130);
-          scene.ball.setVelocity(Phaser.Math.Between(-240, 240), -300);
+          scene.spawnPinball(W - 70, H - 210, -320, -360);
         }
-        var speed = scene.ball.body.velocity.length();
-        if (speed < 260) scene.ball.body.velocity.scale(1.02);
-        if (speed > 560) scene.ball.body.velocity.scale(0.98);
-        scene.setExtraHud("BALLS " + scene.ballLives + " · FEVER " + scene.hitCombo);
+
+        var feverLabel = scene.feverMult > 1 ? ("FEVER x2 " + scene.feverTimer.toFixed(1) + "s") : ("COMBO " + scene.hitCombo);
+        var multiLabel = scene.balls.countActive(true) > 1 ? " · MULTIBALL" : "";
+        var tiltLabel = scene.tilted > 0 ? " · TILT" : (scene.tiltCount > 0 ? " · SHAKE " + scene.tiltCount + "/3" : "");
+        scene.setExtraHud("BALLS " + scene.ballLives + " · x" + scene.playMult.toFixed(2) + " · JP " + scene.jackpot + " · " + feverLabel + multiLabel + tiltLabel);
+        scene.modeHud.setText(scene.skillShotOpen ? "技能射門時窗 " + Math.max(0, scene.skillShotTimer).toFixed(1) + "s" : "大獎累積中");
       }
     },
     "void-rhythm-beat": {
@@ -576,36 +1042,42 @@
       title: "ASTRO GRAVITY RUNNER",
       titleZh: "星際重力翻轉者",
       accent: 0x34d399,
-      help: "Space / W / ↑ 翻轉重力，在上下跑道切換並閃避障礙陣列。",
+      help: "Space / W / ↑ 翻轉重力，在上下跑道切換並閃避障礙陣列。撞到障礙即結束。",
       objective: "翻轉重力 · 閃過障礙 · 收集星核",
       scoreVerb: "DIST",
       startState: function (scene) {
         scene.physics.world.setBounds(0, 0, W, H);
         scene.physics.world.gravity.y = 0;
         scene.runnerGravity = 1;
-        scene.player = scene.physics.add.sprite(170, H - 110, "runner");
+        scene.laneDown = H - 110;
+        scene.laneUp = 110;
+        scene.player = scene.physics.add.sprite(170, scene.laneDown, "runner");
         scene.player.body.allowGravity = false;
-        scene.player.setImmovable(true);
+        scene.player.setCollideWorldBounds(true);
+        scene.player.setSize(52, 22);
+        scene.player.setOffset(8, 3);
         scene.player.setTint(0x34d399);
         scene.obstacles = scene.physics.add.group();
         scene.stars = scene.physics.add.group();
         scene.spawnAcc = 0;
         scene.starAcc = 0;
         scene.flipCd = 0;
-        scene.hp = 4;
         scene.floorLines = [
           scene.add.rectangle(W / 2, H - 70, W, 12, 0x0ea5e9, 0.8),
           scene.add.rectangle(W / 2, 70, W, 12, 0x8b5cf6, 0.8)
         ];
-        scene.physics.add.overlap(scene.player, scene.obstacles, function (_p, obs) {
-          if (!obs.active || scene.flipCd > 0.3) return;
-          obs.destroy();
-          scene.hp -= 1;
+        scene.hitObstacle = function (obs) {
+          if (!scene.alive || !obs || !obs.active) return;
+          try { obs.destroy(); } catch (_e) {}
           SFX.hit();
-          scene.cameras.main.shake(150, 0.018);
-          neonBurst(scene, scene.player.x, scene.player.y, "spark-pink", 24);
-          scene.flipCd = 0.7;
-          if (scene.hp <= 0) scene.gameOver();
+          SFX.explode();
+          scene.cameras.main.shake(220, 0.028);
+          neonBurst(scene, scene.player.x, scene.player.y, "spark-pink", 28);
+          neonBurst(scene, scene.player.x, scene.player.y, "spark-violet", 18);
+          scene.gameOver();
+        };
+        scene.physics.add.overlap(scene.player, scene.obstacles, function (_p, obs) {
+          scene.hitObstacle(obs);
         });
         scene.physics.add.overlap(scene.player, scene.stars, function (_p, star) {
           if (!star.active) return;
@@ -617,40 +1089,74 @@
         });
       },
       updateState: function (scene, dt, threat) {
-        var flip = Phaser.Input.Keyboard.JustDown(scene.cursors.space) || Phaser.Input.Keyboard.JustDown(scene.keys.W) || Phaser.Input.Keyboard.JustDown(scene.cursors.up) || Phaser.Input.Keyboard.JustDown(scene.keys.SPACE);
+        if (!scene.alive) return;
+        var flip =
+          Phaser.Input.Keyboard.JustDown(scene.cursors.space) ||
+          Phaser.Input.Keyboard.JustDown(scene.keys.W) ||
+          Phaser.Input.Keyboard.JustDown(scene.cursors.up) ||
+          Phaser.Input.Keyboard.JustDown(scene.keys.SPACE);
         scene.flipCd = Math.max(0, scene.flipCd - dt);
+        // 立即翻轉，短冷卻避免誤觸連按，不阻塞碰撞判定
         if (flip && scene.flipCd <= 0) {
           scene.runnerGravity *= -1;
-          scene.flipCd = 0.35;
-          scene.player.y = scene.runnerGravity > 0 ? H - 110 : 110;
+          scene.flipCd = 0.14;
+          var targetY = scene.runnerGravity > 0 ? scene.laneDown : scene.laneUp;
+          scene.player.setVelocity(0, 0);
+          scene.player.y = targetY;
+          if (scene.player.body) {
+            scene.player.body.reset(scene.player.x, targetY);
+          }
           scene.player.setAngle(scene.runnerGravity > 0 ? 0 : 180);
           SFX.jump();
-          scene.cameras.main.shake(100, 0.01);
-          neonBurst(scene, scene.player.x, scene.player.y, "spark-green", 18);
+          scene.cameras.main.shake(80, 0.008);
+          neonBurst(scene, scene.player.x, scene.player.y, "spark-green", 16);
         }
+
+        // 手動 AABB：高速障礙避免物理 overlap 穿透漏判
+        var pb = scene.player.body;
+        if (pb) {
+          var kids = scene.obstacles.getChildren();
+          for (var i = 0; i < kids.length; i++) {
+            var obs = kids[i];
+            if (!obs || !obs.active || !obs.body) continue;
+            var ob = obs.body;
+            if (
+              pb.right > ob.left &&
+              pb.left < ob.right &&
+              pb.bottom > ob.top &&
+              pb.top < ob.bottom
+            ) {
+              scene.hitObstacle(obs);
+              return;
+            }
+          }
+        }
+
         scene.spawnAcc += dt;
         scene.starAcc += dt;
         scene.score += Math.floor(18 * dt * scene.diff.scoreMult * threat);
         if (scene.spawnAcc >= Math.max(0.28, 0.9 / threat)) {
           scene.spawnAcc = 0;
-          var laneY = Phaser.Math.Between(0, 1) ? H - 110 : 110;
+          var laneY = Phaser.Math.Between(0, 1) ? scene.laneDown : scene.laneUp;
           var obstacle = scene.obstacles.create(W + 40, laneY, "block");
           obstacle.body.allowGravity = false;
-          obstacle.setVelocityX(-(300 * threat + Phaser.Math.Between(20, 70)));
+          obstacle.setSize(34, 34);
+          obstacle.setOffset(3, 3);
+          obstacle.setVelocityX(-(260 * threat + Phaser.Math.Between(10, 50)));
           obstacle.setTint(laneY < H / 2 ? 0xa78bfa : 0x22d3ee);
         }
         if (scene.starAcc >= Math.max(0.9, 2.4 / threat)) {
           scene.starAcc = 0;
-          var starLane = Phaser.Math.Between(0, 1) ? H - 110 : 110;
+          var starLane = Phaser.Math.Between(0, 1) ? scene.laneDown : scene.laneUp;
           var star = scene.stars.create(W + 20, starLane, "xp");
           star.body.allowGravity = false;
           star.setTint(0xfbbf24);
-          star.setVelocityX(-(280 * threat));
+          star.setVelocityX(-(240 * threat));
           scene.tweens.add({ targets: star, scale: 1.25, alpha: 0.5, duration: 400, repeat: -1, yoyo: true, ease: "Sine.easeInOut" });
         }
         scene.obstacles.getChildren().forEach(function (obs) { if (obs.active && obs.x < -40) obs.destroy(); });
         scene.stars.getChildren().forEach(function (star) { if (star.active && star.x < -30) star.destroy(); });
-        scene.setExtraHud("HP " + scene.hp + " · GRAV " + (scene.runnerGravity > 0 ? "DOWN" : "UP"));
+        scene.setExtraHud("GRAV " + (scene.runnerGravity > 0 ? "DOWN" : "UP") + " · HIT=OUT");
       }
     },
     "cyber-rogue-dungeon": {
@@ -975,7 +1481,7 @@
         var danger = this.payload.danger || 1;
         var elapsed = this.payload.elapsed || 0;
         this.add.rectangle(W / 2, H / 2, W, H, 0x02040a, 0.72).setInteractive();
-        var panel = this.add.rectangle(W / 2, H / 2, 480, 460, 0x0b1220, 0.96)
+        var panel = this.add.rectangle(W / 2, H / 2, 480, 500, 0x0b1220, 0.96)
           .setStrokeStyle(2, cfg.accent, 0.9)
           .setScale(0.7)
           .setAlpha(0);
@@ -1012,20 +1518,20 @@
         neonBurst(this, W / 2, H / 2 - 48, "spark-cyan", 24);
         neonBurst(this, W / 2, H / 2 - 48, "spark-violet", 18);
         var self = this;
-        // 兩排按鈕：全部落在面板內（面板半高 230，最底按鈕中心 +170）
-        makeMenuButton(this, W / 2 - 110, H / 2 + 110, "再來一次", cfg.accent, function () {
+        // 兩排按鈕：落在面板內（半高 250）
+        makeMenuButton(this, W / 2 - 110, H / 2 + 95, "再來一次", cfg.accent, function () {
           SFX.confirm();
           self.scene.stop("GameOverModal");
           self.scene.stop("GameScene");
           self.scene.start("GameScene", { difficulty: selectedDiff });
         }, 180);
-        makeMenuButton(this, W / 2 + 110, H / 2 + 110, "排行榜", 0x34d399, function () {
+        makeMenuButton(this, W / 2 + 110, H / 2 + 95, "排行榜", 0x34d399, function () {
           SFX.click();
           self.scene.stop("GameOverModal");
           self.scene.stop("GameScene");
           self.scene.start("LeaderboardScene", { difficulty: selectedDiff || "standard" });
         }, 180);
-        makeMenuButton(this, W / 2, H / 2 + 172, "主選單", 0xa78bfa, function () {
+        makeMenuButton(this, W / 2, H / 2 + 155, "主選單", 0xa78bfa, function () {
           SFX.click();
           self.scene.stop("GameOverModal");
           self.scene.stop("GameScene");

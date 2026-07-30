@@ -1689,8 +1689,9 @@
       "description": "5×5 five-in-a-row with quantum entanglement dual placement and timed turns; four AI tiers, win-streak stats and touch placement."
     },
     "void-brick-breaker": {
+      "title": "Void Brick Breaker",
       "badge": "Neon arcade",
-      "description": "Multi-ball / laser / magnet / sticky power-ups, explosive and steel bricks, break combos and stardust particles. Four-difficulty void breaker with drag + virtual pad."
+      "description": "Three-tier void breaker with steel bricks, orange blast bricks, drifting void bricks, and multi-ball / laser / magnet / wide paddle power-ups. Stack combos as DANGER rises."
     },
     "rainy-frog-dash": {
       "badge": "Neon arcade",
@@ -1724,7 +1725,7 @@
     "neon-pinball-frenzy": {
       "title": "Neon Pinball Frenzy",
       "badge": "Neon arcade",
-      "description": "Keep the plasma ball in play, slam color-shifting bumpers and nudge into Fever as combo rebounds turn the whole arena into a neon score storm."
+      "description": "Flip to guard the ball, nail skill shots, clear drop banks, light R·N·F, chase the orbit core through rotating missions, stack Fever multipliers, and trigger multiball jackpots."
     },
     "void-rhythm-beat": {
       "title": "Void Rhythm Beat",

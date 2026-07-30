@@ -17,7 +17,7 @@
   <script src="/sdk/phaser.min.js"></script>
   <script src="/sdk/rnf-i18n.js?v=20260730e"></script>
   <script src="/sdk/rnf-game-packs.js?v=20260730e"></script>
-  <script src="/sdk/rnf-game-sdk.js?v=20260731e"></script>
+  <script src="/sdk/rnf-game-sdk.js?v=20260731f"></script>
   <script src="/games/_shared/rnf-phaser-leaderboard.js?v=20260731b"></script>
   <script src="/games/_shared/rnf-phaser-help.js?v=20260731d"></script>
 </head>
@@ -260,7 +260,7 @@
 
   function makeButton(scene, x, y, label, color, onClick, width) {
     var bw = width || 300;
-    var bg = scene.add.rectangle(x, y, bw, 50, color, 0.2)
+    var bg = scene.add.rectangle(x, y, bw, 44, color, 0.2)
       .setStrokeStyle(2, color, 0.9)
       .setInteractive({ useHandCursor: true });
     var txt = scene.add.text(x, y, label, {
@@ -949,7 +949,7 @@
       var diff = this.payload.diff || DIFF.standard;
 
       this.add.rectangle(W / 2, H / 2, W, H, 0x02040a, 0.72).setInteractive().setDepth(70);
-      var panel = this.add.rectangle(W / 2, H / 2, 480, 460, 0x0b1220, 0.97)
+      var panel = this.add.rectangle(W / 2, H / 2, 480, 500, 0x0b1220, 0.97)
         .setStrokeStyle(2, 0x22d3ee, 0.95).setScale(0.7).setAlpha(0).setDepth(71);
 
       var badge = this.add.text(W / 2, H / 2 - 168, "GAME OVER", {
@@ -983,7 +983,7 @@
       neonBurst(this, W / 2, H / 2 - 40, 0x22d3ee, 22);
 
       var self = this;
-      var retry = makeButton(this, W / 2 - 110, H / 2 + 110, "再試一次", 0x22d3ee, function () {
+      var retry = makeButton(this, W / 2 - 110, H / 2 + 95, "再試一次", 0x22d3ee, function () {
         SFX.confirm();
         self.scene.stop("GameOverModal");
         self.scene.stop("GameScene");
@@ -991,7 +991,7 @@
       }, 180);
       retry.bg.setDepth(73); retry.txt.setDepth(74);
 
-      var settings = makeButton(this, W / 2 + 110, H / 2 + 110, "排行榜", 0x34d399, function () {
+      var settings = makeButton(this, W / 2 + 110, H / 2 + 95, "排行榜", 0x34d399, function () {
         SFX.click();
         self.scene.stop("GameOverModal");
         try { self.scene.stop("SettingsScene"); } catch (_e) {}
@@ -1000,7 +1000,7 @@
       }, 180);
       settings.bg.setDepth(73); settings.txt.setDepth(74);
 
-      var menu = makeButton(this, W / 2, H / 2 + 172, "主選單", 0x64748b, function () {
+      var menu = makeButton(this, W / 2, H / 2 + 155, "主選單", 0x64748b, function () {
         SFX.click();
         self.scene.stop("GameOverModal");
         self.scene.stop("SettingsScene");
@@ -1021,6 +1021,7 @@
       default: "arcade",
       arcade: { gravity: { y: 0 }, debug: false }
     },
+
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH
@@ -1034,6 +1035,19 @@
   } catch (_e) {
     config.type = Phaser.AUTO;
     window.__RAINY_FROG__ = new Phaser.Game(config);
+  }
+  window.__RNF_ARCADE_GAME__ = window.__RAINY_FROG__;
+  if (typeof RNF !== "undefined" && RNF.setShowMenuHandler) {
+    RNF.setShowMenuHandler(function () {
+      try {
+        var g = window.__RNF_ARCADE_GAME__ || window.__RAINY_FROG__;
+        if (!g || !g.scene) return;
+        ["GameOverModal", "SettingsScene", "LeaderboardScene", "DifficultyScene", "GameScene"].forEach(function (key) {
+          try { if (g.scene.getScene(key)) g.scene.stop(key); } catch (_s) {}
+        });
+        g.scene.start("MainMenuScene");
+      } catch (_err) {}
+    });
   }
 })();
 </script>

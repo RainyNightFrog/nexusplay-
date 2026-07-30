@@ -16,8 +16,8 @@
   </style>
   <script src="/sdk/phaser.min.js"></script>
   <script src="/sdk/rnf-i18n.js?v=20260730d"></script>
-  <script src="/sdk/rnf-game-packs.js?v=20260730d"></script>
-  <script src="/sdk/rnf-game-sdk.js?v=20260731e"></script>
+  <script src="/sdk/rnf-game-packs.js?v=20260731p"></script>
+  <script src="/sdk/rnf-game-sdk.js?v=20260731f"></script>
   <script src="/games/_shared/rnf-phaser-leaderboard.js?v=20260731b"></script>
   <script src="/games/_shared/rnf-phaser-help.js?v=20260731d"></script>
 </head>
@@ -50,36 +50,42 @@
       scoreMult: 1.0,
       paddleW: 150,
       ballSpeed: 260,
-      powerRate: 0.22,
+      powerRate: 0.24,
       rows: 5,
-      cols: 12,
-      voidBricks: false
+      cols: 11,
+      voidRate: 0.04,
+      steelRate: 0.05,
+      explodeRate: 0.08
     },
     standard: {
       id: "standard",
       label: "Standard 電競",
-      desc: "標準底板 · 標準極速 · 正常道具",
+      desc: "標準底板 · 虛空／鋼鐵／爆破混編",
       color: "#a78bfa",
       scoreMult: 1.35,
       paddleW: 118,
       ballSpeed: 320,
-      powerRate: 0.12,
+      powerRate: 0.14,
       rows: 6,
-      cols: 14,
-      voidBricks: false
+      cols: 13,
+      voidRate: 0.08,
+      steelRate: 0.1,
+      explodeRate: 0.09
     },
     extreme: {
       id: "extreme",
       label: "Extreme 狂暴",
-      desc: "縮短底板 · 極速球 · 移動黑洞磚",
+      desc: "縮短底板 · 極速球 · 大量移動虛空磚",
       color: "#f472b6",
       scoreMult: 2.5,
       paddleW: 88,
       ballSpeed: 390,
-      powerRate: 0.08,
+      powerRate: 0.1,
       rows: 7,
       cols: 14,
-      voidBricks: true
+      voidRate: 0.14,
+      steelRate: 0.12,
+      explodeRate: 0.1
     }
   };
 
@@ -216,6 +222,24 @@
     g.generateTexture("brick-void", 56, 22);
 
     g.clear();
+    g.fillStyle(0x64748b, 1);
+    g.fillRoundedRect(0, 0, 56, 22, 4);
+    g.fillStyle(0xe2e8f0, 0.45);
+    g.fillRoundedRect(6, 4, 44, 6, 2);
+    g.lineStyle(2, 0xcbd5e1, 1);
+    g.strokeRoundedRect(1, 1, 54, 20, 4);
+    g.generateTexture("brick-steel", 56, 22);
+
+    g.clear();
+    g.fillStyle(0xf97316, 1);
+    g.fillRoundedRect(0, 0, 56, 22, 4);
+    g.fillStyle(0xfef08a, 0.7);
+    g.fillCircle(28, 11, 7);
+    g.fillStyle(0xfb7185, 0.9);
+    g.fillCircle(28, 11, 3);
+    g.generateTexture("brick-explode", 56, 22);
+
+    g.clear();
     g.fillStyle(0x22d3ee, 1);
     g.fillCircle(3, 3, 3);
     g.generateTexture("spark", 6, 6);
@@ -232,9 +256,10 @@
 
     // powerup icons
     var powers = [
-      { key: "pow-multi", color: 0x34d399, label: "M" },
-      { key: "pow-laser", color: 0xfbbf24, label: "L" },
-      { key: "pow-magnet", color: 0xa78bfa, label: "G" }
+      { key: "pow-multi", color: 0x34d399 },
+      { key: "pow-laser", color: 0xfbbf24 },
+      { key: "pow-magnet", color: 0xa78bfa },
+      { key: "pow-wide", color: 0x22d3ee }
     ];
     for (i = 0; i < powers.length; i++) {
       g.clear();
@@ -259,7 +284,7 @@
 
   function makeButton(scene, x, y, label, color, onClick, width) {
     var bw = width || 300;
-    var bg = scene.add.rectangle(x, y, bw, 50, color, 0.2)
+    var bg = scene.add.rectangle(x, y, bw, 44, color, 0.2)
       .setStrokeStyle(2, color, 0.9)
       .setInteractive({ useHandCursor: true });
     var txt = scene.add.text(x, y, label, {
@@ -327,9 +352,9 @@
         fontSize: "36px", fontStyle: "bold", color: "#ffffff"
       }).setOrigin(0.5).setScale(0.65).setAlpha(0);
 
-      var sub = this.add.text(W / 2, 195, "虛空打磚塊 · 多球／雷射／磁力 · Arcade 精確反彈", {
+      var sub = this.add.text(W / 2, 188, "虛空打磚塊 · 鋼鐵／爆破／虛空磚 · 多球雷射磁力", {
         fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
-        fontSize: "15px", color: "#94a3b8"
+        fontSize: "14px", color: "#94a3b8"
       }).setOrigin(0.5).setAlpha(0);
 
       this.tweens.add({ targets: badge, alpha: 1, y: 88, duration: 400, ease: "Cubic.easeOut" });
@@ -337,20 +362,20 @@
       this.tweens.add({ targets: sub, alpha: 1, duration: 380, ease: "Cubic.easeOut", delay: 120 });
 
       var self = this;
-      makeButton(this, W / 2, 300, "開始遊戲 START", 0x22d3ee, function () {
+      makeButton(this, W / 2, 280, "開始遊戲 START", 0x22d3ee, function () {
         SFX.confirm();
         self.cameras.main.fadeOut(160, 4, 6, 12);
         self.time.delayedCall(170, function () { self.scene.start("DifficultyScene"); });
       });
-      makeButton(this, W / 2, 370, "設定 SETTINGS", 0xa78bfa, function () {
+      makeButton(this, W / 2, 345, "設定 SETTINGS", 0xa78bfa, function () {
         self.scene.launch("SettingsScene");
       });
-      makeButton(this, W / 2, 440, "排行榜", 0x34d399, function () {
+      makeButton(this, W / 2, 410, "排行榜", 0x34d399, function () {
         self.scene.start("LeaderboardScene", { difficulty: (typeof selectedDiff !== "undefined" && selectedDiff) ? selectedDiff : "standard" });
       });
-      makeButton(this, W / 2, 504, "操作說明", 0x64748b, function () {
+      makeButton(this, W / 2, 475, "操作說明", 0x64748b, function () {
         if (window.RNFPhaserHelp && RNFPhaserHelp.showHelpOverlay) {
-          RNFPhaserHelp.showHelpOverlay(self, "拖曳／A D／方向鍵移動底板 · 空白發射雷射 · 磁力吸附後再點擊發射", { W: W, H: H });
+          RNFPhaserHelp.showHelpOverlay(self, "拖曳／A D／←→ 移動底板。空白鍵發射或開火（雷射）。鋼鐵磚需多擊；橙色爆破磚會炸鄰格；紫色虛空磚會左右游移。接住道具可獲多球／雷射／磁力／加寬。", { W: W, H: H });
         }
       }, 240);
     }
@@ -457,6 +482,7 @@
       this.combo = 0;
       this.comboTimer = 0;
       this.bounces = 0;
+      this.elapsedTime = 0;
       this.dangerMultiplier = 1;
       this.alive = true;
       this.serving = true;
@@ -465,6 +491,7 @@
       this.laserOn = false;
       this.laserTimer = 0;
       this.laserCd = 0;
+      this.wideTimer = 0;
       this.dragActive = false;
 
       // background stars
@@ -478,14 +505,23 @@
 
       this.physics.world.setBounds(0, 0, W, H, true, true, true, false);
 
-      this.paddle = this.physics.add.image(W / 2, H - 48, "paddle");
+      this.paddleY = H - 48;
+      this.paddle = this.physics.add.image(W / 2, this.paddleY, "paddle");
       this.paddle.setImmovable(true);
       this.paddle.body.allowGravity = false;
+      // 禁止物理位移：避免球撞擊時把底板「撞飛」
+      this.paddle.body.moves = false;
       this.paddle.setDisplaySize(this.diff.paddleW, 16);
       this.paddle.body.setSize(this.diff.paddleW, 16);
-      this.paddle.setCollideWorldBounds(true);
+      this.paddle.body.setOffset(
+        (this.paddle.width - this.diff.paddleW) / 2,
+        (this.paddle.height - 16) / 2
+      );
+      this.paddle.setCollideWorldBounds(false);
       this.paddle.setDepth(15);
+      this.paddle.setVelocity(0, 0);
       this.basePaddleW = this.diff.paddleW;
+      this.pinPaddle();
 
       this.balls = this.physics.add.group();
       this.bricks = this.physics.add.staticGroup();
@@ -525,7 +561,7 @@
       this.hudPower = this.add.text(W - 14, 32, "", {
         fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif", fontSize: "12px", color: "#94a3b8"
       }).setOrigin(1, 0).setDepth(40);
-      this.hudHint = this.add.text(W / 2, 16, "點擊／空白 發射", {
+      this.hudHint = this.add.text(W / 2, 52, "點擊／空白 發射", {
         fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif", fontSize: "12px", color: "#64748b"
       }).setOrigin(0.5, 0).setDepth(40);
     }
@@ -558,40 +594,81 @@
     movePaddleTo(x) {
       var half = this.paddle.displayWidth / 2;
       this.paddle.x = Phaser.Math.Clamp(x, half + 4, W - half - 4);
+      this.pinPaddle();
       this.syncStuckBalls();
+    }
+
+    pinPaddle() {
+      if (!this.paddle || !this.paddle.body) return;
+      this.paddle.y = this.paddleY;
+      this.paddle.setVelocity(0, 0);
+      this.paddle.body.moves = false;
+      this.paddle.body.reset(this.paddle.x, this.paddleY);
     }
 
     buildLevel() {
       this.bricks.clear(true, true);
       this.voidMovers = [];
-      var rows = this.diff.rows;
+      var rows = this.diff.rows + Math.min(2, Math.floor((this.level - 1) / 2));
       var cols = this.diff.cols;
       var marginX = 28;
       var bw = (W - marginX * 2) / cols - 4;
       var bh = 22;
-      var startY = 56;
+      var startY = 58;
+      var pattern = (this.level - 1) % 4;
 
       for (var r = 0; r < rows; r++) {
         for (var c = 0; c < cols; c++) {
-          if (Math.random() < 0.08) continue;
-          var isVoid = this.diff.voidBricks && Math.random() < 0.08;
+          // 關卡編排：避免大面積空洞，保留可讀形狀
+          if (pattern === 1 && (r + c) % 2 === 0 && r > 0 && r < rows - 1) continue;
+          if (pattern === 2 && c > 1 && c < cols - 2 && r === Math.floor(rows / 2)) continue;
+          if (pattern === 3 && Math.abs(c - (cols - 1) / 2) < 1.2 && r < 2) continue;
+
+          var kind = "normal";
+          var roll = Math.random();
+          if (roll < this.diff.voidRate) kind = "void";
+          else if (roll < this.diff.voidRate + this.diff.steelRate) kind = "steel";
+          else if (roll < this.diff.voidRate + this.diff.steelRate + this.diff.explodeRate) kind = "explode";
+
           var colorIdx = r % BRICK_COLORS.length;
-          var key = isVoid ? "brick-void" : ("brick-" + colorIdx);
+          var key = "brick-" + colorIdx;
+          var hp = 1;
+          var tintColor = BRICK_COLORS[colorIdx];
+          if (kind === "void") {
+            key = "brick-void";
+            hp = 2;
+            tintColor = 0xa78bfa;
+          } else if (kind === "steel") {
+            key = "brick-steel";
+            hp = 3;
+            tintColor = 0xcbd5e1;
+          } else if (kind === "explode") {
+            key = "brick-explode";
+            hp = 1;
+            tintColor = 0xf97316;
+          }
+
           var x = marginX + c * (bw + 4) + bw / 2 + 2;
           var y = startY + r * (bh + 6) + bh / 2;
           var brick = this.bricks.create(x, y, key);
           brick.setDisplaySize(bw, bh);
           brick.refreshBody();
           brick.setData("colorIdx", colorIdx);
-          brick.setData("isVoid", isVoid);
-          brick.setData("hp", isVoid ? 2 : 1);
-          brick.setData("tintColor", isVoid ? 0xa78bfa : BRICK_COLORS[colorIdx]);
+          brick.setData("kind", kind);
+          brick.setData("isVoid", kind === "void");
+          brick.setData("isSteel", kind === "steel");
+          brick.setData("isExplode", kind === "explode");
+          brick.setData("hp", hp);
+          brick.setData("maxHp", hp);
+          brick.setData("tintColor", tintColor);
+          brick.setData("gridR", r);
+          brick.setData("gridC", c);
           brick.setDepth(8);
-          if (isVoid) {
+          if (kind === "void") {
             brick.setData("baseX", x);
             brick.setData("phase", Math.random() * Math.PI * 2);
-            brick.setData("amp", Phaser.Math.Between(28, 55));
-            brick.setData("spd", Phaser.Math.FloatBetween(1.2, 2.2));
+            brick.setData("amp", Phaser.Math.Between(24, 48));
+            brick.setData("spd", Phaser.Math.FloatBetween(1.1, 2.0));
             this.voidMovers.push(brick);
           }
         }
@@ -599,7 +676,7 @@
     }
 
     spawnBall(stuck) {
-      var ball = this.balls.create(this.paddle.x, this.paddle.y - 18, "ball");
+      var ball = this.balls.create(this.paddle.x, this.paddleY - 18, "ball");
       ball.setCircle(7);
       ball.setBounce(1);
       ball.setCollideWorldBounds(true);
@@ -609,11 +686,29 @@
       ball.setBlendMode(Phaser.BlendModes.ADD);
       ball.setData("stuck", !!stuck);
       ball.setData("speed", this.diff.ballSpeed);
+      ball.body.allowGravity = false;
       if (stuck) {
+        // 關掉物理，避免卡在底板上被碰撞分離「彈飛／掉出」後球消失
         ball.body.setVelocity(0, 0);
-        ball.body.allowGravity = false;
+        ball.body.enable = false;
+        ball.x = this.paddle.x;
+        ball.y = this.paddleY - 18;
+      } else {
+        ball.body.enable = true;
       }
       return ball;
+    }
+
+    ensureServeBall() {
+      var count = 0;
+      this.balls.getChildren().forEach(function (b) {
+        if (b.active) count++;
+      });
+      if (count === 0) {
+        this.serving = true;
+        this.spawnBall(true);
+        if (this.hudHint) this.hudHint.setText("點擊／空白 發射");
+      }
     }
 
     hasStuckBall() {
@@ -627,22 +722,28 @@
     syncStuckBalls() {
       var self = this;
       this.balls.getChildren().forEach(function (b) {
-        if (b.active && b.getData("stuck")) {
-          b.x = self.paddle.x;
-          b.y = self.paddle.y - 18;
-          b.body.reset(b.x, b.y);
-        }
+        if (!b.active || !b.getData("stuck")) return;
+        b.body.enable = false;
+        b.body.setVelocity(0, 0);
+        b.x = self.paddle.x;
+        b.y = self.paddleY - 18;
+        if (b.body) b.body.reset(b.x, b.y);
+        b.body.enable = false;
       });
     }
 
     launchBalls() {
       var launched = false;
       var self = this;
-      var baseSpeed = this.diff.ballSpeed * this.dangerMultiplier;
+      var baseSpeed = Math.max(180, this.diff.ballSpeed * Math.max(1, this.dangerMultiplier * 0.85));
       this.balls.getChildren().forEach(function (b) {
         if (!b.active || !b.getData("stuck")) return;
         b.setData("stuck", false);
-        var angle = Phaser.Math.FloatBetween(-0.55, 0.55);
+        b.body.enable = true;
+        b.x = self.paddle.x;
+        b.y = self.paddleY - 18;
+        b.body.reset(b.x, b.y);
+        var angle = Phaser.Math.FloatBetween(-0.5, 0.5);
         var spd = baseSpeed;
         b.setData("speed", spd);
         b.body.setVelocity(Math.sin(angle) * spd, -Math.cos(angle) * spd);
@@ -652,6 +753,10 @@
         this.serving = false;
         this.hudHint.setText("");
         SFX.launch();
+      } else if (this.serving) {
+        // 發球狀態卻沒有黏球 → 補一顆再發
+        this.spawnBall(true);
+        this.launchBalls();
       }
     }
 
@@ -676,9 +781,11 @@
       if (this.magnetOn) {
         ball.setData("stuck", true);
         ball.body.setVelocity(0, 0);
+        ball.body.enable = false;
         ball.x = paddle.x;
-        ball.y = paddle.y - 18;
+        ball.y = this.paddleY - 18;
         ball.body.reset(ball.x, ball.y);
+        ball.body.enable = false;
         this.hudHint.setText("磁力吸附 · 點擊／空白 重新發射");
         SFX.power();
         return;
@@ -693,17 +800,16 @@
       ball.body.setVelocity(Math.sin(angle) * spd, -Math.abs(Math.cos(angle) * spd));
 
       this.bounces++;
-      this.dangerMultiplier = 1 + Math.log(1 + this.bounces / 12) * 0.8;
+      this.dangerMultiplier = 1 + Math.log(1 + this.elapsedTime / 30) * 0.8 + Math.log(1 + this.bounces / 24) * 0.2;
 
-      // Squash & Stretch
+      // 視覺回饋，不縮放物理底板（避免碰撞體變形）
       this.tweens.killTweensOf(paddle);
-      paddle.setScale(1.18, 0.72);
+      paddle.setAlpha(0.55);
       this.tweens.add({
         targets: paddle,
-        scaleX: 1,
-        scaleY: 1,
-        duration: 160,
-        ease: "Back.easeOut"
+        alpha: 1,
+        duration: 140,
+        ease: "Cubic.easeOut"
       });
 
       SFX.paddle();
@@ -713,7 +819,7 @@
     onBallBrick(ball, brick) {
       this.hitBrick(brick, false);
       this.bounces++;
-      this.dangerMultiplier = 1 + Math.log(1 + this.bounces / 12) * 0.8;
+      this.dangerMultiplier = 1 + Math.log(1 + this.elapsedTime / 30) * 0.8 + Math.log(1 + this.bounces / 24) * 0.2;
       this.applyBallSpeed(ball);
     }
 
@@ -724,7 +830,7 @@
     }
 
     hitBrick(brick, fromLaser) {
-      if (!brick.active) return;
+      if (!brick.active || brick.getData("breaking")) return;
       var hp = brick.getData("hp") || 1;
       hp -= 1;
       brick.setData("hp", hp);
@@ -732,35 +838,45 @@
       if (hp > 0) {
         SFX.hit();
         doShake(this.cameras.main, 60, 0.006);
+        var maxHp = brick.getData("maxHp") || 1;
+        brick.setAlpha(0.45 + 0.55 * (hp / maxHp));
         this.tweens.add({
-          targets: brick, scaleX: 1.12, scaleY: 0.88, duration: 70, yoyo: true, ease: "Cubic.easeOut"
+          targets: brick, scaleX: 1.1, scaleY: 0.9, duration: 70, yoyo: true, ease: "Cubic.easeOut",
+          onComplete: function () {
+            brick.setScale(1);
+          }
         });
         return;
       }
 
+      brick.setData("breaking", true);
       this.combo++;
       this.comboTimer = 2.8;
       var tint = brick.getData("tintColor") || 0x22d3ee;
-      var pts = Math.floor(25 * (1 + this.combo * 0.2) * this.diff.scoreMult * (0.85 + this.dangerMultiplier * 0.2));
+      var kindBonus = brick.getData("isSteel") ? 1.6 : (brick.getData("isExplode") ? 1.35 : (brick.getData("isVoid") ? 1.25 : 1));
+      var pts = Math.floor(25 * (1 + this.combo * 0.2) * kindBonus * this.diff.scoreMult * (0.85 + this.dangerMultiplier * 0.2));
       this.score += pts;
 
       doShake(this.cameras.main, 100, 0.012);
       SFX.break(this.combo);
-      neonBurst(this, brick.x, brick.y, tint, 20);
+      neonBurst(this, brick.x, brick.y, tint, brick.getData("isExplode") ? 26 : 20);
 
       var floater = this.add.text(brick.x, brick.y, "+" + pts, {
         fontFamily: "Segoe UI, sans-serif", fontSize: "16px", fontStyle: "bold",
-        color: BRICK_CSS[brick.getData("colorIdx") || 0]
+        color: brick.getData("isExplode") ? "#fb923c" : BRICK_CSS[brick.getData("colorIdx") || 0]
       }).setOrigin(0.5).setDepth(35);
       this.tweens.add({
         targets: floater, y: brick.y - 40, alpha: 0, scale: 1.2, duration: 420, ease: "Cubic.easeOut",
         onComplete: function () { floater.destroy(); }
       });
 
-      // elastic then shatter
       var self = this;
       var dropPower = Math.random() < this.diff.powerRate;
       var px = brick.x, py = brick.y;
+      var shouldExplode = !!brick.getData("isExplode");
+      var gridR = brick.getData("gridR");
+      var gridC = brick.getData("gridC");
+
       this.tweens.add({
         targets: brick,
         scaleX: 1.25,
@@ -781,6 +897,7 @@
                 if (idx >= 0) self.voidMovers.splice(idx, 1);
               }
               brick.destroy();
+              if (shouldExplode) self.triggerExplosion(px, py, gridR, gridC);
               if (dropPower) self.spawnPowerup(px, py);
               self.checkLevelClear();
             }
@@ -789,8 +906,24 @@
       });
     }
 
+    triggerExplosion(x, y, _r, _c) {
+      var self = this;
+      neonBurst(this, x, y, 0xf97316, 28);
+      neonBurst(this, x, y, 0xfbbf24, 18);
+      doShake(this.cameras.main, 140, 0.02);
+      SFX.break(8);
+      this.bricks.getChildren().forEach(function (other) {
+        if (!other.active || other.getData("breaking")) return;
+        var dx = other.x - x;
+        var dy = other.y - y;
+        if (dx * dx + dy * dy <= 78 * 78) {
+          self.hitBrick(other, true);
+        }
+      });
+    }
+
     spawnPowerup(x, y) {
-      var types = ["multi", "laser", "magnet"];
+      var types = ["multi", "laser", "magnet", "wide"];
       var type = types[Phaser.Math.Between(0, types.length - 1)];
       var key = "pow-" + type;
       var p = this.powerups.create(x, y, key);
@@ -818,7 +951,20 @@
       } else if (type === "magnet") {
         this.magnetOn = true;
         this.magnetTimer = 8;
+      } else if (type === "wide") {
+        this.wideTimer = 12;
+        this.applyPaddleWidth(this.basePaddleW * 1.5);
       }
+    }
+
+    applyPaddleWidth(w) {
+      this.paddle.setDisplaySize(w, 16);
+      this.paddle.body.setSize(w, 16);
+      this.paddle.body.setOffset(
+        (this.paddle.width - w) / 2,
+        (this.paddle.height - 16) / 2
+      );
+      this.movePaddleTo(this.paddle.x);
     }
 
     activateMultiBall() {
@@ -887,12 +1033,15 @@
     }
 
     loseLife() {
+      if (!this.alive || this._lifeLock) return;
+      this._lifeLock = true;
       this.lives--;
       this.combo = 0;
       this.balls.clear(true, true);
       this.lasers.clear(true, true);
 
       if (this.lives <= 0) {
+        this._lifeLock = false;
         this.die();
         return;
       }
@@ -900,8 +1049,13 @@
       SFX.hit();
       doShake(this.cameras.main, 120, 0.015);
       this.serving = true;
+      this.wideTimer = 0;
+      this.applyPaddleWidth(this.basePaddleW);
       this.spawnBall(true);
+      this.syncStuckBalls();
       this.hudHint.setText("生命 -1 · 點擊發射");
+      var self = this;
+      this.time.delayedCall(80, function () { self._lifeLock = false; });
     }
 
     die() {
@@ -936,7 +1090,11 @@
         dangerPeak: Number(this.dangerMultiplier.toFixed(2))
       };
       try {
-        if (typeof RNF !== "undefined" && RNF.submitScore) RNF.submitScore(finalScore, meta);
+        if (window.RNFPhaserLeaderboard && RNFPhaserLeaderboard.submitRun) {
+          RNFPhaserLeaderboard.submitRun(finalScore, meta);
+        } else if (typeof RNF !== "undefined" && RNF.submitScore) {
+          RNF.submitScore(finalScore, meta);
+        }
       } catch (_e) {}
 
       var self = this;
@@ -955,6 +1113,11 @@
     update(_t, delta) {
       if (!this.alive) return;
       var dt = Math.min(0.05, delta / 1000);
+      this.elapsedTime += dt;
+      this.dangerMultiplier = 1 + Math.log(1 + this.elapsedTime / 30) * 0.8 + Math.log(1 + this.bounces / 24) * 0.2;
+
+      // 每幀釘住底板高度，防止被球／道具物理推飛
+      this.pinPaddle();
 
       // keyboard paddle
       var speed = 520;
@@ -978,6 +1141,13 @@
         this.magnetTimer -= dt;
         if (this.magnetTimer <= 0) this.magnetOn = false;
       }
+      if (this.wideTimer > 0) {
+        this.wideTimer -= dt;
+        if (this.wideTimer <= 0) {
+          this.wideTimer = 0;
+          this.applyPaddleWidth(this.basePaddleW);
+        }
+      }
 
       // moving void bricks
       for (var i = 0; i < this.voidMovers.length; i++) {
@@ -995,15 +1165,28 @@
       var self = this;
       this.balls.getChildren().forEach(function (b) {
         if (!b.active) return;
+        if (b.getData("stuck")) {
+          // 黏球不因 y 判定銷毀，固定在底板上
+          b.x = self.paddle.x;
+          b.y = self.paddleY - 18;
+          living++;
+          return;
+        }
         if (b.y > H + 20) {
           b.destroy();
           return;
         }
         living++;
-        if (!b.getData("stuck")) self.applyBallSpeed(b);
+        self.applyBallSpeed(b);
       });
 
-      if (!this.serving && living === 0) this.loseLife();
+      if (living === 0) {
+        if (this.serving) {
+          this.ensureServeBall();
+        } else {
+          this.loseLife();
+        }
+      }
 
       // cleanup lasers / powerups offscreen
       this.lasers.getChildren().forEach(function (l) {
@@ -1021,8 +1204,9 @@
       var powers = [];
       if (this.laserOn) powers.push("雷射 " + Math.ceil(this.laserTimer) + "s");
       if (this.magnetOn) powers.push("磁力 " + Math.ceil(this.magnetTimer) + "s");
+      if (this.wideTimer > 0) powers.push("加寬 " + Math.ceil(this.wideTimer) + "s");
       this.hudPower.setText(powers.join(" · "));
-      this.paddle.setTint(this.laserOn ? 0xfbbf24 : (this.magnetOn ? 0xa78bfa : 0xffffff));
+      this.paddle.setTint(this.laserOn ? 0xfbbf24 : (this.magnetOn ? 0xa78bfa : (this.wideTimer > 0 ? 0x67e8f9 : 0xffffff)));
     }
   }
 
@@ -1059,7 +1243,7 @@
       var diff = this.payload.diff || DIFF.standard;
 
       this.add.rectangle(W / 2, H / 2, W, H, 0x02040a, 0.72).setInteractive().setDepth(70);
-      var panel = this.add.rectangle(W / 2, H / 2, 480, 460, 0x0b1220, 0.97)
+      var panel = this.add.rectangle(W / 2, H / 2, 480, 500, 0x0b1220, 0.97)
         .setStrokeStyle(2, 0x22d3ee, 0.95).setScale(0.7).setAlpha(0).setDepth(71);
 
       var badge = this.add.text(W / 2, H / 2 - 168, "GAME OVER", {
@@ -1093,7 +1277,7 @@
       neonBurst(this, W / 2, H / 2 - 40, 0x22d3ee, 22);
 
       var self = this;
-      var retry = makeButton(this, W / 2 - 110, H / 2 + 110, "再試一次", 0x22d3ee, function () {
+      var retry = makeButton(this, W / 2 - 110, H / 2 + 95, "再試一次", 0x22d3ee, function () {
         SFX.confirm();
         self.scene.stop("GameOverModal");
         self.scene.stop("GameScene");
@@ -1101,7 +1285,7 @@
       }, 180);
       retry.bg.setDepth(73); retry.txt.setDepth(74);
 
-      var settings = makeButton(this, W / 2 + 110, H / 2 + 110, "排行榜", 0x34d399, function () {
+      var settings = makeButton(this, W / 2 + 110, H / 2 + 95, "排行榜", 0x34d399, function () {
         SFX.click();
         self.scene.stop("GameOverModal");
         try { self.scene.stop("SettingsScene"); } catch (_e) {}
@@ -1109,10 +1293,7 @@
         self.scene.start("LeaderboardScene", { difficulty: (typeof selectedDiff !== "undefined" && selectedDiff) ? selectedDiff : "standard" });
       }, 180);
       settings.bg.setDepth(73); settings.txt.setDepth(74);
-
-      var menu = 
-
-      var menu = makeButton(this, W / 2, H / 2 + 172, "主選單", 0x64748b, function () {
+      var menu = makeButton(this, W / 2, H / 2 + 155, "主選單", 0x64748b, function () {
         SFX.click();
         self.scene.stop("GameOverModal");
         self.scene.stop("SettingsScene");
@@ -1133,6 +1314,7 @@
       default: "arcade",
       arcade: { gravity: { y: 0 }, debug: false }
     },
+
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH
@@ -1146,6 +1328,19 @@
   } catch (_e) {
     config.type = Phaser.AUTO;
     window.__VOID_BRICK__ = new Phaser.Game(config);
+  }
+  window.__RNF_ARCADE_GAME__ = window.__VOID_BRICK__;
+  if (typeof RNF !== "undefined" && RNF.setShowMenuHandler) {
+    RNF.setShowMenuHandler(function () {
+      try {
+        var g = window.__RNF_ARCADE_GAME__ || window.__VOID_BRICK__;
+        if (!g || !g.scene) return;
+        ["GameOverModal", "SettingsScene", "LeaderboardScene", "DifficultyScene", "GameScene"].forEach(function (key) {
+          try { if (g.scene.getScene(key)) g.scene.stop(key); } catch (_s) {}
+        });
+        g.scene.start("MainMenuScene");
+      } catch (_err) {}
+    });
   }
 })();
 </script>

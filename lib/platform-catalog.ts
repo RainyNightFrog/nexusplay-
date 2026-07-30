@@ -296,7 +296,7 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
     creator: "RNF Creator Pool",
     categories: ["休閒", "物理"],
     description:
-      "操控雙擋板守住高能鋼珠，撞擊變色 Bumper 疊高 Fever 狂熱分數，讓整個場館陷入霓虹反彈風暴。",
+      "揮擊雙擋板、衝技能射門、擊破目標牆與點亮 R·N·F，完成輪替任務疊倍率，並在大獎後引爆雙球狂潮。",
     coverPath: "/games/neon-pinball-frenzy/cover.png",
     playsCount: 6_920,
     likesCount: 305,

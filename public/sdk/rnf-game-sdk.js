@@ -275,9 +275,30 @@
 
   function isTrustedParentMessage(event) {
     if (!event || event.source !== global.parent) return false;
+    try {
+      var oh = new URL(event.origin).hostname.toLowerCase();
+      var lh = String(location.hostname || "").toLowerCase();
+      // 同源（含 no-referrer 時 referrer 為空）
+      if (event.origin === location.origin) return true;
+      if (oh === lh) return true;
+      // 本機 127.0.0.1 ↔ localhost
+      if (
+        (oh === "localhost" || oh === "127.0.0.1") &&
+        (lh === "localhost" || lh === "127.0.0.1")
+      ) {
+        return true;
+      }
+      if (oh.endsWith(".localhost") || lh.endsWith(".localhost")) return true;
+      // 主站 ↔ play／www 等子網域
+      if (
+        (oh === "rainynightfrog.com" || oh.endsWith(".rainynightfrog.com")) &&
+        (lh === "rainynightfrog.com" || lh.endsWith(".rainynightfrog.com"))
+      ) {
+        return true;
+      }
+    } catch (_e) {}
     var expected = getParentTargetOrigin();
-    if (!expected) return false;
-    return event.origin === expected;
+    return !!expected && event.origin === expected;
   }
 
   function postToParent(payload) {
@@ -405,10 +426,21 @@
     });
     try {
       var game = findPhaserGameInstance();
-      if (game && game.sound && typeof game.sound.volume === "number") {
-        game.sound.volume = v;
+      if (game && game.sound) {
+        try {
+          game.sound.volume = v;
+          if (typeof game.sound.mute === "boolean") game.sound.mute = v <= 0;
+          if (v <= 0 && typeof game.sound.pauseAll === "function") game.sound.pauseAll();
+          if (v > 0 && typeof game.sound.resumeAll === "function") game.sound.resumeAll();
+        } catch (_s) {}
       }
     } catch (_p) {}
+    try {
+      if (audioCtx) {
+        if (v <= 0 && audioCtx.state === "running") audioCtx.suspend();
+        else if (v > 0 && audioCtx.state === "suspended") audioCtx.resume();
+      }
+    } catch (_a) {}
     return v;
   }
 
@@ -1002,7 +1034,10 @@
     root.classList.toggle("rnf-embed-compact", (height || 0) > 0 && (height || 0) < 700);
   }
 
+  var embedBridgeBound = false;
   function bindEmbedBridge() {
+    if (embedBridgeBound) return;
+    embedBridgeBound = true;
     window.addEventListener("message", function (event) {
       if (!isTrustedParentMessage(event)) return;
       var data = event.data;
@@ -1935,4 +1970,11 @@
   };
 
   global.RNF = RNF;
+
+  // 嵌入頁即使未呼叫 init() 也要能收主站的返回選單／音量訊息（suite 等）
+  try {
+    if (global.parent && global.parent !== global) {
+      bindEmbedBridge();
+    }
+  } catch (_autoBind) {}
 })(typeof window !== "undefined" ? window : this);

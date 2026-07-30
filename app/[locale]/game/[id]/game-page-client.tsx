@@ -461,13 +461,21 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
   const iframeSrc = useMemo(() => {
     if (!trustedEmbedUrl || !game) return null;
     const sep = trustedEmbedUrl.includes("?") ? "&" : "?";
-    return `${trustedEmbedUrl}${sep}gid=${game.id}&locale=${encodeURIComponent(locale)}`;
+    // 本地街機 HTML 加版本參數，避免虛擬鍵／結算排版更新後仍吃到舊快取
+    const bust =
+      /\/games\/[^/?#]+\/index\.html/i.test(trustedEmbedUrl) ||
+      /\/demos\/[^/?#]+\.html/i.test(trustedEmbedUrl)
+        ? "&v=20260731x"
+        : "";
+    return `${trustedEmbedUrl}${sep}gid=${game.id}&locale=${encodeURIComponent(locale)}${bust}`;
   }, [trustedEmbedUrl, game, locale]);
 
   const embedCode = useMemo(() => {
     if (!iframeSrc) return "";
+    const origin =
+      typeof window !== "undefined" ? window.location.origin : "";
     const absoluteUrl = iframeSrc.startsWith("/")
-      ? `${window.location.origin}${iframeSrc}`
+      ? `${origin}${iframeSrc}`
       : iframeSrc;
     return buildEmbedCode(
       absoluteUrl,

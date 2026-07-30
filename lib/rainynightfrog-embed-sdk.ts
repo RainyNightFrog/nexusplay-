@@ -298,8 +298,21 @@ export function postShowGameMenu(
   const target = iframe?.contentWindow;
   if (!target) return false;
   const targetOrigin = resolveIframePostOrigin(iframe);
-  target.postMessage({ type: RAINYNIGHTFROG_SHOW_MENU_MESSAGE }, targetOrigin);
-  target.postMessage({ type: RNF_SHOW_MENU_MESSAGE }, targetOrigin);
+  const payloadA = { type: RAINYNIGHTFROG_SHOW_MENU_MESSAGE };
+  const payloadB = { type: RNF_SHOW_MENU_MESSAGE };
+  try {
+    target.postMessage(payloadA, targetOrigin);
+    target.postMessage(payloadB, targetOrigin);
+  } catch {
+    /* ignore */
+  }
+  // 目標 origin 推算錯誤時仍投遞；iframe 端會再做來源驗證
+  try {
+    target.postMessage(payloadA, "*");
+    target.postMessage(payloadB, "*");
+  } catch {
+    /* ignore */
+  }
   return true;
 }
 
@@ -314,8 +327,19 @@ export function postSetGameVolume(
   if (Number.isNaN(v)) return false;
   const targetOrigin = resolveIframePostOrigin(iframe);
   const payload = { type: RAINYNIGHTFROG_SET_VOLUME_MESSAGE, volume: v };
-  target.postMessage(payload, targetOrigin);
-  target.postMessage({ type: RNF_SET_VOLUME_MESSAGE, volume: v }, targetOrigin);
+  const legacy = { type: RNF_SET_VOLUME_MESSAGE, volume: v };
+  try {
+    target.postMessage(payload, targetOrigin);
+    target.postMessage(legacy, targetOrigin);
+  } catch {
+    /* ignore */
+  }
+  try {
+    target.postMessage(payload, "*");
+    target.postMessage(legacy, "*");
+  } catch {
+    /* ignore */
+  }
   return true;
 }
 

@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Neon Tetromino Rush · 霓虹方塊衝刺</title>
+    <!-- touch-dock-v20260731j：鎖定重設上限 + 虛擬鍵安全區 -->
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
@@ -18,7 +19,7 @@
   <script src="/sdk/phaser.min.js"></script>
   <script src="/sdk/rnf-i18n.js?v=20260730f"></script>
   <script src="/sdk/rnf-game-packs.js?v=20260730f"></script>
-  <script src="/sdk/rnf-game-sdk.js?v=20260731e"></script>
+  <script src="/sdk/rnf-game-sdk.js?v=20260731f"></script>
   <script src="/games/_shared/rnf-phaser-leaderboard.js?v=20260731b"></script>
   <script src="/games/_shared/rnf-phaser-help.js?v=20260731d"></script>
 </head>
@@ -44,6 +45,32 @@
   var BOARD_X = 300;
   var BOARD_Y = 20;
   var SETTINGS_KEY = "rnf:neon-tetromino-rush:settings";
+  var TOUCH_DOCK_H = 88;
+
+  function isTouchPlayLayout() {
+    try {
+      return (
+        matchMedia("(pointer: coarse)").matches ||
+        matchMedia("(hover: none)").matches ||
+        (navigator.maxTouchPoints || 0) > 0
+      );
+    } catch (_e) {
+      return false;
+    }
+  }
+
+  /** 觸控時縮小盤面，底部留出虛擬鍵安全區，絕對不蓋住方塊 */
+  function applyBoardLayout(touchMode) {
+    if (touchMode) {
+      BS = 20;
+      BOARD_Y = 10;
+      BOARD_X = Math.floor((W - COLS * BS) / 2);
+    } else {
+      BS = 24;
+      BOARD_Y = 20;
+      BOARD_X = 300;
+    }
+  }
 
   var COLORS = {
     I: 0x22d3ee, O: 0xfbbf24, T: 0xa78bfa, S: 0x4ade80,
@@ -68,7 +95,8 @@
       color: "#67e8f9",
       scoreMult: 1.0,
       baseDrop: 1.05,
-      lockDelay: 0.85,
+      lockDelay: 0.55,
+      maxLockResets: 12,
       infiniteHold: true,
       garbageEvery: 0
     },
@@ -79,7 +107,8 @@
       color: "#a78bfa",
       scoreMult: 1.35,
       baseDrop: 0.75,
-      lockDelay: 0.5,
+      lockDelay: 0.4,
+      maxLockResets: 10,
       infiniteHold: false,
       garbageEvery: 0
     },
@@ -90,7 +119,8 @@
       color: "#f472b6",
       scoreMult: 2.5,
       baseDrop: 0.45,
-      lockDelay: 0.32,
+      lockDelay: 0.28,
+      maxLockResets: 8,
       infiniteHold: false,
       garbageEvery: 20
     }
@@ -243,7 +273,7 @@
 
   function makeButton(scene, x, y, label, color, onClick, width) {
     var bw = width || 300;
-    var bg = scene.add.rectangle(x, y, bw, 50, color, 0.2)
+    var bg = scene.add.rectangle(x, y, bw, 44, color, 0.2)
       .setStrokeStyle(2, color, 0.9)
       .setInteractive({ useHandCursor: true });
     var txt = scene.add.text(x, y, label, {
@@ -268,6 +298,7 @@
   class BootScene extends Phaser.Scene {
     constructor() { super("BootScene"); }
     create() {
+      applyBoardLayout(isTouchPlayLayout());
       makeTextures(this);
       this.cameras.main.setBackgroundColor("#04060c");
       this.cameras.main.fadeIn(320, 4, 6, 12);
@@ -436,6 +467,14 @@
       this.cameras.main.setBackgroundColor("#050814");
       this.cameras.main.fadeIn(180, 4, 6, 12);
 
+      this.touchMode = isTouchPlayLayout();
+      applyBoardLayout(this.touchMode);
+      try {
+        document.querySelectorAll(".rnf-touch-pad").forEach(function (el) {
+          el.remove();
+        });
+      } catch (_rm) {}
+
       this.board = [];
       for (var r = 0; r < ROWS; r++) {
         this.board[r] = [];
@@ -457,6 +496,7 @@
       this.dropAcc = 0;
       this.lockTimer = 0;
       this.locking = false;
+      this.lockResets = 0;
       this.dasDir = 0;
       this.dasTimer = 0;
       this.arrTimer = 0;
@@ -532,48 +572,65 @@
     }
 
     createTouchUI() {
-      var coarse = false;
-      try { coarse = matchMedia("(pointer: coarse)").matches; } catch (_e) {}
-      // 桌面僅保留滑動手勢；虛擬鍵改側欄，避免蓋住盤面底部
       var self = this;
       this.touchBtns = [];
 
-      if (coarse) {
-        var leftX = 72;
-        var rightX = W - 72;
+      // 清掉 SDK 可能殘留的 HTML 虛擬鍵列（會蓋住 canvas）
+      try {
+        document.querySelectorAll(".rnf-touch-pad").forEach(function (el) {
+          el.remove();
+        });
+        if (typeof RNF !== "undefined" && RNF.detachTouchControls) {
+          RNF.detachTouchControls();
+        }
+      } catch (_e) {}
+
+      var boardBottom = BOARD_Y + ROWS * BS;
+      var dockTop = boardBottom + 10;
+
+      // 僅觸控佈局顯示虛擬鍵；一律放在盤面下方安全區
+      if (this.touchMode) {
+        var cy = Math.min(H - 36, dockTop + 36);
+        // 盤面底 + 按鈕半高 必須 < cy+22，且 cy-22 > boardBottom
+        if (cy - 24 <= boardBottom) {
+          cy = boardBottom + 28;
+        }
         var mk = function (x, y, label, fn, bw) {
-          var bg = self.add.rectangle(x, y, bw || 56, 48, 0x0b1220, 0.55)
-            .setStrokeStyle(1, 0x22d3ee, 0.45)
+          var bg = self.add.rectangle(x, y, bw || 52, 40, 0x020617, 0.72)
+            .setStrokeStyle(1, 0x22d3ee, 0.55)
             .setInteractive({ useHandCursor: true })
-            .setDepth(50)
+            .setDepth(60)
             .setScrollFactor(0);
           var txt = self.add.text(x, y, label, {
-            fontFamily: "Segoe UI, sans-serif", fontSize: "14px", fontStyle: "bold", color: "#e2e8f0"
-          }).setOrigin(0.5).setDepth(51).setAlpha(0.9);
+            fontFamily: "Segoe UI, sans-serif", fontSize: "13px", fontStyle: "bold", color: "#e2e8f0"
+          }).setOrigin(0.5).setDepth(61);
           bg.on("pointerdown", function (p) {
-            if (p) p.event.stopPropagation();
+            if (p && p.event) p.event.stopPropagation();
             fn();
           });
           self.touchBtns.push(bg, txt);
         };
-        mk(leftX, 320, "↻", function () { self.rotate(); });
-        mk(leftX - 34, 390, "◀", function () { self.move(-1); }, 48);
-        mk(leftX + 34, 390, "▶", function () { self.move(1); }, 48);
-        mk(leftX, 460, "↓", function () { self.softDropOnce(); });
-        mk(rightX, 360, "DROP", function () { self.hardDrop(); }, 72);
-        mk(rightX, 440, "HOLD", function () { self.doHold(); }, 72);
+        var gap = 58;
+        var x0 = W / 2 - gap * 2.5;
+        mk(x0, cy, "◀", function () { self.move(-1); }, 48);
+        mk(x0 + gap, cy, "▶", function () { self.move(1); }, 48);
+        mk(x0 + gap * 2, cy, "↻", function () { self.rotate(); }, 48);
+        mk(x0 + gap * 3, cy, "↓", function () { self.softDropOnce(); }, 48);
+        mk(x0 + gap * 4, cy, "DROP", function () { self.hardDrop(); }, 64);
+        mk(x0 + gap * 5, cy, "HOLD", function () { self.doHold(); }, 64);
       }
 
-      // swipe on board area only（避開左右虛擬鍵區）
+      // 滑動手勢：只在盤面矩形內，避開底部虛擬鍵
       this._swipe = { x: 0, y: 0, on: false };
       this.input.on("pointerdown", function (p) {
-        if (p.x < 160 || p.x > W - 160) return;
+        if (p.y > boardBottom - 2) return;
+        if (p.x < BOARD_X - 8 || p.x > BOARD_X + COLS * BS + 8) return;
         self._swipe.x = p.x; self._swipe.y = p.y; self._swipe.on = true;
       });
       this.input.on("pointerup", function (p) {
         if (!self._swipe.on || !self.alive) return;
         self._swipe.on = false;
-        if (p.x < 160 || p.x > W - 160) return;
+        if (p.y > boardBottom - 2) return;
         var dx = p.x - self._swipe.x;
         var dy = p.y - self._swipe.y;
         if (Math.abs(dx) < 24 && Math.abs(dy) < 24) {
@@ -662,7 +719,13 @@
       }
       this.lockTimer = 0;
       this.locking = false;
+      this.lockResets = 0;
       this.redrawSidePanels();
+    }
+
+    grounded() {
+      if (!this.piece) return false;
+      return !this.valid(this.piece.matrix, this.piece.x, this.piece.y + 1);
     }
 
     valid(matrix, x, y) {
@@ -701,6 +764,9 @@
         this.piece.y++;
         this.score += Math.floor(1 * this.diff.scoreMult);
         SFX.soft();
+        this.lockResets = 0;
+        this.locking = false;
+        this.lockTimer = 0;
         this.redrawActive();
       } else {
         this.startLock();
@@ -725,17 +791,33 @@
     }
 
     resetLockIfGrounded() {
-      if (!this.valid(this.piece.matrix, this.piece.x, this.piece.y + 1)) {
-        this.lockTimer = 0;
-        this.locking = true;
-      } else {
+      if (!this.piece) return;
+      if (!this.grounded()) {
         this.locking = false;
         this.lockTimer = 0;
+        this.lockResets = 0;
+        return;
       }
+      // 已落地：允許有限次移動重設鎖定，避免無限左右滑
+      if (!this.locking) {
+        this.locking = true;
+        this.lockTimer = 0;
+        this.lockResets = 0;
+        return;
+      }
+      this.lockResets++;
+      var maxResets = this.diff.maxLockResets != null ? this.diff.maxLockResets : 10;
+      if (this.lockResets >= maxResets) {
+        this.lockPiece();
+        return;
+      }
+      this.lockTimer = 0;
     }
 
     startLock() {
+      if (!this.piece) return;
       this.locking = true;
+      if (this.lockTimer < 0) this.lockTimer = 0;
     }
 
     hardDrop() {
@@ -1120,9 +1202,14 @@
           this.piece.y++;
           this.locking = false;
           this.lockTimer = 0;
+          this.lockResets = 0;
           this.redrawActive();
         } else {
-          this.locking = true;
+          if (!this.locking) {
+            this.locking = true;
+            this.lockTimer = 0;
+          }
+          break;
         }
       }
 
@@ -1178,7 +1265,7 @@
       var diff = this.payload.diff || DIFF.standard;
 
       this.add.rectangle(W / 2, H / 2, W, H, 0x02040a, 0.72).setInteractive().setDepth(70);
-      var panel = this.add.rectangle(W / 2, H / 2, 480, 460, 0x0b1220, 0.97)
+      var panel = this.add.rectangle(W / 2, H / 2, 480, 500, 0x0b1220, 0.97)
         .setStrokeStyle(2, 0x22d3ee, 0.95).setScale(0.7).setAlpha(0).setDepth(71);
 
       var badge = this.add.text(W / 2, H / 2 - 168, "GAME OVER", {
@@ -1212,7 +1299,7 @@
       neonBurst(this, W / 2, H / 2 - 40, 0x22d3ee, 22);
 
       var self = this;
-      var retry = makeButton(this, W / 2 - 110, H / 2 + 110, "再試一次", 0x22d3ee, function () {
+      var retry = makeButton(this, W / 2 - 110, H / 2 + 95, "再試一次", 0x22d3ee, function () {
         SFX.confirm();
         self.scene.stop("GameOverModal");
         self.scene.stop("GameScene");
@@ -1220,7 +1307,7 @@
       }, 180);
       retry.bg.setDepth(73); retry.txt.setDepth(74);
 
-      var settings = makeButton(this, W / 2 + 110, H / 2 + 110, "排行榜", 0x34d399, function () {
+      var settings = makeButton(this, W / 2 + 110, H / 2 + 95, "排行榜", 0x34d399, function () {
         SFX.click();
         self.scene.stop("GameOverModal");
         try { self.scene.stop("SettingsScene"); } catch (_e) {}
@@ -1228,10 +1315,7 @@
         self.scene.start("LeaderboardScene", { difficulty: (typeof selectedDiff !== "undefined" && selectedDiff) ? selectedDiff : "standard" });
       }, 180);
       settings.bg.setDepth(73); settings.txt.setDepth(74);
-
-      var menu = 
-
-      var menu = makeButton(this, W / 2, H / 2 + 172, "主選單", 0x64748b, function () {
+      var menu = makeButton(this, W / 2, H / 2 + 155, "主選單", 0x64748b, function () {
         SFX.click();
         self.scene.stop("GameOverModal");
         self.scene.stop("SettingsScene");
@@ -1261,6 +1345,19 @@
   } catch (_e) {
     config.type = Phaser.AUTO;
     window.__NEON_TETRIS__ = new Phaser.Game(config);
+  }
+  window.__RNF_ARCADE_GAME__ = window.__NEON_TETRIS__;
+  if (typeof RNF !== "undefined" && RNF.setShowMenuHandler) {
+    RNF.setShowMenuHandler(function () {
+      try {
+        var g = window.__RNF_ARCADE_GAME__ || window.__NEON_TETRIS__;
+        if (!g || !g.scene) return;
+        ["GameOverModal", "SettingsScene", "LeaderboardScene", "DifficultyScene", "GameScene"].forEach(function (key) {
+          try { if (g.scene.getScene(key)) g.scene.stop(key); } catch (_s) {}
+        });
+        g.scene.start("MainMenuScene");
+      } catch (_err) {}
+    });
   }
 })();
 </script>

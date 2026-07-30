@@ -1077,89 +1077,89 @@
   },
 "void-brick-breaker": {
     "zh-HK": {
-      "subtitle": "Arcade 反彈 · 多球／雷射／磁力 · 動態危險倍率 · 觸控拖曳",
+      "subtitle": "鋼鐵／爆破／虛空磚 · 多球雷射磁力加寬 · 動態危險倍率",
       "highlights": [
         "三段難度",
-        "多球分裂",
-        "雷射底板",
-        "磁力吸附",
+        "鋼鐵與爆破磚",
+        "虛空游移磚",
+        "多球／雷射／磁力／加寬",
         "排行榜"
       ],
       "help": {
-        "about": "Phaser 3 虛空打磚塊。Arcade Physics 精確反彈，擊碎磚塊過關。道具含多球、雷射板與磁力吸附。",
+        "about": "Phaser 3 虛空打磚塊。Arcade Physics 精確反彈；鋼鐵磚需多擊、爆破磚炸鄰格、虛空磚會左右游移。",
         "features": [
-          "Casual 長板慢球高掉落／Standard 極速／Extreme 短板＋移動黑洞磚",
-          "磚塊碎裂震屏、彈性縮放與同色星塵",
-          "底板擠壓拉伸與依擊中位置計算反彈角",
-          "反彈次數提升球速與 DANGER，結算上傳排行榜"
+          "Casual／Standard／Extreme 三段難度，關卡越高磚列越密",
+          "特殊磚：鋼鐵（灰）、爆破（橙）、虛空（紫游移）",
+          "道具：多球、雷射板、磁力吸附、底板加寬",
+          "時間與反彈推升 DANGER，結算上傳本遊戲排行榜"
         ],
         "controls": [
           "滑鼠／手指拖曳底板，或 A D／方向鍵",
-          "點擊／空白：發射球或雷射",
+          "點擊／空白：發射球；雷射開啟時空白開火",
           "磁力吸附後再點擊重新選擇角度發射"
         ],
         "tips": [
-          "多球可同時清多排",
-          "雷射板兩端雙發射線貫穿磚塊",
-          "Extreme 黑洞磚會左右移動，預判落點"
+          "優先打爆破磚可清出通道",
+          "鋼鐵磚用雷射或多球更有效",
+          "Extreme 虛空磚會左右移動，預判落點"
         ]
       }
     },
     "zh-CN": {
-      "subtitle": "Arcade 反弹 · 多球／镭射／磁力 · 动态危险倍率 · 触控拖曳",
+      "subtitle": "钢铁／爆破／虚空砖 · 多球镭射磁力加宽 · 动态危险倍率",
       "highlights": [
         "三段难度",
-        "多球分裂",
-        "镭射底板",
-        "磁力吸附",
+        "钢铁与爆破砖",
+        "虚空游移砖",
+        "多球／镭射／磁力／加宽",
         "排行榜"
       ],
       "help": {
-        "about": "Phaser 3 虚空打砖块。Arcade Physics 精确反弹，击碎砖块过关。道具含多球、镭射板与磁力吸附。",
+        "about": "Phaser 3 虚空打砖块。Arcade Physics 精确反弹；钢铁砖需多击、爆破砖炸邻格、虚空砖会左右游移。",
         "features": [
-          "Casual 长板慢球高掉落／Standard 极速／Extreme 短板＋移动黑洞砖",
-          "砖块碎裂震屏、弹性缩放与同色星尘",
-          "底板挤压拉伸与依击中位置计算反弹角",
-          "反弹次数提升球速与 DANGER，结算上传排行榜"
+          "Casual／Standard／Extreme 三段难度，关卡越高砖列越密",
+          "特殊砖：钢铁（灰）、爆破（橙）、虚空（紫游移）",
+          "道具：多球、镭射板、磁力吸附、底板加宽",
+          "时间与反弹推升 DANGER，结算上传本游戏排行榜"
         ],
         "controls": [
           "鼠标／手指拖曳底板，或 A D／方向键",
-          "点击／空格：发射球或镭射",
+          "点击／空格：发射球；镭射开启时空格开火",
           "磁力吸附后再点击重新选择角度发射"
         ],
         "tips": [
-          "多球可同时清多排",
-          "镭射板两端双发射线贯穿砖块",
-          "Extreme 黑洞砖会左右移动，预判落点"
+          "优先打爆破砖可清出通道",
+          "钢铁砖用镭射或多球更有效",
+          "Extreme 虚空砖会左右移动，预判落点"
         ]
       }
     },
     "en": {
-      "subtitle": "Arcade bounce · Multi / laser / magnet · Dynamic danger · Touch drag",
+      "subtitle": "Steel / blast / void bricks · Multi laser magnet wide · Dynamic danger",
       "highlights": [
         "3 difficulties",
-        "Multi-ball",
-        "Laser paddle",
-        "Magnet catch",
+        "Steel & blast bricks",
+        "Drifting void bricks",
+        "Multi / laser / magnet / wide",
         "Leaderboard"
       ],
       "help": {
-        "about": "Phaser 3 void brick breaker with Arcade Physics. Break bricks to clear stages. Power-ups: multi-ball, laser paddle, magnet catch.",
+        "about": "Phaser 3 void brick breaker. Steel bricks take multi-hits, orange blast bricks clear neighbors, purple void bricks drift sideways.",
         "features": [
-          "Casual long paddle / Standard / Extreme short paddle + moving void bricks",
-          "Brick shatter shake, elastic scale, colored stardust",
-          "Paddle squash-stretch and angle from hit position",
-          "Bounces raise speed and DANGER; scores upload via RNF"
+          "Casual / Standard / Extreme with denser rows on later levels",
+          "Special bricks: steel, blast, drifting void",
+          "Power-ups: multi-ball, laser, magnet, wide paddle",
+          "Time and bounces raise DANGER; scores upload to this game's leaderboard"
         ],
         "controls": [
           "Drag paddle or use A/D / arrows",
-          "Click / Space: launch ball or fire lasers",
+          "Click / Space: launch ball; Space fires lasers when armed",
           "Magnet sticks the ball — click again to relaunch"
         ],
         "tips": [
-          "Multi-ball clears multiple rows",
-          "Laser paddle fires twin beams",
-          "Extreme void bricks slide sideways"
+          "Prioritize blast bricks to open lanes",
+          "Use laser or multi-ball on steel bricks",
+          "Predict drifting void bricks on Extreme"
         ]
       }
     },

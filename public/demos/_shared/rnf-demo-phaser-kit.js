@@ -38,6 +38,42 @@
   var LEGACY_TO_DIFF = { easy: "casual", normal: "standard", hard: "extreme" };
 
   var audioCtx = null;
+  var settingsSlug = "demo";
+  var gameSettings = { sfx: true, shake: true };
+
+  function loadSettings(slug) {
+    settingsSlug = slug || "demo";
+    gameSettings = { sfx: true, shake: true };
+    try {
+      var raw = localStorage.getItem("rnf:demo:" + settingsSlug + ":settings");
+      if (raw) {
+        var o = JSON.parse(raw);
+        if (typeof o.sfx === "boolean") gameSettings.sfx = o.sfx;
+        if (typeof o.shake === "boolean") gameSettings.shake = o.shake;
+      }
+      if (typeof window.RNF !== "undefined" && RNF.getSettings) {
+        var s = RNF.getSettings();
+        if (s) {
+          if (typeof s.sfxVolume === "number") gameSettings.sfx = s.sfxVolume > 0;
+          if (typeof s.screenShake === "boolean") gameSettings.shake = s.screenShake;
+        }
+      }
+    } catch (_e) {}
+    return gameSettings;
+  }
+
+  function saveSettings() {
+    try {
+      localStorage.setItem("rnf:demo:" + settingsSlug + ":settings", JSON.stringify(gameSettings));
+      if (typeof window.RNF !== "undefined" && RNF.setSettings) {
+        RNF.setSettings({
+          sfxVolume: gameSettings.sfx ? 0.75 : 0,
+          screenShake: !!gameSettings.shake
+        });
+      }
+    } catch (_e2) {}
+  }
+
   function ensureAudio() {
     if (!audioCtx) {
       var AC = window.AudioContext || window.webkitAudioContext;
@@ -48,6 +84,7 @@
   }
 
   function beep(freq, dur, type, vol, slide) {
+    if (!gameSettings.sfx) return;
     var ctx = ensureAudio();
     if (!ctx) return;
     var master = 1;
@@ -81,7 +118,8 @@
     place: function () { beep(480, 0.06, "square", 0.08); },
     explode: function () { beep(120, 0.22, "sawtooth", 0.16, 40); beep(90, 0.28, "triangle", 0.1, 30); },
     over: function () { beep(220, 0.18, "sawtooth", 0.12, 80); beep(140, 0.35, "triangle", 0.1, 50); },
-    win: function () { beep(520, 0.08, "square", 0.1); beep(780, 0.12, "triangle", 0.1); beep(1040, 0.16, "square", 0.08); }
+    win: function () { beep(520, 0.08, "square", 0.1); beep(780, 0.12, "triangle", 0.1); beep(1040, 0.16, "square", 0.08); },
+    toggle: function () { beep(440, 0.05, "triangle", 0.07); }
   };
 
   function neonBurst(scene, x, y, color, count) {
@@ -110,6 +148,7 @@
   }
 
   function screenShake(scene, dur, intens) {
+    if (!gameSettings.shake) return;
     if (scene && scene.cameras && scene.cameras.main) {
       scene.cameras.main.shake(dur || 100, intens || 0.01);
     }
@@ -353,10 +392,8 @@
         makeMenuButton(this, W / 2 - 150, 460, "排行榜", 0x34d399, function () {
           self.scene.start("LeaderboardScene");
         }, 200);
-        makeMenuButton(this, W / 2 + 150, 460, "離開平台", 0xf472b6, function () {
-          if (window.PlatformBridge && PlatformBridge.leaveToPlatform) {
-            PlatformBridge.leaveToPlatform({ confirm: true });
-          }
+        makeMenuButton(this, W / 2 + 150, 460, "設定", 0xf472b6, function () {
+          self.scene.launch("SettingsScene");
         }, 200);
 
         if (window.PlatformBridge) {
@@ -364,7 +401,7 @@
             var game = window.__RNF_DEMO_GAME__;
             if (!game || !game.scene) return;
             try {
-              ["GameOverModal", "LeaderboardScene", "DifficultyScene", "GameScene"].forEach(function (key) {
+              ["GameOverModal", "SettingsScene", "LeaderboardScene", "DifficultyScene", "GameScene"].forEach(function (key) {
                 try {
                   if (game.scene.getScene(key)) game.scene.stop(key);
                 } catch (_e) {}
@@ -373,6 +410,46 @@
             game.scene.start("MainMenuScene");
           });
         }
+      }
+    }
+
+    class SettingsScene extends Phaser.Scene {
+      constructor() { super("SettingsScene"); }
+      create() {
+        var dim = this.add.rectangle(W / 2, H / 2, W, H, 0x02040a, 0.75).setInteractive().setDepth(100);
+        var panel = this.add.rectangle(W / 2, H / 2, 420, 300, 0x0b1220, 0.98)
+          .setStrokeStyle(2, accent, 0.85).setScale(0.75).setAlpha(0).setDepth(101);
+        var head = this.add.text(W / 2, H / 2 - 110, "設定選單", {
+          fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+          fontSize: "26px", fontStyle: "bold", color: "#e2e8f0"
+        }).setOrigin(0.5).setAlpha(0).setDepth(102);
+
+        this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 300, ease: "Back.easeOut" });
+        this.tweens.add({ targets: head, alpha: 1, duration: 260, ease: "Cubic.easeOut", delay: 50 });
+
+        var self = this;
+        var sfxBtn = makeMenuButton(this, W / 2, H / 2 - 20, gameSettings.sfx ? "音效：開" : "音效：關", 0x22d3ee, function () {
+          gameSettings.sfx = !gameSettings.sfx;
+          saveSettings();
+          SFX.toggle();
+          sfxBtn.txt.setText(gameSettings.sfx ? "音效：開" : "音效：關");
+        }, 260);
+        sfxBtn.bg.setDepth(102); sfxBtn.txt.setDepth(103);
+
+        var shakeBtn = makeMenuButton(this, W / 2, H / 2 + 50, gameSettings.shake ? "震屏：開" : "震屏：關", 0xa78bfa, function () {
+          gameSettings.shake = !gameSettings.shake;
+          saveSettings();
+          SFX.toggle();
+          shakeBtn.txt.setText(gameSettings.shake ? "震屏：開" : "震屏：關");
+        }, 260);
+        shakeBtn.bg.setDepth(102); shakeBtn.txt.setDepth(103);
+
+        var closeBtn = makeMenuButton(this, W / 2, H / 2 + 120, "關閉", 0x64748b, function () {
+          self.scene.stop("SettingsScene");
+        }, 180);
+        closeBtn.bg.setDepth(102); closeBtn.txt.setDepth(103);
+
+        dim.on("pointerdown", function () { self.scene.stop("SettingsScene"); });
       }
     }
 
@@ -531,17 +608,19 @@
       DifficultyScene: DifficultyScene,
       LeaderboardScene: LeaderboardScene,
       GameOverModal: GameOverModal,
+      SettingsScene: SettingsScene,
       registry: registry,
       bootBridge: bootBridge
     };
   }
 
   function launchDemoGame(opts) {
+    loadSettings(opts && opts.slug);
     var shell = createShellScenes(opts);
     shell.bootBridge();
-    var scenes = [shell.BootScene, shell.MainMenuScene, shell.DifficultyScene, opts.GameScene, shell.GameOverModal, shell.LeaderboardScene];
+    var scenes = [shell.BootScene, shell.MainMenuScene, shell.DifficultyScene, opts.GameScene, shell.GameOverModal, shell.LeaderboardScene, shell.SettingsScene];
     if (opts.extraScenes && opts.extraScenes.length) {
-      scenes = [shell.BootScene, shell.MainMenuScene].concat(opts.extraScenes).concat([shell.DifficultyScene, opts.GameScene, shell.GameOverModal, shell.LeaderboardScene]);
+      scenes = [shell.BootScene, shell.MainMenuScene].concat(opts.extraScenes).concat([shell.DifficultyScene, opts.GameScene, shell.GameOverModal, shell.LeaderboardScene, shell.SettingsScene]);
     }
     var config = {
       type: Phaser.AUTO,
@@ -579,6 +658,9 @@
     showHelpOverlay: showHelpOverlay,
     drawBriefCards: drawBriefCards,
     createShellScenes: createShellScenes,
-    launchDemoGame: launchDemoGame
+    launchDemoGame: launchDemoGame,
+    loadSettings: loadSettings,
+    saveSettings: saveSettings,
+    getSettings: function () { return gameSettings; }
   };
 })(window);

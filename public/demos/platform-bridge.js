@@ -801,7 +801,10 @@
     } catch (_r) {}
     try {
       var game = window.__RNF_DEMO_GAME__;
-      if (game && game.sound) game.sound.volume = v;
+      if (game && game.sound) {
+        game.sound.volume = v;
+        if (typeof game.sound.mute === "boolean") game.sound.mute = v <= 0;
+      }
     } catch (_p) {}
   }
 

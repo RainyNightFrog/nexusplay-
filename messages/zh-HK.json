@@ -1689,8 +1689,9 @@
       "description": "5×5 連五對決、量子糾纏雙格落子與回合限時；四段 AI 難度、連勝統計與觸控落子，在量子棋盤上超越對手！"
     },
     "void-brick-breaker": {
+      "title": "虛空打磚塊",
       "badge": "霓虹街機",
-      "description": "多球／雷射／磁力／黏球道具、爆炸與鋼鐵特殊磚、Combo 連破倍率與星塵粒子。四段難度虛空打磚塊，支援拖曳與虛擬鍵。"
+      "description": "三段難度虛空打磚塊：鋼鐵磚需多擊、橙色爆破磚炸鄰格、紫色虛空磚會游移；接住多球／雷射／磁力／加寬道具，疊 Combo 與 DANGER 倍率。"
     },
     "rainy-frog-dash": {
       "badge": "霓虹街機",
@@ -1724,7 +1725,7 @@
     "neon-pinball-frenzy": {
       "title": "霓虹狂暴彈珠台",
       "badge": "霓虹街機",
-      "description": "守住高能鋼珠、猛撞變色 Bumper，利用震台與連續反彈疊高 Fever 狂熱分數，讓整個競技場化成霓虹彈分風暴。"
+      "description": "揮擊雙擋板守球，衝技能射門、擊破目標牆、點亮 R·N·F、追打遊走核心完成輪替任務；疊 Fever 與場內倍率，並在大獎後引爆雙球狂潮。"
     },
     "void-rhythm-beat": {
       "title": "虛空節奏拍點",
