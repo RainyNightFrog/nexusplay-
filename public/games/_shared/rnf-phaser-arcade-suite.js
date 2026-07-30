@@ -55,8 +55,102 @@
     pinball: function () { beep(840, 0.05, "square", 0.08); beep(1120, 0.05, "triangle", 0.05); },
     beat: function () { beep(700, 0.05, "triangle", 0.07); },
     explode: function () { beep(120, 0.22, "sawtooth", 0.14, 40); beep(92, 0.25, "triangle", 0.08, 30); },
-    over: function () { beep(220, 0.18, "sawtooth", 0.12, 80); beep(140, 0.35, "triangle", 0.09, 50); }
+    over: function () { beep(220, 0.18, "sawtooth", 0.12, 80); beep(140, 0.35, "triangle", 0.09, 50); },
+    // 節奏判定專用打擊音
+    perfect: function () {
+      beep(880, 0.06, "square", 0.11);
+      beep(1320, 0.09, "triangle", 0.1);
+      beep(1760, 0.12, "sine", 0.07);
+    },
+    great: function () {
+      beep(740, 0.06, "square", 0.1);
+      beep(1100, 0.1, "triangle", 0.08);
+    },
+    good: function () {
+      beep(620, 0.07, "triangle", 0.08);
+    },
+    combo: function () {
+      beep(520, 0.05, "square", 0.08);
+      beep(780, 0.08, "square", 0.09);
+      beep(1040, 0.12, "triangle", 0.07);
+    }
   };
+
+  function masterVol() {
+    try {
+      if (typeof window.RNF !== "undefined" && RNF.getGameVolume) return RNF.getGameVolume();
+      if (typeof window.__RNF_GAME_VOLUME__ === "number") return window.__RNF_GAME_VOLUME__;
+    } catch (_e) {}
+    return 1;
+  }
+
+  function noiseHit(dur, vol, hpFreq) {
+    var ctx = ensureAudio();
+    if (!ctx) return;
+    var m = masterVol();
+    if (m <= 0) return;
+    var len = Math.max(1, Math.floor(ctx.sampleRate * dur));
+    var buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    var data = buf.getChannelData(0);
+    for (var i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+    var src = ctx.createBufferSource();
+    src.buffer = buf;
+    var filter = ctx.createBiquadFilter();
+    filter.type = "highpass";
+    filter.frequency.value = hpFreq || 1800;
+    var g = ctx.createGain();
+    var t0 = ctx.currentTime;
+    g.gain.setValueAtTime((vol || 0.05) * m, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    src.connect(filter);
+    filter.connect(g);
+    g.connect(ctx.destination);
+    src.start(t0);
+    src.stop(t0 + dur + 0.02);
+  }
+
+  /** 虛空節奏：依 BPM 的電子鼓＋貝斯＋旋律（無外部音檔） */
+  function playRhythmStep(step, fever, intensity) {
+    var ctx = ensureAudio();
+    if (!ctx) return;
+    var m = masterVol();
+    if (m <= 0) return;
+    intensity = intensity || 1;
+    var s = step % 16;
+    var hot = !!fever;
+
+    // Kick：每拍
+    if (s % 4 === 0) {
+      beep(150, 0.12, "sine", 0.14 * intensity, 48);
+      beep(70, 0.1, "triangle", 0.1 * intensity, 40);
+    }
+    // Snare：2、4 拍
+    if (s === 4 || s === 12) {
+      noiseHit(0.09, 0.07 * intensity, 1200);
+      beep(220, 0.06, "triangle", 0.05 * intensity, 120);
+    }
+    // Hi-hat：八分；Fever 加密
+    if (s % 2 === 0 || hot) {
+      noiseHit(hot ? 0.035 : 0.045, (hot ? 0.045 : 0.032) * intensity, hot ? 6000 : 4500);
+    }
+    // 貝斯 root
+    if (s % 4 === 0) {
+      var bassScale = [55, 65.41, 73.42, 82.41];
+      var bf = bassScale[(step >> 2) % bassScale.length];
+      beep(bf, 0.22, "sawtooth", 0.07 * intensity, bf * 0.7);
+    }
+    // 旋律琶音（偏拍）
+    if (s === 2 || s === 6 || s === 10 || s === 14 || (hot && s % 2 === 1)) {
+      var lead = [523.25, 659.25, 783.99, 987.77, 880, 698.46];
+      var lf = lead[(step + (hot ? 2 : 0)) % lead.length] * (hot ? 1.01 : 1);
+      beep(lf, 0.08, "square", (hot ? 0.055 : 0.04) * intensity);
+      if (hot) beep(lf * 1.5, 0.06, "triangle", 0.03 * intensity);
+    }
+    // Fever 額外衝擊
+    if (hot && s === 0) {
+      beep(98, 0.18, "sine", 0.08 * intensity, 55);
+    }
+  }
 
   function makeTextures(scene) {
     var g = scene.make.graphics({ x: 0, y: 0, add: false });
@@ -67,6 +161,25 @@
     g.fillStyle(0xffffff, 0.55);
     g.fillCircle(11, 11, 5);
     g.generateTexture("player-orb", 32, 32);
+
+    // 賽博地牢佔位（稍後由 RNFCyberRogueArt 覆寫成像素機甲）
+    g.clear();
+    g.fillStyle(0xfbbf24, 1);
+    g.fillRect(8, 18, 44, 16);
+    g.generateTexture("player-fighter", 60, 56);
+    g.generateTexture("player-fighter-mk2", 64, 56);
+
+    g.clear();
+    g.fillStyle(0xf97316, 1);
+    g.fillCircle(8, 8, 7);
+    g.fillStyle(0xfde68a, 1);
+    g.fillCircle(8, 8, 3);
+    g.generateTexture("engine-flame", 16, 16);
+
+    g.clear();
+    g.fillStyle(0xffffff, 1);
+    g.fillCircle(10, 10, 10);
+    g.generateTexture("muzzle-flash", 20, 20);
 
     g.clear();
     g.fillStyle(0x06b6d4, 1);
@@ -89,6 +202,181 @@
     g.fillCircle(16, 16, 4);
     g.generateTexture("drone", 32, 32);
 
+    // 賽博地牢：多型敵人
+    g.clear();
+    g.fillStyle(0x38bdf8, 1);
+    g.fillTriangle(14, 1, 27, 26, 1, 26);
+    g.fillStyle(0xffffff, 0.4);
+    g.fillCircle(14, 14, 3);
+    g.generateTexture("foe-scout", 28, 28);
+
+    g.clear();
+    g.fillStyle(0xf97316, 1);
+    g.fillRoundedRect(2, 2, 28, 28, 4);
+    g.fillStyle(0xfed7aa, 0.5);
+    g.fillRect(7, 8, 18, 6);
+    g.generateTexture("foe-grunt", 32, 32);
+
+    g.clear();
+    g.fillStyle(0x64748b, 1);
+    g.fillCircle(18, 18, 16);
+    g.lineStyle(3, 0x94a3b8, 1);
+    g.strokeCircle(18, 18, 13);
+    g.fillStyle(0x22d3ee, 0.7);
+    g.fillCircle(18, 18, 5);
+    g.generateTexture("foe-shield", 36, 36);
+
+    g.clear();
+    g.fillStyle(0xa855f7, 1);
+    g.fillTriangle(16, 2, 30, 16, 16, 30);
+    g.fillTriangle(16, 2, 2, 16, 16, 30);
+    g.fillStyle(0xffffff, 0.35);
+    g.fillCircle(16, 16, 4);
+    g.generateTexture("foe-spitter", 32, 32);
+
+    g.clear();
+    g.fillStyle(0xef4444, 1);
+    g.fillRoundedRect(0, 0, 44, 44, 6);
+    g.fillStyle(0xfbbf24, 0.55);
+    g.fillCircle(22, 22, 10);
+    g.fillStyle(0xffffff, 0.4);
+    g.fillRect(10, 8, 24, 6);
+    g.generateTexture("foe-elite", 44, 44);
+
+    g.clear();
+    g.fillStyle(0xfb7185, 1);
+    g.fillCircle(16, 16, 14);
+    g.fillStyle(0xfef08a, 0.85);
+    g.fillCircle(16, 16, 6);
+    g.generateTexture("foe-bomber", 32, 32);
+
+    g.clear();
+    g.fillStyle(0x4ade80, 1);
+    g.fillCircle(8, 8, 7);
+    g.fillStyle(0xffffff, 0.45);
+    g.fillCircle(6, 6, 2);
+    g.generateTexture("foe-swarm", 16, 16);
+
+    // 更多敵外形
+    g.clear();
+    g.fillStyle(0x14b8a6, 1);
+    g.fillEllipse(18, 12, 32, 16);
+    g.fillStyle(0x99f6e4, 0.5);
+    g.fillCircle(10, 10, 4);
+    g.fillTriangle(30, 8, 40, 12, 30, 16);
+    g.generateTexture("foe-crawler", 40, 24);
+
+    g.clear();
+    g.fillStyle(0x6366f1, 1);
+    g.fillTriangle(12, 2, 22, 28, 2, 28);
+    g.fillStyle(0xc7d2fe, 0.55);
+    g.fillRect(8, 10, 8, 14);
+    g.generateTexture("foe-sniper", 24, 30);
+
+    g.clear();
+    g.fillStyle(0xb45309, 1);
+    g.fillRoundedRect(0, 0, 48, 40, 5);
+    g.fillStyle(0xfbbf24, 0.45);
+    g.fillRect(8, 8, 32, 10);
+    g.fillStyle(0x78716c, 1);
+    g.fillRect(4, 28, 40, 8);
+    g.generateTexture("foe-jugger", 48, 40);
+
+    g.clear();
+    g.fillStyle(0xd946ef, 1);
+    g.fillCircle(16, 16, 13);
+    g.fillStyle(0x0f172a, 1);
+    g.fillRect(6, 12, 20, 8);
+    g.fillStyle(0xfae8ff, 0.7);
+    g.fillCircle(16, 16, 4);
+    g.generateTexture("foe-glitch", 32, 32);
+
+    g.clear();
+    g.fillStyle(0xf59e0b, 1);
+    g.fillTriangle(16, 0, 28, 20, 4, 20);
+    g.fillStyle(0xfef3c7, 0.5);
+    g.fillTriangle(16, 8, 22, 20, 10, 20);
+    g.generateTexture("foe-wasp", 32, 24);
+
+    // 限時掉落膠囊（加大，場上一定看得見）
+    g.clear();
+    g.fillStyle(0xfacc15, 0.35);
+    g.fillCircle(18, 18, 18);
+    g.fillStyle(0xfacc15, 1);
+    g.fillRoundedRect(4, 4, 28, 28, 8);
+    g.fillStyle(0xffffff, 0.9);
+    g.fillTriangle(18, 8, 26, 22, 10, 22);
+    g.fillRect(16, 20, 4, 8);
+    g.generateTexture("drop-thunder", 36, 36);
+
+    g.clear();
+    g.fillStyle(0xef4444, 0.35);
+    g.fillCircle(18, 18, 18);
+    g.fillStyle(0xef4444, 1);
+    g.fillRoundedRect(4, 4, 28, 28, 8);
+    g.fillStyle(0xfbbf24, 1);
+    g.fillTriangle(18, 8, 28, 24, 8, 24);
+    g.fillStyle(0xffffff, 0.7);
+    g.fillTriangle(18, 14, 24, 24, 12, 24);
+    g.generateTexture("drop-fire", 36, 36);
+
+    g.clear();
+    g.fillStyle(0x38bdf8, 0.35);
+    g.fillCircle(18, 18, 18);
+    g.fillStyle(0x38bdf8, 1);
+    g.fillRoundedRect(4, 4, 28, 28, 8);
+    g.fillStyle(0xe0f2fe, 1);
+    g.fillCircle(18, 14, 8);
+    g.fillRect(13, 20, 10, 8);
+    g.generateTexture("drop-ice", 36, 36);
+
+    g.clear();
+    g.fillStyle(0xf472b6, 0.35);
+    g.fillCircle(18, 18, 18);
+    g.fillStyle(0xf472b6, 1);
+    g.fillRoundedRect(4, 4, 28, 28, 8);
+    g.fillStyle(0xffffff, 0.9);
+    g.fillTriangle(8, 18, 28, 10, 28, 26);
+    g.generateTexture("drop-missile", 36, 36);
+
+    g.clear();
+    g.fillStyle(0x94a3b8, 0.35);
+    g.fillCircle(18, 18, 18);
+    g.fillStyle(0x94a3b8, 1);
+    g.fillRoundedRect(4, 4, 28, 28, 8);
+    g.fillStyle(0xe2e8f0, 1);
+    g.fillCircle(18, 18, 10);
+    g.lineStyle(3, 0x64748b, 1);
+    g.strokeCircle(18, 18, 7);
+    g.generateTexture("drop-armor", 36, 36);
+
+    g.clear();
+    g.fillStyle(0xfbbf24, 1);
+    g.fillTriangle(0, 8, 20, 0, 20, 16);
+    g.fillStyle(0xfde68a, 0.9);
+    g.fillRect(10, 5, 10, 6);
+    g.fillStyle(0xf472b6, 1);
+    g.fillCircle(4, 8, 3);
+    g.generateTexture("bullet-missile", 20, 16);
+
+    g.clear();
+    g.fillStyle(0xf97316, 1);
+    g.fillCircle(8, 8, 8);
+    g.fillStyle(0xfef08a, 0.95);
+    g.fillCircle(8, 8, 4);
+    g.fillStyle(0xffffff, 0.7);
+    g.fillCircle(6, 6, 2);
+    g.generateTexture("bullet-fire", 16, 16);
+
+    g.clear();
+    g.fillStyle(0xfacc15, 1);
+    g.fillRect(0, 2, 24, 6);
+    g.fillStyle(0xffffff, 0.95);
+    g.fillCircle(20, 5, 5);
+    g.fillStyle(0xfde68a, 1);
+    g.fillCircle(22, 5, 2);
+    g.generateTexture("bullet-thunder", 24, 10);
+
     g.clear();
     g.fillStyle(0xfbbf24, 1);
     g.fillCircle(12, 12, 10);
@@ -105,8 +393,24 @@
 
     g.clear();
     g.fillStyle(0xfb7185, 1);
-    g.fillRoundedRect(0, 0, 20, 72, 8);
-    g.generateTexture("note", 20, 72);
+    g.fillRoundedRect(0, 0, 56, 18, 7);
+    g.fillStyle(0xffffff, 0.45);
+    g.fillRoundedRect(8, 5, 40, 5, 3);
+    g.generateTexture("note", 56, 18);
+
+    g.clear();
+    g.fillStyle(0xfbbf24, 1);
+    g.fillRoundedRect(0, 0, 56, 18, 7);
+    g.fillStyle(0xffffff, 0.5);
+    g.fillRoundedRect(8, 5, 40, 5, 3);
+    g.generateTexture("note-gold", 56, 18);
+
+    g.clear();
+    g.fillStyle(0xa78bfa, 1);
+    g.fillRoundedRect(0, 0, 16, 72, 6);
+    g.fillStyle(0xffffff, 0.28);
+    g.fillRoundedRect(3, 6, 10, 60, 4);
+    g.generateTexture("note-hold", 16, 72);
 
     g.clear();
     g.fillStyle(0x34d399, 1);
@@ -128,9 +432,54 @@
     g.generateTexture("xp", 20, 20);
 
     g.clear();
-    g.fillStyle(0xffffff, 1);
-    g.fillRect(0, 0, 8, 3);
-    g.generateTexture("bullet", 8, 3);
+    g.fillStyle(0xfbbf24, 1);
+    g.fillRoundedRect(0, 2, 22, 8, 3);
+    g.fillStyle(0xffffff, 0.95);
+    g.fillRoundedRect(12, 3, 10, 6, 2);
+    g.generateTexture("bullet", 22, 12);
+
+    g.clear();
+    g.fillStyle(0x67e8f9, 1);
+    g.fillRoundedRect(0, 1, 20, 6, 2);
+    g.fillStyle(0xffffff, 0.8);
+    g.fillRect(8, 2, 10, 4);
+    g.generateTexture("bullet-pierce", 20, 8);
+
+    g.clear();
+    g.fillStyle(0xf97316, 1);
+    g.fillCircle(8, 8, 8);
+    g.fillStyle(0xfde68a, 0.9);
+    g.fillCircle(8, 8, 4);
+    g.generateTexture("bullet-blast", 16, 16);
+
+    g.clear();
+    g.fillStyle(0x38bdf8, 1);
+    g.fillRoundedRect(0, 0, 14, 14, 4);
+    g.fillStyle(0xe0f2fe, 0.9);
+    g.fillCircle(7, 7, 4);
+    g.generateTexture("bullet-frost", 14, 14);
+
+    g.clear();
+    g.fillStyle(0xe879f9, 1);
+    g.fillRect(0, 0, 28, 5);
+    g.fillStyle(0xffffff, 0.75);
+    g.fillRect(0, 1, 28, 2);
+    g.generateTexture("bullet-rail", 28, 5);
+
+    g.clear();
+    g.fillStyle(0xfbbf24, 1);
+    g.fillRoundedRect(0, 0, 22, 22, 5);
+    g.fillStyle(0xffffff, 0.35);
+    g.fillRect(4, 4, 14, 6);
+    g.generateTexture("mod-crate", 22, 22);
+
+    g.clear();
+    g.fillStyle(0xf43f5e, 1);
+    g.fillCircle(10, 10, 9);
+    g.fillStyle(0xffffff, 0.5);
+    g.fillRect(8, 4, 4, 12);
+    g.fillRect(4, 8, 12, 4);
+    g.generateTexture("hp-pack", 20, 20);
 
     g.clear();
     g.fillStyle(0x67e8f9, 1);
@@ -157,10 +506,44 @@
     g.fillCircle(4, 4, 4);
     g.generateTexture("spark-green", 8, 8);
 
+    // 賽博地牢：用像素機甲貼圖覆寫三角／圓形幾何
+    if (window.RNFCyberRogueArt && typeof RNFCyberRogueArt.install === "function") {
+      RNFCyberRogueArt.install(scene);
+    }
+
     g.destroy();
   }
 
+  function isCombatFxOn() {
+    try {
+      if (typeof window.RNF !== "undefined" && RNF.getSettings) {
+        var s = RNF.getSettings();
+        if (s && typeof s.combatFx === "boolean") return s.combatFx;
+      }
+    } catch (_e) {}
+    try {
+      var v = localStorage.getItem("rnf:arcade-combat-fx");
+      if (v === null || v === undefined) return true;
+      return v === "1" || v === "true";
+    } catch (_e2) {
+      return true;
+    }
+  }
+
+  function setCombatFxOn(on) {
+    var enabled = !!on;
+    try {
+      localStorage.setItem("rnf:arcade-combat-fx", enabled ? "1" : "0");
+    } catch (_e) {}
+    try {
+      if (typeof window.RNF !== "undefined" && RNF.setSettings) {
+        RNF.setSettings({ combatFx: enabled });
+      }
+    } catch (_e2) {}
+  }
+
   function neonBurst(scene, x, y, key, count) {
+    if (!isCombatFxOn()) return;
     var n = Phaser.Math.Clamp(count || 20, 15, 30);
     var emitter = scene.add.particles(x, y, key, {
       speed: { min: 70, max: 280 },
@@ -950,91 +1333,609 @@
       title: "VOID RHYTHM BEAT",
       titleZh: "虛空節奏拍點",
       accent: 0xa78bfa,
-      help: "依序按下 D / F / J / K；Perfect 疊高分，漏拍會耗損同步值。",
-      objective: "跟拍四軌音浪 · Perfect 連擊 · 維持同步",
+      help: "D / F / J / K（或點擊底部四鍵）跟拍電子節奏。Perfect／Great／Good 會爆出加分與打擊特效；金色為加分音、長條為按住音。連擊 20 進 FEVER，漏拍扣同步值。",
+      objective: "四軌跟拍 · 譜面連段 · Fever 狂熱",
       scoreVerb: "COMBO",
       startState: function (scene) {
         scene.physics.world.setBounds(0, 0, W, H);
-        scene.lanes = [W / 2 - 135, W / 2 - 45, W / 2 + 45, W / 2 + 135];
+
+        // 場地框：所有軌道／音符都鎖在此框內，禁止掉出畫面
+        var frameW = 420;
+        var frameH = 430;
+        var frameX = W / 2;
+        var frameY = H / 2 + 8;
+        scene.trackTop = frameY - frameH / 2 + 18;
+        scene.trackBottom = frameY + frameH / 2 - 18;
+        scene.judgementY = scene.trackBottom - 58;
+        scene.missY = scene.judgementY + 46;
+        scene.spawnY = scene.trackTop + 8;
+        scene.laneGap = 92;
+        scene.lanes = [
+          frameX - scene.laneGap * 1.5,
+          frameX - scene.laneGap * 0.5,
+          frameX + scene.laneGap * 0.5,
+          frameX + scene.laneGap * 1.5
+        ];
+        scene.laneColors = [0x22d3ee, 0x34d399, 0xa78bfa, 0xf472b6];
+        scene.laneColorHex = ["#67e8f9", "#6ee7b7", "#c4b5fd", "#f9a8d4"];
+
+        scene.playFrame = scene.add.rectangle(frameX, frameY, frameW, frameH, 0x070b16, 0.82)
+          .setStrokeStyle(3, 0xa78bfa, 0.85)
+          .setDepth(1);
+        scene.add.rectangle(frameX, frameY, frameW - 18, frameH - 18, 0x0b1220, 0.35)
+          .setStrokeStyle(1, 0x334155, 0.55)
+          .setDepth(1);
+
+        // 遮罩：音符不會畫到框外
+        scene.noteMaskGfx = scene.make.graphics({ x: 0, y: 0, add: false });
+        scene.noteMaskGfx.fillStyle(0xffffff, 1);
+        scene.noteMaskGfx.fillRect(frameX - frameW / 2 + 10, scene.trackTop - 4, frameW - 20, scene.trackBottom - scene.trackTop + 10);
+        scene.noteMask = scene.noteMaskGfx.createGeometryMask();
+
         scene.laneKeys = [
           { name: "D", key: scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D) },
           { name: "F", key: scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F) },
           { name: "J", key: scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.J) },
           { name: "K", key: scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.K) }
         ];
+
+        scene.laneVisuals = [];
+        scene.judgePads = [];
+        scene.touchPads = [];
+        scene.lanes.forEach(function (laneX, idx) {
+          var rail = scene.add.rectangle(laneX, (scene.trackTop + scene.judgementY) / 2, 74, scene.judgementY - scene.trackTop + 24, 0x0f172a, 0.72)
+            .setStrokeStyle(2, scene.laneColors[idx], 0.45)
+            .setDepth(2);
+          var judge = scene.add.rectangle(laneX, scene.judgementY, 74, 18, scene.laneColors[idx], 0.28)
+            .setStrokeStyle(2, scene.laneColors[idx], 0.95)
+            .setDepth(6);
+          var keyLabel = scene.add.text(laneX, scene.trackBottom - 10, scene.laneKeys[idx].name, {
+            fontFamily: "Segoe UI, sans-serif",
+            fontSize: "26px",
+            fontStyle: "bold",
+            color: scene.laneColorHex[idx]
+          }).setOrigin(0.5).setDepth(8);
+          var pad = scene.add.rectangle(laneX, scene.trackBottom - 10, 78, 44, scene.laneColors[idx], 0.12)
+            .setStrokeStyle(2, scene.laneColors[idx], 0.55)
+            .setInteractive({ useHandCursor: true })
+            .setDepth(7);
+          pad.on("pointerdown", function () {
+            scene.hitLane(idx, true);
+          });
+          scene.laneVisuals.push({ rail: rail, judge: judge, keyLabel: keyLabel, pad: pad });
+          scene.judgePads.push(judge);
+          scene.touchPads.push(pad);
+        });
+
         scene.syncHp = 100;
         scene.combo = 0;
-        scene.noteAcc = 0;
-        scene.notes = scene.physics.add.group();
-        scene.judgementY = H - 92;
-        scene.lanes.forEach(function (laneX, idx) {
-          scene.add.rectangle(laneX, H / 2, 72, 420, 0x0f172a, 0.65).setStrokeStyle(2, 0x334155, 1);
-          scene.add.rectangle(laneX, scene.judgementY, 72, 16, 0x22d3ee, 0.35).setStrokeStyle(2, 0x22d3ee, 1);
-          scene.add.text(laneX, H - 48, scene.laneKeys[idx].name, {
-            fontFamily: "Segoe UI, sans-serif",
-            fontSize: "28px",
-            fontStyle: "bold",
-            color: "#e2e8f0"
-          }).setOrigin(0.5);
+        scene.maxCombo = 0;
+        scene.perfects = 0;
+        scene.greats = 0;
+        scene.goods = 0;
+        scene.misses = 0;
+        scene.fever = false;
+        scene.feverTimer = 0;
+        scene.beatClock = 0;
+        scene.beatPulse = 0;
+        scene.patternIdx = 0;
+        scene.holdLane = [null, null, null, null];
+        scene.notes = scene.add.group();
+        scene.bpm = scene.diffKey === "casual" ? 108 : scene.diffKey === "extreme" ? 148 : 128;
+        scene.musicStep = 0;
+        scene.musicOn = true;
+        scene.musicIntensity = 1;
+
+        // 中央連擊／判定大字
+        scene.comboBanner = scene.add.text(W / 2, H / 2 - 70, "", {
+          fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif",
+          fontSize: "36px",
+          fontStyle: "bold",
+          color: "#e2e8f0"
+        }).setOrigin(0.5).setAlpha(0).setDepth(40);
+        scene.gradeBanner = scene.add.text(W / 2, scene.judgementY - 70, "", {
+          fontFamily: "Segoe UI, sans-serif",
+          fontSize: "44px",
+          fontStyle: "bold",
+          color: "#67e8f9"
+        }).setOrigin(0.5).setAlpha(0).setDepth(41);
+        scene.scorePopup = scene.add.text(W / 2, scene.judgementY - 110, "", {
+          fontFamily: "Segoe UI, sans-serif",
+          fontSize: "26px",
+          fontStyle: "bold",
+          color: "#fde68a"
+        }).setOrigin(0.5).setAlpha(0).setDepth(41);
+
+        // 啟動節奏音樂（也嘗試 SDK 環境底噪）
+        try {
+          if (typeof RNF !== "undefined" && RNF.startBgm) RNF.startBgm("pulse");
+        } catch (_e) {}
+        ensureAudio();
+        scene.time.delayedCall(200, function () {
+          if (scene.alive && scene.musicOn) {
+            uiFloat(scene, W / 2, 110, "♪ VOID PULSE ON", "#c4b5fd");
+          }
         });
-      },
-      updateState: function (scene, dt, threat) {
-        scene.noteAcc += dt;
-        if (scene.noteAcc >= Math.max(0.22, 0.78 / threat)) {
-          scene.noteAcc = 0;
-          var lane = Phaser.Math.Between(0, 3);
-          var note = scene.notes.create(scene.lanes[lane], -40, "note");
-          note.body.allowGravity = false;
-          note.setTint([0x22d3ee, 0x34d399, 0xa78bfa, 0xf472b6][lane]);
+
+        var origGameOver = scene.gameOver.bind(scene);
+        scene.gameOver = function () {
+          scene.musicOn = false;
+          try {
+            if (typeof RNF !== "undefined" && RNF.stopBgm) RNF.stopBgm();
+          } catch (_e2) {}
+          origGameOver();
+        };
+        scene.syncBarBg = scene.add.rectangle(W / 2, 78, 280, 12, 0x1e293b, 0.9).setDepth(20);
+        scene.syncBarFill = scene.add.rectangle(W / 2 - 140, 78, 280, 12, 0x34d399, 0.95).setOrigin(0, 0.5).setDepth(21);
+        scene.modeHud = scene.add.text(W / 2, 58, "READY", {
+          fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+          fontSize: "13px",
+          fontStyle: "bold",
+          color: "#c4b5fd"
+        }).setOrigin(0.5).setDepth(22);
+
+        // 譜面模式庫：單音／雙音／之字／連打／和弦／金色／長音
+        scene.patterns = [
+          { kind: "single", lanes: [0] },
+          { kind: "single", lanes: [1] },
+          { kind: "single", lanes: [2] },
+          { kind: "single", lanes: [3] },
+          { kind: "double", lanes: [0, 2] },
+          { kind: "double", lanes: [1, 3] },
+          { kind: "double", lanes: [0, 3] },
+          { kind: "zigzag", lanes: [0, 1, 2, 3] },
+          { kind: "zigzag", lanes: [3, 2, 1, 0] },
+          { kind: "stream", lanes: [1, 1, 2, 2] },
+          { kind: "chord", lanes: [1, 2] },
+          { kind: "gold", lanes: [0] },
+          { kind: "hold", lanes: [0] },
+          { kind: "hold", lanes: [3] },
+          { kind: "burst", lanes: [0, 1, 2, 3] }
+        ];
+
+        scene.spawnNoteAt = function (lane, type) {
+          lane = Phaser.Math.Clamp(lane, 0, 3);
+          var key = type === "gold" ? "note-gold" : type === "hold" ? "note-hold" : "note";
+          var note = scene.add.image(scene.lanes[lane], scene.spawnY, key).setDepth(10);
+          note.setMask(scene.noteMask);
+          if (type !== "gold") note.setTint(scene.laneColors[lane]);
           note.setData("lane", lane);
           note.setData("hit", false);
-          note.setVelocityY(220 * threat + 40);
-        }
-        scene.laneKeys.forEach(function (lane, idx) {
-          if (!Phaser.Input.Keyboard.JustDown(lane.key)) return;
-          var judged = false;
+          note.setData("type", type || "tap");
+          note.setData("holdProg", 0);
+          note.setData("holdNeed", type === "hold" ? 0.55 : 0);
+          if (type === "hold") {
+            note.setDisplaySize(16, 64);
+            note.y = scene.spawnY + 20;
+          } else {
+            note.setDisplaySize(56, 18);
+          }
+          scene.notes.add(note);
+          return note;
+        };
+
+        scene.queuePattern = function () {
+          var p = scene.patterns[scene.patternIdx % scene.patterns.length];
+          scene.patternIdx += 1;
+          // 依威脅度偶爾跳過長音／爆發，避免 casual 過密
+          if (scene.diffKey === "casual" && (p.kind === "burst" || p.kind === "hold") && Math.random() < 0.45) {
+            p = scene.patterns[Phaser.Math.Between(0, 6)];
+          }
+          var delay = 0;
+          var step = Math.max(0.12, (60 / scene.bpm) * (p.kind === "burst" ? 0.42 : p.kind === "stream" || p.kind === "zigzag" ? 0.55 : 1));
+          if (p.kind === "gold") {
+            scene.spawnNoteAt(Phaser.Math.Between(0, 3), "gold");
+            return step * 1.2;
+          }
+          if (p.kind === "double" || p.kind === "chord") {
+            p.lanes.forEach(function (lane) {
+              scene.spawnNoteAt(lane, "tap");
+            });
+            return step * 1.15;
+          }
+          if (p.kind === "hold") {
+            scene.spawnNoteAt(p.lanes[0], "hold");
+            return step * 1.6;
+          }
+          p.lanes.forEach(function (lane, i) {
+            scene.time.delayedCall(delay, function () {
+              if (!scene.alive) return;
+              scene.spawnNoteAt(lane, p.kind === "burst" && i === p.lanes.length - 1 ? "gold" : "tap");
+            });
+            delay += step * 1000;
+          });
+          return delay / 1000 + step * 0.4;
+        };
+
+        scene.flashLane = function (idx, color) {
+          var pad = scene.judgePads[idx];
+          var rail = scene.laneVisuals[idx] && scene.laneVisuals[idx].rail;
+          if (!pad) return;
+          pad.setFillStyle(color || scene.laneColors[idx], 0.85);
+          if (rail) rail.setStrokeStyle(3, color || scene.laneColors[idx], 0.95);
+          scene.tweens.add({
+            targets: pad,
+            alpha: 0.35,
+            duration: 160,
+            ease: "Cubic.easeOut",
+            onComplete: function () {
+              pad.setFillStyle(scene.laneColors[idx], 0.28);
+              pad.setAlpha(1);
+              if (rail) rail.setStrokeStyle(2, scene.laneColors[idx], 0.45);
+            }
+          });
+          scene.tweens.add({
+            targets: [scene.touchPads[idx], pad],
+            scaleX: 1.14,
+            scaleY: 1.14,
+            duration: 90,
+            yoyo: true,
+            ease: "Back.easeOut"
+          });
+        };
+
+        scene.showHitJuice = function (lane, grade, gain, color) {
+          var x = scene.lanes[lane];
+          var y = scene.judgementY;
+          var ringColor = grade === "PERFECT" ? 0xfde68a : grade === "GREAT" ? 0x67e8f9 : 0xa78bfa;
+          var ring = scene.add.circle(x, y, 10, ringColor, 0.55).setDepth(30).setBlendMode(Phaser.BlendModes.ADD);
+          scene.tweens.add({
+            targets: ring,
+            scale: grade === "PERFECT" ? 4.2 : 3.2,
+            alpha: 0,
+            duration: grade === "PERFECT" ? 340 : 260,
+            ease: "Cubic.easeOut",
+            onComplete: function () { ring.destroy(); }
+          });
+          var ring2 = scene.add.circle(x, y, 6, 0xffffff, 0.7).setDepth(31);
+          scene.tweens.add({
+            targets: ring2,
+            scale: 2.4,
+            alpha: 0,
+            duration: 180,
+            ease: "Cubic.easeOut",
+            onComplete: function () { ring2.destroy(); }
+          });
+
+          // 判定大字
+          scene.gradeBanner.setText(grade);
+          scene.gradeBanner.setColor(color);
+          scene.gradeBanner.setPosition(x, y - 56);
+          scene.gradeBanner.setAlpha(1).setScale(0.35);
+          scene.tweens.killTweensOf(scene.gradeBanner);
+          scene.tweens.add({
+            targets: scene.gradeBanner,
+            scale: grade === "PERFECT" ? 1.25 : 1.08,
+            duration: 160,
+            ease: "Back.easeOut",
+            yoyo: true,
+            hold: 80,
+            onComplete: function () {
+              scene.tweens.add({
+                targets: scene.gradeBanner,
+                alpha: 0,
+                y: y - 90,
+                duration: 280,
+                ease: "Cubic.easeOut"
+              });
+            }
+          });
+
+          // 加分數字（獨立、更大）
+          scene.scorePopup.setText("+" + gain);
+          scene.scorePopup.setColor(grade === "PERFECT" ? "#fde68a" : "#e2e8f0");
+          scene.scorePopup.setPosition(x, y - 100);
+          scene.scorePopup.setAlpha(1).setScale(0.5);
+          scene.tweens.killTweensOf(scene.scorePopup);
+          scene.tweens.add({
+            targets: scene.scorePopup,
+            scale: 1.2,
+            y: y - 140,
+            duration: 220,
+            ease: "Back.easeOut",
+            onComplete: function () {
+              scene.tweens.add({
+                targets: scene.scorePopup,
+                alpha: 0,
+                y: y - 170,
+                duration: 320,
+                ease: "Cubic.easeOut"
+              });
+            }
+          });
+
+          // 連擊橫幅
+          if (scene.combo >= 2) {
+            scene.comboBanner.setText(scene.combo + " COMBO");
+            scene.comboBanner.setColor(scene.fever ? "#fbbf24" : "#f8fafc");
+            scene.comboBanner.setAlpha(1).setScale(0.55);
+            scene.tweens.killTweensOf(scene.comboBanner);
+            scene.tweens.add({
+              targets: scene.comboBanner,
+              scale: 1.05,
+              duration: 140,
+              ease: "Back.easeOut",
+              yoyo: true,
+              hold: 60,
+              onComplete: function () {
+                scene.tweens.add({
+                  targets: scene.comboBanner,
+                  alpha: 0,
+                  duration: 420,
+                  ease: "Cubic.easeOut"
+                });
+              }
+            });
+          }
+
+          // 軌道光束
+          var beam = scene.add.rectangle(x, (scene.trackTop + y) / 2, 8, y - scene.trackTop, scene.laneColors[lane], 0.55)
+            .setDepth(9)
+            .setBlendMode(Phaser.BlendModes.ADD);
+          scene.tweens.add({
+            targets: beam,
+            alpha: 0,
+            scaleX: 4,
+            duration: 220,
+            ease: "Cubic.easeOut",
+            onComplete: function () { beam.destroy(); }
+          });
+
+          // 短促鏡頭衝擊
+          scene.cameras.main.shake(grade === "PERFECT" ? 120 : 80, grade === "PERFECT" ? 0.016 : 0.01);
+          if (grade === "PERFECT") {
+            scene.tweens.add({
+              targets: scene.cameras.main,
+              zoom: 1.04,
+              duration: 70,
+              yoyo: true,
+              ease: "Cubic.easeOut"
+            });
+          }
+        };
+
+        scene.applyMiss = function (lane, reason) {
+          scene.combo = 0;
+          scene.fever = false;
+          scene.feverTimer = 0;
+          scene.misses += 1;
+          scene.syncHp = Math.max(0, scene.syncHp - (reason === "empty" ? 5 : 10));
+          SFX.hit();
+          scene.cameras.main.shake(90, 0.012);
+          var x = typeof lane === "number" ? scene.lanes[lane] : W / 2;
+          neonBurst(scene, x, scene.judgementY, "spark-pink", 18);
+          uiFloat(scene, x, scene.judgementY - 36, "MISS", "#fb7185");
+          scene.comboBanner.setAlpha(0);
+          if (typeof lane === "number") scene.flashLane(lane, 0xfb7185);
+          if (scene.syncHp <= 0) scene.gameOver();
+        };
+
+        scene.resolveHit = function (note, dist) {
+          var lane = note.getData("lane");
+          var type = note.getData("type");
+          note.setData("hit", true);
+          var grade = "GOOD";
+          var base = 70;
+          var spark = "spark-violet";
+          var color = "#c4b5fd";
+          if (dist <= 14) {
+            grade = "PERFECT";
+            base = type === "gold" ? 260 : 180;
+            spark = type === "gold" ? "spark-gold" : "spark-cyan";
+            color = type === "gold" ? "#fde68a" : "#67e8f9";
+            scene.perfects += 1;
+            scene.syncHp = Math.min(100, scene.syncHp + (type === "gold" ? 8 : 3));
+          } else if (dist <= 28) {
+            grade = "GREAT";
+            base = type === "gold" ? 170 : 120;
+            spark = "spark-violet";
+            color = "#c4b5fd";
+            scene.greats += 1;
+            scene.syncHp = Math.min(100, scene.syncHp + 1);
+          } else {
+            scene.goods += 1;
+          }
+          note.destroy();
+          scene.combo += 1;
+          scene.maxCombo = Math.max(scene.maxCombo, scene.combo);
+          if (scene.combo >= 20 && !scene.fever) {
+            scene.fever = true;
+            scene.feverTimer = 8;
+            scene.musicIntensity = 1.25;
+            SFX.combo();
+            SFX.confirm();
+            uiFloat(scene, W / 2, H / 2 - 40, "FEVER!", "#fbbf24");
+            scene.cameras.main.shake(160, 0.02);
+            neonBurst(scene, W / 2, scene.judgementY, "spark-gold", 30);
+            neonBurst(scene, W / 2, H / 2, "spark-violet", 22);
+          }
+          var feverMul = scene.fever ? 2 : 1;
+          var comboBonus = scene.combo * 6 + (grade === "PERFECT" ? 20 : grade === "GREAT" ? 10 : 0);
+          var gain = Math.floor(base * scene.diff.scoreMult * (0.85 + scene.dangerMultiplier * 0.15) * feverMul) + comboBonus;
+          scene.score += gain;
+
+          // 分級打擊音效
+          if (grade === "PERFECT") SFX.perfect();
+          else if (grade === "GREAT") SFX.great();
+          else SFX.good();
+          if (type === "gold") SFX.score();
+
+          neonBurst(scene, scene.lanes[lane], scene.judgementY, spark, grade === "PERFECT" ? 28 : grade === "GREAT" ? 20 : 15);
+          if (grade === "PERFECT") {
+            neonBurst(scene, scene.lanes[lane], scene.judgementY - 20, "spark-gold", 16);
+          }
+          scene.showHitJuice(lane, grade, gain, color);
+          scene.flashLane(lane, scene.laneColors[lane]);
+
+          // 連擊里程碑
+          if (scene.combo === 10 || scene.combo === 25 || scene.combo === 50 || scene.combo === 100) {
+            SFX.combo();
+            uiFloat(scene, W / 2, H / 2 - 20, scene.combo + " HIT STREAK!", "#fbbf24");
+            neonBurst(scene, W / 2, H / 2, "spark-gold", 26);
+          }
+        };
+
+        scene.hitLane = function (idx, fromTouch) {
+          if (!scene.alive) return;
           var candidates = scene.notes.getChildren().filter(function (note) {
-            return note.active && note.getData("lane") === idx && !note.getData("hit");
+            return note.active && !note.getData("hit") && note.getData("lane") === idx;
           }).sort(function (a, b) {
             return Math.abs(a.y - scene.judgementY) - Math.abs(b.y - scene.judgementY);
           });
-          if (candidates.length > 0) {
-            var note = candidates[0];
-            var dist = Math.abs(note.y - scene.judgementY);
-            if (dist <= 42) {
-              judged = true;
+          if (!candidates.length) {
+            // 空按不重罰：僅在判定線附近有音時才算 miss；完全空軌只閃一下
+            scene.flashLane(idx, 0x64748b);
+            if (fromTouch) SFX.click();
+            return;
+          }
+          var note = candidates[0];
+          var type = note.getData("type");
+          var dist = Math.abs(note.y - scene.judgementY);
+          if (type === "hold") {
+            if (dist <= 48 && note.y >= scene.judgementY - 40) {
+              scene.holdLane[idx] = note;
+              note.setData("holding", true);
+              scene.flashLane(idx, scene.laneColors[idx]);
+              SFX.beat();
+            } else if (dist <= 70) {
+              // 太早／太晚按長音 → miss 該音
               note.setData("hit", true);
               note.destroy();
-              scene.combo += 1;
-              var perfect = dist <= 16;
-              var gain = Math.floor((perfect ? 130 : 80) * scene.diff.scoreMult * (0.85 + scene.dangerMultiplier * 0.15));
-              scene.score += gain + scene.combo * 4;
-              SFX.beat();
-              scene.cameras.main.shake(100, 0.01);
-              neonBurst(scene, scene.lanes[idx], scene.judgementY, perfect ? "spark-cyan" : "spark-violet", perfect ? 22 : 16);
-              uiFloat(scene, scene.lanes[idx], scene.judgementY - 34, perfect ? "PERFECT" : "GREAT", perfect ? "#67e8f9" : "#c4b5fd");
+              scene.applyMiss(idx, "timing");
+            }
+            return;
+          }
+          if (dist <= 46) {
+            scene.resolveHit(note, dist);
+          } else if (dist <= 70) {
+            note.setData("hit", true);
+            note.destroy();
+            scene.applyMiss(idx, "timing");
+          } else {
+            scene.flashLane(idx, 0x64748b);
+          }
+        };
+
+        scene.nextPatternIn = 0.35;
+        scene.beatPulseRing = scene.add.circle(W / 2, scene.judgementY, 8, 0xa78bfa, 0.0).setDepth(5);
+      },
+      updateState: function (scene, dt, threat) {
+        if (!scene.alive) return;
+
+        // BPM 拍點視覺 + 節奏音樂（每 1/4 拍進一步）
+        var beatSec = 60 / scene.bpm;
+        var stepSec = beatSec / 4;
+        scene.beatClock += dt;
+        scene.beatPulse += dt;
+        if (scene.beatPulse >= stepSec) {
+          scene.beatPulse -= stepSec;
+          if (scene.musicOn) {
+            playRhythmStep(scene.musicStep, scene.fever, scene.musicIntensity || 1);
+            scene.musicStep += 1;
+          }
+          // 每整拍閃判定線
+          if (scene.musicStep % 4 === 1) {
+            scene.judgePads.forEach(function (pad) {
+              scene.tweens.add({
+                targets: pad,
+                scaleX: 1.08,
+                duration: 70,
+                yoyo: true,
+                ease: "Sine.easeOut"
+              });
+            });
+            if (scene.playFrame) {
+              scene.tweens.add({
+                targets: scene.playFrame,
+                alpha: 0.95,
+                duration: 60,
+                yoyo: true
+              });
             }
           }
-          if (!judged) {
-            scene.combo = 0;
-            scene.syncHp -= 8;
-            SFX.hit();
-            neonBurst(scene, scene.lanes[idx], scene.judgementY, "spark-pink", 16);
-            uiFloat(scene, scene.lanes[idx], scene.judgementY - 34, "MISS", "#fb7185");
-            if (scene.syncHp <= 0) scene.gameOver();
+        }
+
+        if (scene.fever) {
+          scene.feverTimer -= dt;
+          if (scene.feverTimer <= 0) {
+            scene.fever = false;
+            scene.feverTimer = 0;
+            scene.musicIntensity = 1;
+          }
+        }
+
+        // 譜面生成（依 BPM + 危險倍率）
+        scene.nextPatternIn -= dt;
+        if (scene.nextPatternIn <= 0) {
+          var wait = scene.queuePattern();
+          var dens = Math.max(0.55, 1.35 / Math.sqrt(threat));
+          scene.nextPatternIn = Math.max(0.18, wait * dens);
+        }
+
+        var fallSpeed = (210 + 90 * threat) * (scene.diffKey === "extreme" ? 1.12 : scene.diffKey === "casual" ? 0.88 : 1);
+
+        // 長音按住檢測
+        scene.laneKeys.forEach(function (lane, idx) {
+          var held = lane.key.isDown;
+          var holdNote = scene.holdLane[idx];
+          if (holdNote && holdNote.active && holdNote.getData("holding")) {
+            if (held) {
+              var prog = (holdNote.getData("holdProg") || 0) + dt;
+              holdNote.setData("holdProg", prog);
+              holdNote.setTint(0xfbbf24);
+              if (prog >= holdNote.getData("holdNeed")) {
+                holdNote.setData("hit", true);
+                scene.holdLane[idx] = null;
+                scene.resolveHit(holdNote, 0);
+              }
+            } else {
+              // 鬆開太早
+              holdNote.setData("hit", true);
+              holdNote.destroy();
+              scene.holdLane[idx] = null;
+              scene.applyMiss(idx, "hold");
+            }
           }
         });
+
+        // 鍵盤 JustDown
+        scene.laneKeys.forEach(function (lane, idx) {
+          if (Phaser.Input.Keyboard.JustDown(lane.key)) scene.hitLane(idx, false);
+        });
+
+        // 音符下落（dt），並嚴格夾在軌道內
         scene.notes.getChildren().forEach(function (note) {
-          if (!note.active) return;
-          if (note.y > H + 40) {
+          if (!note.active || note.getData("hit")) return;
+          if (note.getData("holding")) {
+            // 長音按住時鎖在判定線
+            note.y = scene.judgementY;
+            note.x = scene.lanes[note.getData("lane")];
+            return;
+          }
+          note.y += fallSpeed * dt;
+          note.x = scene.lanes[note.getData("lane")];
+          if (note.y > scene.missY) {
+            note.setData("hit", true);
+            var lane = note.getData("lane");
             note.destroy();
-            scene.combo = 0;
-            scene.syncHp -= 10;
-            SFX.hit();
-            if (scene.syncHp <= 0) scene.gameOver();
+            if (scene.holdLane[lane] === note) scene.holdLane[lane] = null;
+            scene.applyMiss(lane, "drop");
           }
         });
-        scene.setExtraHud("SYNC " + Math.max(0, scene.syncHp) + "% · COMBO " + scene.combo);
+
+        // 同步條與 HUD
+        var sync = Math.max(0, Math.min(100, scene.syncHp));
+        scene.syncBarFill.width = 280 * (sync / 100);
+        scene.syncBarFill.setFillStyle(sync > 55 ? 0x34d399 : sync > 25 ? 0xfbbf24 : 0xf472b6, 0.95);
+        var total = scene.perfects + scene.greats + scene.goods + scene.misses;
+        var acc = total ? ((scene.perfects + scene.greats * 0.7 + scene.goods * 0.4) / total) * 100 : 100;
+        var feverLabel = scene.fever ? ("FEVER " + Math.max(0, scene.feverTimer).toFixed(1) + "s") : ("COMBO " + scene.combo);
+        scene.setExtraHud("SYNC " + Math.round(sync) + "% · " + feverLabel + " · ACC " + acc.toFixed(0) + "%");
+        scene.modeHud.setText(
+          (scene.fever ? "狂熱倍率 x2 · " : "") +
+          "P" + scene.perfects + " G" + scene.greats + " · MAX " + scene.maxCombo +
+          " · " + Math.round(scene.bpm * Math.min(1.35, 0.85 + threat * 0.2)) + " BPM"
+        );
       }
     },
     "astro-gravity-runner": {
@@ -1164,124 +2065,998 @@
       title: "CYBER ROGUE DUNGEON",
       titleZh: "賽博地牢倖存者",
       accent: 0xfbbf24,
-      help: "WASD / 方向鍵走位，自動索敵開火，吸收 XP 核心升級火力並存活更久。",
-      objective: "走位生存 · 自動清怪 · 收集模組升級",
-      scoreVerb: "LV",
+      help: "WASD / 方向鍵走位，自動索敵開火。擊敗敵人收集 XP、永久模組箱，以及限時元素膠囊（雷／火／冰／導／甲）：雷鏈、燃燒、寒霜緩速、導引飛彈、護甲層。敵人依難度與時間進化，具血量與防禦。",
+      objective: "走位清怪 · 限時元素膠囊 · 模組火力",
+      scoreVerb: "KILLS",
       startState: function (scene) {
-        scene.physics.world.setBounds(0, 0, W, H);
-        scene.player = scene.physics.add.sprite(W / 2, H / 2, "player-orb");
-        scene.player.setTint(0xfbbf24);
-        scene.player.setDrag(900, 900);
-        scene.player.setMaxVelocity(280, 280);
+        // 大地圖 + 鏡頭跟隨：可視範圍仍 960×540，實際可走約 1.75 倍邊長
+        var mapW = 1680;
+        var mapH = 960;
+        scene.mapW = mapW;
+        scene.mapH = mapH;
+        scene.physics.world.setBounds(0, 0, mapW, mapH);
+        scene.cameras.main.setBounds(0, 0, mapW, mapH);
+
+        if (window.RNFCyberRogueArt && RNFCyberRogueArt.buildDungeonScene) {
+          RNFCyberRogueArt.buildDungeonScene(scene, mapW, mapH);
+        } else {
+          scene.add.rectangle(mapW / 2, mapH / 2, mapW - 24, mapH - 24, 0x0a0f1a, 0.35)
+            .setStrokeStyle(2, 0xfbbf24, 0.28);
+        }
+
+        scene.player = scene.physics.add.sprite(mapW / 2, mapH / 2, "player-fighter");
+        scene.player.setDepth(12);
+        scene.player.setScale(0.72);
+        scene.player.setDrag(0, 0);
+        scene.player.setMaxVelocity(400, 400);
         scene.player.setCollideWorldBounds(true);
-        scene.player.hp = 6;
+        scene.player.setSize(30, 16);
+        scene.player.setOffset(41, 24);
+        scene.player.aimAngle = 0;
+        scene.player.moveSpeed = 320;
+        scene.player.hp = scene.diffKey === "casual" ? 7 : scene.diffKey === "extreme" ? 4 : 5;
+        scene.player.maxHp = scene.player.hp + 2;
         scene.player.weaponLevel = 1;
         scene.player.invuln = 0;
+        scene.player.atk = 1;
+        scene.player.fireCd = 0.42;
+        scene.player.bulletCount = 1;
+        scene.player.spread = 0.08;
+        scene.player.pierce = 0;
+        scene.player.explode = 0;
+        scene.player.homing = 0;
+        scene.player.frost = 0;
+        scene.player.rail = 0;
+        scene.player.crit = 0.05;
+        scene.player.bulletSpeed = 540;
+        scene.player.armorCharges = 0;
+        scene.player.buffs = { thunder: 0, fire: 0, ice: 0, missile: 0, armor: 0 };
+        scene.mods = [];
+        scene.thunderAcc = 0;
+        scene.missileAcc = 0;
+        scene.burnTickAcc = 0;
+        scene.engineAcc = 0;
+        scene.maxBuffPickups = 2;
+
+        // 引擎尾焰（收斂，少擋視野）
+        scene.engineGlow = scene.add.image(scene.player.x - 28, scene.player.y, "engine-flame")
+          .setDepth(11)
+          .setBlendMode(Phaser.BlendModes.ADD)
+          .setScale(0.7)
+          .setAlpha(0.75);
+        scene.engineGlow2 = null;
+        scene.engineEmitter = null;
+
+        // 機體柔光極淡
+        scene.shipRing = scene.add.image(scene.player.x, scene.player.y, "ship-glow")
+          .setDepth(10)
+          .setBlendMode(Phaser.BlendModes.ADD)
+          .setAlpha(0.14)
+          .setScale(0.4);
+
+        scene.cameras.main.startFollow(scene.player, true, 0.1, 0.1);
+        scene.cameras.main.setDeadzone(48, 32);
+
         scene.killCount = 0;
         scene.xp = 0;
+        scene.xpNeed = 6;
         scene.spawnAcc = 0;
         scene.fireAcc = 0;
+        scene.eliteAcc = 0;
+        scene.waveLabel = "偵察波";
         scene.enemies = scene.physics.add.group();
         scene.bullets = scene.physics.add.group();
+        scene.enemyShots = scene.physics.add.group();
         scene.xpOrbs = scene.physics.add.group();
-        scene.physics.add.overlap(scene.player, scene.enemies, function (_p, enemy) {
-          if (scene.player.invuln > 0 || !enemy.active) return;
-          enemy.destroy();
-          scene.player.hp -= 1;
-          scene.player.invuln = 0.8;
+        scene.pickups = scene.physics.add.group();
+
+        scene.auraRing = scene.add.circle(scene.player.x, scene.player.y, 42, 0xfbbf24, 0)
+          .setStrokeStyle(3, 0xfacc15, 0.75)
+          .setDepth(5)
+          .setVisible(false);
+
+        scene.refreshShipLook = function () {
+          var lv = scene.player.weaponLevel || 1;
+          var key = lv >= 5 ? "player-fighter-mk2" : "player-fighter";
+          if (scene.player.texture.key !== key) scene.player.setTexture(key);
+          var sc = 0.72 + Math.min(0.12, (lv - 1) * 0.015);
+          scene.player.setScale(sc);
+          // 不整機染色，避免變成色塊糊團；只改光暈色
+          scene.player.clearTint();
+          if (scene.shipRing) {
+            var ringCol = scene.player.buffs.fire > 0 ? 0xef4444 :
+              scene.player.buffs.thunder > 0 ? 0xfacc15 :
+              scene.player.buffs.ice > 0 ? 0x38bdf8 :
+              scene.player.buffs.missile > 0 ? 0xf472b6 :
+              (scene.player.buffs.armor > 0 || scene.player.armorCharges > 0) ? 0xe2e8f0 : 0xfbbf24;
+            scene.shipRing.setTint(ringCol);
+            scene.shipRing.setAlpha(0.14);
+          }
+        };
+        scene.refreshShipLook();
+
+        scene.spawnMuzzleFlash = function (ang, kind) {
+          if (!isCombatFxOn()) return;
+          var ox = Math.cos(ang) * 28;
+          var oy = Math.sin(ang) * 28;
+          var col = kind === "thunder" ? 0xfacc15 : kind === "fire" ? 0xef4444 : kind === "frost" ? 0x38bdf8 : kind === "missile" ? 0xf472b6 : kind === "rail" ? 0xe879f9 : 0xfbbf24;
+          var flash = scene.add.rectangle(scene.player.x + ox, scene.player.y + oy, 12, 6, col, 0.85)
+            .setDepth(30)
+            .setRotation(ang)
+            .setBlendMode(Phaser.BlendModes.ADD);
+          scene.tweens.add({
+            targets: flash,
+            alpha: 0,
+            scaleX: 1.4,
+            duration: 80,
+            ease: "Cubic.easeOut",
+            onComplete: function () { flash.destroy(); }
+          });
+        };
+
+        scene.spawnBulletTrail = function (bullet, kind) {
+          var col = kind === "fire" ? 0xef4444 : kind === "frost" ? 0x38bdf8 : kind === "thunder" ? 0xfacc15 : kind === "missile" ? 0xf472b6 : kind === "rail" ? 0xe879f9 : 0xfbbf24;
+          bullet.setData("trailColor", col);
+          // 不依賴粒子：在 update 用圓點拖尾
+          bullet.setData("trailPts", []);
+        };
+
+        scene.spawnImpactFx = function (x, y, kind) {
+          if (!isCombatFxOn()) return;
+          var col = kind === "fire" ? 0xef4444 : kind === "frost" ? 0x38bdf8 : kind === "thunder" ? 0xfacc15 : kind === "missile" || kind === "blast" ? 0xf472b6 : 0xfbbf24;
+          var spark = kind === "frost" ? "spark-cyan" : kind === "missile" ? "spark-pink" : "spark-gold";
+          try { neonBurst(scene, x, y, spark, 14); } catch (_e) {}
+          var ring = scene.add.circle(x, y, 8, col, 0.55).setDepth(25).setBlendMode(Phaser.BlendModes.ADD);
+          scene.tweens.add({
+            targets: ring,
+            scale: 2.4,
+            alpha: 0,
+            duration: 160,
+            ease: "Cubic.easeOut",
+            onComplete: function () { ring.destroy(); }
+          });
+        };
+
+        scene.modeHud = scene.add.text(W / 2, 40, "", {
+          fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+          fontSize: "13px",
+          fontStyle: "bold",
+          color: "#fde68a"
+        }).setOrigin(0.5).setDepth(22).setScrollFactor(0);
+
+        scene.buffHud = scene.add.text(W / 2, H - 28, "", {
+          fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+          fontSize: "14px",
+          fontStyle: "bold",
+          color: "#e2e8f0"
+        }).setOrigin(0.5).setDepth(22).setScrollFactor(0);
+
+        // 版本戳：確認不是舊快取
+        scene.add.text(W - 12, H - 10, "設定 ART6", {
+          fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+          fontSize: "11px",
+          fontStyle: "bold",
+          color: "#94a3b8"
+        }).setOrigin(1, 1).setDepth(30).setAlpha(0.75).setScrollFactor(0);
+
+        var TEMP_BUFFS = {
+          thunder: { duration: 6, label: "雷", tex: "drop-thunder", color: "#facc15", tint: 0xfacc15 },
+          fire: { duration: 7, label: "火", tex: "drop-fire", color: "#ef4444", tint: 0xef4444 },
+          ice: { duration: 7, label: "冰", tex: "drop-ice", color: "#38bdf8", tint: 0x38bdf8 },
+          missile: { duration: 8, label: "導", tex: "drop-missile", color: "#f472b6", tint: 0xf472b6 },
+          armor: { duration: 10, label: "甲", tex: "drop-armor", color: "#94a3b8", tint: 0x94a3b8 }
+        };
+        scene.TEMP_BUFFS = TEMP_BUFFS;
+
+        var MOD_DEFS = {
+          ATK: { label: "攻擊+1", color: "#fbbf24", apply: function () { scene.player.atk += 1; } },
+          RAPID: { label: "連射", color: "#67e8f9", apply: function () { scene.player.fireCd = Math.max(0.22, scene.player.fireCd - 0.04); } },
+          SPREAD: { label: "散射", color: "#c4b5fd", apply: function () { scene.player.bulletCount = Math.min(3, scene.player.bulletCount + 1); scene.player.spread += 0.03; } },
+          PIERCE: { label: "穿透", color: "#38bdf8", apply: function () { scene.player.pierce = Math.min(2, scene.player.pierce + 1); } },
+          BLAST: { label: "爆破", color: "#fb923c", apply: function () { scene.player.explode = Math.min(2, scene.player.explode + 1); } },
+          HOMING: { label: "追蹤", color: "#f472b6", apply: function () { scene.player.homing = Math.min(2, scene.player.homing + 1); } },
+          FROST: { label: "寒霜", color: "#7dd3fc", apply: function () { scene.player.frost = Math.min(2, scene.player.frost + 1); } },
+          RAIL: { label: "軌道炮", color: "#e879f9", apply: function () { scene.player.rail = Math.min(1, scene.player.rail + 1); scene.player.bulletSpeed += 40; } },
+          CRIT: { label: "暴擊", color: "#fde68a", apply: function () { scene.player.crit = Math.min(0.28, scene.player.crit + 0.05); } },
+          SHIELD: { label: "護盾+1", color: "#4ade80", apply: function () { scene.player.hp = Math.min(scene.player.maxHp + 1, scene.player.hp + 1); scene.player.maxHp += 1; } }
+        };
+        scene.MOD_DEFS = MOD_DEFS;
+
+        scene.activateBuff = function (key, silent) {
+          var def = TEMP_BUFFS[key];
+          if (!def) return;
+          scene.player.buffs[key] = Math.min(20, (scene.player.buffs[key] || 0) + def.duration);
+          if (key === "armor") {
+            scene.player.armorCharges = Math.min(3, (scene.player.armorCharges || 0) + 1);
+          }
+          if (key === "thunder") scene.thunderAcc = 0;
+          if (key === "missile") scene.missileAcc = 0;
+          if (scene.refreshShipLook) scene.refreshShipLook();
+          if (!silent) {
+            SFX.confirm();
+            scene.cameras.main.shake(70, 0.006);
+            neonBurst(scene, scene.player.x, scene.player.y, "spark-gold", 12);
+            uiFloat(scene, scene.player.x, scene.player.y - 36, def.label + " " + Math.ceil(scene.player.buffs[key]) + "s", def.color);
+          }
+        };
+
+        scene.spawnTimedDrop = function (x, y, preferKey) {
+          var activeBuffDrops = scene.pickups.getChildren().filter(function (p) {
+            return p.active && p.getData("kind") === "buff";
+          }).length;
+          if (activeBuffDrops >= (scene.maxBuffPickups || 2)) return null;
+          var keys = Object.keys(TEMP_BUFFS);
+          var key = preferKey && TEMP_BUFFS[preferKey] ? preferKey : keys[Phaser.Math.Between(0, keys.length - 1)];
+          var def = TEMP_BUFFS[key];
+          var glow = scene.add.rectangle(x, y, 28, 28, def.tint, 0.15)
+            .setDepth(15)
+            .setStrokeStyle(1, def.tint, 0.7);
+          var drop = scene.pickups.create(x, y, def.tex);
+          drop.body.allowGravity = false;
+          drop.setData("kind", "buff");
+          drop.setData("buff", key);
+          drop.setTint(def.tint);
+          drop.setScale(0.85);
+          drop.setDepth(16);
+          drop.body.setSize(22, 22);
+          var tag = scene.add.text(x, y - 18, def.label, {
+            fontFamily: "Microsoft JhengHei",
+            fontSize: "12px",
+            fontStyle: "bold",
+            color: def.color,
+            stroke: "#000000",
+            strokeThickness: 3
+          }).setOrigin(0.5).setDepth(17);
+          drop.setData("tag", tag);
+          drop.setData("glow", glow);
+          scene.tweens.add({
+            targets: [drop, glow],
+            scale: 0.95,
+            duration: 500,
+            yoyo: true,
+            repeat: -1,
+            ease: "Sine.easeInOut"
+          });
+          return drop;
+        };
+
+        scene.grantMod = function (key, silent) {
+          var def = MOD_DEFS[key];
+          if (!def) return;
+          def.apply();
+          scene.mods.push(key);
+          if (scene.mods.length > 8) scene.mods.shift();
+          if (!silent) {
+            SFX.confirm();
+            scene.cameras.main.shake(110, 0.012);
+            neonBurst(scene, scene.player.x, scene.player.y, "spark-gold", 22);
+            uiFloat(scene, scene.player.x, scene.player.y - 36, def.label, def.color);
+          }
+        };
+
+        scene.levelUp = function () {
+          scene.player.weaponLevel += 1;
+          scene.xpNeed = 6 + scene.player.weaponLevel * 4;
+          scene.player.hp = Math.min(scene.player.maxHp, scene.player.hp + 1);
+          if (scene.player.weaponLevel % 3 === 0) scene.player.atk += 1;
+          var pool = ["ATK", "RAPID", "SPREAD", "PIERCE", "BLAST", "HOMING", "FROST", "RAIL", "CRIT", "SHIELD"];
+          if (scene.elapsedTime > 45) pool = pool.concat(["BLAST", "HOMING", "PIERCE"]);
+          if (scene.diffKey === "extreme") pool = pool.concat(["ATK", "RAPID"]);
+          var pick = pool[Phaser.Math.Between(0, pool.length - 1)];
+          scene.grantMod(pick, false);
+          if (Math.random() < 0.12) {
+            var buffKeys = Object.keys(TEMP_BUFFS);
+            scene.activateBuff(buffKeys[Phaser.Math.Between(0, buffKeys.length - 1)], false);
+          }
+          uiFloat(scene, scene.player.x, scene.player.y - 58, "LV " + scene.player.weaponLevel, "#4ade80");
+          if (scene.refreshShipLook) scene.refreshShipLook();
+          neonBurst(scene, scene.player.x, scene.player.y, "spark-green", 16);
+        };
+
+        scene.enemyCatalog = [
+          { id: "scout", tex: "foe-scout", tint: 0x38bdf8, hp: 2, def: 0, hpGrow: 0.35, speed: 118, score: 70, unlock: 0, weight: 30, behavior: "chase", scale: 1 },
+          { id: "swarm", tex: "foe-swarm", tint: 0x4ade80, hp: 1, def: 0, hpGrow: 0.25, speed: 150, score: 35, unlock: 4, weight: 24, behavior: "swarm", scale: 1, pack: 4 },
+          { id: "wasp", tex: "foe-wasp", tint: 0xfbbf24, hp: 2, def: 0, hpGrow: 0.3, speed: 165, score: 55, unlock: 8, weight: 18, behavior: "swarm", scale: 1, pack: 3 },
+          { id: "grunt", tex: "foe-grunt", tint: 0xf97316, hp: 6, def: 1, hpGrow: 0.55, speed: 78, score: 110, unlock: 10, weight: 22, behavior: "chase", scale: 1.05 },
+          { id: "crawler", tex: "foe-crawler", tint: 0xa3e635, hp: 7, def: 1, hpGrow: 0.6, speed: 55, score: 130, unlock: 18, weight: 14, behavior: "tank", scale: 1.08 },
+          { id: "shield", tex: "foe-shield", tint: 0x94a3b8, hp: 6, def: 3, hpGrow: 0.5, speed: 62, score: 150, unlock: 22, weight: 14, behavior: "tank", scale: 1.1 },
+          { id: "sniper", tex: "foe-sniper", tint: 0xe879f9, hp: 4, def: 1, hpGrow: 0.45, speed: 68, score: 160, unlock: 26, weight: 12, behavior: "kite", scale: 1, shootCd: 1.6 },
+          { id: "spitter", tex: "foe-spitter", tint: 0xa855f7, hp: 4, def: 1, hpGrow: 0.5, speed: 70, score: 140, unlock: 28, weight: 12, behavior: "kite", scale: 1, shootCd: 1.4 },
+          { id: "glitch", tex: "foe-glitch", tint: 0x22d3ee, hp: 5, def: 1, hpGrow: 0.55, speed: 100, score: 180, unlock: 32, weight: 10, behavior: "glitch", scale: 1 },
+          { id: "bomber", tex: "foe-bomber", tint: 0xfb7185, hp: 3, def: 0, hpGrow: 0.4, speed: 96, score: 160, unlock: 35, weight: 11, behavior: "bomber", scale: 1.05 },
+          { id: "jugger", tex: "foe-jugger", tint: 0xf59e0b, hp: 22, def: 3, hpGrow: 0.9, speed: 42, score: 380, unlock: 45, weight: 5, behavior: "tank", scale: 1.2 },
+          { id: "elite", tex: "foe-elite", tint: 0xef4444, hp: 18, def: 2, hpGrow: 0.85, speed: 54, score: 420, unlock: 50, weight: 6, behavior: "elite", scale: 1.15, shootCd: 1.8 }
+        ];
+
+        scene.pickEnemyType = function (threat) {
+          var t = scene.elapsedTime || 0;
+          var diffBoost = scene.diffKey === "casual" ? 0.75 : scene.diffKey === "extreme" ? 1.35 : 1;
+          var unlockPad = scene.diffKey === "casual" ? 8 : scene.diffKey === "extreme" ? -6 : 0;
+          var pool = [];
+          scene.enemyCatalog.forEach(function (e) {
+            if (t + unlockPad < e.unlock && e.id !== "scout") return;
+            var w = e.weight;
+            if (e.id === "elite" || e.id === "shield" || e.id === "jugger") w *= diffBoost;
+            if (threat > 1.6 && (e.id === "grunt" || e.id === "bomber" || e.id === "wasp")) w *= 1.25;
+            if (threat > 2.2 && (e.id === "elite" || e.id === "jugger")) w *= 1.5;
+            pool.push({ e: e, w: w });
+          });
+          var sum = pool.reduce(function (a, b) { return a + b.w; }, 0);
+          var r = Math.random() * sum;
+          for (var i = 0; i < pool.length; i++) {
+            r -= pool[i].w;
+            if (r <= 0) return pool[i].e;
+          }
+          return scene.enemyCatalog[0];
+        };
+
+        scene.spawnEnemyOf = function (type, ex, ey) {
+          var lv = scene.player.weaponLevel || 1;
+          var diffMul = scene.diffKey === "casual" ? 0.85 : scene.diffKey === "extreme" ? 1.22 : 1;
+          var timeBonus = Math.floor((scene.elapsedTime || 0) / 32);
+          var lvBonus = Math.floor(Math.pow(Math.max(0, lv - 1), 0.85) * (type.hpGrow || 0.5));
+          var hp = Math.round((type.hp + timeBonus + lvBonus) * diffMul);
+          if (type.id === "swarm" || type.id === "scout" || type.id === "wasp") {
+            hp = Math.min(hp, type.hp + 3 + Math.floor(lv / 4) + Math.floor(timeBonus / 2));
+          }
+          if (type.id === "elite" || type.id === "jugger") {
+            hp = Math.round(hp * 1.08);
+          }
+          hp = Math.max(1, hp);
+          var def = Math.max(0, Math.round(type.def * (scene.diffKey === "casual" ? 0.6 : scene.diffKey === "extreme" ? 1.2 : 1) + ((scene.elapsedTime || 0) > 60 ? 1 : 0)));
+          def = Math.min(def, scene.player.atk);
+          var enemy = scene.enemies.create(ex, ey, type.tex);
+          enemy.clearTint();
+          enemy.setScale(type.scale || 1);
+          enemy.setData("type", type.id);
+          enemy.setData("hp", hp);
+          enemy.setData("maxHp", hp);
+          enemy.setData("def", def);
+          enemy.setData("speed", type.speed * Phaser.Math.FloatBetween(0.92, 1.08));
+          enemy.setData("score", type.score);
+          enemy.setData("behavior", type.behavior);
+          enemy.setData("slow", 0);
+          enemy.setData("burn", 0);
+          enemy.setData("shootCd", type.shootCd || 0);
+          enemy.setData("shootAcc", Phaser.Math.FloatBetween(0.2, 0.8));
+          enemy.setDepth(9);
+          return enemy;
+        };
+
+        scene.spawnEnemyEdge = function (threat) {
+          var mw = scene.mapW || W;
+          var mh = scene.mapH || H;
+          var type = scene.pickEnemyType(threat);
+          var edge = Phaser.Math.Between(0, 3);
+          var ex = edge === 0 ? -24 : edge === 1 ? mw + 24 : Phaser.Math.Between(30, mw - 30);
+          var ey = edge === 2 ? -24 : edge === 3 ? mh + 24 : Phaser.Math.Between(30, mh - 30);
+          var pack = type.pack || 1;
+          if ((type.id === "swarm" || type.id === "wasp") && scene.diffKey === "extreme") pack += 1;
+          for (var i = 0; i < pack; i++) {
+            scene.spawnEnemyOf(type, ex + Phaser.Math.Between(-18, 18), ey + Phaser.Math.Between(-18, 18));
+          }
+        };
+
+        scene.chainLightning = function () {
+          var living = scene.enemies.getChildren().filter(function (e) { return e.active; });
+          if (!living.length) return;
+          living.sort(function (a, b) {
+            return Phaser.Math.Distance.Between(a.x, a.y, scene.player.x, scene.player.y) -
+              Phaser.Math.Distance.Between(b.x, b.y, scene.player.x, scene.player.y);
+          });
+          var hits = living.slice(0, 3);
+          var prevX = scene.player.x;
+          var prevY = scene.player.y;
+          var dmg = Math.max(1, scene.player.atk + 1);
+          hits.forEach(function (e) {
+            var line = scene.add.line(0, 0, prevX, prevY, e.x, e.y, 0xfacc15, 0.85).setOrigin(0, 0).setDepth(25);
+            if (line.setLineWidth) line.setLineWidth(2);
+            scene.tweens.add({
+              targets: line,
+              alpha: 0,
+              duration: 180,
+              onComplete: function () { line.destroy(); }
+            });
+            neonBurst(scene, e.x, e.y, "spark-gold", 12);
+            scene.hurtEnemy(e, dmg, null);
+            prevX = e.x;
+            prevY = e.y;
+          });
           SFX.hit();
-          scene.cameras.main.shake(160, 0.018);
-          neonBurst(scene, scene.player.x, scene.player.y, "spark-pink", 24);
+          scene.cameras.main.shake(70, 0.008);
+        };
+
+        scene.fireMissileSalvo = function () {
+          var living = scene.enemies.getChildren().filter(function (e) { return e.active; });
+          if (!living.length) return;
+          living.sort(function (a, b) {
+            return Phaser.Math.Distance.Between(a.x, a.y, scene.player.x, scene.player.y) -
+              Phaser.Math.Distance.Between(b.x, b.y, scene.player.x, scene.player.y);
+          });
+          for (var i = 0; i < 1; i++) {
+            var ang = Phaser.Math.Angle.Between(scene.player.x, scene.player.y, living[0].x, living[0].y);
+            var m = scene.bullets.create(scene.player.x, scene.player.y, "bullet-missile");
+            m.body.allowGravity = false;
+            m.setTint(0xf472b6);
+            m.setRotation(ang);
+            m.setVelocity(Math.cos(ang) * 360, Math.sin(ang) * 360);
+            m.setData("dmg", scene.player.atk);
+            m.setData("kind", "missile");
+            m.setData("pierceLeft", 0);
+            m.setData("homing", Math.max(1, scene.player.homing + 1));
+            m.setData("life", 1.4);
+            scene.time.delayedCall(1400, function (b) { if (b && b.active) b.destroy(); }, [m]);
+          }
+          SFX.shoot();
+          neonBurst(scene, scene.player.x, scene.player.y, "spark-pink", 8);
+        };
+
+        scene.hurtEnemy = function (enemy, rawDmg, bullet) {
+          if (!enemy.active) return false;
+          var def = enemy.getData("def") || 0;
+          var dmg = Math.max(1, rawDmg - def);
+          if (Math.random() < scene.player.crit) {
+            dmg = Math.floor(dmg * 2);
+            uiFloat(scene, enemy.x, enemy.y - 18, "CRIT", "#fde68a");
+          }
+          enemy.setData("hp", enemy.getData("hp") - dmg);
+          enemy.setTint(0xffffff);
+          scene.time.delayedCall(50, function () {
+            if (enemy.active) enemy.clearTint();
+          });
+          var bKind = bullet ? bullet.getData("kind") : null;
+          if (scene.player.buffs.fire > 0 || bKind === "fire") {
+            enemy.setData("burn", Math.max(enemy.getData("burn") || 0, 2.4));
+          }
+          if (scene.player.buffs.ice > 0 || bKind === "frost") {
+            enemy.setData("slow", Math.max(enemy.getData("slow") || 0, 0.62));
+            enemy.setData("slowTimer", 1.8);
+          } else if (scene.player.frost > 0) {
+            enemy.setData("slow", Math.max(enemy.getData("slow") || 0, 0.35 + scene.player.frost * 0.12));
+            enemy.setData("slowTimer", 1.2);
+          }
+          if (scene.player.explode > 0 && bullet && bullet.getData("kind") === "blast") {
+            scene.aoeBlast(enemy.x, enemy.y, 48 + scene.player.explode * 18, Math.max(1, Math.floor(scene.player.atk * 0.7)));
+          }
+          if (enemy.getData("hp") <= 0) {
+            scene.killEnemy(enemy);
+            return true;
+          }
+          return false;
+        };
+
+        scene.aoeBlast = function (x, y, radius, dmg) {
+          neonBurst(scene, x, y, "spark-gold", 24);
+          neonBurst(scene, x, y, "spark-pink", 16);
+          scene.cameras.main.shake(90, 0.01);
+          SFX.explode();
+          scene.enemies.getChildren().forEach(function (e) {
+            if (!e.active) return;
+            if (Phaser.Math.Distance.Between(e.x, e.y, x, y) <= radius) {
+              var def = e.getData("def") || 0;
+              e.setData("hp", e.getData("hp") - Math.max(1, dmg - Math.floor(def * 0.5)));
+              if (e.getData("hp") <= 0) scene.killEnemy(e);
+            }
+          });
+        };
+
+        scene.killEnemy = function (enemy) {
+          if (!enemy || !enemy.active) return;
+          var type = enemy.getData("type");
+          var bx = enemy.x;
+          var by = enemy.y;
+          var scoreBase = enemy.getData("score") || 80;
+          if (enemy.hpBar) {
+            enemy.hpBar.destroy();
+            enemy.hpBar = null;
+          }
+          enemy.destroy();
+          scene.killCount += 1;
+          scene.score += Math.floor(scoreBase * scene.diff.scoreMult * (0.85 + scene.dangerMultiplier * 0.2));
+          neonBurst(scene, bx, by, (type === "elite" || type === "jugger") ? "spark-gold" : "spark-violet", (type === "elite" || type === "jugger") ? 28 : 18);
+          SFX.hit();
+          if (type === "bomber") {
+            scene.aoeBlast(bx, by, 70, 2);
+            if (Phaser.Math.Distance.Between(bx, by, scene.player.x, scene.player.y) < 78 && scene.player.invuln <= 0) {
+              scene.damagePlayer(1);
+            }
+          }
+          var xp = scene.xpOrbs.create(bx, by, "xp");
+          xp.body.allowGravity = false;
+          xp.setTint(0x34d399);
+          xp.setData("val", (type === "elite" || type === "jugger") ? 3 : type === "swarm" ? 1 : 1);
+
+          var buffRate = scene.diffKey === "casual" ? 0.07 : scene.diffKey === "extreme" ? 0.05 : 0.06;
+          if (type === "elite" || type === "jugger") buffRate = 0.22;
+          if (Math.random() < buffRate) {
+            scene.spawnTimedDrop(bx + Phaser.Math.Between(-12, 12), by + Phaser.Math.Between(-10, 10));
+          }
+
+          var modRate = scene.diffKey === "casual" ? 0.07 : scene.diffKey === "extreme" ? 0.04 : 0.05;
+          if (type === "elite" || type === "jugger") modRate = Math.max(modRate, 0.16);
+          if (Math.random() < modRate) {
+            var crate = scene.pickups.create(bx + 10, by - 8, "mod-crate");
+            crate.body.allowGravity = false;
+            crate.setTint(0xfbbf24);
+            crate.setData("kind", "mod");
+            scene.tweens.add({ targets: crate, scale: 1.2, duration: 400, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+          }
+          if (Math.random() < (type === "elite" || type === "jugger" ? 0.04 : 0.012)) {
+            var pack = scene.pickups.create(bx - 10, by + 6, "hp-pack");
+            pack.body.allowGravity = false;
+            pack.setData("kind", "hp");
+          }
+        };
+
+        scene.damagePlayer = function (amount) {
+          if (!scene.alive || scene.player.invuln > 0) return;
+          if (scene.player.armorCharges > 0) {
+            scene.player.armorCharges -= 1;
+            scene.player.invuln = 0.55;
+            SFX.hit();
+            scene.cameras.main.shake(90, 0.01);
+            neonBurst(scene, scene.player.x, scene.player.y, "spark-cyan", 18);
+            uiFloat(scene, scene.player.x, scene.player.y - 28, "甲盾", "#94a3b8");
+            return;
+          }
+          scene.player.hp -= amount;
+          scene.player.invuln = 0.85;
+          SFX.hit();
+          scene.cameras.main.shake(170, 0.02);
+          neonBurst(scene, scene.player.x, scene.player.y, "spark-pink", 26);
           if (scene.player.hp <= 0) scene.gameOver();
+        };
+
+        scene.fireWeapon = function () {
+          var living = scene.enemies.getChildren().filter(function (e) { return e.active; });
+          if (!living.length) return;
+          living.sort(function (a, b) {
+            return Phaser.Math.Distance.Between(a.x, a.y, scene.player.x, scene.player.y) -
+              Phaser.Math.Distance.Between(b.x, b.y, scene.player.x, scene.player.y);
+          });
+          var target = living[0];
+          var baseAngle = Phaser.Math.Angle.Between(scene.player.x, scene.player.y, target.x, target.y);
+          scene.player.aimAngle = baseAngle;
+          scene.player.setRotation(baseAngle);
+          var count = Math.max(1, scene.player.bulletCount);
+          if (scene.player.rail > 0) count = Math.max(1, Math.min(3, scene.player.bulletCount));
+          var kind = "normal";
+          var tex = "bullet";
+          var tint = 0xfbbf24;
+          var extraHoming = 0;
+          var bulletScale = 0.9;
+          if (scene.player.buffs.thunder > 0) {
+            kind = "thunder"; tex = "bullet-thunder"; tint = 0xfacc15; bulletScale = 1.05;
+          } else if (scene.player.buffs.fire > 0) {
+            kind = "fire"; tex = "bullet-fire"; tint = 0xef4444; bulletScale = 1.05;
+          } else if (scene.player.buffs.ice > 0) {
+            kind = "frost"; tex = "bullet-frost"; tint = 0x38bdf8; bulletScale = 1.0;
+          } else if (scene.player.buffs.missile > 0) {
+            kind = "missile"; tex = "bullet-missile"; tint = 0xf472b6; extraHoming = 2; bulletScale = 1.0;
+          } else if (scene.player.rail > 0 && Math.random() < 0.35 + scene.player.rail * 0.1) {
+            kind = "rail"; tex = "bullet-rail"; tint = 0xe879f9; bulletScale = 1.1;
+          } else if (scene.player.explode > 0 && Math.random() < 0.22 + scene.player.explode * 0.08) {
+            kind = "blast"; tex = "bullet-blast"; tint = 0xfb923c; bulletScale = 1.05;
+          } else if (scene.player.frost > 0 && Math.random() < 0.2 + scene.player.frost * 0.08) {
+            kind = "frost"; tex = "bullet-frost"; tint = 0x38bdf8; bulletScale = 1.0;
+          } else if (scene.player.pierce > 0) {
+            kind = "pierce"; tex = "bullet-pierce"; tint = 0x67e8f9; bulletScale = 0.95;
+          }
+          var dmg = scene.player.atk + (kind === "rail" ? 1 + scene.player.rail : 0);
+          var speed = scene.player.bulletSpeed * (kind === "rail" || kind === "thunder" ? 1.25 : kind === "blast" ? 0.85 : kind === "missile" ? 0.9 : 1);
+          scene.spawnMuzzleFlash(baseAngle, kind);
+          for (var i = 0; i < count; i++) {
+            var spread = (i - (count - 1) / 2) * scene.player.spread;
+            var ang = baseAngle + spread;
+            var bullet = scene.bullets.create(scene.player.x + Math.cos(ang) * 22, scene.player.y + Math.sin(ang) * 22, tex);
+            bullet.body.allowGravity = false;
+            bullet.setTint(tint);
+            bullet.setRotation(ang);
+            bullet.setScale(bulletScale);
+            bullet.setBlendMode(Phaser.BlendModes.ADD);
+            bullet.setDepth(15);
+            bullet.setVelocity(Math.cos(ang) * speed, Math.sin(ang) * speed);
+            bullet.setData("dmg", dmg);
+            bullet.setData("kind", kind);
+            bullet.setData("pierceLeft", kind === "pierce" || kind === "rail" || kind === "thunder" ? scene.player.pierce + (kind === "rail" || kind === "thunder" ? 2 : 0) : 0);
+            bullet.setData("homing", scene.player.homing + extraHoming);
+            bullet.setData("life", kind === "rail" ? 1.45 : kind === "missile" ? 1.4 : 1.1);
+            scene.spawnBulletTrail(bullet, kind);
+            scene.time.delayedCall((kind === "rail" ? 1450 : kind === "missile" ? 1400 : 1100), function (b) {
+              if (!b) return;
+              var tr = b.getData && b.getData("trail");
+              if (tr && tr.destroy) try { tr.destroy(); } catch (_e) {}
+              if (b.active) b.destroy();
+            }, [bullet]);
+          }
+          if (kind === "rail" || kind === "thunder") scene.cameras.main.shake(50, 0.006);
+          SFX.shoot();
+        };
+
+        scene.physics.add.overlap(scene.player, scene.enemies, function (_p, enemy) {
+          if (!enemy.active || !scene.alive) return;
+          var typ = enemy.getData("type");
+          if (typ === "bomber") {
+            scene.killEnemy(enemy);
+            return;
+          }
+          if (typ === "swarm" || typ === "scout" || typ === "wasp") {
+            scene.killEnemy(enemy);
+            if (scene.player.invuln <= 0) scene.damagePlayer(1);
+            return;
+          }
+          if (scene.player.invuln > 0) return;
+          scene.damagePlayer(1);
+          var ang = Phaser.Math.Angle.Between(enemy.x, enemy.y, scene.player.x, scene.player.y);
+          scene.player.setVelocity(Math.cos(ang) * 320, Math.sin(ang) * 320);
+          enemy.x -= Math.cos(ang) * 36;
+          enemy.y -= Math.sin(ang) * 36;
         });
+
+        scene.physics.add.overlap(scene.player, scene.enemyShots, function (_p, shot) {
+          if (!shot.active) return;
+          shot.destroy();
+          scene.damagePlayer(1);
+        });
+
         scene.physics.add.overlap(scene.bullets, scene.enemies, function (bullet, enemy) {
           if (!bullet.active || !enemy.active) return;
-          enemy.setData("hp", enemy.getData("hp") - 1);
-          bullet.destroy();
-          if (enemy.getData("hp") <= 0) {
-            enemy.destroy();
-            scene.killCount += 1;
-            scene.score += Math.floor(85 * scene.diff.scoreMult * (0.85 + scene.dangerMultiplier * 0.18));
-            neonBurst(scene, enemy.x, enemy.y, "spark-violet", 18);
-            var xp = scene.xpOrbs.create(enemy.x, enemy.y, "xp");
-            xp.body.allowGravity = false;
-            xp.setTint(0x34d399);
+          var dmg = bullet.getData("dmg") || scene.player.atk;
+          var pierceLeft = bullet.getData("pierceLeft") || 0;
+          var kind = bullet.getData("kind") || "normal";
+          var hx = enemy.x;
+          var hy = enemy.y;
+          scene.hurtEnemy(enemy, dmg, bullet);
+          if (scene.spawnImpactFx) scene.spawnImpactFx(hx, hy, kind);
+          if (pierceLeft > 0) {
+            bullet.setData("pierceLeft", pierceLeft - 1);
+          } else {
+            var tr = bullet.getData("trail");
+            if (tr && tr.destroy) try { tr.destroy(); } catch (_e) {}
+            bullet.destroy();
           }
         });
+
         scene.physics.add.overlap(scene.player, scene.xpOrbs, function (_p, orb) {
           if (!orb.active) return;
+          var val = orb.getData("val") || 1;
           orb.destroy();
-          scene.xp += 1;
+          scene.xp += val;
           SFX.score();
-          if (scene.xp % 8 === 0) {
-            scene.player.weaponLevel += 1;
-            scene.player.hp = Math.min(scene.player.hp + 1, 8);
-            scene.cameras.main.shake(100, 0.01);
-            neonBurst(scene, scene.player.x, scene.player.y, "spark-green", 22);
-            uiFloat(scene, scene.player.x, scene.player.y - 28, "UPGRADE", "#4ade80");
+          while (scene.xp >= scene.xpNeed) {
+            scene.xp -= scene.xpNeed;
+            scene.levelUp();
           }
+        });
+
+        scene.physics.add.overlap(scene.player, scene.pickups, function (_p, item) {
+          if (!item.active) return;
+          var kind = item.getData("kind");
+          var buffKey = item.getData("buff");
+          var tag = item.getData("tag");
+          if (tag && tag.destroy) try { tag.destroy(); } catch (_e) {}
+          var glow = item.getData("glow");
+          if (glow && glow.destroy) try { glow.destroy(); } catch (_e2) {}
+          item.destroy();
+          if (kind === "hp") {
+            scene.player.hp = Math.min(scene.player.maxHp, scene.player.hp + 1);
+            SFX.score();
+            neonBurst(scene, scene.player.x, scene.player.y, "spark-pink", 10);
+            uiFloat(scene, scene.player.x, scene.player.y - 24, "+1 HP", "#fb7185");
+          } else if (kind === "buff") {
+            scene.activateBuff(buffKey || "thunder", false);
+          } else {
+            var keys = Object.keys(scene.MOD_DEFS).filter(function (k) { return k !== "SHIELD"; });
+            scene.grantMod(keys[Phaser.Math.Between(0, keys.length - 1)], false);
+          }
+        });
+
+        scene.time.delayedCall(400, function () {
+          if (!scene.alive) return;
+          uiFloat(scene, scene.player.x, scene.player.y - 70, "清怪求生", "#fbbf24");
         });
       },
       updateState: function (scene, dt, threat) {
+        if (!scene.alive) return;
+        var mapW = scene.mapW || W;
+        var mapH = scene.mapH || H;
         var left = scene.cursors.left.isDown || scene.keys.A.isDown;
         var right = scene.cursors.right.isDown || scene.keys.D.isDown;
         var up = scene.cursors.up.isDown || scene.keys.W.isDown;
         var down = scene.cursors.down.isDown || scene.keys.S.isDown;
         var vec = new Phaser.Math.Vector2((right ? 1 : 0) - (left ? 1 : 0), (down ? 1 : 0) - (up ? 1 : 0));
-        if (vec.lengthSq() > 0) vec.normalize();
-        scene.player.setAcceleration(vec.x * 1500, vec.y * 1500);
-        scene.player.invuln = Math.max(0, scene.player.invuln - dt);
-        scene.player.setAlpha(scene.player.invuln > 0 ? 0.5 : 1);
-        scene.spawnAcc += dt;
-        scene.fireAcc += dt;
-        if (scene.spawnAcc >= Math.max(0.24, 0.95 / threat)) {
-          scene.spawnAcc = 0;
-          var edge = Phaser.Math.Between(0, 3);
-          var ex = edge === 0 ? -20 : edge === 1 ? W + 20 : Phaser.Math.Between(20, W - 20);
-          var ey = edge === 2 ? -20 : edge === 3 ? H + 20 : Phaser.Math.Between(20, H - 20);
-          var enemy = scene.enemies.create(ex, ey, "drone");
-          enemy.setTint(0xfb7185);
-          enemy.setData("speed", Phaser.Math.Between(60, 100));
-          enemy.setData("hp", 1 + Math.floor(scene.player.weaponLevel / 3));
+        if (vec.lengthSq() > 0) {
+          vec.normalize();
+          var spd = scene.player.moveSpeed || 320;
+          scene.player.setAcceleration(0, 0);
+          scene.player.setVelocity(vec.x * spd, vec.y * spd);
+          if (!scene.enemies.countActive(true)) {
+            scene.player.aimAngle = Math.atan2(vec.y, vec.x);
+            scene.player.setRotation(scene.player.aimAngle);
+          }
+        } else {
+          scene.player.setAcceleration(0, 0);
+          scene.player.setVelocity(0, 0);
         }
-        if (scene.fireAcc >= Math.max(0.12, 0.5 - scene.player.weaponLevel * 0.03)) {
-          scene.fireAcc = 0;
-          var living = scene.enemies.getChildren().filter(function (enemy) { return enemy.active; });
-          if (living.length > 0) {
-            living.sort(function (a, b) {
-              return Phaser.Math.Distance.Between(a.x, a.y, scene.player.x, scene.player.y) -
-                Phaser.Math.Distance.Between(b.x, b.y, scene.player.x, scene.player.y);
-            });
-            var target = living[0];
-            var angle = Phaser.Math.Angle.Between(scene.player.x, scene.player.y, target.x, target.y);
-            for (var i = 0; i < Math.min(scene.player.weaponLevel, 3); i++) {
-              var spread = (i - (Math.min(scene.player.weaponLevel, 3) - 1) / 2) * 0.14;
-              var bullet = scene.bullets.create(scene.player.x, scene.player.y, "bullet");
-              bullet.body.allowGravity = false;
-              bullet.setTint(0xfbbf24);
-              bullet.setRotation(angle + spread);
-              bullet.setVelocity(Math.cos(angle + spread) * 480, Math.sin(angle + spread) * 480);
-              scene.time.delayedCall(1000, function (b) { if (b.active) b.destroy(); }, [bullet]);
-            }
-            SFX.shoot();
+        scene.player.invuln = Math.max(0, scene.player.invuln - dt);
+        scene.player.setAlpha(scene.player.invuln > 0 ? 0.55 : 1);
+
+        var pang = scene.player.rotation || 0;
+        if (scene.shipRing) {
+          scene.shipRing.setPosition(scene.player.x, scene.player.y);
+          scene.shipRing.setRotation(pang);
+          scene.shipRing.setScale(0.4);
+        }
+        if (scene.engineGlow) {
+          scene.engineGlow.setPosition(scene.player.x + Math.cos(pang) * -22, scene.player.y + Math.sin(pang) * -22);
+          scene.engineGlow.setRotation(pang);
+          scene.engineGlow.setScale(0.45 + Math.random() * 0.15);
+        }
+        if (scene.engineGlow2) {
+          scene.engineGlow2.setPosition(scene.player.x + Math.cos(pang) * -30, scene.player.y + Math.sin(pang) * -30);
+          scene.engineGlow2.setRotation(pang);
+        }
+        if (scene.engineEmitter && scene.engineEmitter.followOffset) {
+          scene.engineEmitter.followOffset.x = Math.cos(pang) * -28;
+          scene.engineEmitter.followOffset.y = Math.sin(pang) * -28;
+        }
+
+        var buffKeys = ["thunder", "fire", "ice", "missile", "armor"];
+        var activeBuff = null;
+        var bi;
+        for (bi = 0; bi < buffKeys.length; bi++) {
+          var bk = buffKeys[bi];
+          if (scene.player.buffs[bk] > 0) {
+            scene.player.buffs[bk] = Math.max(0, scene.player.buffs[bk] - dt);
+            if (scene.player.buffs[bk] > 0 && !activeBuff) activeBuff = bk;
           }
         }
+
+        if (scene.auraRing) {
+          scene.auraRing.setPosition(scene.player.x, scene.player.y);
+          if (activeBuff && scene.TEMP_BUFFS[activeBuff]) {
+            scene.auraRing.setVisible(true);
+            scene.auraRing.setStrokeStyle(2, scene.TEMP_BUFFS[activeBuff].tint, 0.7);
+            scene.auraRing.setScale(1 + Math.sin((scene.elapsedTime || 0) * 6) * 0.06);
+          } else {
+            scene.auraRing.setVisible(false);
+          }
+        }
+
+        var buffParts = [];
+        var labelMap = { thunder: "雷", fire: "火", ice: "冰", missile: "導", armor: "甲" };
+        for (bi = 0; bi < buffKeys.length; bi++) {
+          var bkk = buffKeys[bi];
+          if (scene.player.buffs[bkk] > 0) {
+            buffParts.push(labelMap[bkk] + scene.player.buffs[bkk].toFixed(1));
+          }
+        }
+        if (scene.player.armorCharges > 0) {
+          buffParts.push("盾×" + scene.player.armorCharges);
+        }
+        if (scene.buffHud) {
+          scene.buffHud.setText(buffParts.length ? buffParts.join("  ") : "");
+        }
+
+        if (scene.player.buffs.thunder > 0) {
+          scene.thunderAcc += dt;
+          if (scene.thunderAcc >= 1.15) {
+            scene.thunderAcc = 0;
+            scene.chainLightning();
+          }
+        }
+        if (scene.player.buffs.missile > 0) {
+          scene.missileAcc += dt;
+          if (scene.missileAcc >= 2.0) {
+            scene.missileAcc = 0;
+            scene.fireMissileSalvo();
+          }
+        }
+
+        scene.burnTickAcc += dt;
+        if (scene.burnTickAcc >= 0.4) {
+          scene.burnTickAcc = 0;
+          scene.enemies.getChildren().forEach(function (e) {
+            if (!e.active) return;
+            var burn = e.getData("burn") || 0;
+            if (burn > 0) {
+              e.setData("burn", burn - 0.4);
+              var burnDmg = Math.max(1, Math.floor(scene.player.atk * 0.45));
+              e.setData("hp", e.getData("hp") - burnDmg);
+              neonBurst(scene, e.x, e.y, "spark-pink", 6);
+              if (e.getData("hp") <= 0) scene.killEnemy(e);
+            }
+          });
+        }
+
+        var t = scene.elapsedTime || 0;
+        if (t < 12) scene.waveLabel = "偵察波";
+        else if (t < 28) scene.waveLabel = "機甲潮";
+        else if (t < 50) scene.waveLabel = "護盾突襲";
+        else if (t < 75) scene.waveLabel = "轟炸帶";
+        else scene.waveLabel = "精英狂潮";
+
+        scene.spawnAcc += dt;
+        scene.fireAcc += dt;
+        scene.eliteAcc += dt;
+        var livingCount = scene.enemies.countActive(true);
+        var softCap = scene.diffKey === "casual" ? 36 : scene.diffKey === "extreme" ? 60 : 48;
+        var spawnEvery = Math.max(0.12, (scene.diffKey === "casual" ? 0.62 : scene.diffKey === "extreme" ? 0.38 : 0.48) / threat);
+        if (livingCount < softCap && scene.spawnAcc >= spawnEvery) {
+          scene.spawnAcc = 0;
+          scene.spawnEnemyEdge(threat);
+          if (Math.random() < (scene.diffKey === "casual" ? 0.45 : 0.65)) scene.spawnEnemyEdge(threat);
+          if (threat > 1.5 && Math.random() < 0.4) scene.spawnEnemyEdge(threat);
+        }
+        if (t > 28 && scene.eliteAcc >= Math.max(6, 14 / threat)) {
+          scene.eliteAcc = 0;
+          var elite = null;
+          for (var ei = 0; ei < scene.enemyCatalog.length; ei++) {
+            if (scene.enemyCatalog[ei].id === "elite") { elite = scene.enemyCatalog[ei]; break; }
+          }
+          if (elite) {
+            var edge = Phaser.Math.Between(0, 3);
+            var ex = edge === 0 ? -30 : edge === 1 ? mapW + 30 : Phaser.Math.Between(40, mapW - 40);
+            var ey = edge === 2 ? -30 : edge === 3 ? mapH + 30 : Phaser.Math.Between(40, mapH - 40);
+            scene.spawnEnemyOf(elite, ex, ey);
+            uiFloat(scene, scene.player.x, scene.player.y - 90, "精英突入！", "#ef4444");
+            SFX.explode();
+            scene.cameras.main.shake(120, 0.014);
+          }
+        }
+
+        var fireEvery = Math.max(0.18, scene.player.fireCd - Math.min(0.1, scene.player.weaponLevel * 0.008));
+        if (scene.player.buffs.fire > 0) fireEvery *= 0.9;
+        if (scene.fireAcc >= fireEvery) {
+          scene.fireAcc = 0;
+          scene.fireWeapon();
+        }
+
+        scene.bullets.getChildren().forEach(function (b) {
+          if (!b.active) return;
+          var life = (b.getData("life") || 1) - dt;
+          b.setData("life", life);
+          if (life <= 0) { b.destroy(); return; }
+          var trailAcc = (b.getData("trailAcc") || 0) + dt;
+          if (isCombatFxOn() && trailAcc >= 0.05) {
+            b.setData("trailAcc", 0);
+            var tc = b.getData("trailColor") || 0x67e8f9;
+            var spark = scene.add.circle(b.x, b.y, 2, tc, 0.55).setDepth(8);
+            scene.tweens.add({
+              targets: spark,
+              alpha: 0,
+              scale: 0.2,
+              duration: 120,
+              onComplete: function () { spark.destroy(); }
+            });
+          } else {
+            b.setData("trailAcc", trailAcc);
+          }
+          var homing = b.getData("homing") || 0;
+          if (homing > 0) {
+            var foes = scene.enemies.getChildren().filter(function (e) { return e.active; });
+            if (foes.length) {
+              foes.sort(function (a, c) {
+                return Phaser.Math.Distance.Between(a.x, a.y, b.x, b.y) - Phaser.Math.Distance.Between(c.x, c.y, b.x, b.y);
+              });
+              var ang = Phaser.Math.Angle.Between(b.x, b.y, foes[0].x, foes[0].y);
+              var spd = b.body.velocity.length();
+              var turn = 2.2 + homing * 0.9;
+              var cur = Math.atan2(b.body.velocity.y, b.body.velocity.x);
+              var diff = Phaser.Math.Angle.Wrap(ang - cur);
+              var next = cur + Phaser.Math.Clamp(diff, -turn * dt, turn * dt);
+              b.setVelocity(Math.cos(next) * spd, Math.sin(next) * spd);
+              b.setRotation(next);
+            }
+          }
+          if (b.x < -40 || b.x > mapW + 40 || b.y < -40 || b.y > mapH + 40) b.destroy();
+        });
+
+        scene.enemyShots.getChildren().forEach(function (s) {
+          if (!s.active) return;
+          if (s.x < -40 || s.x > mapW + 40 || s.y < -40 || s.y > mapH + 40) s.destroy();
+        });
+
         scene.enemies.getChildren().forEach(function (enemy) {
           if (!enemy.active) return;
-          var angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, scene.player.x, scene.player.y);
-          var speed = enemy.getData("speed") * threat;
-          enemy.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
-          enemy.rotation += dt * 3;
+          var slowTimer = enemy.getData("slowTimer") || 0;
+          if (slowTimer > 0) {
+            enemy.setData("slowTimer", slowTimer - dt);
+            if (slowTimer - dt <= 0) enemy.setData("slow", 0);
+          }
+          var slow = enemy.getData("slow") || 0;
+          var speed = enemy.getData("speed") * threat * (1 - slow);
+          var behavior = enemy.getData("behavior");
+          var ang = Phaser.Math.Angle.Between(enemy.x, enemy.y, scene.player.x, scene.player.y);
+          var dist = Phaser.Math.Distance.Between(enemy.x, enemy.y, scene.player.x, scene.player.y);
+
+          if (behavior === "kite") {
+            if (dist < 170) ang += Math.PI;
+            else if (dist > 260) { /* chase */ }
+            else ang += Math.PI / 2;
+            enemy.setData("shootAcc", (enemy.getData("shootAcc") || 0) + dt);
+            if (enemy.getData("shootAcc") >= (enemy.getData("shootCd") || 1.4)) {
+              enemy.setData("shootAcc", 0);
+              var shotAng = Phaser.Math.Angle.Between(enemy.x, enemy.y, scene.player.x, scene.player.y);
+              var shot = scene.enemyShots.create(enemy.x, enemy.y, "bullet");
+              shot.body.allowGravity = false;
+              shot.setTint(enemy.getData("type") === "sniper" ? 0xe879f9 : 0xa855f7);
+              var shotSpd = enemy.getData("type") === "sniper" ? 320 : 260;
+              shot.setVelocity(Math.cos(shotAng) * shotSpd, Math.sin(shotAng) * shotSpd);
+              scene.time.delayedCall(2200, function (s) { if (s && s.active) s.destroy(); }, [shot]);
+              SFX.shoot();
+            }
+          } else if (behavior === "tank") {
+            speed *= 0.85;
+          } else if (behavior === "elite") {
+            speed *= 0.9;
+            enemy.setData("shootAcc", (enemy.getData("shootAcc") || 0) + dt);
+            if (enemy.getData("shootAcc") >= 1.8) {
+              enemy.setData("shootAcc", 0);
+              for (var k = 0; k < 3; k++) {
+                var a = ang + (k - 1) * 0.22;
+                var es = scene.enemyShots.create(enemy.x, enemy.y, "bullet");
+                es.body.allowGravity = false;
+                es.setTint(0xef4444);
+                es.setVelocity(Math.cos(a) * 240, Math.sin(a) * 240);
+                scene.time.delayedCall(2400, function (s) { if (s && s.active) s.destroy(); }, [es]);
+              }
+            }
+          } else if (behavior === "swarm") {
+            ang += Math.sin((scene.elapsedTime || 0) * 8 + enemy.x * 0.05) * 0.5;
+            speed *= 1.15;
+          } else if (behavior === "bomber") {
+            speed *= 1.1;
+          } else if (behavior === "glitch") {
+            enemy.setData("glitchAcc", (enemy.getData("glitchAcc") || 0) + dt);
+            if (enemy.getData("glitchAcc") >= 1.15) {
+              enemy.setData("glitchAcc", 0);
+              enemy.x = Phaser.Math.Clamp(enemy.x + Phaser.Math.Between(-90, 90), 24, mapW - 24);
+              enemy.y = Phaser.Math.Clamp(enemy.y + Phaser.Math.Between(-90, 90), 24, mapH - 24);
+              neonBurst(scene, enemy.x, enemy.y, "spark-cyan", 10);
+            }
+            ang += Math.sin((scene.elapsedTime || 0) * 12 + enemy.y * 0.04) * 0.85;
+            speed *= 1.05;
+          }
+
+          enemy.setVelocity(Math.cos(ang) * speed, Math.sin(ang) * speed);
+          enemy.rotation += dt * (behavior === "elite" ? 1.2 : behavior === "glitch" ? 5 : 3);
+
+          var maxHp = enemy.getData("maxHp") || 1;
+          var hp = enemy.getData("hp") || 0;
+          if (!enemy.hpBar) {
+            enemy.hpBar = scene.add.rectangle(enemy.x, enemy.y - 22, 28, 3, 0x22c55e, 0.9).setDepth(15);
+          }
+          enemy.hpBar.setPosition(enemy.x, enemy.y - 22 - (enemy.displayHeight * 0.2));
+          enemy.hpBar.width = 28 * Phaser.Math.Clamp(hp / maxHp, 0, 1);
+          enemy.hpBar.setFillStyle(hp / maxHp > 0.45 ? 0x22c55e : 0xf97316, 0.9);
+          if (!enemy.active && enemy.hpBar) { enemy.hpBar.destroy(); enemy.hpBar = null; }
         });
+
+        scene.enemies.getChildren().forEach(function (enemy) {
+          if (!enemy.active && enemy.hpBar) {
+            enemy.hpBar.destroy();
+            enemy.hpBar = null;
+          }
+        });
+
         scene.xpOrbs.getChildren().forEach(function (orb) {
           if (!orb.active) return;
           var dist = Phaser.Math.Distance.Between(orb.x, orb.y, scene.player.x, scene.player.y);
-          if (dist < 120) {
+          if (dist < 140) {
             var angle = Phaser.Math.Angle.Between(orb.x, orb.y, scene.player.x, scene.player.y);
-            orb.setVelocity(Math.cos(angle) * 180, Math.sin(angle) * 180);
+            orb.setVelocity(Math.cos(angle) * 200, Math.sin(angle) * 200);
           }
         });
-        scene.setExtraHud("HP " + scene.player.hp + " · LV " + scene.player.weaponLevel + " · XP " + scene.xp);
+
+        var modShort = scene.mods.slice(-3).join("+") || "BASIC";
+        scene.setExtraHud(
+          "HP " + scene.player.hp + "/" + scene.player.maxHp +
+          " · LV" + scene.player.weaponLevel +
+          " · ATK" + scene.player.atk +
+          " · KILL " + scene.killCount
+        );
+        scene.modeHud.setText(scene.waveLabel + " · XP " + scene.xp + "/" + scene.xpNeed + " · " + modShort);
       }
     }
   };
@@ -1339,19 +3114,72 @@
         this.tweens.add({ targets: title, alpha: 1, scale: 1, duration: 520, ease: "Back.easeOut", delay: 80 });
         this.tweens.add({ targets: sub, alpha: 1, duration: 400, ease: "Cubic.easeOut", delay: 160 });
         var self = this;
-        makeMenuButton(this, W / 2, 318, "開始遊戲 START", cfg.accent, function () {
+        makeMenuButton(this, W / 2, 300, "開始遊戲 START", cfg.accent, function () {
           SFX.confirm();
           self.cameras.main.fadeOut(220, 4, 6, 12);
           self.time.delayedCall(230, function () { self.scene.start("DifficultyScene"); });
         });
-        makeMenuButton(this, W / 2, 378, "排行榜", 0x34d399, function () {
+        makeMenuButton(this, W / 2, 358, "設定", 0xfbbf24, function () {
+          SFX.click();
+          self.scene.start("SettingsScene");
+        });
+        makeMenuButton(this, W / 2, 416, "排行榜", 0x34d399, function () {
           SFX.click();
           self.scene.start("LeaderboardScene", { difficulty: selectedDiff || "standard" });
         });
-        makeMenuButton(this, W / 2, 438, "操作說明", 0xa78bfa, function () {
+        makeMenuButton(this, W / 2, 474, "操作說明", 0xa78bfa, function () {
           if (window.RNFPhaserHelp && RNFPhaserHelp.showHelpOverlay) {
             RNFPhaserHelp.showHelpOverlay(self, cfg.help, { W: W, H: H, accent: cfg.accent });
           }
+        });
+      }
+    }
+
+    class SettingsScene extends Phaser.Scene {
+      constructor() { super("SettingsScene"); }
+      create() {
+        drawBackdrop(this, cfg.accent);
+        this.cameras.main.fadeIn(180, 4, 6, 12);
+        this.add.text(W / 2, 90, "設定", {
+          fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+          fontSize: "36px",
+          fontStyle: "bold",
+          color: "#e2e8f0"
+        }).setOrigin(0.5);
+        this.add.text(W / 2, 140, "可關閉打擊特效以降低畫面干擾", {
+          fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+          fontSize: "14px",
+          color: "#64748b"
+        }).setOrigin(0.5);
+
+        var self = this;
+        var fxOn = isCombatFxOn();
+        var fxBtn = makeMenuButton(this, W / 2, 260, "打擊特效：" + (fxOn ? "開" : "關"), fxOn ? 0x22d3ee : 0x64748b, function () {
+          setCombatFxOn(!isCombatFxOn());
+          SFX.click();
+          self.scene.restart();
+        });
+
+        var shakeOn = true;
+        try {
+          if (typeof RNF !== "undefined" && RNF.getSettings) {
+            var st = RNF.getSettings();
+            if (st && typeof st.screenShake === "boolean") shakeOn = st.screenShake;
+          }
+        } catch (_e) {}
+        makeMenuButton(this, W / 2, 330, "螢幕震動：" + (shakeOn ? "開" : "關"), shakeOn ? 0xa78bfa : 0x64748b, function () {
+          try {
+            if (typeof RNF !== "undefined" && RNF.setSettings && RNF.getSettings) {
+              RNF.setSettings({ screenShake: !RNF.getSettings().screenShake });
+            }
+          } catch (_e2) {}
+          SFX.click();
+          self.scene.restart();
+        });
+
+        makeMenuButton(this, W / 2, 430, "返回", 0x94a3b8, function () {
+          SFX.click();
+          self.scene.start("MainMenuScene");
         });
       }
     }
@@ -1427,6 +3255,19 @@
           fontFamily: "Segoe UI, sans-serif", fontSize: "14px", fontStyle: "bold", color: "#f8fafc"
         }).setOrigin(1, 0).setScrollFactor(0).setDepth(20);
         cfg.startState(this);
+        // 打擊特效／震動開關：關閉時略過震屏
+        var cam = this.cameras.main;
+        var rawShake = cam.shake.bind(cam);
+        cam.shake = function (duration, intensity) {
+          if (!isCombatFxOn()) return cam;
+          try {
+            if (typeof RNF !== "undefined" && RNF.getSettings) {
+              var s = RNF.getSettings();
+              if (s && s.screenShake === false) return cam;
+            }
+          } catch (_e) {}
+          return rawShake(duration, intensity);
+        };
       }
       update(_time, delta) {
         if (!this.alive) return;
@@ -1581,7 +3422,7 @@
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH
       },
-      scene: [BootScene, MainMenuScene, DifficultyScene, GameScene, GameOverModal, LeaderboardScene]
+      scene: [BootScene, MainMenuScene, SettingsScene, DifficultyScene, GameScene, GameOverModal, LeaderboardScene]
     });
     if (typeof RNF !== "undefined" && RNF.setShowMenuHandler) {
       RNF.setShowMenuHandler(function () {

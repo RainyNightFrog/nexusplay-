@@ -461,11 +461,11 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
   const iframeSrc = useMemo(() => {
     if (!trustedEmbedUrl || !game) return null;
     const sep = trustedEmbedUrl.includes("?") ? "&" : "?";
-    // 本地街機 HTML 加版本參數，避免虛擬鍵／結算排版更新後仍吃到舊快取
+    // 本地街機／demo HTML：每次大改務必 bump，否則 iframe 固定 query 會鎖住舊 index.html
     const bust =
       /\/games\/[^/?#]+\/index\.html/i.test(trustedEmbedUrl) ||
       /\/demos\/[^/?#]+\.html/i.test(trustedEmbedUrl)
-        ? "&v=20260731v"
+        ? "&v=20260731art6"
         : "";
     return `${trustedEmbedUrl}${sep}gid=${game.id}&locale=${encodeURIComponent(locale)}${bust}`;
   }, [trustedEmbedUrl, game, locale]);

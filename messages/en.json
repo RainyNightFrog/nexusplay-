@@ -1737,7 +1737,7 @@
     "void-rhythm-beat": {
       "title": "Void Rhythm Beat",
       "badge": "Neon arcade",
-      "description": "Hit four-lane void pulses with D / F / J / K, stack Perfect timing and protect your sync meter while the beat accelerates with danger."
+      "description": "Follow four-lane void pulses with D / F / J / K or tap the bottom pads. Face singles, doubles, zigzags, gold bonus notes and holds; stack Perfect / Great / Good combos, trigger Fever at 20, and guard your sync meter as danger speeds up the beat."
     },
     "astro-gravity-runner": {
       "title": "Astro Gravity Runner",
@@ -1747,7 +1747,7 @@
     "cyber-rogue-dungeon": {
       "title": "Cyber Rogue Dungeon",
       "badge": "Neon arcade",
-      "description": "Survive a cyber dungeon swarm with auto-target fire, gather XP cores to upgrade your weapon level and outlast escalating machine waves."
+      "description": "Auto-fire through a cyber dungeon of 12 evolving foes. Grab timed capsules for lightning, fire, ice, homing missiles and armor, plus XP modules for permanent upgrades—enemy HP scales gently with your level."
     }
   },
   "errors": {

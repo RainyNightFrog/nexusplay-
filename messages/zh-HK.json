@@ -1737,7 +1737,7 @@
     "void-rhythm-beat": {
       "title": "虛空節奏拍點",
       "badge": "霓虹街機",
-      "description": "跟隨虛空四軌脈衝按下 D / F / J / K，以 Perfect 節拍堆高連擊，同時守住同步值迎戰不斷加速的危險節奏。"
+      "description": "跟隨虛空四軌脈衝按下 D / F / J / K（或點擊底部按鍵），應對單音、雙音、之字連段、金色加分音與長按音；以 Perfect／Great／Good 判定堆連擊，連擊 20 進入 Fever，並守住同步值迎戰加速節奏。"
     },
     "astro-gravity-runner": {
       "title": "星際重力翻轉者",
@@ -1747,7 +1747,7 @@
     "cyber-rogue-dungeon": {
       "title": "賽博地牢倖存者",
       "badge": "霓虹街機",
-      "description": "在賽博地牢中一邊走位一邊自動索敵開火，吸收 XP 核心提升武器等級，撐過愈來愈兇猛的機械怪潮。"
+      "description": "在賽博地牢走位自動開火，對抗 12 種進化敵潮；收集限時膠囊啟動雷電／火焰／冰凍／追蹤導彈／護甲，並以 XP 模組永久強化火力，血量隨等級溫和成長。"
     }
   },
   "errors": {

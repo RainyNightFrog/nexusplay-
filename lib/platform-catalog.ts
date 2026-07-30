@@ -321,7 +321,7 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
     creator: "RNF Creator Pool",
     categories: ["音樂節奏", "休閒"],
     description:
-      "跟隨虛空四軌脈衝按下 D / F / J / K，以 Perfect 疊高連擊，同步值每秒都在危險倍率中被放大考驗。",
+      "跟隨虛空四軌脈衝按下 D / F / J / K（可點擊底部鍵），應對單音、雙音、之字連段、金色加分音與長按音；Perfect／Great／Good 堆連擊，連擊 20 進 Fever，並守住同步值迎戰加速節奏。",
     coverPath: "/games/void-rhythm-beat/cover.png",
     playsCount: 7_880,
     likesCount: 438,
@@ -372,7 +372,7 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
     creator: "RNF Creator Pool",
     categories: ["RPG", "Roguelike"],
     description:
-      "深入賽博地牢對抗機械怪潮，自動索敵火力隨 XP 模組升級暴漲，生存越久危險倍率越殘暴。",
+      "深入賽博地牢對抗 12 種機械敵潮，撿限時膠囊啟動雷電／火焰／冰凍／追蹤導彈／護甲，並以 XP 模組永久強化；敵人血量隨等級溫和成長，火力節奏熱血不悶。",
     coverPath: "/games/cyber-rogue-dungeon/cover.png",
     playsCount: 8_140,
     likesCount: 476,

@@ -11,6 +11,7 @@
     bgmVolume: 0.45,
     masterVolume: 0.75,
     screenShake: true,
+    combatFx: true,
     quality: "high",
     qualityUserChosen: false,
     sensitivity: 1,
@@ -1860,6 +1861,7 @@
         '<div class="rnf-setting-row"><span>' + rnfT("settings.sfx") + '</span><input type="range" id="rnf-sfx" min="0" max="100" value="' + Math.round(settings.sfxVolume * 100) + '"><b id="rnf-sfx-v">' + Math.round(settings.sfxVolume * 100) + "%</b></div>" +
         '<div class="rnf-setting-row"><span>' + rnfT("settings.bgm") + '</span><input type="range" id="rnf-bgm" min="0" max="100" value="' + Math.round(settings.bgmVolume * 100) + '"><b id="rnf-bgm-v">' + Math.round(settings.bgmVolume * 100) + "%</b></div>" +
         '<div class="rnf-setting-row"><span>' + rnfT("settings.shake") + '</span><button class="rnf-toggle ' + (settings.screenShake ? "on" : "") + '" id="rnf-shake">' + (settings.screenShake ? rnfT("settings.on") : rnfT("settings.off")) + "</button></div>" +
+        '<div class="rnf-setting-row"><span>' + rnfT("settings.combatFx") + '</span><button class="rnf-toggle ' + (settings.combatFx !== false ? "on" : "") + '" id="rnf-combat-fx">' + (settings.combatFx !== false ? rnfT("settings.on") : rnfT("settings.off")) + "</button></div>" +
         '<div class="rnf-setting-row"><span>' + rnfT("settings.quality") + '</span><div class="rnf-btn-row" style="margin:0"><button class="rnf-btn ' + (settings.quality === "high" ? "selected" : "") + '" id="rnf-q-h">High</button><button class="rnf-btn ' + (settings.quality === "low" ? "selected" : "") + '" id="rnf-q-l">Low</button></div></div>' +
         "</div>" +
         '<div class="rnf-btn-row"><button class="rnf-btn primary" id="rnf-settings-back">' + rnfT("settings.back") + "</button></div>";
@@ -1890,6 +1892,11 @@
       settingsPanel.querySelector("#rnf-shake").onclick = function () {
         SFX.click();
         setSettings({ screenShake: !settings.screenShake });
+        renderSettings();
+      };
+      settingsPanel.querySelector("#rnf-combat-fx").onclick = function () {
+        SFX.click();
+        setSettings({ combatFx: settings.combatFx === false });
         renderSettings();
       };
       settingsPanel.querySelector("#rnf-q-h").onclick = function () { SFX.click(); setSettings({ quality: "high", qualityUserChosen: true }); renderSettings(); };
