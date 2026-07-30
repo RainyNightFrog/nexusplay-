@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import {
   CalendarCheck,
@@ -69,12 +69,14 @@ function formatStreakWeekday(dayIso: string, locale: string) {
 function QuestCard({
   quest,
   claiming,
+  loading,
   onClaim,
   locale,
   t,
 }: {
   quest: QuestProgressItem;
   claiming: string | null;
+  loading: boolean;
   onClaim: (id: string) => void;
   locale: string;
   t: ReturnType<typeof useTranslations<"quests">>;
@@ -87,6 +89,8 @@ function QuestCard({
     title: quest.title,
     description: quest.description,
   });
+  const isClaimingThis = claiming === quest.id;
+  const busy = loading || claiming !== null;
 
   return (
     <div className="rounded-xl border border-white/10 bg-zinc-900/70 p-4">
@@ -120,17 +124,22 @@ function QuestCard({
         <Button
           type="button"
           size="sm"
-          disabled={!quest.claimable || claiming !== null}
+          disabled={!quest.claimable || busy}
           onClick={() => onClaim(quest.id)}
+          className="gap-1.5"
         >
-          {claiming === quest.id ? (
-            <Loader2 className="size-3.5 animate-spin" />
-          ) : null}
-          {quest.claimed
-            ? t("claimed")
-            : quest.claimable
-              ? t("claim")
-              : t("inProgress")}
+          {isClaimingThis ? (
+            <>
+              <Loader2 className="size-3.5 animate-spin" />
+              {t("claiming")}
+            </>
+          ) : quest.claimed ? (
+            t("claimed")
+          ) : quest.claimable ? (
+            t("claim")
+          ) : (
+            t("inProgress")
+          )}
         </Button>
       </div>
     </div>
@@ -147,30 +156,48 @@ export function DailyQuestsModal({ open, onOpenChange }: DailyQuestsModalProps) 
   const [claiming, setClaiming] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
-
-  const load = useCallback(async () => {
-    if (!profile) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch("/api/quests", { credentials: "same-origin" });
-      const payload = (await response.json()) as QuestsDashboard & {
-        error?: string;
-      };
-      if (!response.ok) {
-        setError(translateApiError(payload.error) ?? t("loadError"));
-        return;
-      }
-      setData(payload);
-    } catch {
-      setError(t("loadError"));
-    } finally {
-      setLoading(false);
-    }
-  }, [profile, t, translateApiError]);
+  const claimingRef = useRef<string | null>(null);
+  const dataRef = useRef<QuestsDashboard | null>(null);
+  const loadSeqRef = useRef(0);
 
   useEffect(() => {
-    if (open && profile) void load();
+    dataRef.current = data;
+  }, [data]);
+
+  const load = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      if (!profile) return;
+      const seq = ++loadSeqRef.current;
+      const silent = Boolean(opts?.silent && dataRef.current);
+      if (!silent) setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch("/api/quests", {
+          credentials: "same-origin",
+        });
+        const payload = (await response.json()) as QuestsDashboard & {
+          error?: string;
+        };
+        if (seq !== loadSeqRef.current) return;
+        if (!response.ok) {
+          setError(translateApiError(payload.error) ?? t("loadError"));
+          return;
+        }
+        setData(payload);
+      } catch {
+        if (seq !== loadSeqRef.current) return;
+        setError(t("loadError"));
+      } finally {
+        if (seq === loadSeqRef.current) setLoading(false);
+      }
+    },
+    [profile, t, translateApiError]
+  );
+
+  useEffect(() => {
+    if (!open || !profile) return;
+    // 有快取時先顯示舊資料，背景靜默刷新，避免重複全頁 Spinner
+    void load({ silent: true });
   }, [open, profile, load]);
 
   useEffect(() => {
@@ -180,6 +207,8 @@ export function DailyQuestsModal({ open, onOpenChange }: DailyQuestsModalProps) 
   }, [open]);
 
   async function claim(body: Record<string, unknown>, key: string) {
+    if (claimingRef.current || loading) return;
+    claimingRef.current = key;
     setClaiming(key);
     setError(null);
     try {
@@ -202,6 +231,7 @@ export function DailyQuestsModal({ open, onOpenChange }: DailyQuestsModalProps) 
     } catch {
       setError(t("claimFailed"));
     } finally {
+      claimingRef.current = null;
       setClaiming(null);
     }
   }
@@ -255,8 +285,9 @@ export function DailyQuestsModal({ open, onOpenChange }: DailyQuestsModalProps) 
             {t("loginRequired")}
           </p>
         ) : loading && !data ? (
-          <div className="flex justify-center py-12">
+          <div className="flex flex-col items-center justify-center gap-2 py-12">
             <Loader2 className="size-7 animate-spin text-cyan-400" />
+            <p className="text-xs text-zinc-500">{t("loading")}</p>
           </div>
         ) : (
           <div className="space-y-5">
@@ -359,7 +390,9 @@ export function DailyQuestsModal({ open, onOpenChange }: DailyQuestsModalProps) 
                       type="button"
                       size="sm"
                       variant="outline"
-                      disabled={data.claimableCount === 0 || claiming !== null}
+                      disabled={
+                        data.claimableCount === 0 || busy
+                      }
                       onClick={() => void claim({ claim_all: true }, "all")}
                       className="gap-1.5 border-cyan-400/30 bg-cyan-500/10 text-cyan-100"
                     >
@@ -368,7 +401,7 @@ export function DailyQuestsModal({ open, onOpenChange }: DailyQuestsModalProps) 
                       ) : (
                         <Gift className="size-3.5" />
                       )}
-                      {t("claimAll")}
+                      {claiming === "all" ? t("claiming") : t("claimAll")}
                     </Button>
                   </div>
 
@@ -381,6 +414,7 @@ export function DailyQuestsModal({ open, onOpenChange }: DailyQuestsModalProps) 
                         key={quest.id}
                         quest={quest}
                         claiming={claiming}
+                        loading={loading}
                         onClaim={(id) => void claim({ questId: id }, id)}
                         locale={locale}
                         t={t}
@@ -397,6 +431,7 @@ export function DailyQuestsModal({ open, onOpenChange }: DailyQuestsModalProps) 
                         key={quest.id}
                         quest={quest}
                         claiming={claiming}
+                        loading={loading}
                         onClaim={(id) => void claim({ questId: id }, id)}
                         locale={locale}
                         t={t}

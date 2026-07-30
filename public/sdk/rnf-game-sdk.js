@@ -794,33 +794,98 @@
     writeParentStorage("leaderboard-by-diff", store || {});
   }
 
+  function canonicalizeDifficulty(raw) {
+    var k = String(raw || "normal").trim().toLowerCase();
+    if (k === "casual" || k === "easy") return "easy";
+    if (k === "standard" || k === "normal") return "normal";
+    if (k === "extreme" || k === "hard") return "hard";
+    return k || "normal";
+  }
+
+  function difficultyAliases(raw) {
+    var k = canonicalizeDifficulty(raw);
+    if (k === "easy") return ["easy", "casual"];
+    if (k === "normal") return ["normal", "standard"];
+    if (k === "hard") return ["hard", "extreme"];
+    return [k];
+  }
+
   function readLocalLeaderboardForDifficulty(difficulty) {
     var store = readLocalLeaderboardByDiff();
-    return (store[difficulty] || []).slice();
+    var aliases = difficultyAliases(difficulty);
+    var out = [];
+    aliases.forEach(function (key) {
+      ((store && store[key]) || []).forEach(function (e) {
+        out.push(e);
+      });
+    });
+    return dedupeLeaderboardByPlayer(out);
+  }
+
+  function normalizePlayerName(name) {
+    var s = String(name || "");
+    try {
+      s = s.normalize("NFKC");
+    } catch (_e) {}
+    return s
+      .replace(/[\u200B-\u200D\uFEFF]/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
+  }
+
+  function sameLeaderboardPlayer(a, b) {
+    if (!a || !b) return false;
+    if (a.isMe && b.isMe) return true;
+    var na = normalizePlayerName(a.playerName || a.displayName || a.name);
+    var nb = normalizePlayerName(b.playerName || b.displayName || b.name);
+    return Boolean(na && nb && na === nb);
+  }
+
+  function dedupeLeaderboardByPlayer(entries) {
+    var best = {};
+    var order = [];
+    (entries || []).forEach(function (e) {
+      var key = normalizePlayerName(e.playerName || e.displayName || e.name);
+      if (!key) key = "__row_" + order.length;
+      if (!best[key]) {
+        best[key] = e;
+        order.push(key);
+        return;
+      }
+      var cur = best[key];
+      if ((e.score || 0) > (cur.score || 0)) {
+        best[key] = Object.assign({}, e, {
+          isMe: !!(cur.isMe || e.isMe),
+        });
+      } else {
+        cur.isMe = !!(cur.isMe || e.isMe);
+      }
+    });
+    return order.map(function (k) {
+      return best[k];
+    });
   }
 
   function mergeDifficultyLeaderboard(cloud, local, difficulty) {
-    var merged = (cloud || []).filter(function (e) {
-      return resolveEntryDifficulty(e, "normal") === difficulty;
-    }).slice();
-    (local || []).forEach(function (le) {
-      if (!le.isMe) return;
-      var idx = merged.findIndex(function (e) { return e.isMe; });
-      if (idx >= 0) {
-        if (le.score > merged[idx].score) merged[idx] = Object.assign({}, le, { rank: merged[idx].rank });
-      } else {
-        merged.push(le);
-      }
-    });
-    merged.sort(function (a, b) { return b.score - a.score; });
-    return merged.slice(0, 15).map(function (e, i) {
+    var cloudList = dedupeLeaderboardByPlayer(cloud || []);
+    if (cloudList.length) {
+      cloudList.sort(function (a, b) { return (b.score || 0) - (a.score || 0); });
+      return cloudList.slice(0, 15).map(function (e, i) {
+        return Object.assign({}, e, { rank: i + 1 });
+      });
+    }
+    var localMine = (local || []).filter(function (le) { return le && le.isMe; });
+    localMine = dedupeLeaderboardByPlayer(localMine);
+    localMine.sort(function (a, b) { return (b.score || 0) - (a.score || 0); });
+    return localMine.slice(0, 15).map(function (e, i) {
       return Object.assign({}, e, { rank: i + 1 });
     });
   }
 
   function fetchLeaderboardBundle(limit, difficulty) {
     limit = limit || 15;
-    difficulty = difficulty || "normal";
+    difficulty = canonicalizeDifficulty(difficulty || "normal");
     var loadPromise = isEmbedded()
       ? ensureParentStorage("leaderboard-by-diff")
       : Promise.resolve(null);
@@ -849,7 +914,8 @@
           var cloud = ((res.data && res.data.entries) || []).map(function (e) {
             return Object.assign({}, e, { source: "cloud", local: false });
           });
-          bundle.cloud = filterEntriesByDifficulty(cloud, difficulty);
+          // API 已依難度別名過濾並去重，勿再嚴格二次過濾
+          bundle.cloud = dedupeLeaderboardByPlayer(cloud);
           if (!res.ok) {
             bundle.cloudError = (res.data && res.data.error) || res.error || rnfT("err.readFail");
           }
@@ -885,9 +951,8 @@
   }
 
   function pushLocalScore(score, meta) {
-    var difficulty = resolveEntryDifficulty({ meta: meta }, "normal");
+    var difficulty = canonicalizeDifficulty(resolveEntryDifficulty({ meta: meta }, "normal"));
     var store = readLocalLeaderboardByDiff();
-    var list = store[difficulty] || [];
     var name = (authUser && authUser.displayName) || rnfT("player.local");
     var entry = {
       playerName: name,
@@ -898,17 +963,26 @@
       source: "local",
       updatedAt: new Date().toISOString(),
     };
-    var idx = list.findIndex(function (e) { return e.isMe; });
-    if (idx >= 0) {
-      if (list[idx].score >= score) return list;
-      list[idx] = entry;
-    } else {
-      list.push(entry);
-    }
-    list.sort(function (a, b) { return b.score - a.score; });
-    store[difficulty] = list.slice(0, 20).map(function (e, i) {
-      return Object.assign({}, e, { rank: i + 1 });
+    var merged = readLocalLeaderboardForDifficulty(difficulty).filter(function (e) {
+      return !(e && e.isMe);
     });
+    var prevMine = readLocalLeaderboardForDifficulty(difficulty).filter(function (e) {
+      return e && e.isMe;
+    })[0];
+    if (!prevMine || (prevMine.score || 0) < score) {
+      merged.push(entry);
+    } else {
+      merged.push(prevMine);
+    }
+    difficultyAliases(difficulty).forEach(function (key) {
+      delete store[key];
+    });
+    store[difficulty] = dedupeLeaderboardByPlayer(merged)
+      .sort(function (a, b) { return (b.score || 0) - (a.score || 0); })
+      .slice(0, 20)
+      .map(function (e, i) {
+        return Object.assign({}, e, { rank: i + 1 });
+      });
     writeLocalLeaderboardByDiff(store);
     return store[difficulty];
   }
@@ -976,45 +1050,50 @@
     return msg;
   }
 
-  function renderLeaderboardPanel(bundle, diffLabel, source) {
-    source = source === "local" ? "local" : "cloud";
+  function renderLeaderboardPanel(bundle) {
     var html = "";
-    var isLocal = source === "local";
-
-    if (isLocal) {
-      html +=
-        '<p class="rnf-lb-note">' + rnfT("lb.noteLocal") + "</p>";
-      var localEntries = (bundle.local || []).map(function (e, i) {
-        return Object.assign({}, e, { rank: i + 1, source: "local", local: true });
-      });
-      if (localEntries.length) {
-        html += renderLeaderboardHtml(localEntries, false, null, { showSourceTag: false, showDiffMeta: false });
-      } else {
-        html += '<p class="rnf-lb-empty">' + rnfT("lb.emptyLocal") + "</p>";
-      }
-      return html;
-    }
+    var entries = (bundle && (bundle.merged || bundle.cloud)) || [];
 
     if (!bundle.loggedIn) {
       html +=
         '<p class="rnf-lb-note warn">' + rnfT("lb.noteGuest") + "</p>";
     }
 
-    if (bundle.cloudOk && bundle.cloud.length) {
-      html += renderLeaderboardHtml(bundle.cloud, false, null, { showSourceTag: false, showDiffMeta: false });
-    } else if (bundle.cloudOk) {
+    if (entries.length) {
+      html += renderLeaderboardHtml(entries, false, null, {
+        showSourceTag: false,
+        showDiffMeta: false,
+      });
+      return html;
+    }
+
+    if (bundle.cloudOk) {
       html +=
         '<p class="rnf-lb-empty">' +
         (bundle.loggedIn
           ? rnfT("lb.emptyCloud")
           : rnfT("lb.emptyCloudGuest")) +
         "</p>";
-    } else {
-      html +=
-        '<p class="rnf-lb-empty">' + rnfT("lb.cloudFail") +
-        (bundle.cloudError ? "：" + formatCloudError(bundle.cloudError) : "") +
-        "</p>";
+      return html;
     }
+
+    // 雲端失敗時仍顯示合併後本機分數（不當成另一個榜）
+    var localOnly = (bundle.local || []).map(function (e, i) {
+      return Object.assign({}, e, { rank: i + 1 });
+    });
+    if (localOnly.length) {
+      html += renderLeaderboardHtml(localOnly, false, null, {
+        showSourceTag: false,
+        showDiffMeta: false,
+      });
+      return html;
+    }
+
+    html +=
+      '<p class="rnf-lb-empty">' +
+      rnfT("lb.cloudFail") +
+      (bundle.cloudError ? "：" + formatCloudError(bundle.cloudError) : "") +
+      "</p>";
     return html;
   }
 
@@ -1520,7 +1599,6 @@
     var difficulties = options.difficulties || getDefaultDifficulties();
     var selectedDifficulty = localSave.difficulty || difficulties[1]?.id || difficulties[0].id;
     var lbDifficulty = selectedDifficulty;
-    var lbSource = null;
 
     function getBestForDifficulty(diffId) {
       if (localSave.bestScores && localSave.bestScores[diffId] != null) {
@@ -1641,40 +1719,26 @@
 
     function renderLeaderboardScreen() {
       var diffCfg = difficulties.find(function (d) { return d.id === lbDifficulty; }) || getDifficultyConfig();
-      if (!lbSource) lbSource = isUserLoggedIn() ? "cloud" : "local";
       var tabButtons = difficulties.map(function (d) {
         return '<button class="rnf-btn' + (d.id === lbDifficulty ? " selected" : "") + '" data-lb-diff="' + d.id + '">' + d.label + "</button>";
       }).join("");
-      var sourceTabs =
-        '<div class="rnf-lb-tabs">' +
-        '<button type="button" class="rnf-lb-tab' + (lbSource === "cloud" ? " active" : "") + '" data-lb-source="cloud">' + rnfT("lb.global") + '</button>' +
-        '<button type="button" class="rnf-lb-tab' + (lbSource === "local" ? " active" : "") + '" data-lb-source="local">' + rnfT("lb.thisDevice") + '</button>' +
-        "</div>";
       leaderboardPanel.innerHTML =
         '<div class="rnf-badge">LEADERBOARD</div>' +
         '<h1 class="rnf-title" style="font-size:1.45rem">' + rnfT("lb.title") + '</h1>' +
         '<p class="rnf-sub">' + rnfT("lb.sub") + '</p>' +
         '<p class="rnf-diff-label">' + rnfT("lb.diffLabel") + '</p>' +
         '<div class="rnf-btn-row" id="rnf-lb-diff-row">' + tabButtons + "</div>" +
-        sourceTabs +
         '<div class="rnf-lb-list rnf-scroll" id="rnf-lb-list"><p class="rnf-lb-empty">' + rnfT("lb.loadingShort") + '</p></div>' +
         '<div class="rnf-btn-row"><button class="rnf-btn primary" id="rnf-lb-back">' + rnfT("help.back") + "</button></div>";
       show("rnf-leaderboard");
       var listEl = leaderboardPanel.querySelector("#rnf-lb-list");
       fetchLeaderboardBundle(15, lbDifficulty).then(function (bundle) {
-        listEl.innerHTML = renderLeaderboardPanel(bundle, diffCfg.label, lbSource);
+        listEl.innerHTML = renderLeaderboardPanel(bundle);
       });
       leaderboardPanel.querySelectorAll("[data-lb-diff]").forEach(function (btn) {
         btn.onclick = function () {
           SFX.click();
           lbDifficulty = btn.getAttribute("data-lb-diff");
-          renderLeaderboardScreen();
-        };
-      });
-      leaderboardPanel.querySelectorAll("[data-lb-source]").forEach(function (btn) {
-        btn.onclick = function () {
-          SFX.click();
-          lbSource = btn.getAttribute("data-lb-source");
           renderLeaderboardScreen();
         };
       });

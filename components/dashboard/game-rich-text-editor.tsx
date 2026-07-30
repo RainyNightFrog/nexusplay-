@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -81,6 +81,7 @@ export function GameRichTextEditor({
 }: GameRichTextEditorProps) {
   const t = useTranslations("dashboard");
   const resolvedPlaceholder = placeholder ?? t("richTextPlaceholder");
+  const lastEmittedHtmlRef = useRef<string | null>(null);
 
   const editor = useEditor({
     extensions: [
@@ -105,6 +106,7 @@ export function GameRichTextEditor({
     content: value || "",
     editable: !disabled,
     immediatelyRender: false,
+    shouldRerenderOnTransaction: true,
     editorProps: {
       attributes: {
         class:
@@ -112,7 +114,9 @@ export function GameRichTextEditor({
       },
     },
     onUpdate: ({ editor: currentEditor }) => {
-      onChange(currentEditor.getHTML());
+      const html = currentEditor.getHTML();
+      lastEmittedHtmlRef.current = html;
+      onChange(html);
     },
   });
 
@@ -123,10 +127,15 @@ export function GameRichTextEditor({
 
   useEffect(() => {
     if (!editor) return;
+    const incoming = value || "";
+    if (incoming === lastEmittedHtmlRef.current) return;
     const current = editor.getHTML();
-    if (value !== current && value !== (current === "<p></p>" ? "" : current)) {
-      editor.commands.setContent(value || "", { emitUpdate: false });
+    const currentNorm = current === "<p></p>" ? "" : current;
+    const valueNorm = incoming === "<p></p>" ? "" : incoming;
+    if (valueNorm !== currentNorm) {
+      editor.commands.setContent(incoming, { emitUpdate: false });
     }
+    lastEmittedHtmlRef.current = incoming;
   }, [editor, value]);
 
   const stats = useMemo(() => {
@@ -134,6 +143,18 @@ export function GameRichTextEditor({
     const htmlLength = value.length;
     return { textLength, htmlLength };
   }, [editor, value]);
+
+  const toggleMark = (
+    mark: "bold" | "italic" | "underline" | "strike" | "code"
+  ) => {
+    if (!editor) return;
+    const chain = editor.chain().focus().extendMarkRange(mark);
+    if (mark === "bold") chain.toggleBold().run();
+    else if (mark === "italic") chain.toggleItalic().run();
+    else if (mark === "underline") chain.toggleUnderline().run();
+    else if (mark === "strike") chain.toggleStrike().run();
+    else chain.toggleCode().run();
+  };
 
   const setLink = () => {
     if (!editor) return;
@@ -200,7 +221,7 @@ export function GameRichTextEditor({
             label={t("richTextBold")}
             disabled={disabled || !editor}
             active={editor?.isActive("bold")}
-            onClick={() => editor?.chain().focus().toggleBold().run()}
+            onClick={() => toggleMark("bold")}
           >
             <Bold className="size-3.5" />
           </ToolbarButton>
@@ -208,7 +229,7 @@ export function GameRichTextEditor({
             label={t("richTextItalic")}
             disabled={disabled || !editor}
             active={editor?.isActive("italic")}
-            onClick={() => editor?.chain().focus().toggleItalic().run()}
+            onClick={() => toggleMark("italic")}
           >
             <Italic className="size-3.5" />
           </ToolbarButton>
@@ -216,7 +237,7 @@ export function GameRichTextEditor({
             label={t("richTextUnderline")}
             disabled={disabled || !editor}
             active={editor?.isActive("underline")}
-            onClick={() => editor?.chain().focus().toggleUnderline().run()}
+            onClick={() => toggleMark("underline")}
           >
             <UnderlineIcon className="size-3.5" />
           </ToolbarButton>
@@ -224,7 +245,7 @@ export function GameRichTextEditor({
             label={t("richTextStrike")}
             disabled={disabled || !editor}
             active={editor?.isActive("strike")}
-            onClick={() => editor?.chain().focus().toggleStrike().run()}
+            onClick={() => toggleMark("strike")}
           >
             <Strikethrough className="size-3.5" />
           </ToolbarButton>
@@ -232,7 +253,7 @@ export function GameRichTextEditor({
             label={t("richTextInlineCode")}
             disabled={disabled || !editor}
             active={editor?.isActive("code")}
-            onClick={() => editor?.chain().focus().toggleCode().run()}
+            onClick={() => toggleMark("code")}
           >
             <Code className="size-3.5" />
           </ToolbarButton>

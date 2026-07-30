@@ -143,11 +143,11 @@ export async function createGameComment(
   input: { gameId: number; userId: string; content: string },
   supabase?: SupabaseClient
 ): Promise<GameComment> {
-  const trimmed = input.content.trim();
-  if (!trimmed) {
+  const content = input.content.trim();
+  if (!content) {
     throw new Error("請輸入評論內容");
   }
-  if (trimmed.length > MAX_COMMENT_LENGTH) {
+  if (content.length > MAX_COMMENT_LENGTH) {
     throw new Error(`評論不可超過 ${MAX_COMMENT_LENGTH} 字`);
   }
 
@@ -157,7 +157,7 @@ export async function createGameComment(
     .insert({
       game_id: input.gameId,
       user_id: input.userId,
-      content: trimmed,
+      content,
     })
     .select("*")
     .single();

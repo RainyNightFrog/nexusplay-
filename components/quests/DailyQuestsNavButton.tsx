@@ -20,7 +20,9 @@ export function DailyQuestsNavButton() {
       return;
     }
     try {
-      const response = await fetch("/api/quests", { credentials: "same-origin" });
+      const response = await fetch("/api/quests/summary", {
+        credentials: "same-origin",
+      });
       if (!response.ok) return;
       const data = (await response.json()) as { claimableCount?: number };
       setClaimableCount(data.claimableCount ?? 0);
@@ -42,10 +44,7 @@ export function DailyQuestsNavButton() {
     <>
       <button
         type="button"
-        onClick={() => {
-          setOpen(true);
-          void refreshBadge();
-        }}
+        onClick={() => setOpen(true)}
         className={cn(
           "relative inline-flex size-9 items-center justify-center rounded-full border border-cyan-400/30",
           "bg-cyan-500/10 text-cyan-100 touch-manipulation",

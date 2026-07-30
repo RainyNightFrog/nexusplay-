@@ -35,11 +35,22 @@
     if (!entries || !entries.length) {
       return "尚無紀錄，完成一局即可上榜";
     }
+    var seen = {};
     return entries
+      .filter(function (e) {
+        var key =
+          String(e.playerName || e.displayName || e.name || "")
+            .trim()
+            .toLowerCase() +
+          "#" +
+          String(e.score || 0);
+        if (seen[key]) return false;
+        seen[key] = true;
+        return true;
+      })
       .slice(0, 10)
       .map(function (e, i) {
         var grade = e.grade ? "  [" + e.grade + "]" : "";
-        var src = e.local || e.source === "local" ? " ·本機" : "";
         return (
           i +
           1 +
@@ -47,8 +58,7 @@
           entryName(e) +
           "  —  " +
           Number(e.score || 0).toLocaleString() +
-          grade +
-          src
+          grade
         );
       })
       .join("\n");
@@ -56,7 +66,11 @@
 
   function submitRun(score, meta) {
     var m = Object.assign({}, meta || {});
-    if (m.difficulty) m.difficulty = normalizeDiff(m.difficulty);
+    if (m.difficulty) {
+      var d = normalizeDiff(m.difficulty);
+      m.difficulty =
+        d === "casual" ? "easy" : d === "extreme" ? "hard" : "normal";
+    }
     var s = Math.floor(Number(score) || 0);
     if (typeof global.RNF === "undefined") return null;
     if (typeof global.RNF.pushLocalScore === "function") {
@@ -72,16 +86,19 @@
 
   function fetchEntries(limit, difficulty) {
     var diff = normalizeDiff(difficulty);
+    // SDK／API 使用 easy/normal/hard
+    var legacy =
+      diff === "casual" ? "easy" : diff === "extreme" ? "hard" : "normal";
     if (typeof global.RNF === "undefined") {
       return Promise.resolve([]);
     }
     if (typeof global.RNF.fetchLeaderboardBundle === "function") {
-      return global.RNF.fetchLeaderboardBundle(limit || 12, diff).then(function (b) {
+      return global.RNF.fetchLeaderboardBundle(limit || 12, legacy).then(function (b) {
         return (b && (b.merged || b.cloud || b.local)) || [];
       });
     }
     if (typeof global.RNF.fetchLeaderboard === "function") {
-      return global.RNF.fetchLeaderboard(limit || 12, diff);
+      return global.RNF.fetchLeaderboard(limit || 12, legacy);
     }
     return Promise.resolve([]);
   }
@@ -211,7 +228,7 @@
           })
           .catch(function () {
             if (!self.sys || !self.sys.isActive()) return;
-            self._list.setText("排行榜載入失敗（未登入仍可看本機榜）");
+            self._list.setText("排行榜載入失敗");
           });
       }
     };

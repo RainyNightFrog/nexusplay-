@@ -224,41 +224,129 @@ function toProgressItem(
   };
 }
 
-export async function getQuestsDashboard(
+type QuestsDashboardOptions = {
+  /** 略過開啟面板時的簽到進度寫入（領獎後刷新用） */
+  skipLoginTouch?: boolean;
+};
+
+/**
+ * 頂欄徽章用：只讀目前週期可領取數量，不做連擊／簽到副作用。
+ */
+export async function getQuestsClaimableCount(
   userId: string,
   supabase?: SupabaseClient
-): Promise<QuestsDashboard> {
+): Promise<number> {
   const client = supabase ?? createServerSupabase();
   const today = getQuestDateHongKong();
   const weekKey = getQuestWeekKeyHongKong();
-  const quests = await listActiveQuests(client);
-  const streak = await ensureStreakTouch(client, userId, today);
+  const { count, error } = await client
+    .from("user_quest_progress")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("completed", true)
+    .eq("claimed", false)
+    .in("period_key", [today, weekKey]);
 
+  if (error) throw new Error(error.message);
+  return count ?? 0;
+}
+
+/** 開啟面板時一次寫入每日／每周簽到進度（重用已載入的任務清單） */
+async function applyLoginQuestTouches(
+  client: SupabaseClient,
+  userId: string,
+  quests: QuestDefinition[],
+  today: string,
+  weekKey: string
+) {
+  const loginQuests = quests.filter(
+    (quest) =>
+      quest.questType === "daily_login" ||
+      quest.questType === "weekly_login_days"
+  );
+  if (loginQuests.length === 0) return;
+
+  const { data: rows, error } = await client
+    .from("user_quest_progress")
+    .select("id, quest_id, period_key, progress, completed, claimed, meta")
+    .eq("user_id", userId)
+    .in(
+      "quest_id",
+      loginQuests.map((quest) => quest.id)
+    )
+    .in("period_key", [today, weekKey]);
+
+  if (error) throw new Error(error.message);
+
+  const rowMap = new Map(
+    (rows ?? []).map((row) => [`${row.quest_id}:${row.period_key}`, row])
+  );
+
+  await Promise.all(
+    loginQuests.map(async (quest) => {
+      const periodKey = quest.periodType === "weekly" ? weekKey : today;
+      const row = rowMap.get(`${quest.id}:${periodKey}`);
+      if (!row || row.claimed) return;
+
+      const meta = (row.meta as Record<string, unknown>) ?? {};
+      let nextProgress = Number(row.progress) || 0;
+      let nextMeta = meta;
+
+      if (quest.questType === "weekly_login_days") {
+        const days = Array.isArray(meta.days)
+          ? (meta.days as unknown[]).map(String)
+          : [];
+        if (days.includes(today)) return;
+        days.push(today);
+        nextProgress = Math.min(days.length, quest.targetCount);
+        nextMeta = { ...meta, days };
+      } else {
+        nextProgress = Math.min(Math.max(nextProgress, 1), quest.targetCount);
+      }
+
+      const completed = nextProgress >= quest.targetCount;
+      if (
+        nextProgress === Number(row.progress) &&
+        completed === row.completed
+      ) {
+        return;
+      }
+
+      const { error: updateError } = await client
+        .from("user_quest_progress")
+        .update({
+          progress: nextProgress,
+          completed,
+          meta: nextMeta,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", row.id);
+
+      if (updateError) throw new Error(updateError.message);
+    })
+  );
+}
+
+function buildDashboardFromParts(
+  today: string,
+  weekKey: string,
+  quests: QuestDefinition[],
+  streak: StreakState,
+  progressRows: Array<{
+    quest_id: string;
+    period_key: string;
+    progress: number | null;
+    completed: boolean | null;
+    claimed: boolean | null;
+  }>
+): QuestsDashboard {
   const periodKeyByPeriod: Record<QuestPeriodType, string> = {
     daily: today,
     weekly: weekKey,
   };
 
-  await ensureProgressRows(client, userId, quests, periodKeyByPeriod);
-
-  // 每日簽到任務：開啟面板即計進度
-  await trackQuestEvent(userId, "daily_login", { supabase: client });
-  await trackQuestEvent(userId, "weekly_login_days", {
-    supabase: client,
-    loginDay: today,
-  });
-
-  const periodKeys = [today, weekKey];
-  const { data: progressRows, error } = await client
-    .from("user_quest_progress")
-    .select("quest_id, period_key, progress, completed, claimed")
-    .eq("user_id", userId)
-    .in("period_key", periodKeys);
-
-  if (error) throw new Error(error.message);
-
   const progressMap = new Map(
-    (progressRows ?? []).map((row) => [
+    progressRows.map((row) => [
       `${row.quest_id}:${row.period_key}`,
       {
         progress: Number(row.progress) || 0,
@@ -283,10 +371,6 @@ export async function getQuestsDashboard(
     else weekly.push(item);
   }
 
-  const claimableCount =
-    daily.filter((q) => q.claimable).length +
-    weekly.filter((q) => q.claimable).length;
-
   return {
     questDate: today,
     weekKey,
@@ -295,8 +379,52 @@ export async function getQuestsDashboard(
     daily,
     weekly,
     streak,
-    claimableCount,
+    claimableCount:
+      daily.filter((q) => q.claimable).length +
+      weekly.filter((q) => q.claimable).length,
   };
+}
+
+export async function getQuestsDashboard(
+  userId: string,
+  supabase?: SupabaseClient,
+  options?: QuestsDashboardOptions
+): Promise<QuestsDashboard> {
+  const client = supabase ?? createServerSupabase();
+  const today = getQuestDateHongKong();
+  const weekKey = getQuestWeekKeyHongKong();
+
+  const [quests, streak] = await Promise.all([
+    listActiveQuests(client),
+    ensureStreakTouch(client, userId, today),
+  ]);
+
+  const periodKeyByPeriod: Record<QuestPeriodType, string> = {
+    daily: today,
+    weekly: weekKey,
+  };
+
+  await ensureProgressRows(client, userId, quests, periodKeyByPeriod);
+
+  if (!options?.skipLoginTouch) {
+    await applyLoginQuestTouches(client, userId, quests, today, weekKey);
+  }
+
+  const { data: progressRows, error } = await client
+    .from("user_quest_progress")
+    .select("quest_id, period_key, progress, completed, claimed")
+    .eq("user_id", userId)
+    .in("period_key", [today, weekKey]);
+
+  if (error) throw new Error(error.message);
+
+  return buildDashboardFromParts(
+    today,
+    weekKey,
+    quests,
+    streak,
+    progressRows ?? []
+  );
 }
 
 type TrackOptions = {
@@ -395,26 +523,47 @@ export async function trackQuestEvent(
   }
 }
 
-export async function claimQuestReward(
+async function assertClaimableAndPeriod(
+  client: SupabaseClient,
+  userId: string,
+  questId: string
+): Promise<{ periodKey: string; rewardAp: number }> {
+  const today = getQuestDateHongKong();
+  const weekKey = getQuestWeekKeyHongKong();
+  const quests = await listActiveQuests(client);
+  const quest = quests.find((item) => item.id === questId);
+  if (!quest) throw new Error("找不到此任務");
+
+  const periodKey = quest.periodType === "weekly" ? weekKey : today;
+  const { data: row, error } = await client
+    .from("user_quest_progress")
+    .select("progress, completed, claimed")
+    .eq("user_id", userId)
+    .eq("quest_id", questId)
+    .eq("period_key", periodKey)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  if (!row) throw new Error("任務尚未完成，無法領取");
+  if (row.claimed) throw new Error("獎勵已領取");
+
+  const progress = Number(row.progress) || 0;
+  const completed = row.completed === true || progress >= quest.targetCount;
+  if (!completed) throw new Error("任務尚未完成，無法領取");
+
+  return { periodKey, rewardAp: quest.rewardAp };
+}
+
+async function runClaimRpc(
+  client: SupabaseClient,
   userId: string,
   questId: string,
-  supabase?: SupabaseClient
+  periodKey: string
 ) {
-  const client = supabase ?? createServerSupabase();
-  const dashboard = await getQuestsDashboard(userId, client);
-  const quest =
-    dashboard.daily.find((q) => q.id === questId) ??
-    dashboard.weekly.find((q) => q.id === questId);
-
-  if (!quest) throw new Error("找不到此任務");
-  if (!quest.claimable) {
-    throw new Error(quest.claimed ? "獎勵已領取" : "任務尚未完成，無法領取");
-  }
-
   const { data, error } = await client.rpc("claim_quest_reward", {
     p_user_id: userId,
     p_quest_id: questId,
-    p_period_key: quest.periodKey,
+    p_period_key: periodKey,
   });
 
   if (error) throw new Error(error.message);
@@ -427,7 +576,18 @@ export async function claimQuestReward(
     throw new Error("領取失敗");
   }
 
-  return getQuestsDashboard(userId, client);
+  return result;
+}
+
+export async function claimQuestReward(
+  userId: string,
+  questId: string,
+  supabase?: SupabaseClient
+) {
+  const client = supabase ?? createServerSupabase();
+  const { periodKey } = await assertClaimableAndPeriod(client, userId, questId);
+  await runClaimRpc(client, userId, questId, periodKey);
+  return getQuestsDashboard(userId, client, { skipLoginTouch: true });
 }
 
 export async function claimAllQuestRewards(
@@ -435,7 +595,7 @@ export async function claimAllQuestRewards(
   supabase?: SupabaseClient
 ) {
   const client = supabase ?? createServerSupabase();
-  let dashboard = await getQuestsDashboard(userId, client);
+  const dashboard = await getQuestsDashboard(userId, client);
   const claimedIds: string[] = [];
   let totalAp = 0;
 
@@ -444,10 +604,14 @@ export async function claimAllQuestRewards(
   );
 
   for (const quest of claimable) {
-    dashboard = await claimQuestReward(userId, quest.id, client);
+    await runClaimRpc(client, userId, quest.id, quest.periodKey);
     claimedIds.push(quest.id);
     totalAp += quest.rewardAp;
   }
 
-  return { dashboard, claimedIds, totalAp };
+  const nextDashboard = await getQuestsDashboard(userId, client, {
+    skipLoginTouch: true,
+  });
+
+  return { dashboard: nextDashboard, claimedIds, totalAp };
 }

@@ -7,11 +7,33 @@ import { motion } from "framer-motion";
 import { Calendar, Loader2, MessageSquare, Send } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
-import type { GameComment, GameDevlogEntry } from "@/lib/game-page-content";
+import { ForumContentView } from "@/components/game/forum-content-view";
+import { ForumRichTextEditor } from "@/components/game/forum-rich-text-editor";
+import { isForumContentEmpty } from "@/lib/forum-content";
+import {
+  MAX_COMMENT_LENGTH,
+  type GameComment,
+  type GameDevlogEntry,
+} from "@/lib/game-page-content";
 import { isSupabaseImage } from "@/lib/games";
 import { buildGameHref } from "@/lib/game-path";
 import { useApiError } from "@/hooks/use-api-error";
+import { useAuth } from "@/hooks/use-auth";
 import { UserBadge } from "@/components/UserBadge";
+import {
+  ChatPlayerCard,
+  forumAuthorToPlayerPreview,
+  virtualPlayerToPlayerPreview,
+  type ChatPlayerPreview,
+} from "@/components/chat/chat-player-card";
+import { isSeedGameCommentUserId } from "@/lib/forum-seed-builder";
+import { getVirtualPlayerById } from "@/lib/virtual-players";
+import { resolveVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
+import {
+  getVirtualPlayerEquippedTitle,
+  getVirtualPlayerSupporterFlags,
+} from "@/lib/virtual-player-supporter";
+import { requestOpenPlayerDm } from "@/lib/open-player-dm";
 import { sanitizeRichHtmlForRender } from "@/lib/sanitize-rich-html";
 import { cn } from "@/lib/utils";
 
@@ -87,16 +109,68 @@ export function GameDetailSections({
   const locale = useLocale();
   const tc = useTranslations("common");
   const tg = useTranslations("game");
+  const tf = useTranslations("forum");
   const { translateApiError } = useApiError();
+  const { profile } = useAuth();
 
   const [comments, setComments] = useState<GameComment[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(true);
   const [commentDraft, setCommentDraft] = useState("");
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [commentError, setCommentError] = useState<string | null>(null);
+  const [profileHint, setProfileHint] = useState<string | null>(null);
+  const [playerPreview, setPlayerPreview] = useState<ChatPlayerPreview | null>(
+    null
+  );
+  const [playerCardOpen, setPlayerCardOpen] = useState(false);
   const [activeGalleryIndex, setActiveGalleryIndex] = useState(0);
   const [tableDevlogs, setTableDevlogs] = useState<ApiDevlog[]>([]);
   const [devlogsLoading, setDevlogsLoading] = useState(true);
+
+  const openCommentAuthor = useCallback(
+    (comment: GameComment) => {
+      setProfileHint(null);
+      const virtualPlayerId = comment.author_virtual_player_id ?? null;
+
+      if (virtualPlayerId) {
+        const player = getVirtualPlayerById(virtualPlayerId);
+        if (player) {
+          const flags = getVirtualPlayerSupporterFlags(virtualPlayerId);
+          setPlayerPreview(
+            virtualPlayerToPlayerPreview({
+              id: player.id,
+              displayName: comment.author_name,
+              avatarUrl: resolveVirtualPlayerAvatarUrl(player.id),
+              equippedTitle:
+                comment.author_equipped_title ??
+                getVirtualPlayerEquippedTitle(virtualPlayerId),
+              isSupporter: flags?.isSupporter === true,
+              supporterBadge: flags?.badge ?? null,
+              supporterLifetime: flags?.lifetime === true,
+            })
+          );
+          setPlayerCardOpen(true);
+          return;
+        }
+      }
+
+      if (isSeedGameCommentUserId(comment.user_id)) {
+        setProfileHint(tf("seedPlayerProfile"));
+        return;
+      }
+
+      setPlayerPreview(
+        forumAuthorToPlayerPreview(
+          comment.author_name,
+          comment.user_id,
+          comment.author_equipped_title,
+          { isOwn: profile?.id === comment.user_id }
+        )
+      );
+      setPlayerCardOpen(true);
+    },
+    [profile?.id, tf]
+  );
 
   const gallery = useMemo(
     () => galleryUrls.filter(Boolean),
@@ -159,8 +233,8 @@ export function GameDetailSections({
   }, [gameId]);
 
   const submitComment = useCallback(async () => {
-    const trimmed = commentDraft.trim();
-    if (!trimmed || commentSubmitting) return;
+    if (isForumContentEmpty(commentDraft) || commentSubmitting) return;
+    if (commentDraft.length > MAX_COMMENT_LENGTH) return;
 
     setCommentSubmitting(true);
     setCommentError(null);
@@ -170,7 +244,7 @@ export function GameDetailSections({
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: trimmed }),
+        body: JSON.stringify({ content: commentDraft }),
       });
       const data = (await response.json()) as {
         comment?: GameComment;
@@ -399,40 +473,59 @@ export function GameDetailSections({
         transition={{ duration: 0.45, delay: 0.3 }}
       >
         <SectionCard title={tg("comments")}>
-          <div className="mx-auto mt-6 max-w-3xl">
-            <div className="rounded-xl border border-white/10 bg-zinc-950/50 p-4">
-              <textarea
-                value={commentDraft}
-                onChange={(event) => setCommentDraft(event.target.value)}
-                placeholder={tg("commentPlaceholder")}
-                rows={3}
-                maxLength={1000}
-                className={cn(
-                  "w-full resize-none rounded-lg border border-white/10 bg-white/5 px-4 py-3",
-                  "text-sm text-zinc-100 placeholder:text-zinc-500 outline-none",
-                  "focus:border-violet-400/40 focus:ring-2 focus:ring-violet-500/20"
-                )}
-              />
-              {commentError && (
-                <p className="mt-2 text-center text-xs text-rose-400">
-                  {commentError}
-                </p>
-              )}
-              <div className="mt-3 flex justify-center">
-                <Button
-                  type="button"
-                  onClick={submitComment}
-                  disabled={commentSubmitting || !commentDraft.trim()}
-                  className="gap-2 bg-violet-600 hover:bg-violet-500"
-                >
-                  {commentSubmitting ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <Send className="size-4" />
+          <div className="mx-auto mt-6 max-w-2xl text-center">
+            <div className="rounded-2xl border border-white/10 bg-zinc-950/50 p-4 sm:p-5">
+              {profile ? (
+                <div className="mx-auto max-w-xl space-y-3">
+                  <ForumRichTextEditor
+                    id="game-comment-composer"
+                    value={commentDraft}
+                    onChange={setCommentDraft}
+                    disabled={commentSubmitting}
+                    placeholder={tg("commentPlaceholder")}
+                    maxLength={MAX_COMMENT_LENGTH}
+                    minHeightClass="min-h-[110px]"
+                    enableImages={false}
+                    enableLists={false}
+                  />
+                  {commentError && (
+                    <p className="text-center text-xs text-rose-400">
+                      {commentError}
+                    </p>
                   )}
-                  {tg("postComment")}
-                </Button>
-              </div>
+                  <div className="flex justify-center">
+                    <Button
+                      type="button"
+                      onClick={() => void submitComment()}
+                      disabled={
+                        commentSubmitting ||
+                        isForumContentEmpty(commentDraft) ||
+                        commentDraft.length > MAX_COMMENT_LENGTH
+                      }
+                      className="gap-2 bg-violet-600 hover:bg-violet-500"
+                    >
+                      {commentSubmitting ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Send className="size-4" />
+                      )}
+                      {tg("postComment")}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-3 py-4">
+                  <p className="text-sm text-zinc-400">{tf("loginToDiscuss")}</p>
+                  <Button
+                    nativeButton={false}
+                    render={<Link href="/auth" />}
+                    variant="outline"
+                    className="border-white/10 bg-white/5 text-zinc-200 hover:border-violet-400/30"
+                  >
+                    {tf("goLogin")}
+                  </Button>
+                </div>
+              )}
             </div>
 
             <div className="mt-6 space-y-4">
@@ -451,26 +544,40 @@ export function GameDetailSections({
                     className="rounded-xl border border-white/8 bg-zinc-950/30 px-4 py-3"
                   >
                     <div className="flex flex-wrap items-center justify-center gap-2 text-center">
-                      <UserBadge
-                        username={comment.author_name}
-                        title={comment.author_equipped_title}
-                        isSupporter={comment.author_is_supporter}
-                        supporterBadge={comment.author_supporter_badge}
-                        animateTitle={false}
-                        usernameClassName="text-sm text-zinc-200"
-                        titleClassName="text-[10px]"
-                      />
+                      <button
+                        type="button"
+                        onClick={() => openCommentAuthor(comment)}
+                        className="group rounded-lg px-1.5 py-1 transition-colors hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
+                        aria-label={comment.author_name}
+                      >
+                        <UserBadge
+                          username={comment.author_name}
+                          title={comment.author_equipped_title}
+                          isSupporter={comment.author_is_supporter}
+                          supporterBadge={comment.author_supporter_badge}
+                          animateTitle={false}
+                          usernameClassName="text-sm text-zinc-200 underline-offset-2 group-hover:underline group-hover:text-cyan-200"
+                          titleClassName="text-[10px]"
+                        />
+                      </button>
                       <span className="text-xs text-zinc-500">
                         {formatRelativeTime(comment.created_at, tc)}
                       </span>
                     </div>
-                    <p className="mt-2 whitespace-pre-wrap text-center text-sm text-zinc-400">
-                      {comment.content}
-                    </p>
+                    <ForumContentView
+                      content={comment.content}
+                      className="mt-2 text-center text-zinc-300 [&_p]:text-center [&_li]:text-left"
+                    />
                   </div>
                 ))
               )}
             </div>
+
+            {profileHint ? (
+              <p className="mt-3 text-center text-xs text-amber-300/90">
+                {profileHint}
+              </p>
+            ) : null}
 
             <p className="mt-4 text-center text-xs text-zinc-600">
               <MessageSquare className="mr-1 inline size-3.5" />
@@ -479,6 +586,19 @@ export function GameDetailSections({
           </div>
         </SectionCard>
       </motion.section>
+
+      <ChatPlayerCard
+        player={playerPreview}
+        open={playerCardOpen}
+        onOpenChange={(open) => {
+          setPlayerCardOpen(open);
+          if (!open) setPlayerPreview(null);
+        }}
+        canDirectMessage={Boolean(profile)}
+        onDirectMessage={
+          profile ? (target) => requestOpenPlayerDm(target) : undefined
+        }
+      />
     </div>
   );
 }

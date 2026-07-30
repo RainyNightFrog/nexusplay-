@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import {
   Coins,
@@ -68,6 +68,13 @@ export function ApStoreModal({ open, onOpenChange }: ApStoreModalProps) {
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<ApStoreItem | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const busyRef = useRef<string | null>(null);
+  const dataRef = useRef<ApStoreDashboard | null>(null);
+  const loadSeqRef = useRef(0);
+
+  useEffect(() => {
+    dataRef.current = data;
+  }, [data]);
 
   const selectedLocalized = useMemo(() => {
     if (!selected) return null;
@@ -77,41 +84,80 @@ export function ApStoreModal({ open, onOpenChange }: ApStoreModalProps) {
     });
   }, [selected, locale]);
 
-  const load = useCallback(async () => {
-    if (!profile) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch("/api/ap/store", { credentials: "same-origin" });
-      const payload = (await response.json()) as ApStoreDashboard & {
-        error?: string;
-      };
-      if (!response.ok) {
-        setError(translateApiError(payload.error) ?? t("loadError"));
-        return;
+  const load = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      if (!profile) return;
+      const seq = ++loadSeqRef.current;
+      const silent = Boolean(opts?.silent && dataRef.current);
+      if (!silent) setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch("/api/ap/store", {
+          credentials: "same-origin",
+        });
+        const payload = (await response.json()) as ApStoreDashboard & {
+          error?: string;
+        };
+        if (seq !== loadSeqRef.current) return;
+        if (!response.ok) {
+          setError(translateApiError(payload.error) ?? t("loadError"));
+          return;
+        }
+        setData(payload);
+      } catch {
+        if (seq !== loadSeqRef.current) return;
+        setError(t("loadError"));
+      } finally {
+        if (seq === loadSeqRef.current) setLoading(false);
       }
-      setData(payload);
+    },
+    [profile, t, translateApiError]
+  );
+
+  const refreshBalanceOnly = useCallback(async () => {
+    if (!profile) return;
+    try {
+      const response = await fetch("/api/ap/balance", {
+        credentials: "same-origin",
+      });
+      if (!response.ok) return;
+      const wallet = (await response.json()) as {
+        balance?: number;
+        lifetimeEarned?: number;
+      };
+      if (typeof wallet.balance !== "number") return;
+      setData((prev) =>
+        prev
+          ? {
+              ...prev,
+              balance: wallet.balance!,
+              lifetimeEarned:
+                typeof wallet.lifetimeEarned === "number"
+                  ? wallet.lifetimeEarned
+                  : prev.lifetimeEarned,
+            }
+          : prev
+      );
     } catch {
-      setError(t("loadError"));
-    } finally {
-      setLoading(false);
+      /* ignore balance patch errors */
     }
-  }, [profile, t, translateApiError]);
+  }, [profile]);
 
   useEffect(() => {
-    if (open && profile) void load();
+    if (!open || !profile) return;
+    void load({ silent: true });
   }, [open, profile, load]);
 
   useEffect(() => {
     if (!open || !profile) return;
     function onRefreshRequest() {
-      void load();
+      void refreshBalanceOnly();
     }
     window.addEventListener(REFRESH_AP_BALANCE_EVENT, onRefreshRequest);
     return () => {
       window.removeEventListener(REFRESH_AP_BALANCE_EVENT, onRefreshRequest);
     };
-  }, [open, profile, load]);
+  }, [open, profile, refreshBalanceOnly]);
 
   const previewTitle = useMemo(() => {
     if (!selected || selected.category !== "title") {
@@ -135,8 +181,11 @@ export function ApStoreModal({ open, onOpenChange }: ApStoreModalProps) {
       ? selected.cssClass
       : profile?.equipped_name_color_class;
 
+  const actionBusy = busyId !== null || loading;
+
   async function buySelected() {
-    if (!selected) return;
+    if (!selected || busyRef.current || loading) return;
+    busyRef.current = selected.id;
     setBusyId(selected.id);
     setError(null);
     try {
@@ -160,11 +209,14 @@ export function ApStoreModal({ open, onOpenChange }: ApStoreModalProps) {
     } catch {
       setError(t("buyFailed"));
     } finally {
+      busyRef.current = null;
       setBusyId(null);
     }
   }
 
   async function toggleEquip(item: ApStoreItem) {
+    if (busyRef.current || loading) return;
+    busyRef.current = item.id;
     setBusyId(item.id);
     setError(null);
     try {
@@ -186,6 +238,7 @@ export function ApStoreModal({ open, onOpenChange }: ApStoreModalProps) {
     } catch {
       setError(t("equipFailed"));
     } finally {
+      busyRef.current = null;
       setBusyId(null);
     }
   }
@@ -232,7 +285,7 @@ export function ApStoreModal({ open, onOpenChange }: ApStoreModalProps) {
                   variant="ghost"
                   size="sm"
                   onClick={() => void load()}
-                  disabled={loading}
+                  disabled={actionBusy}
                   className="absolute right-2 top-1/2 -translate-y-1/2 gap-1.5 text-zinc-400"
                 >
                   <RefreshCw className={cn("size-3.5", loading && "animate-spin")} />
@@ -247,12 +300,12 @@ export function ApStoreModal({ open, onOpenChange }: ApStoreModalProps) {
               )}
 
               {loading && !data ? (
-                <div className="flex justify-center py-16">
+                <div className="flex flex-col items-center justify-center gap-2 py-16">
                   <Loader2 className="size-8 animate-spin text-amber-300" />
+                  <p className="text-xs text-zinc-500">{t("loading")}</p>
                 </div>
               ) : data ? (
                 <div className="grid gap-4 lg:grid-cols-[1fr_240px]">
-                  {/* 手機：預覽置頂並 sticky，選商品時不必捲到最底才看得到 */}
                   <aside className="order-first rounded-2xl border border-cyan-400/20 bg-zinc-900/80 p-3 sm:p-4 lg:order-last lg:sticky lg:top-0 lg:self-start">
                     <p className="mb-2 text-center text-xs font-semibold uppercase tracking-wide text-cyan-300 sm:mb-3">
                       {t("livePreview")}
@@ -340,6 +393,11 @@ export function ApStoreModal({ open, onOpenChange }: ApStoreModalProps) {
                                 description: item.description,
                               }
                             );
+                            const soldOut =
+                              item.stockRemaining != null &&
+                              item.stockRemaining <= 0;
+                            const cannotAfford =
+                              !item.owned && item.costAp > data.balance;
                             return (
                             <button
                               key={item.id}
@@ -389,14 +447,18 @@ export function ApStoreModal({ open, onOpenChange }: ApStoreModalProps) {
                                     type="button"
                                     size="sm"
                                     variant="outline"
-                                    disabled={busyId === item.id}
+                                    disabled={actionBusy}
                                     onClick={(event) => {
                                       event.stopPropagation();
                                       void toggleEquip(item);
                                     }}
+                                    className="gap-1.5"
                                   >
                                     {busyId === item.id ? (
-                                      <Loader2 className="size-3.5 animate-spin" />
+                                      <>
+                                        <Loader2 className="size-3.5 animate-spin" />
+                                        {t("working")}
+                                      </>
                                     ) : item.equipped ? (
                                       t("unequip")
                                     ) : (
@@ -409,9 +471,7 @@ export function ApStoreModal({ open, onOpenChange }: ApStoreModalProps) {
                                     size="sm"
                                     className="gap-1 bg-amber-500 text-zinc-950 hover:bg-amber-400"
                                     disabled={
-                                      busyId === item.id ||
-                                      (item.stockRemaining != null &&
-                                        item.stockRemaining <= 0)
+                                      actionBusy || soldOut || cannotAfford
                                     }
                                     onClick={(event) => {
                                       event.stopPropagation();
@@ -419,8 +479,16 @@ export function ApStoreModal({ open, onOpenChange }: ApStoreModalProps) {
                                       setConfirmOpen(true);
                                     }}
                                   >
-                                    <Sparkles className="size-3.5" />
-                                    {t("buy")}
+                                    {busyId === item.id ? (
+                                      <Loader2 className="size-3.5 animate-spin" />
+                                    ) : (
+                                      <Sparkles className="size-3.5" />
+                                    )}
+                                    {soldOut
+                                      ? t("soldOut")
+                                      : cannotAfford
+                                        ? t("insufficientAp")
+                                        : t("buy")}
                                   </Button>
                                 )}
                                 {item.isLimited && (
@@ -466,18 +534,28 @@ export function ApStoreModal({ open, onOpenChange }: ApStoreModalProps) {
             <Button
               type="button"
               variant="outline"
+              disabled={busyId !== null}
               onClick={() => setConfirmOpen(false)}
             >
               {t("cancel")}
             </Button>
             <Button
               type="button"
-              disabled={!selected || busyId === selected?.id}
+              disabled={
+                !selected ||
+                busyId !== null ||
+                loading ||
+                (selected != null &&
+                  selected.costAp > (data?.balance ?? 0))
+              }
               onClick={() => void buySelected()}
-              className="bg-amber-500 text-zinc-950 hover:bg-amber-400"
+              className="gap-1.5 bg-amber-500 text-zinc-950 hover:bg-amber-400"
             >
               {busyId ? (
-                <Loader2 className="size-4 animate-spin" />
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  {t("buying")}
+                </>
               ) : (
                 t("confirmBuy")
               )}

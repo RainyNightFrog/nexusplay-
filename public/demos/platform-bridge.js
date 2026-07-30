@@ -399,40 +399,121 @@
     return store;
   }
 
-  function mergeDifficultyLeaderboard(cloud, local, difficulty) {
-    var merged = (cloud || []).filter(function (e) {
-      return resolveEntryDifficulty(e, "normal") === difficulty;
-    }).slice();
-    (local || []).forEach(function (le) {
-      if (!le.isMe) return;
-      var idx = merged.findIndex(function (e) { return e.isMe; });
-      if (idx >= 0) {
-        if (le.score > merged[idx].score) merged[idx] = Object.assign({}, le, { rank: merged[idx].rank });
+  function normalizePlayerName(name) {
+    var s = String(name || "");
+    try {
+      s = s.normalize("NFKC");
+    } catch (_e) {}
+    return s
+      .replace(/[\u200B-\u200D\uFEFF]/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
+  }
+
+  function sameLeaderboardPlayer(a, b) {
+    if (!a || !b) return false;
+    if (a.isMe && b.isMe) return true;
+    var na = normalizePlayerName(a.playerName || a.displayName || a.name);
+    var nb = normalizePlayerName(b.playerName || b.displayName || b.name);
+    return Boolean(na && nb && na === nb);
+  }
+
+  /** 同名只留最高分一筆；再擋同名同分完整重複列 */
+  function dedupeLeaderboardByPlayer(entries) {
+    var best = {};
+    var order = [];
+    (entries || []).forEach(function (e) {
+      var key = normalizePlayerName(e.playerName || e.displayName || e.name);
+      if (!key) key = "__row_" + order.length;
+      if (!best[key]) {
+        best[key] = e;
+        order.push(key);
+        return;
+      }
+      var cur = best[key];
+      if ((e.score || 0) > (cur.score || 0)) {
+        best[key] = Object.assign({}, e, {
+          isMe: !!(cur.isMe || e.isMe),
+        });
       } else {
-        merged.push(le);
+        cur.isMe = !!(cur.isMe || e.isMe);
       }
     });
-    merged.sort(function (a, b) { return b.score - a.score; });
-    return merged.slice(0, 20).map(function (e, i) {
-      return Object.assign({}, e, { rank: i + 1 });
+    return order.map(function (k) {
+      return best[k];
     });
+  }
+
+  function collectLocalForDifficulty(store, difficulty) {
+    var aliases = difficultyAliases(difficulty);
+    var out = [];
+    aliases.forEach(function (key) {
+      var list = (store && store[key]) || [];
+      list.forEach(function (e) {
+        out.push(e);
+      });
+    });
+    return dedupeLeaderboardByPlayer(out);
+  }
+
+  function mergeDifficultyLeaderboard(cloud, local, difficulty) {
+    // 以雲端為主；本機只在雲端完全沒資料時補上（避免同名雙開）
+    var cloudList = dedupeLeaderboardByPlayer(cloud || []);
+    if (cloudList.length) {
+      return finalizeLeaderboard(cloudList, 20);
+    }
+    var localMine = (local || []).filter(function (le) {
+      return le && le.isMe;
+    });
+    return finalizeLeaderboard(localMine, 20);
   }
 
   async function cloudFetchLeaderboard(limit, difficulty) {
     if (!gameId) return [];
     var path = "/api/games/" + gameId + "/leaderboard?limit=" + (limit || 20);
-    if (difficulty) path += "&difficulty=" + encodeURIComponent(difficulty);
+    if (difficulty) {
+      path += "&difficulty=" + encodeURIComponent(normalizeDifficultyKey(difficulty));
+    }
     var res = await fetch(path, {
       credentials: "same-origin",
     });
     if (!res.ok) return [];
     var data = await res.json();
-    return filterEntriesByDifficulty(data.entries || [], difficulty || "normal");
+    // API 已依難度（含別名）過濾並去重；此處再防禦一次
+    return dedupeLeaderboardByPlayer(data.entries || []);
   }
 
   function filterEntriesByDifficulty(entries, difficulty) {
+    var aliases = difficultyAliases(difficulty);
     return (entries || []).filter(function (e) {
-      return resolveEntryDifficulty(e, "normal") === difficulty;
+      return aliases.indexOf(normalizeDifficultyKey(resolveEntryDifficulty(e, difficulty))) >= 0;
+    });
+  }
+
+  function normalizeDifficultyKey(raw) {
+    var k = String(raw || "normal").toLowerCase();
+    if (k === "casual") return "easy";
+    if (k === "standard") return "normal";
+    if (k === "extreme") return "hard";
+    return k;
+  }
+
+  function difficultyAliases(raw) {
+    var k = normalizeDifficultyKey(raw);
+    if (k === "easy") return ["easy", "casual"];
+    if (k === "normal") return ["normal", "standard"];
+    if (k === "hard") return ["hard", "extreme"];
+    return [k];
+  }
+
+  function finalizeLeaderboard(entries, limit) {
+    var list = dedupeLeaderboardByPlayer(entries || []);
+    list.sort(function (a, b) {
+      return (b.score || 0) - (a.score || 0);
+    });
+    return list.slice(0, limit || 20).map(function (e, i) {
+      return Object.assign({}, e, { rank: i + 1 });
     });
   }
 
@@ -471,9 +552,8 @@
   }
 
   function submitLocalScore(entry) {
-    var difficulty = resolveEntryDifficulty(entry, "normal");
+    var difficulty = normalizeDifficultyKey(resolveEntryDifficulty(entry, "normal"));
     var store = readLocalLeaderboardByDiff();
-    var list = store[difficulty] || [];
     var name = user ? user.displayName : getGuestName();
     if (!user) writeLocal("guest-name", name);
 
@@ -487,44 +567,34 @@
       local: true,
     };
 
-    var existingIdx = list.findIndex(function (e) {
-      return e.isMe && e.local;
+    // 合併別名桶後只留一筆「我」
+    var mergedLocal = collectLocalForDifficulty(store, difficulty).filter(function (e) {
+      return !(e && e.isMe);
     });
-    if (existingIdx >= 0) {
-      if (list[existingIdx].score >= newEntry.score) return list;
-      list[existingIdx] = newEntry;
+    var prevMine = collectLocalForDifficulty(store, difficulty).filter(function (e) {
+      return e && e.isMe;
+    })[0];
+    if (!prevMine || (prevMine.score || 0) < newEntry.score) {
+      mergedLocal.push(newEntry);
     } else {
-      list.push(newEntry);
+      mergedLocal.push(prevMine);
     }
 
-    list.sort(function (a, b) {
-      return b.score - a.score;
+    // 清別名桶，只寫正規鍵
+    difficultyAliases(difficulty).forEach(function (key) {
+      delete store[key];
     });
-    store[difficulty] = list.slice(0, 20);
+    store[difficulty] = dedupeLeaderboardByPlayer(mergedLocal)
+      .sort(function (a, b) {
+        return (b.score || 0) - (a.score || 0);
+      })
+      .slice(0, 20);
     writeLocal("leaderboard-by-diff", store);
     return store[difficulty];
   }
 
   function mergeLeaderboards(cloud, local) {
-    var merged = (cloud || []).slice();
-    (local || []).forEach(function (le) {
-      if (le.isMe) {
-        var idx = merged.findIndex(function (e) {
-          return e.isMe;
-        });
-        if (idx >= 0) {
-          if (le.score > merged[idx].score) merged[idx] = Object.assign({}, le, { rank: merged[idx].rank });
-        } else {
-          merged.push(le);
-        }
-      }
-    });
-    merged.sort(function (a, b) {
-      return b.score - a.score;
-    });
-    return merged.slice(0, 20).map(function (e, i) {
-      return Object.assign({}, e, { rank: i + 1 });
-    });
+    return mergeDifficultyLeaderboard(cloud, local, "normal");
   }
 
   function injectStyles() {
@@ -654,18 +724,22 @@
       return cloudResult;
     },
     fetchLeaderboard: async function (limit, difficulty) {
-      difficulty = difficulty || "normal";
-      var store = readLocalLeaderboardByDiff();
-      var local = store[difficulty] || [];
+      difficulty = normalizeDifficultyKey(difficulty || "normal");
       var cloud = [];
       try {
         cloud = await cloudFetchLeaderboard(limit || 20, difficulty);
       } catch (_e) {}
-      return mergeDifficultyLeaderboard(cloud, local, difficulty);
+      if (cloud && cloud.length) {
+        return finalizeLeaderboard(cloud, limit || 20);
+      }
+      var store = readLocalLeaderboardByDiff();
+      var local = collectLocalForDifficulty(store, difficulty);
+      return finalizeLeaderboard(local, limit || 20);
     },
     renderLeaderboard: function (container, entries) {
       injectStyles();
       if (!container) return;
+      entries = finalizeLeaderboard(entries || [], 20);
       if (!entries || !entries.length) {
         container.innerHTML = '<div class="np-lb-empty">' + demoBridgeT("lbEmpty", "尚無排行紀錄，完成一場對局即可上榜！") + '</div>';
         return;

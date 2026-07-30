@@ -93,22 +93,24 @@ export async function getApStoreDashboard(
   supabase?: SupabaseClient
 ): Promise<ApStoreDashboard> {
   const client = supabase ?? createServerSupabase();
-  const wallet = await getApBalance(userId, client);
 
-  const [{ data: items, error: itemsError }, { data: inventory, error: invError }] =
-    await Promise.all([
-      client
-        .from("ap_store_items")
-        .select(
-          "id, key, category, rarity, cost_ap, name, description, asset_config, unlock_title_id, is_limited, stock_limit, stock_sold, sort_order"
-        )
-        .eq("active", true)
-        .order("sort_order", { ascending: true }),
-      client
-        .from("user_ap_inventory")
-        .select("item_id, is_equipped")
-        .eq("user_id", userId),
-    ]);
+  const [wallet, itemsResult, inventoryResult] = await Promise.all([
+    getApBalance(userId, client),
+    client
+      .from("ap_store_items")
+      .select(
+        "id, key, category, rarity, cost_ap, name, description, asset_config, unlock_title_id, is_limited, stock_limit, stock_sold, sort_order"
+      )
+      .eq("active", true)
+      .order("sort_order", { ascending: true }),
+    client
+      .from("user_ap_inventory")
+      .select("item_id, is_equipped")
+      .eq("user_id", userId),
+  ]);
+
+  const { data: items, error: itemsError } = itemsResult;
+  const { data: inventory, error: invError } = inventoryResult;
 
   if (itemsError) throw new Error(itemsError.message);
   if (invError) throw new Error(invError.message);

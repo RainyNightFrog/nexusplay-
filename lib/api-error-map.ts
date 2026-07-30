@@ -82,6 +82,7 @@ export const API_ERROR_KEY_BY_MESSAGE: Record<string, string> = {
   "裝備失敗": "apEquipFailed",
   "請提供商品 ID": "apItemIdRequired",
   "讀取 AP 商店失敗": "apStoreLoadFailed",
+  "讀取 AP 餘額失敗": "apBalanceLoadFailed",
   "請提供任務 ID": "questIdRequired",
   "讀取每日任務失敗": "questsLoadFailed",
   "領取獎勵失敗": "questClaimFailed",

@@ -20,6 +20,8 @@ export type GameComment = {
   author_equipped_title: import("@/lib/titles").EquippedTitle | null;
   author_is_supporter?: boolean;
   author_supporter_badge?: string | null;
+  /** 種子評論對應的虛擬玩家，供點擊開資料卡 */
+  author_virtual_player_id?: string | null;
 };
 
 export type SeedGameComment = {
@@ -35,7 +37,8 @@ export const MAX_GALLERY_IMAGES = 8;
 export const MAX_DEVLOG_IMAGES = 4;
 export const MAX_DEVLOG_TITLE_LENGTH = 120;
 export const MAX_DEVLOG_CONTENT_LENGTH = 4000;
-export const MAX_COMMENT_LENGTH = 1000;
+/** 富文字 HTML 上限（與論壇短評同級） */
+export const MAX_COMMENT_LENGTH = 2000;
 
 function resolveAssetUrl(url: string) {
   return normalizeAppAssetUrl(url);

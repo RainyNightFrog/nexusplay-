@@ -31,6 +31,10 @@ type ForumRichTextEditorProps = {
   maxLength?: number;
   minHeightClass?: string;
   onUploadError?: (message: string) => void;
+  /** 預設開啟；遊戲頁評論可關閉圖片上傳 */
+  enableImages?: boolean;
+  /** 預設開啟；短評可關閉清單按鈕 */
+  enableLists?: boolean;
 };
 
 function ToolbarButton({
@@ -78,9 +82,12 @@ export function ForumRichTextEditor({
   maxLength = FORUM_LIMITS.content,
   minHeightClass = "min-h-[160px]",
   onUploadError,
+  enableImages = true,
+  enableLists = true,
 }: ForumRichTextEditorProps) {
   const t = useTranslations("forum");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const lastEmittedHtmlRef = useRef<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const resolvedPlaceholder = placeholder ?? t("contentPlaceholder");
 
@@ -106,6 +113,8 @@ export function ForumRichTextEditor({
     content: value || "",
     editable: !disabled,
     immediatelyRender: false,
+    // TipTap 3 預設 false，工具列 isActive／取消樣式會卡住
+    shouldRerenderOnTransaction: true,
     editorProps: {
       attributes: {
         ...(id ? { id } : {}),
@@ -114,7 +123,9 @@ export function ForumRichTextEditor({
       },
     },
     onUpdate: ({ editor: currentEditor }) => {
-      onChange(currentEditor.getHTML());
+      const html = currentEditor.getHTML();
+      lastEmittedHtmlRef.current = html;
+      onChange(html);
     },
   });
 
@@ -125,10 +136,15 @@ export function ForumRichTextEditor({
 
   useEffect(() => {
     if (!editor) return;
+    const incoming = value || "";
+    if (incoming === lastEmittedHtmlRef.current) return;
     const current = editor.getHTML();
-    if (value !== current && value !== (current === "<p></p>" ? "" : current)) {
-      editor.commands.setContent(value || "", { emitUpdate: false });
+    const currentNorm = current === "<p></p>" ? "" : current;
+    const valueNorm = incoming === "<p></p>" ? "" : incoming;
+    if (valueNorm !== currentNorm) {
+      editor.commands.setContent(incoming, { emitUpdate: false });
     }
+    lastEmittedHtmlRef.current = incoming;
   }, [editor, value]);
 
   const stats = useMemo(() => {
@@ -136,6 +152,15 @@ export function ForumRichTextEditor({
     const htmlLength = value.length;
     return { textLength, htmlLength };
   }, [editor, value]);
+
+  const toggleMark = (mark: "bold" | "italic" | "underline" | "strike") => {
+    if (!editor) return;
+    const chain = editor.chain().focus().extendMarkRange(mark);
+    if (mark === "bold") chain.toggleBold().run();
+    else if (mark === "italic") chain.toggleItalic().run();
+    else if (mark === "underline") chain.toggleUnderline().run();
+    else chain.toggleStrike().run();
+  };
 
   const insertEmoji = (emoji: string) => {
     editor?.chain().focus().insertContent(emoji).run();
@@ -189,7 +214,7 @@ export function ForumRichTextEditor({
             label={t("richTextBold")}
             disabled={disabled || !editor}
             active={editor?.isActive("bold")}
-            onClick={() => editor?.chain().focus().toggleBold().run()}
+            onClick={() => toggleMark("bold")}
           >
             <Bold className="size-3.5" />
           </ToolbarButton>
@@ -197,7 +222,7 @@ export function ForumRichTextEditor({
             label={t("richTextItalic")}
             disabled={disabled || !editor}
             active={editor?.isActive("italic")}
-            onClick={() => editor?.chain().focus().toggleItalic().run()}
+            onClick={() => toggleMark("italic")}
           >
             <Italic className="size-3.5" />
           </ToolbarButton>
@@ -205,7 +230,7 @@ export function ForumRichTextEditor({
             label={t("richTextUnderline")}
             disabled={disabled || !editor}
             active={editor?.isActive("underline")}
-            onClick={() => editor?.chain().focus().toggleUnderline().run()}
+            onClick={() => toggleMark("underline")}
           >
             <UnderlineIcon className="size-3.5" />
           </ToolbarButton>
@@ -213,29 +238,32 @@ export function ForumRichTextEditor({
             label={t("richTextStrike")}
             disabled={disabled || !editor}
             active={editor?.isActive("strike")}
-            onClick={() => editor?.chain().focus().toggleStrike().run()}
+            onClick={() => toggleMark("strike")}
           >
             <Strikethrough className="size-3.5" />
           </ToolbarButton>
 
-          <ToolbarDivider />
-
-          <ToolbarButton
-            label={t("richTextBulletList")}
-            disabled={disabled || !editor}
-            active={editor?.isActive("bulletList")}
-            onClick={() => editor?.chain().focus().toggleBulletList().run()}
-          >
-            <List className="size-3.5" />
-          </ToolbarButton>
-          <ToolbarButton
-            label={t("richTextOrderedList")}
-            disabled={disabled || !editor}
-            active={editor?.isActive("orderedList")}
-            onClick={() => editor?.chain().focus().toggleOrderedList().run()}
-          >
-            <ListOrdered className="size-3.5" />
-          </ToolbarButton>
+          {enableLists ? (
+            <>
+              <ToolbarDivider />
+              <ToolbarButton
+                label={t("richTextBulletList")}
+                disabled={disabled || !editor}
+                active={editor?.isActive("bulletList")}
+                onClick={() => editor?.chain().focus().toggleBulletList().run()}
+              >
+                <List className="size-3.5" />
+              </ToolbarButton>
+              <ToolbarButton
+                label={t("richTextOrderedList")}
+                disabled={disabled || !editor}
+                active={editor?.isActive("orderedList")}
+                onClick={() => editor?.chain().focus().toggleOrderedList().run()}
+              >
+                <ListOrdered className="size-3.5" />
+              </ToolbarButton>
+            </>
+          ) : null}
 
           <ToolbarDivider />
 
@@ -243,24 +271,28 @@ export function ForumRichTextEditor({
             disabled={disabled || !editor}
             onPick={insertEmoji}
           />
-          <ToolbarButton
-            label={t("insertImage")}
-            disabled={disabled || !editor || uploadingImage}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            {uploadingImage ? (
-              <Loader2 className="size-3.5 animate-spin" />
-            ) : (
-              <ImagePlus className="size-3.5" />
-            )}
-          </ToolbarButton>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp"
-            className="hidden"
-            onChange={(event) => void handleImageSelect(event)}
-          />
+          {enableImages ? (
+            <>
+              <ToolbarButton
+                label={t("insertImage")}
+                disabled={disabled || !editor || uploadingImage}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {uploadingImage ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <ImagePlus className="size-3.5" />
+                )}
+              </ToolbarButton>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp"
+                className="hidden"
+                onChange={(event) => void handleImageSelect(event)}
+              />
+            </>
+          ) : null}
         </div>
 
         <EditorContent editor={editor} />

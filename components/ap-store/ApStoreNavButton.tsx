@@ -21,7 +21,7 @@ export function ApStoreNavButton() {
       return;
     }
     try {
-      const response = await fetch("/api/ap/store", {
+      const response = await fetch("/api/ap/balance", {
         credentials: "same-origin",
       });
       if (!response.ok) return;
@@ -56,10 +56,7 @@ export function ApStoreNavButton() {
     <>
       <button
         type="button"
-        onClick={() => {
-          setOpen(true);
-          void refreshBalance();
-        }}
+        onClick={() => setOpen(true)}
         className={cn(
           "relative inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-amber-400/35",
           "bg-amber-500/10 text-xs font-semibold text-amber-100 touch-manipulation",

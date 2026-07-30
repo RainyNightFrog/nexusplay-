@@ -9,7 +9,8 @@ import {
   rateLimitResponse,
 } from "@/lib/rate-limit";
 import { resolveRequestLocale } from "@/lib/request-locale";
-import { sanitizePlainText } from "@/lib/sanitize-plain";
+import { isForumContentEmpty, stripHtmlForPreview } from "@/lib/forum-content";
+import { sanitizeRichHtml } from "@/lib/sanitize-rich-html";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { MAX_COMMENT_LENGTH } from "@/lib/game-page-content";
 
@@ -73,9 +74,9 @@ export async function POST(
     }
 
     const body = (await request.json()) as { content?: string };
-    const content = sanitizePlainText(body.content ?? "", MAX_COMMENT_LENGTH);
+    const content = sanitizeRichHtml(body.content ?? "", MAX_COMMENT_LENGTH);
 
-    if (!content) {
+    if (isForumContentEmpty(content)) {
       return NextResponse.json({ error: "請輸入評論內容" }, { status: 400 });
     }
 
@@ -95,7 +96,7 @@ export async function POST(
       const { createServerSupabase } = await import("@/lib/supabase-server");
       void trackQuestEvent(user.id, "post_comment", {
         gameId,
-        commentLength: content.length,
+        commentLength: stripHtmlForPreview(content).length,
         supabase: createServerSupabase(),
       }).catch((error) => {
         console.error("[quests] comment progress failed:", error);

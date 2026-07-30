@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import {
   claimAllQuestRewards,
   claimQuestReward,
-  getQuestsDashboard,
 } from "@/lib/quests-service";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";

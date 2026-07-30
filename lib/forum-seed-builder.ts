@@ -109,6 +109,7 @@ export function buildLocalizedGameComments(
       created_at: new Date(now - seed.offsetHours * 3_600_000).toISOString(),
       author_name: resolveSeedAuthorName(seed.author, seedLocale),
       author_equipped_title: null,
+      author_virtual_player_id: resolveStableSeedVirtualPlayerId(seed.author),
     };
   });
 }

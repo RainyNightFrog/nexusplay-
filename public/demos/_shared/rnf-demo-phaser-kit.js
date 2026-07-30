@@ -165,12 +165,14 @@
     });
   }
 
-  function makeMenuButton(scene, x, y, label, tint, onClick, width) {
+  function makeMenuButton(scene, x, y, label, tint, onClick, width, height) {
     var w = width || 280;
-    var bg = scene.add.rectangle(x, y, w, 48, tint, 0.22).setStrokeStyle(2, tint, 0.85).setInteractive({ useHandCursor: true });
+    var h = height || 48;
+    var fontSize = h <= 22 ? "11px" : h <= 30 ? "12px" : h <= 36 ? "14px" : "18px";
+    var bg = scene.add.rectangle(x, y, w, h, tint, 0.22).setStrokeStyle(2, tint, 0.85).setInteractive({ useHandCursor: true });
     var txt = scene.add.text(x, y, label, {
       fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
-      fontSize: "18px",
+      fontSize: fontSize,
       fontStyle: "bold",
       color: "#f8fafc"
     }).setOrigin(0.5);
@@ -486,39 +488,110 @@
 
     class LeaderboardScene extends Phaser.Scene {
       constructor() { super("LeaderboardScene"); }
+      init(data) {
+        this._openDiff = resolveDiffKey(
+          (data && data.difficulty) || registry.difficulty || "standard"
+        );
+      }
       create() {
         var self = this;
         this.cameras.main.setBackgroundColor("#060a14");
-        this.add.text(W / 2, 70, "排行榜", {
-          fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif", fontSize: "30px", fontStyle: "bold", color: "#67e8f9"
+        this.cameras.main.fadeIn(180, 4, 6, 12);
+        this.add.text(W / 2, 48, "本遊戲排行榜", {
+          fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif", fontSize: "28px", fontStyle: "bold", color: "#67e8f9"
         }).setOrigin(0.5);
-        var list = this.add.text(W / 2, H / 2, "載入中…", {
-          fontFamily: "Segoe UI, sans-serif", fontSize: "16px", color: "#94a3b8", align: "center"
+        this.add.text(W / 2, 82, "依難度獨立計分 · 與其他作品互不影響", {
+          fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif", fontSize: "13px", color: "#64748b"
         }).setOrigin(0.5);
-        makeMenuButton(this, W / 2, 480, "返回", 0x64748b, function () {
+
+        this._diffLabel = this.add.text(W / 2, 112, "", {
+          fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif", fontSize: "14px", fontStyle: "bold", color: "#c4b5fd"
+        }).setOrigin(0.5);
+
+        this._list = this.add.text(W / 2, H / 2 + 24, "載入中…", {
+          fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif", fontSize: "15px", color: "#94a3b8", align: "center", lineSpacing: 8
+        }).setOrigin(0.5);
+
+        this._diffBtns = {};
+        ["casual", "standard", "extreme"].forEach(function (key, i) {
+          var d = DIFF_PRESETS[key];
+          var color = Phaser.Display.Color.HexStringToColor(d.color).color;
+          var btn = makeMenuButton(
+            self,
+            W / 2 - 200 + i * 200,
+            155,
+            d.label,
+            key === self._openDiff ? color : 0x475569,
+            function () {
+              self._openDiff = key;
+              self.refreshDiffButtons();
+              self.reloadList();
+            },
+            170,
+            40
+          );
+          self._diffBtns[key] = { btn: btn, color: color };
+        });
+        this.refreshDiffButtons();
+
+        makeMenuButton(this, W / 2, H - 48, "返回", 0x64748b, function () {
           self.scene.start("MainMenuScene");
         }, 180);
 
         if (!window.PlatformBridge) {
-          list.setText("PlatformBridge 未就緒");
+          this._list.setText("PlatformBridge 未就緒");
           return;
         }
-        var legacy = DIFF_PRESETS[registry.difficulty].legacy;
-        this.add.text(W / 2, 108, "本遊戲獨立排行榜 · 與其他作品互不影響", {
-          fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif", fontSize: "13px", color: "#64748b"
-        }).setOrigin(0.5);
+        this.reloadList();
+      }
+
+      refreshDiffButtons() {
+        var self = this;
+        Object.keys(this._diffBtns || {}).forEach(function (key) {
+          var item = self._diffBtns[key];
+          var on = key === self._openDiff;
+          item.btn.bg.setFillStyle(on ? item.color : 0x475569, on ? 0.45 : 0.22);
+          item.btn.bg.setStrokeStyle(2, on ? item.color : 0x64748b, on ? 0.95 : 0.5);
+          item.btn.txt.setScale(on ? 1.04 : 1);
+        });
+      }
+
+      reloadList() {
+        var self = this;
+        var diffKey = resolveDiffKey(this._openDiff);
+        var preset = DIFF_PRESETS[diffKey] || DIFF_PRESETS.standard;
+        var legacy = preset.legacy;
+        this._diffLabel.setText("難度：" + preset.label);
+        this._list.setText("載入中…");
+        if (!window.PlatformBridge) {
+          this._list.setText("PlatformBridge 未就緒");
+          return;
+        }
         PlatformBridge.fetchLeaderboard(12, legacy).then(function (entries) {
-          if (!entries || !entries.length) {
-            list.setText("尚無紀錄，完成一局即可上榜");
+          if (!self.sys || !self.sys.isActive()) return;
+          var seen = {};
+          var unique = (entries || []).filter(function (e) {
+            var name = String(e.playerName || e.displayName || e.name || "");
+            try { name = name.normalize("NFKC"); } catch (_e) {}
+            var key =
+              name.replace(/[\u200B-\u200D\uFEFF]/g, "").replace(/\s+/g, " ").trim().toLowerCase() +
+              "#" +
+              String(Math.floor(Number(e.score) || 0));
+            if (!key || key.charAt(0) === "#" || seen[key]) return false;
+            seen[key] = true;
+            return true;
+          });
+          if (!unique.length) {
+            self._list.setText("此難度尚無紀錄，完成一局即可上榜");
             return;
           }
-          list.setText(entries.slice(0, 10).map(function (e, i) {
+          self._list.setText(unique.slice(0, 10).map(function (e, i) {
             var name = e.playerName || e.displayName || e.name || "Player";
-            var src = e.local || e.source === "local" ? " ·本機" : "";
-            return (i + 1) + ". " + name + "  —  " + (e.score || 0).toLocaleString() + "  [" + (e.grade || "—") + "]" + src;
+            return (i + 1) + ". " + name + "  —  " + (e.score || 0).toLocaleString() + "  [" + (e.grade || "—") + "]";
           }).join("\n"));
         }).catch(function () {
-          list.setText("排行榜載入失敗");
+          if (!self.sys || !self.sys.isActive()) return;
+          self._list.setText("排行榜載入失敗");
         });
       }
     }

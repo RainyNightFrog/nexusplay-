@@ -132,7 +132,8 @@
     "gameVolume": "ระดับเสียงเกม",
     "gameVolumeMute": "ปิดเสียง",
     "gameVolumeUnmute": "เปิดเสียง",
-    "gameVolumeClose": "ปิดระดับเสียง","copySubdomainUrl": "Copy URL"
+    "gameVolumeClose": "ปิดระดับเสียง",
+    "copySubdomainUrl": "Copy URL"
   },
   "home": {
     "statsPlaying": "กำลังเล่น",
@@ -2679,7 +2680,9 @@
     "resetHint": "Resets daily at 00:00 (UTC+8) / weekly on Monday",
     "dailyResetIn": "Daily reset in {time}",
     "weeklyResetIn": "Weekly reset in {time}",
-    "streakToday": "Today"
+    "streakToday": "Today",
+    "claiming": "Claiming…",
+    "loading": "Loading quests…"
   },
   "wishlist": {
     "add": "⭐ Add to Wishlist",
@@ -2722,7 +2725,12 @@
     "rarityRare": "Rare",
     "rarityEpic": "Epic",
     "rarityLegendary": "Legendary",
-    "rarityMythic": "Mythic"
+    "rarityMythic": "Mythic",
+    "loading": "Loading store…",
+    "buying": "Buying…",
+    "working": "Working…",
+    "soldOut": "Sold out",
+    "insufficientAp": "Not enough AP"
   },
   "pwa": {
     "install_title": "ติดตั้ง RainyNightFrog App",
