@@ -465,7 +465,7 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
     const bust =
       /\/games\/[^/?#]+\/index\.html/i.test(trustedEmbedUrl) ||
       /\/demos\/[^/?#]+\.html/i.test(trustedEmbedUrl)
-        ? "&v=20260731art6"
+        ? "&v=20260731invaderWar13"
         : "";
     return `${trustedEmbedUrl}${sep}gid=${game.id}&locale=${encodeURIComponent(locale)}${bust}`;
   }, [trustedEmbedUrl, game, locale]);

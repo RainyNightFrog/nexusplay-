@@ -25,10 +25,10 @@
   <div id="game-host"></div>
 <script>
 /**
- * Rainy Frog Dash — Phaser 3 商業級電競重構
- * Boot → MainMenu → Difficulty → Game → GameOverModal (+ Settings)
- * Juice：擠壓拉伸／雨絲／護盾·火箭·金雨滴
- * Casual 寬隙二段跳 · Standard · Extreme 窄隙移動管＋暴風
+ * Rainy Frog Dash — Phaser 3 電競街機
+ * Boot → MainMenu → Difficulty → Game → GameOverModal
+ * 平衡：寬隙連跳／正確 hitbox（外觀與判定分離）
+ * 內容：金雨滴路徑 · 護盾／火箭／慢動作／磁吸 · 近距刮擦 · 里程碑 · 天氣階段
  */
 (function () {
   "use strict";
@@ -43,47 +43,56 @@
     casual: {
       id: "casual",
       label: "Casual 輕鬆",
-      desc: "管道間隙寬 · 重力平緩 · 二段跳躍",
+      desc: "寬管道 · 連跳飛躍 · 開局護盾 · 手感寬鬆",
       color: "#67e8f9",
       scoreMult: 1.0,
-      gravity: 980,
-      jump: -380,
-      jump2: -320,
-      maxJumps: 2,
-      gap: 190,
-      scroll: 160,
-      spawnEvery: 2.0,
-      movingPipes: false
+      gravity: 720,
+      jump: -390,
+      jumpCooldown: 0.02,
+      gap: 250,
+      scroll: 115,
+      spawnEvery: 2.6,
+      movingPipes: false,
+      startShield: 1,
+      gapFloor: 0.82,
+      pickupRate: 0.85,
+      powerRate: 0.22
     },
     standard: {
       id: "standard",
       label: "Standard 電競",
-      desc: "標準間隙 · 標準重力 · 一次二段跳",
+      desc: "標準間隙 · 連跳飛躍 · 道具豐富",
       color: "#a78bfa",
       scoreMult: 1.35,
-      gravity: 1200,
-      jump: -420,
-      jump2: -340,
-      maxJumps: 2,
-      gap: 150,
-      scroll: 200,
-      spawnEvery: 1.55,
-      movingPipes: false
+      gravity: 820,
+      jump: -410,
+      jumpCooldown: 0.02,
+      gap: 210,
+      scroll: 140,
+      spawnEvery: 2.2,
+      movingPipes: false,
+      startShield: 1,
+      gapFloor: 0.78,
+      pickupRate: 0.78,
+      powerRate: 0.18
     },
     extreme: {
       id: "extreme",
       label: "Extreme 狂暴",
-      desc: "窄間隙 · 管道動態移動 · 雨夜暴風",
+      desc: "較窄間隙 · 移動管 · 暴風階段 · 高分倍率",
       color: "#f472b6",
-      scoreMult: 2.5,
-      gravity: 1450,
-      jump: -450,
-      jump2: -300,
-      maxJumps: 2,
-      gap: 118,
-      scroll: 250,
-      spawnEvery: 1.2,
-      movingPipes: true
+      scoreMult: 2.2,
+      gravity: 960,
+      jump: -430,
+      jumpCooldown: 0.03,
+      gap: 175,
+      scroll: 170,
+      spawnEvery: 1.85,
+      movingPipes: true,
+      startShield: 0,
+      gapFloor: 0.74,
+      pickupRate: 0.72,
+      powerRate: 0.2
     }
   };
 
@@ -126,7 +135,7 @@
     if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
     return audioCtx;
   }
-    function rnfGameVolMul() {
+  function rnfGameVolMul() {
     try {
       if (typeof RNF !== "undefined" && RNF.getGameVolume) return RNF.getGameVolume();
       if (typeof window !== "undefined" && typeof window.__RNF_GAME_VOLUME__ === "number") return window.__RNF_GAME_VOLUME__;
@@ -153,13 +162,39 @@
     confirm: function () { tone(660, 0.07, "square", 0.09); tone(990, 0.08, "triangle", 0.07); },
     jump: function () { tone(320, 0.08, "sawtooth", 0.09, 560); },
     drop: function (n) {
-      var f = 600 + Math.min(n || 0, 12) * 45;
-      tone(f, 0.06, "square", 0.1);
-      tone(f * 1.4, 0.08, "triangle", 0.07);
+      var f = 620 + Math.min(n || 0, 12) * 50;
+      tone(f, 0.05, "square", 0.11);
+      tone(f * 1.5, 0.07, "triangle", 0.08);
+      tone(f * 2.1, 0.05, "sine", 0.05);
     },
-    shield: function () { tone(480, 0.1, "sine", 0.1); tone(720, 0.12, "triangle", 0.08); },
-    shieldBreak: function () { tone(200, 0.15, "sawtooth", 0.12, 80); },
-    rocket: function () { tone(140, 0.2, "sawtooth", 0.12, 400); tone(90, 0.25, "triangle", 0.08); },
+    shield: function () {
+      tone(220, 0.08, "sawtooth", 0.1); tone(440, 0.1, "square", 0.12);
+      tone(880, 0.14, "sine", 0.1); tone(1320, 0.1, "triangle", 0.07);
+    },
+    shieldBreak: function () {
+      tone(180, 0.12, "sawtooth", 0.14, 60); tone(90, 0.2, "triangle", 0.1, 40); tone(320, 0.08, "square", 0.08);
+    },
+    rocket: function () {
+      tone(90, 0.18, "sawtooth", 0.15, 520); tone(160, 0.22, "square", 0.12, 700);
+      tone(60, 0.3, "triangle", 0.1); tone(1100, 0.06, "sine", 0.06);
+    },
+    slow: function () {
+      tone(420, 0.1, "sine", 0.1, 180); tone(280, 0.16, "triangle", 0.1, 120); tone(160, 0.22, "sine", 0.08, 90);
+    },
+    magnet: function () {
+      tone(360, 0.06, "square", 0.1); tone(540, 0.08, "square", 0.1);
+      tone(720, 0.1, "sine", 0.09); tone(980, 0.08, "triangle", 0.07);
+    },
+    gem: function () {
+      tone(740, 0.05, "square", 0.1); tone(990, 0.07, "triangle", 0.11);
+      tone(1480, 0.1, "sine", 0.09); tone(1980, 0.08, "sine", 0.05);
+    },
+    power: function () {
+      tone(180, 0.06, "sawtooth", 0.1); tone(360, 0.08, "square", 0.12);
+      tone(720, 0.12, "triangle", 0.1); tone(1440, 0.1, "sine", 0.08);
+    },
+    near: function () { tone(760, 0.05, "square", 0.08); tone(980, 0.06, "triangle", 0.06); },
+    mile: function () { tone(440, 0.08, "square", 0.1); tone(660, 0.1, "triangle", 0.09); tone(880, 0.12, "sine", 0.08); },
     die: function () { tone(160, 0.22, "sawtooth", 0.14, 45); tone(70, 0.35, "triangle", 0.1); },
     toggle: function () { tone(440, 0.05, "triangle", 0.07); }
   };
@@ -172,24 +207,96 @@
   function neonBurst(scene, x, y, tint, count) {
     var n = Phaser.Math.Clamp(count || 20, 15, 40);
     var emitter = scene.add.particles(x, y, "spark", {
-      speed: { min: 60, max: 320 },
+      speed: { min: 90, max: 440 },
       angle: { min: 0, max: 360 },
-      lifespan: { min: 260, max: 700 },
-      scale: { start: 1.15, end: 0 },
+      lifespan: { min: 280, max: 780 },
+      scale: { start: 1.45, end: 0 },
       alpha: { start: 1, end: 0 },
-      gravityY: 80,
+      gravityY: 50,
       blendMode: "ADD",
       tint: tint,
       emitting: false
     });
     emitter.explode(n);
-    scene.time.delayedCall(850, function () { if (emitter.destroy) emitter.destroy(); });
+    scene.time.delayedCall(900, function () { if (emitter.destroy) emitter.destroy(); });
+  }
+
+  function dualBurst(scene, x, y, c1, c2, n) {
+    neonBurst(scene, x, y, c1, n || 24);
+    neonBurst(scene, x, y, c2, Math.floor((n || 24) * 0.75));
+  }
+
+  function shockwave(scene, x, y, color, maxR) {
+    var ring = scene.add.circle(x, y, 10, color, 0)
+      .setStrokeStyle(5, color, 1).setDepth(44).setBlendMode(Phaser.BlendModes.ADD);
+    scene.tweens.add({
+      targets: ring,
+      scale: (maxR || 100) / 10,
+      alpha: 0,
+      duration: 400,
+      ease: "Cubic.easeOut",
+      onComplete: function () { ring.destroy(); }
+    });
+  }
+
+  function screenPunch(scene, color, alpha, shakeDur, shakeInt) {
+    var flash = scene.add.rectangle(W / 2, H / 2, W, H, color, alpha || 0.38).setDepth(58);
+    scene.tweens.add({
+      targets: flash, alpha: 0, duration: 300, ease: "Cubic.easeOut",
+      onComplete: function () { flash.destroy(); }
+    });
+    doShake(scene.cameras.main, shakeDur || 130, shakeInt || 0.016);
+    try {
+      scene.cameras.main.zoomTo(1.07, 70, "Cubic.easeOut", true, function (_c, done) {
+        if (done) scene.cameras.main.zoomTo(1, 150, "Back.easeOut");
+      });
+    } catch (_e) {}
+  }
+
+  function powerBanner(scene, title, sub, colorHex) {
+    var wrap = scene.add.container(W / 2, H * 0.27).setDepth(55).setAlpha(0).setScale(0.35);
+    var col = Phaser.Display.Color.HexStringToColor(colorHex).color;
+    var glow = scene.add.rectangle(0, 0, 460, 76, col, 0.18);
+    var bar = scene.add.rectangle(0, 0, 440, 68, 0x020617, 0.88).setStrokeStyle(3, col, 1);
+    var t1 = scene.add.text(0, -10, title, {
+      fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif",
+      fontSize: "28px", fontStyle: "bold", color: "#ffffff",
+      stroke: "#020617", strokeThickness: 4
+    }).setOrigin(0.5);
+    var t2 = scene.add.text(0, 18, sub, {
+      fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif",
+      fontSize: "14px", fontStyle: "bold", color: colorHex,
+      stroke: "#020617", strokeThickness: 2
+    }).setOrigin(0.5);
+    wrap.add([glow, bar, t1, t2]);
+    scene.tweens.add({ targets: wrap, alpha: 1, scale: 1, duration: 300, ease: "Back.easeOut" });
+    scene.tweens.add({
+      targets: wrap, alpha: 0, y: H * 0.2, scale: 1.1, duration: 450, delay: 750, ease: "Cubic.easeIn",
+      onComplete: function () { wrap.destroy(); }
+    });
+  }
+
+  function floatText(scene, x, y, msg, color, size) {
+    var floater = scene.add.text(x, y, msg, {
+      fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif",
+      fontSize: (size || 16) + "px",
+      fontStyle: "bold",
+      color: color || "#fbbf24",
+      stroke: "#020617",
+      strokeThickness: 3
+    }).setOrigin(0.5).setDepth(45).setScale(0.55).setAlpha(0);
+    scene.tweens.add({
+      targets: floater, y: y - 54, alpha: 1, scale: 1.2, duration: 240, ease: "Back.easeOut"
+    });
+    scene.tweens.add({
+      targets: floater, y: y - 96, alpha: 0, scale: 0.85, duration: 420, delay: 240, ease: "Cubic.easeOut",
+      onComplete: function () { floater.destroy(); }
+    });
   }
 
   function makeTextures(scene) {
     var g = scene.make.graphics({ x: 0, y: 0, add: false });
 
-    // frog body
     g.clear();
     g.fillStyle(0x34d399, 1);
     g.fillEllipse(20, 18, 36, 28);
@@ -203,7 +310,6 @@
     g.fillTriangle(36, 16, 48, 12, 48, 22);
     g.generateTexture("frog", 52, 36);
 
-    // pipe
     g.clear();
     g.fillStyle(0xa78bfa, 1);
     g.fillRect(0, 0, 64, 200);
@@ -225,29 +331,108 @@
 
     g.clear();
     g.fillStyle(0xfbbf24, 1);
-    g.fillCircle(5, 5, 5);
-    g.fillStyle(0xffffff, 0.5);
-    g.fillCircle(3, 3, 2);
-    g.generateTexture("raindrop", 10, 10);
+    g.fillCircle(8, 8, 7);
+    g.fillStyle(0xfef08a, 1);
+    g.fillCircle(6, 5, 3);
+    g.fillStyle(0xffffff, 0.7);
+    g.fillCircle(5, 4, 1.5);
+    g.lineStyle(2, 0xf59e0b, 0.9);
+    g.strokeCircle(8, 8, 7.5);
+    g.generateTexture("raindrop", 16, 16);
 
     g.clear();
-    g.fillStyle(0xa78bfa, 1);
-    g.fillCircle(12, 12, 11);
-    g.lineStyle(2, 0xe9d5ff, 1);
-    g.strokeCircle(12, 12, 11);
-    g.generateTexture("shield-icon", 24, 24);
+    g.fillStyle(0xf0abfc, 1);
+    g.fillTriangle(16, 2, 28, 16, 16, 30);
+    g.fillTriangle(16, 2, 4, 16, 16, 30);
+    g.fillStyle(0xe879f9, 1);
+    g.fillTriangle(16, 8, 22, 16, 16, 24);
+    g.fillTriangle(16, 8, 10, 16, 16, 24);
+    g.fillStyle(0xffffff, 0.85);
+    g.fillCircle(13, 12, 2.5);
+    g.generateTexture("gem", 32, 32);
 
+    // 護盾：六角能量盾
+    g.clear();
+    g.lineStyle(3, 0xc4b5fd, 1);
+    g.strokeCircle(24, 24, 18);
+    g.lineStyle(2, 0x22d3ee, 0.9);
+    g.strokeCircle(24, 24, 12);
+    g.fillStyle(0xa78bfa, 0.55);
+    g.fillTriangle(24, 8, 36, 18, 36, 30);
+    g.fillTriangle(24, 8, 12, 18, 12, 30);
+    g.fillTriangle(12, 30, 24, 40, 36, 30);
+    g.fillStyle(0xe9d5ff, 0.95);
+    g.fillCircle(24, 22, 5);
+    g.fillStyle(0xffffff, 0.8);
+    g.fillCircle(22, 20, 2);
+    g.generateTexture("shield-icon", 48, 48);
+
+    // 火箭：推進噴焰
     g.clear();
     g.fillStyle(0xf97316, 1);
-    g.fillTriangle(4, 20, 20, 12, 4, 4);
+    g.fillTriangle(8, 40, 24, 6, 40, 40);
     g.fillStyle(0xfbbf24, 1);
-    g.fillTriangle(8, 16, 18, 12, 8, 8);
-    g.generateTexture("rocket-icon", 24, 24);
+    g.fillTriangle(14, 36, 24, 14, 34, 36);
+    g.fillStyle(0xffffff, 1);
+    g.fillTriangle(18, 34, 24, 20, 30, 34);
+    g.fillStyle(0xef4444, 1);
+    g.fillTriangle(16, 40, 24, 48, 32, 40);
+    g.fillStyle(0xfde68a, 1);
+    g.fillTriangle(20, 40, 24, 46, 28, 40);
+    g.generateTexture("rocket-icon", 48, 48);
+
+    // 慢動作：時鐘＋凍結裂紋
+    g.clear();
+    g.fillStyle(0x0ea5e9, 0.35);
+    g.fillCircle(24, 24, 20);
+    g.lineStyle(3, 0x38bdf8, 1);
+    g.strokeCircle(24, 24, 18);
+    g.lineStyle(2, 0xe0f2fe, 1);
+    g.lineBetween(24, 24, 24, 10);
+    g.lineBetween(24, 24, 34, 28);
+    g.fillStyle(0x7dd3fc, 1);
+    g.fillCircle(24, 24, 3);
+    g.fillStyle(0xffffff, 0.5);
+    g.fillRect(6, 22, 8, 3);
+    g.fillRect(34, 22, 8, 3);
+    g.generateTexture("slow-icon", 48, 48);
+
+    // 磁吸：電磁環
+    g.clear();
+    g.fillStyle(0x34d399, 0.25);
+    g.fillCircle(24, 24, 20);
+    g.lineStyle(4, 0x34d399, 1);
+    g.strokeCircle(24, 24, 17);
+    g.lineStyle(3, 0x6ee7b7, 1);
+    g.strokeCircle(24, 24, 11);
+    g.fillStyle(0xa7f3d0, 1);
+    g.fillCircle(24, 24, 5);
+    g.fillStyle(0xffffff, 0.95);
+    g.fillCircle(24, 24, 2.2);
+    g.fillStyle(0x34d399, 1);
+    g.fillTriangle(38, 8, 46, 14, 40, 20);
+    g.fillTriangle(10, 8, 2, 14, 8, 20);
+    g.fillStyle(0x6ee7b7, 1);
+    g.fillRect(20, 2, 8, 4);
+    g.fillRect(20, 42, 8, 4);
+    g.generateTexture("magnet-icon", 48, 48);
 
     g.clear();
     g.fillStyle(0xf97316, 1);
-    g.fillCircle(4, 4, 4);
-    g.generateTexture("flame", 8, 8);
+    g.fillCircle(5, 5, 5);
+    g.fillStyle(0xfde68a, 1);
+    g.fillCircle(4, 3, 2);
+    g.generateTexture("flame", 10, 10);
+
+    g.clear();
+    g.fillStyle(0xfbbf24, 1);
+    g.fillCircle(3, 3, 3);
+    g.generateTexture("spark-gold", 6, 6);
+
+    g.clear();
+    g.fillStyle(0xf472b6, 1);
+    g.fillCircle(3, 3, 3);
+    g.generateTexture("spark-pink", 6, 6);
 
     g.destroy();
   }
@@ -291,8 +476,8 @@
       var t = this.add.text(W / 2, H / 2 - 8, "RAINY FROG DASH", {
         fontFamily: "Segoe UI, sans-serif", fontSize: "28px", fontStyle: "bold", color: "#22d3ee"
       }).setOrigin(0.5).setAlpha(0);
-      this.add.text(W / 2, H / 2 + 28, "Phaser 3 · RainyNightFrog", {
-        fontFamily: "Segoe UI, sans-serif", fontSize: "13px", color: "#64748b"
+      this.add.text(W / 2, H / 2 + 28, "技能特效強化 · build frogJuice10", {
+        fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif", fontSize: "13px", color: "#fbbf24"
       }).setOrigin(0.5);
       this.tweens.add({ targets: t, alpha: 1, scale: 1.04, duration: 400, ease: "Back.easeOut" });
       this.time.delayedCall(520, function () { this.scene.start("MainMenuScene"); }, [], this);
@@ -328,9 +513,9 @@
         fontSize: "38px", fontStyle: "bold", color: "#ffffff"
       }).setOrigin(0.5).setScale(0.65).setAlpha(0);
 
-      var sub = this.add.text(W / 2, 195, "雨夜飛天蛙 · 護盾／火箭 · 金雨滴 Combo · 暴風危險曲線", {
+      var sub = this.add.text(W / 2, 195, "雨夜飛天蛙 · 連跳飛躍 · 護盾／火箭／慢動作／磁吸 · 里程碑", {
         fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
-        fontSize: "15px", color: "#94a3b8"
+        fontSize: "14px", color: "#94a3b8"
       }).setOrigin(0.5).setAlpha(0);
 
       this.tweens.add({ targets: badge, alpha: 1, y: 88, duration: 400, ease: "Cubic.easeOut" });
@@ -351,7 +536,10 @@
       });
       makeButton(this, W / 2, 504, "操作說明", 0x64748b, function () {
         if (window.RNFPhaserHelp && RNFPhaserHelp.showHelpOverlay) {
-          RNFPhaserHelp.showHelpOverlay(self, "空白／↑／點擊跳躍 · 二段跳 · 收集金雨滴 · 護盾擋一次 · 火箭無敵衝刺", { W: W, H: H });
+          RNFPhaserHelp.showHelpOverlay(self,
+            "空白／↑／點擊可持續跳躍 · 金雨滴 Combo · 紫寶石大分 · 護盾擋一次 · 火箭衝刺 · 慢動作 · 磁吸 · 近距刮擦加分 · 里程碑獎勵",
+            { W: W, H: H }
+          );
         }
       }, 240);
     }
@@ -370,7 +558,7 @@
       }).setOrigin(0.5).setScale(0.7).setAlpha(0);
       this.tweens.add({ targets: head, alpha: 1, scale: 1, duration: 360, ease: "Back.easeOut" });
 
-      this.add.text(W / 2, 118, "飛越越遠 → 滾動越快 · 管道越密 · DANGER 越高", {
+      this.add.text(W / 2, 118, "前幾管較寬 · 危險緩慢上升 · 道具越多飛越遠", {
         fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
         fontSize: "14px", color: "#64748b"
       }).setOrigin(0.5);
@@ -454,59 +642,93 @@
 
       this.score = 0;
       this.combo = 0;
+      this.bestCombo = 0;
       this.comboTimer = 0;
       this.distance = 0;
+      this.elapsedTime = 0;
       this.dangerMultiplier = 1;
       this.alive = true;
       this.started = false;
-      this.jumpsUsed = 0;
-      this.shield = 0;
+      this.shield = this.diff.startShield || 0;
       this.rocketTimer = 0;
+      this.slowTimer = 0;
+      this.magnetTimer = 0;
       this.invuln = 0;
       this.spawnAcc = 0;
+      this.pipesCleared = 0;
+      this.pipeStreak = 0;
+      this.nearMisses = 0;
       this.scrollSpeed = this.diff.scroll;
       this.pipePairs = [];
+      this.milestonesHit = {};
+      this.weather = "calm";
+      this.timeScale = 1;
 
       this.drawSkyline();
       this.createRain();
 
       this.physics.world.gravity.y = this.diff.gravity;
 
-      this.frog = this.physics.add.sprite(220, H / 2, "frog");
+      // 青蛙：固定小判定，絕不因 scale 變形（擠壓只做在外觀容器）
+      this.frog = this.physics.add.image(220, H / 2, "frog");
       this.frog.setCollideWorldBounds(false);
       this.frog.setDepth(20);
-      this.frog.body.setSize(36, 28);
-      this.frog.body.setOffset(6, 4);
       this.frog.body.setAllowGravity(false);
-      this.frog.setBounce(0);
+      this.frog.body.setBounce(0, 0);
+      this.frog.body.setSize(20, 16);
+      this.frog.body.setOffset(16, 10);
+      this.frog.body.allowRotation = false;
 
-      this.pipes = this.physics.add.group();
+      this.pipeHits = this.physics.add.group();
       this.pickups = this.physics.add.group();
 
-      this.physics.add.overlap(this.frog, this.pipes, this.onHitPipe, null, this);
+      this.physics.add.overlap(this.frog, this.pipeHits, this.onHitPipe, null, this);
       this.physics.add.overlap(this.frog, this.pickups, this.onPickup, null, this);
 
-      this.shieldRing = this.add.circle(this.frog.x, this.frog.y, 28, 0xa78bfa, 0.2)
-        .setStrokeStyle(2, 0xc4b5fd, 0.9).setDepth(19).setVisible(false);
+      this.shieldRing = this.add.circle(this.frog.x, this.frog.y, 30, 0xa78bfa, 0.12)
+        .setStrokeStyle(3, 0xc4b5fd, 1).setDepth(19).setVisible(this.shield > 0)
+        .setBlendMode(Phaser.BlendModes.ADD);
+      this.shieldRing2 = this.add.circle(this.frog.x, this.frog.y, 40, 0x22d3ee, 0)
+        .setStrokeStyle(2, 0x67e8f9, 0.85).setDepth(18).setVisible(this.shield > 0)
+        .setBlendMode(Phaser.BlendModes.ADD);
 
       this.rocketTrail = this.add.particles(0, 0, "flame", {
-        speed: { min: 40, max: 140 },
-        angle: { min: 150, max: 210 },
-        lifespan: { min: 200, max: 450 },
-        scale: { start: 1.4, end: 0 },
-        alpha: { start: 0.9, end: 0 },
+        speed: { min: 80, max: 260 },
+        angle: { min: 140, max: 220 },
+        lifespan: { min: 180, max: 420 },
+        scale: { start: 2.2, end: 0 },
+        alpha: { start: 1, end: 0 },
         blendMode: "ADD",
-        frequency: 18,
+        frequency: 10,
+        quantity: 2,
         follow: this.frog,
-        followOffset: { x: -18, y: 0 },
+        followOffset: { x: -22, y: 0 },
+        emitting: false
+      }).setDepth(18);
+      this.rocketSparks = this.add.particles(0, 0, "spark-gold", {
+        speed: { min: 60, max: 220 },
+        angle: { min: 150, max: 210 },
+        lifespan: { min: 200, max: 500 },
+        scale: { start: 1.2, end: 0 },
+        alpha: { start: 0.95, end: 0 },
+        blendMode: "ADD",
+        frequency: 14,
+        follow: this.frog,
+        followOffset: { x: -16, y: 0 },
         emitting: false
       }).setDepth(18);
 
+      this.magnetAura = this.add.circle(this.frog.x, this.frog.y, 48, 0x34d399, 0)
+        .setStrokeStyle(2, 0x6ee7b7, 0.7).setDepth(17).setVisible(false)
+        .setBlendMode(Phaser.BlendModes.ADD);
+      this.slowVignette = this.add.rectangle(W / 2, H / 2, W, H, 0x0284c7, 0).setDepth(6);
+
       this.flash = this.add.rectangle(W / 2, H / 2, W, H, 0xff2244, 0).setDepth(60);
+      this.weatherTint = this.add.rectangle(W / 2, H / 2, W, H, 0x1e3a8a, 0).setDepth(4);
       this.createHud();
       this.bindInput();
 
-      this.hudHint = this.add.text(W / 2, H / 2 + 60, "點擊／空白 開始飛躍", {
+      this.hudHint = this.add.text(W / 2, H / 2 + 60, "點擊／空白 開始 · 可持續連跳飛躍", {
         fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
         fontSize: "16px", color: "#94a3b8"
       }).setOrigin(0.5).setDepth(40);
@@ -516,12 +738,9 @@
       var g = this.add.graphics().setDepth(0);
       g.fillStyle(0x050814, 1);
       g.fillRect(0, 0, W, H);
-      // city silhouettes (static parallax feel via scroll offset later)
       this.cityGfx = this.add.graphics().setDepth(1);
       this.cityOffset = 0;
       this.redrawCity(0);
-
-      // ground line
       this.add.rectangle(W / 2, H - 8, W, 16, 0x0ea5e9, 0.25).setDepth(5);
       this.add.rectangle(W / 2, 8, W, 16, 0xa78bfa, 0.15).setDepth(5);
     }
@@ -536,7 +755,7 @@
         g.fillStyle(0x22d3ee, 0.06);
         g.fillRect(x, H - 24 - h, 50, h);
         g.fillStyle(0xfbbf24, 0.15);
-        if ((i + off) % 3 < 1) g.fillRect(x + 10, H - 24 - h + 20, 6, 8);
+        if ((i + Math.floor(off)) % 3 < 1) g.fillRect(x + 10, H - 24 - h + 20, 6, 8);
       }
     }
 
@@ -544,23 +763,41 @@
       this.rain = this.add.particles(0, 0, "spark-cyan", {
         x: { min: 0, max: W + 100 },
         y: { min: -40, max: 0 },
-        speedY: { min: 280, max: 520 },
-        speedX: { min: -80, max: -40 },
+        speedY: { min: 220, max: 420 },
+        speedX: { min: -70, max: -30 },
         scale: { start: 0.35, end: 0.1 },
-        alpha: { start: 0.35, end: 0 },
+        alpha: { start: 0.28, end: 0 },
         lifespan: 1400,
-        quantity: 2,
-        frequency: 16,
+        quantity: 1,
+        frequency: 28,
         blendMode: "ADD"
       }).setDepth(3);
-      // slanted look via angle on particle texture is limited; offset velocity gives slant
+    }
+
+    setWeather(mode) {
+      if (this.weather === mode) return;
+      this.weather = mode;
+      if (mode === "calm") {
+        this.rain.frequency = 28;
+        this.rain.quantity = 1;
+        this.tweens.add({ targets: this.weatherTint, alpha: 0, duration: 500, ease: "Cubic.easeOut" });
+      } else if (mode === "rain") {
+        this.rain.frequency = 16;
+        this.rain.quantity = 2;
+        this.tweens.add({ targets: this.weatherTint, alpha: 0.08, duration: 500, ease: "Cubic.easeOut" });
+      } else {
+        this.rain.frequency = 10;
+        this.rain.quantity = 3;
+        this.tweens.add({ targets: this.weatherTint, alpha: 0.16, duration: 500, ease: "Cubic.easeOut" });
+        floatText(this, W / 2, 90, "暴風來襲！", "#f472b6", 20);
+      }
     }
 
     createHud() {
       this.hudScore = this.add.text(14, 10, "SCORE 0", {
         fontFamily: "Segoe UI, sans-serif", fontSize: "16px", fontStyle: "bold", color: "#67e8f9"
       }).setDepth(40);
-      this.hudDanger = this.add.text(14, 32, "DANGER: x1.00", {
+      this.hudDanger = this.add.text(14, 32, "DANGER x1.00", {
         fontFamily: "Segoe UI, sans-serif", fontSize: "14px", fontStyle: "bold", color: "#f472b6"
       }).setDepth(40);
       this.hudDist = this.add.text(W / 2, 10, "0m", {
@@ -575,15 +812,24 @@
       this.hudPower = this.add.text(W - 14, 32, "", {
         fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif", fontSize: "12px", color: "#94a3b8"
       }).setOrigin(1, 0).setDepth(40);
+      this.hudStreak = this.add.text(14, 54, "STREAK 0", {
+        fontFamily: "Segoe UI, sans-serif", fontSize: "12px", color: "#a78bfa"
+      }).setDepth(40);
     }
 
     bindInput() {
       var self = this;
-      var jump = function () { self.tryJump(); };
-      this.input.keyboard.on("keydown-SPACE", jump);
-      this.input.keyboard.on("keydown-UP", jump);
-      this.input.keyboard.on("keydown-W", jump);
-      this.input.on("pointerdown", jump);
+      this.keySpace = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+      this.keyUp = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP);
+      this.keyW = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W);
+      try {
+        this.input.keyboard.addCapture([
+          Phaser.Input.Keyboard.KeyCodes.SPACE,
+          Phaser.Input.Keyboard.KeyCodes.UP,
+          Phaser.Input.Keyboard.KeyCodes.W
+        ]);
+      } catch (_e) {}
+      this.input.on("pointerdown", function () { self.tryJump(); });
     }
 
     tryJump() {
@@ -594,130 +840,256 @@
         this.started = true;
         this.frog.body.setAllowGravity(true);
         this.hudHint.setVisible(false);
-        this.spawnPipePair();
+        this.invuln = Math.max(this.invuln, 2.0);
+        this.spawnAcc = -0.6;
+        floatText(this, this.frog.x, this.frog.y - 36, "起飛！", "#67e8f9", 18);
       }
 
-      if (this.jumpsUsed >= this.diff.maxJumps) return;
-
-      var isSecond = this.jumpsUsed >= 1;
-      var vy = isSecond ? this.diff.jump2 : this.diff.jump;
+      // 無次數、無冷卻——每次輸入都立即給向上速度
+      var vy = this.diff.jump;
+      if (this.slowTimer > 0) vy *= 0.92;
       this.frog.setVelocityY(vy);
-      this.jumpsUsed++;
-
-      // Squash & Stretch + tilt
-      this.tweens.killTweensOf(this.frog);
-      this.frog.setScale(1.25, 0.7);
-      this.frog.setAngle(-18);
-      this.tweens.add({
-        targets: this.frog,
-        scaleX: 1,
-        scaleY: 1,
-        duration: 160,
-        ease: "Back.easeOut"
-      });
-
-      neonBurst(this, this.frog.x, this.frog.y + 16, 0x22d3ee, 15);
+      this.frog.setAngle(-22);
+      neonBurst(this, this.frog.x, this.frog.y + 14, 0x22d3ee, 15);
       SFX.jump();
-      doShake(this.cameras.main, 50, 0.005);
+      doShake(this.cameras.main, 35, 0.0035);
+    }
 
-      // rocket "dash" feel on jump while rocket active — extra micro shake
-      if (this.rocketTimer > 0) {
-        doShake(this.cameras.main, 40, 0.006);
-      }
+    /** 前幾管較寬，之後才逐漸收緊 */
+    currentGap() {
+      var introBoost = this.pipesCleared < 4 ? 1.35 : (this.pipesCleared < 8 ? 1.15 : 1);
+      var shrink = Math.pow(Math.max(1, this.dangerMultiplier * 0.22 + 0.78), 0.3);
+      var gap = (this.diff.gap * introBoost) / shrink;
+      var floor = this.diff.gap * this.diff.gapFloor;
+      return Phaser.Math.Clamp(gap, floor, this.diff.gap + 50);
+    }
+
+    makePipeHit(x, y, w, h) {
+      var hit = this.add.rectangle(x, y, w, Math.max(8, h), 0xff0000, 0);
+      this.physics.add.existing(hit);
+      hit.body.setAllowGravity(false);
+      hit.body.setImmovable(true);
+      hit.body.moves = false;
+      hit.body.setSize(w, Math.max(8, h));
+      hit.setData("role", "pipe");
+      this.pipeHits.add(hit);
+      return hit;
+    }
+
+    syncPipePair(pair, x, gapY) {
+      var gap = pair.gap;
+      var topH = Math.max(8, gapY - gap / 2);
+      var botY = gapY + gap / 2;
+      var botH = Math.max(8, H - botY);
+      var w = pair.hitW;
+
+      pair.topVis.setPosition(x, topH / 2);
+      pair.topVis.setDisplaySize(64, Math.max(8, topH));
+      pair.botVis.setPosition(x, botY + botH / 2);
+      pair.botVis.setDisplaySize(64, Math.max(8, botH));
+
+      pair.topHit.setPosition(x, topH / 2);
+      pair.topHit.setSize(w, Math.max(8, topH));
+      pair.topHit.body.setSize(w, Math.max(8, topH));
+      pair.topHit.body.reset(x, topH / 2);
+
+      pair.botHit.setPosition(x, botY + botH / 2);
+      pair.botHit.setSize(w, Math.max(8, botH));
+      pair.botHit.body.setSize(w, Math.max(8, botH));
+      pair.botHit.body.reset(x, botY + botH / 2);
+
+      pair.baseGapYLive = gapY;
     }
 
     spawnPipePair() {
-      var gap = this.diff.gap / Math.sqrt(Math.max(1, this.dangerMultiplier * 0.55 + 0.45));
-      gap = Phaser.Math.Clamp(gap, 96, this.diff.gap + 10);
-      var margin = 70;
-      var gapY = Phaser.Math.Between(margin + gap / 2, H - margin - gap / 2);
+      var gap = this.currentGap();
+      var margin = 90;
+      var prevY = this.pipePairs.length
+        ? this.pipePairs[this.pipePairs.length - 1].baseGapY
+        : H / 2;
+      var maxShift = this.pipesCleared < 4 ? 55 : (this.pipesCleared < 8 ? 80 : 100);
+      var gapY = Phaser.Math.Clamp(
+        prevY + Phaser.Math.Between(-maxShift, maxShift),
+        margin + gap / 2,
+        H - margin - gap / 2
+      );
 
       var topH = gapY - gap / 2;
       var botY = gapY + gap / 2;
       var botH = H - botY;
+      var tintCycle = [0xa78bfa, 0x22d3ee, 0x34d399, 0xf472b6];
+      var tint = tintCycle[this.pipesCleared % tintCycle.length];
+      var x = W + 50;
+      var hitW = 40;
 
-      var top = this.pipes.create(W + 40, topH / 2, "pipe");
-      top.setDisplaySize(64, Math.max(40, topH));
-      top.body.setAllowGravity(false);
-      top.setImmovable(true);
-      top.body.setSize(56, Math.max(40, topH));
-      top.setFlipY(true);
-      top.setDepth(10);
-      top.setData("role", "pipe");
+      // 外觀與判定分離：拉伸圖片不會放大 hitbox
+      var topVis = this.add.image(x, topH / 2, "pipe")
+        .setDisplaySize(64, Math.max(8, topH)).setFlipY(true).setDepth(10).setTint(tint);
+      var botVis = this.add.image(x, botY + botH / 2, "pipe")
+        .setDisplaySize(64, Math.max(8, botH)).setDepth(10).setTint(tint);
 
-      var bot = this.pipes.create(W + 40, botY + botH / 2, "pipe");
-      bot.setDisplaySize(64, Math.max(40, botH));
-      bot.body.setAllowGravity(false);
-      bot.setImmovable(true);
-      bot.body.setSize(56, Math.max(40, botH));
-      bot.setDepth(10);
-      bot.setData("role", "pipe");
+      var topHit = this.makePipeHit(x, topH / 2, hitW, topH);
+      var botHit = this.makePipeHit(x, botY + botH / 2, hitW, botH);
 
+      var moveNow = this.diff.movingPipes && this.pipesCleared >= 5;
       var pair = {
-        top: top,
-        bot: bot,
+        topVis: topVis,
+        botVis: botVis,
+        topHit: topHit,
+        botHit: botHit,
         scored: false,
-        moving: this.diff.movingPipes,
+        moving: moveNow,
         phase: Math.random() * Math.PI * 2,
         baseGapY: gapY,
+        baseGapYLive: gapY,
         gap: gap,
-        amp: this.diff.movingPipes ? Phaser.Math.Between(18, 36) : 0
+        hitW: hitW,
+        x: x,
+        amp: moveNow ? Phaser.Math.Between(10, 18) : 0
       };
       this.pipePairs.push(pair);
+      this.spawnGapRewards(x, gapY, gap);
+    }
 
-      // pickups in gap
-      if (Math.random() < 0.7) {
-        this.spawnPickup(W + 40, gapY, "drop");
+    spawnGapRewards(x, gapY, gap) {
+      if (Math.random() < this.diff.pickupRate) {
+        var pattern = Math.random();
+        if (pattern < 0.45) {
+          this.spawnPickup(x, gapY, "drop");
+        } else if (pattern < 0.75) {
+          this.spawnPickup(x - 18, gapY - 22, "drop");
+          this.spawnPickup(x + 8, gapY, "drop");
+          this.spawnPickup(x - 18, gapY + 22, "drop");
+        } else {
+          this.spawnPickup(x, gapY - gap * 0.18, "drop");
+          this.spawnPickup(x + 22, gapY, "gem");
+          this.spawnPickup(x, gapY + gap * 0.18, "drop");
+        }
       }
-      if (Math.random() < 0.12) {
-        this.spawnPickup(W + 40, gapY + Phaser.Math.Between(-40, 40), Math.random() < 0.5 ? "shield" : "rocket");
+      if (Math.random() < this.diff.powerRate) {
+        var roll = Math.random();
+        var type = roll < 0.28 ? "shield" : (roll < 0.52 ? "rocket" : (roll < 0.76 ? "slow" : "magnet"));
+        this.spawnPickup(x + Phaser.Math.Between(-8, 28), gapY + Phaser.Math.Between(-28, 28), type);
       }
     }
 
     spawnPickup(x, y, type) {
-      var key = type === "drop" ? "raindrop" : (type === "shield" ? "shield-icon" : "rocket-icon");
-      var p = this.pickups.create(x, y, key);
+      var keyMap = {
+        drop: "raindrop",
+        gem: "gem",
+        shield: "shield-icon",
+        rocket: "rocket-icon",
+        slow: "slow-icon",
+        magnet: "magnet-icon"
+      };
+      var isPower = type === "shield" || type === "rocket" || type === "slow" || type === "magnet" || type === "gem";
+      var p = this.pickups.create(x, y, keyMap[type] || "raindrop");
       p.body.setAllowGravity(false);
       p.setDepth(12);
       p.setData("type", type);
-      p.setBlendMode(type === "drop" ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL);
+      p.setBlendMode(Phaser.BlendModes.ADD);
+      p.setScale(isPower ? 0.95 : 1.1);
+
+      var auraColor = {
+        shield: 0xa78bfa, rocket: 0xf97316, slow: 0x38bdf8, magnet: 0x34d399, gem: 0xe879f9, drop: 0xfbbf24
+      }[type] || 0xfbbf24;
+      var aura = this.add.circle(x, y, isPower ? 26 : 14, auraColor, 0.18)
+        .setStrokeStyle(2, auraColor, 0.85).setDepth(11).setBlendMode(Phaser.BlendModes.ADD);
+      p.setData("aura", aura);
+
       this.tweens.add({
-        targets: p, scale: 1.2, duration: 400, yoyo: true, repeat: -1, ease: "Sine.easeInOut"
+        targets: [p, aura],
+        scale: isPower ? 1.2 : 1.35,
+        duration: 380,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut"
       });
+      if (isPower) {
+        this.tweens.add({
+          targets: p, angle: 360, duration: 2200, repeat: -1, ease: "Linear"
+        });
+      }
+      this.tweens.add({
+        targets: [p, aura],
+        y: y - 10,
+        duration: 700,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut"
+      });
+    }
+
+    playPowerGet(type, x, y) {
+      var meta = {
+        shield: { title: "ENERGY SHIELD", sub: "護盾展開 · 擋下致命一擊", color: "#c4b5fd", tint: 0xa78bfa, tint2: 0x22d3ee },
+        rocket: { title: "ROCKET OVERDRIVE", sub: "火箭衝刺 · 無敵疾行", color: "#fb923c", tint: 0xf97316, tint2: 0xfbbf24 },
+        slow: { title: "TIME BREAK", sub: "時間裂縫 · 全域慢放", color: "#7dd3fc", tint: 0x38bdf8, tint2: 0xe0f2fe },
+        magnet: { title: "MAGNET STORM", sub: "電磁場 · 吸爆金雨滴", color: "#6ee7b7", tint: 0x34d399, tint2: 0xa7f3d0 },
+        gem: { title: "VOID GEM", sub: "紫晶爆擊 · 高分連擊", color: "#f0abfc", tint: 0xe879f9, tint2: 0xffffff }
+      }[type];
+      if (!meta) return;
+      SFX.power();
+      powerBanner(this, meta.title, meta.sub, meta.color);
+      screenPunch(this, meta.tint, 0.42, 150, 0.02);
+      shockwave(this, x, y, meta.tint, 120);
+      shockwave(this, x, y, meta.tint2, 70);
+      dualBurst(this, x, y, meta.tint, meta.tint2, 30);
     }
 
     onPickup(_frog, item) {
       if (!item.active || !this.alive) return;
       var type = item.getData("type");
       var x = item.x, y = item.y;
+      var aura = item.getData("aura");
+      if (aura && aura.destroy) aura.destroy();
       item.destroy();
 
       if (type === "drop") {
         this.combo++;
-        this.comboTimer = 3.5;
-        var pts = Math.floor(15 * (1 + this.combo * 0.25) * this.diff.scoreMult * this.dangerMultiplier);
+        this.bestCombo = Math.max(this.bestCombo, this.combo);
+        this.comboTimer = 4.2;
+        var pts = Math.floor(18 * (1 + this.combo * 0.22) * this.diff.scoreMult * (0.85 + this.dangerMultiplier * 0.15));
         this.score += pts;
         SFX.drop(this.combo);
-        neonBurst(this, x, y, 0xfbbf24, 16);
-        var floater = this.add.text(x, y, "+" + pts, {
-          fontFamily: "Segoe UI, sans-serif", fontSize: "16px", fontStyle: "bold", color: "#fbbf24"
-        }).setOrigin(0.5).setDepth(35);
-        this.tweens.add({
-          targets: floater, y: y - 40, alpha: 0, duration: 400, ease: "Cubic.easeOut",
-          onComplete: function () { floater.destroy(); }
-        });
+        dualBurst(this, x, y, 0xfbbf24, 0xfde68a, 18);
+        shockwave(this, x, y, 0xfbbf24, 40);
+        floatText(this, x, y, "+" + pts, "#fde68a", 16);
+      } else if (type === "gem") {
+        this.combo += 2;
+        this.bestCombo = Math.max(this.bestCombo, this.combo);
+        this.comboTimer = 4.5;
+        var gpts = Math.floor(70 * (1 + this.combo * 0.2) * this.diff.scoreMult * (0.85 + this.dangerMultiplier * 0.15));
+        this.score += gpts;
+        SFX.gem();
+        this.playPowerGet("gem", x, y);
+        floatText(this, x, y - 20, "+" + gpts + " GEM", "#f0abfc", 20);
       } else if (type === "shield") {
-        this.shield = 1;
+        this.shield = Math.min(2, this.shield + 1);
         this.shieldRing.setVisible(true);
+        this.shieldRing2.setVisible(true);
         SFX.shield();
-        neonBurst(this, x, y, 0xa78bfa, 18);
+        this.playPowerGet("shield", x, y);
+        floatText(this, x, y - 18, "護盾 x" + this.shield, "#e9d5ff", 18);
       } else if (type === "rocket") {
-        this.rocketTimer = 3;
-        this.invuln = Math.max(this.invuln, 3);
+        this.rocketTimer = 2.8;
+        this.invuln = Math.max(this.invuln, 2.8);
         this.rocketTrail.start();
+        this.rocketSparks.start();
         SFX.rocket();
-        doShake(this.cameras.main, 100, 0.01);
-        neonBurst(this, x, y, 0xf97316, 22);
+        this.playPowerGet("rocket", x, y);
+        floatText(this, x, y - 18, "OVERDRIVE!", "#fdba74", 18);
+      } else if (type === "slow") {
+        this.slowTimer = 3.5;
+        SFX.slow();
+        this.playPowerGet("slow", x, y);
+        floatText(this, x, y - 18, "時間裂縫", "#bae6fd", 18);
+      } else if (type === "magnet") {
+        this.magnetTimer = 4.5;
+        this.magnetAura.setVisible(true);
+        SFX.magnet();
+        this.playPowerGet("magnet", x, y);
+        floatText(this, x, y - 18, "電磁場 ON", "#a7f3d0", 18);
       }
     }
 
@@ -725,23 +1097,69 @@
       if (!this.alive || this.invuln > 0 || this.rocketTimer > 0) return;
 
       if (this.shield > 0) {
-        this.shield = 0;
-        this.shieldRing.setVisible(false);
-        this.invuln = 1.0;
+        this.shield -= 1;
+        this.shieldRing.setVisible(this.shield > 0);
+        if (this.shieldRing2) this.shieldRing2.setVisible(this.shield > 0);
+        this.invuln = 1.25;
+        this.pipeStreak = 0;
         SFX.shieldBreak();
-        doShake(this.cameras.main, 120, 0.015);
-        neonBurst(this, this.frog.x, this.frog.y, 0x60a5fa, 24);
-        neonBurst(this, this.frog.x, this.frog.y, 0xa78bfa, 16);
+        doShake(this.cameras.main, 140, 0.02);
+        screenPunch(this, 0x60a5fa, 0.35, 140, 0.018);
+        shockwave(this, this.frog.x, this.frog.y, 0xa78bfa, 110);
+        dualBurst(this, this.frog.x, this.frog.y, 0x60a5fa, 0xa78bfa, 28);
+        powerBanner(this, "SHIELD BREAK", "護盾抵擋 · 繼續衝刺", "#93c5fd");
         return;
       }
 
       this.die();
     }
 
+    checkMilestones() {
+      var marks = [
+        { m: 50, label: "50m 起飛", bonus: 80, gift: null },
+        { m: 120, label: "120m 雨夜", bonus: 160, gift: "shield" },
+        { m: 220, label: "220m 疾行", bonus: 280, gift: "slow" },
+        { m: 350, label: "350m 傳說", bonus: 450, gift: "rocket" },
+        { m: 500, label: "500m 蛙神", bonus: 800, gift: "gem" }
+      ];
+      for (var i = 0; i < marks.length; i++) {
+        var mk = marks[i];
+        if (this.distance >= mk.m && !this.milestonesHit[mk.m]) {
+          this.milestonesHit[mk.m] = true;
+          var pts = Math.floor(mk.bonus * this.diff.scoreMult);
+          this.score += pts;
+          SFX.mile();
+          doShake(this.cameras.main, 90, 0.01);
+          neonBurst(this, this.frog.x, this.frog.y, 0x22d3ee, 24);
+          floatText(this, W / 2, 120, mk.label + "  +" + pts, "#67e8f9", 22);
+          if (mk.gift === "shield") {
+            this.shield = Math.min(2, this.shield + 1);
+            this.shieldRing.setVisible(true);
+            this.shieldRing2.setVisible(true);
+            this.playPowerGet("shield", this.frog.x, this.frog.y);
+          } else if (mk.gift === "slow") {
+            this.slowTimer = Math.max(this.slowTimer, 2.5);
+            this.playPowerGet("slow", this.frog.x, this.frog.y);
+          } else if (mk.gift === "rocket") {
+            this.rocketTimer = Math.max(this.rocketTimer, 2.2);
+            this.invuln = Math.max(this.invuln, 2.2);
+            this.rocketTrail.start();
+            this.rocketSparks.start();
+            this.playPowerGet("rocket", this.frog.x, this.frog.y);
+          } else if (mk.gift === "gem") {
+            this.combo += 3;
+            this.comboTimer = 4;
+            this.playPowerGet("gem", this.frog.x, this.frog.y);
+          }
+        }
+      }
+    }
+
     die() {
       if (!this.alive) return;
       this.alive = false;
       this.rocketTrail.stop();
+      if (this.rocketSparks) this.rocketSparks.stop();
       SFX.die();
 
       this.flash.setAlpha(0.75);
@@ -765,13 +1183,17 @@
       this.frog.body.setVelocity(0, 0);
       this.frog.body.setAllowGravity(false);
 
-      var distBonus = Math.floor(this.distance * 0.5 * this.diff.scoreMult);
-      var finalScore = Math.floor(this.score + distBonus);
+      var distBonus = Math.floor(this.distance * 0.55 * this.diff.scoreMult);
+      var streakBonus = Math.floor(this.pipeStreak * 12 * this.diff.scoreMult);
+      var nearBonus = Math.floor(this.nearMisses * 25 * this.diff.scoreMult);
+      var finalScore = Math.floor(this.score + distBonus + streakBonus + nearBonus);
       var meta = {
         slug: "rainy-frog-dash",
         difficulty: this.diff.id,
         distance: Math.floor(this.distance),
-        combo: this.combo,
+        combo: this.bestCombo,
+        streak: this.pipeStreak,
+        nearMisses: this.nearMisses,
         dangerPeak: Number(this.dangerMultiplier.toFixed(2))
       };
       try {
@@ -783,7 +1205,9 @@
         self.scene.launch("GameOverModal", {
           score: finalScore,
           distance: self.distance,
-          combo: self.combo,
+          combo: self.bestCombo,
+          streak: self.pipeStreak,
+          near: self.nearMisses,
           danger: self.dangerMultiplier,
           diff: self.diff
         });
@@ -792,113 +1216,205 @@
 
     update(_t, delta) {
       if (!this.alive) return;
-      var dt = Math.min(0.05, delta / 1000);
+      var rawDt = Math.min(0.05, delta / 1000);
+      var dt = rawDt * (this.slowTimer > 0 ? 0.62 : 1);
 
-      // dive pose when falling
+      // 鍵盤 JustDown：每一下空白／↑／W 都觸發跳躍（不依賴 keydown 事件）
+      if (
+        Phaser.Input.Keyboard.JustDown(this.keySpace) ||
+        Phaser.Input.Keyboard.JustDown(this.keyUp) ||
+        Phaser.Input.Keyboard.JustDown(this.keyW)
+      ) {
+        this.tryJump();
+      }
+
+      // 每幀鎖定青蛙判定，避免旋轉／縮放污染
+      if (this.frog.body) {
+        this.frog.body.setSize(20, 16);
+        this.frog.body.setOffset(16, 10);
+      }
+
       if (this.started && this.frog.body.velocity.y > 80) {
         this.frog.setAngle(Phaser.Math.Clamp(this.frog.body.velocity.y * 0.05, 12, 55));
       } else if (this.started && this.frog.body.velocity.y < -40) {
         this.frog.setAngle(Phaser.Math.Clamp(this.frog.body.velocity.y * 0.04, -35, -8));
       }
 
-      // reset jumps near apex soft floor — treat as grounded when near bottom? Flappy style: reset jumps when going up from jump only once per air. Reset when velocity was positive and we jump again limit. Reset jumps when frog "lands" conceptually: when vy becomes positive after jump cycle we keep jumpsUsed until pass pipe... Better: reset jumps when frog is falling past a threshold after being low, or when rocket ends. Classic double jump: reset when "onGround". For flappy, reset jumps when frog crosses into upper half after falling, OR reset when velocity > 0 and we haven't used - actually simplest: reset jumpsUsed when frog.y is near bottom safe OR when rocket. Spec: double jump available - reset when frog starts falling after first jump and allow second; reset both when frog would touch ground line.
-
-      if (this.frog.y > H - 30) {
-        this.die();
-        return;
+      // 頂／底：有護盾／無敵時柔彈，否則撞底死亡
+      if (this.frog.y > H - 22) {
+        if (this.invuln > 0 || this.rocketTimer > 0 || this.shield > 0) {
+          this.frog.y = H - 24;
+          this.frog.setVelocityY(this.diff.jump * 0.75);
+          if (this.shield > 0 && this.invuln <= 0 && this.rocketTimer <= 0) {
+            this.shield -= 1;
+            this.shieldRing.setVisible(this.shield > 0);
+            if (this.shieldRing2) this.shieldRing2.setVisible(this.shield > 0);
+            this.invuln = 0.8;
+            SFX.shieldBreak();
+            dualBurst(this, this.frog.x, this.frog.y, 0x60a5fa, 0xa78bfa, 20);
+          }
+        } else {
+          this.die();
+          return;
+        }
       }
-      if (this.frog.y < 10) {
-        this.frog.y = 10;
-        this.frog.setVelocityY(Math.max(0, this.frog.body.velocity.y));
-      }
-
-      // soft ground bounce reset jumps at y near bottom without dying? Spec says fall to bottom = death. So jumps reset only after successful jump cycle: reset when vy > 100 (falling) after using jumps? No - double jump means 2 in air. Reset when starting new "flap session" after landing - we don't land. So reset jumps when frog passes through a pipe gap (scored) or after 0.4s of falling enable? Better approach matching Casual "二段跳躍可用": jumpsUsed resets when frog is falling (vy>0) for more than 0.15s after last jump... Actually standard: max 2 jumps per airtime, reset when you would land. Without ground, reset when rocket ends or every time after score? Simplest good feel: reset jumpsUsed whenever frog velocity.y > 150 (diving) so you get one recovery flap + second, or reset on each pipe pass.
-
-      if (this.frog.body.velocity.y > 200) {
-        // allow refreshing one jump for recovery in casual/standard feel — only if all jumps used
-        // Actually don't auto-reset mid-dive. Reset on pipe score:
+      if (this.frog.y < 16) {
+        this.frog.y = 16;
+        this.frog.setVelocityY(Math.max(40, Math.abs(this.frog.body.velocity.y) * 0.35));
       }
 
       this.shieldRing.setPosition(this.frog.x, this.frog.y);
       this.shieldRing.setVisible(this.shield > 0);
+      this.shieldRing.setAlpha(0.4 + Math.sin((_t || 0) / 90) * 0.2);
+      if (this.shieldRing2) {
+        this.shieldRing2.setPosition(this.frog.x, this.frog.y);
+        this.shieldRing2.setVisible(this.shield > 0);
+        this.shieldRing2.setAlpha(0.55 + Math.sin((_t || 0) / 70) * 0.25);
+        this.shieldRing2.setScale(1 + Math.sin((_t || 0) / 110) * 0.08);
+      }
+      if (this.magnetAura) {
+        this.magnetAura.setPosition(this.frog.x, this.frog.y);
+        this.magnetAura.setVisible(this.magnetTimer > 0);
+        if (this.magnetTimer > 0) {
+          this.magnetAura.setScale(1.05 + Math.sin((_t || 0) / 80) * 0.15);
+          this.magnetAura.setAlpha(0.5 + Math.sin((_t || 0) / 60) * 0.25);
+        }
+      }
+      if (this.slowVignette) {
+        this.slowVignette.setAlpha(this.slowTimer > 0 ? 0.14 + Math.sin((_t || 0) / 100) * 0.04 : 0);
+      }
 
       if (!this.started) return;
 
-      // danger from distance
+      this.elapsedTime += rawDt;
+      this.dangerMultiplier = 1 + Math.log(1 + this.elapsedTime / 30) * 0.8;
+      // 難度基底疊加
+      var diffBias = this.diffKey === "casual" ? 0.85 : (this.diffKey === "extreme" ? 1.18 : 1);
+      var effectiveDanger = 1 + (this.dangerMultiplier - 1) * diffBias;
+
+      this.scrollSpeed = this.diff.scroll * (0.9 + effectiveDanger * 0.22);
+      if (this.rocketTimer > 0) this.scrollSpeed *= 1.4;
+      if (this.slowTimer > 0) this.scrollSpeed *= 0.7;
+
+      if (effectiveDanger < 1.35) this.setWeather("calm");
+      else if (effectiveDanger < 1.9) this.setWeather("rain");
+      else this.setWeather("storm");
+
       this.distance += this.scrollSpeed * dt * 0.1;
-      this.dangerMultiplier = 1 + Math.log(1 + this.distance / 40) * 0.8;
-      this.scrollSpeed = this.diff.scroll * (0.85 + this.dangerMultiplier * 0.35);
-      if (this.rocketTimer > 0) this.scrollSpeed *= 1.55;
+      this.checkMilestones();
 
       this.cityOffset += this.scrollSpeed * dt * 0.4;
       this.redrawCity(this.cityOffset);
 
-      // spawn pipes
-      var spawnEvery = this.diff.spawnEvery / Math.max(0.7, 0.5 + this.dangerMultiplier * 0.5);
+      var spawnEvery = this.diff.spawnEvery / Math.max(0.82, 0.72 + effectiveDanger * 0.28);
+      if (this.pipesCleared < 2) spawnEvery *= 1.2;
       this.spawnAcc += dt;
       if (this.spawnAcc >= spawnEvery) {
         this.spawnAcc = 0;
         this.spawnPipePair();
       }
 
-      // move pipes & pickups
       var spd = this.scrollSpeed;
       var self = this;
       for (var i = this.pipePairs.length - 1; i >= 0; i--) {
         var pair = this.pipePairs[i];
-        if (!pair.top.active) {
+        if (!pair.topHit || !pair.topHit.active) {
           this.pipePairs.splice(i, 1);
           continue;
         }
-        pair.top.x -= spd * dt;
-        pair.bot.x -= spd * dt;
-
+        pair.x -= spd * dt;
+        var gy = pair.baseGapY;
         if (pair.moving) {
-          pair.phase += dt * 1.6;
-          var gy = pair.baseGapY + Math.sin(pair.phase) * pair.amp;
-          var topH = Math.max(40, gy - pair.gap / 2);
-          var botY = gy + pair.gap / 2;
-          var botH = Math.max(40, H - botY);
-          pair.top.setDisplaySize(64, topH);
-          pair.top.y = topH / 2;
-          pair.top.body.setSize(56, topH);
-          pair.bot.setDisplaySize(64, botH);
-          pair.bot.y = botY + botH / 2;
-          pair.bot.body.setSize(56, botH);
+          pair.phase += dt * 1.1;
+          gy = pair.baseGapY + Math.sin(pair.phase) * pair.amp;
         }
+        this.syncPipePair(pair, pair.x, gy);
 
-        if (!pair.scored && pair.top.x + 32 < this.frog.x) {
+        if (!pair.scored && pair.x + 24 < this.frog.x) {
           pair.scored = true;
-          this.jumpsUsed = 0; // refresh jumps after clearing a pipe
-          var pts = Math.floor(50 * this.diff.scoreMult * this.dangerMultiplier * (1 + this.combo * 0.1));
+          this.pipesCleared++;
+          this.pipeStreak++;
+          var streakMul = 1 + Math.min(this.pipeStreak, 12) * 0.06;
+          var pts = Math.floor(45 * this.diff.scoreMult * (0.9 + effectiveDanger * 0.12) * streakMul * (1 + this.combo * 0.08));
           this.score += pts;
           SFX.drop(Math.min(this.combo + 2, 8));
+          floatText(this, this.frog.x + 36, this.frog.y - 20, "+" + pts, "#67e8f9", 14);
+
+          var liveGapY = pair.baseGapYLive || pair.baseGapY;
+          var edgeDist = Math.min(
+            Math.abs(this.frog.y - (liveGapY - pair.gap / 2)),
+            Math.abs(this.frog.y - (liveGapY + pair.gap / 2))
+          );
+          if (edgeDist < 22) {
+            this.nearMisses++;
+            var nearPts = Math.floor(40 * this.diff.scoreMult * (1 + this.pipeStreak * 0.05));
+            this.score += nearPts;
+            SFX.near();
+            neonBurst(this, this.frog.x, this.frog.y, 0xf472b6, 18);
+            floatText(this, this.frog.x, this.frog.y + 28, "NEAR +" + nearPts, "#f9a8d4", 15);
+            doShake(this.cameras.main, 60, 0.008);
+          }
         }
 
-        if (pair.top.x < -80) {
-          pair.top.destroy();
-          pair.bot.destroy();
+        if (pair.x < -90) {
+          pair.topVis.destroy();
+          pair.botVis.destroy();
+          pair.topHit.destroy();
+          pair.botHit.destroy();
           this.pipePairs.splice(i, 1);
         }
       }
 
       this.pickups.getChildren().forEach(function (p) {
         if (!p.active) return;
+        if (self.magnetTimer > 0 && (p.getData("type") === "drop" || p.getData("type") === "gem")) {
+          var dx = self.frog.x - p.x;
+          var dy = self.frog.y - p.y;
+          var dist = Math.sqrt(dx * dx + dy * dy) || 1;
+          if (dist < 240) {
+            p.x += (dx / dist) * 320 * dt;
+            p.y += (dy / dist) * 320 * dt;
+          }
+        }
         p.x -= spd * dt;
-        if (p.x < -40) p.destroy();
+        var aura = p.getData("aura");
+        if (aura && aura.active) {
+          aura.x = p.x;
+          aura.y = p.y;
+        }
+        if (p.x < -40) {
+          if (aura && aura.destroy) aura.destroy();
+          p.destroy();
+        }
       });
 
-      // timers
-      this.comboTimer = Math.max(0, this.comboTimer - dt);
+      this.comboTimer = Math.max(0, this.comboTimer - rawDt);
       if (this.comboTimer <= 0) this.combo = 0;
-      this.invuln = Math.max(0, this.invuln - dt);
+      this.invuln = Math.max(0, this.invuln - rawDt);
+      this.slowTimer = Math.max(0, this.slowTimer - rawDt);
+      this.magnetTimer = Math.max(0, this.magnetTimer - rawDt);
+      if (this.magnetTimer <= 0 && this.magnetAura) this.magnetAura.setVisible(false);
       if (this.rocketTimer > 0) {
-        this.rocketTimer = Math.max(0, this.rocketTimer - dt);
-        if (this.rocketTimer <= 0) this.rocketTrail.stop();
-        else if (Math.random() < 0.08) doShake(this.cameras.main, 30, 0.004);
+        this.rocketTimer = Math.max(0, this.rocketTimer - rawDt);
+        if (this.rocketTimer <= 0) {
+          this.rocketTrail.stop();
+          if (this.rocketSparks) this.rocketSparks.stop();
+        } else {
+          if (Math.random() < 0.12) doShake(this.cameras.main, 28, 0.005);
+          if (Math.random() < 0.35) {
+            var line = this.add.rectangle(
+              this.frog.x - Phaser.Math.Between(40, 120),
+              this.frog.y + Phaser.Math.Between(-28, 28),
+              Phaser.Math.Between(30, 70), 2, 0xfbbf24, 0.7
+            ).setDepth(16).setBlendMode(Phaser.BlendModes.ADD);
+            this.tweens.add({
+              targets: line, x: line.x - 80, alpha: 0, duration: 180, ease: "Cubic.easeOut",
+              onComplete: function () { line.destroy(); }
+            });
+          }
+        }
       }
 
-      // blink when invuln without rocket
       if (this.invuln > 0 && this.rocketTimer <= 0) {
         this.frog.setAlpha(Math.sin(this.invuln * 20) > 0 ? 1 : 0.4);
       } else {
@@ -906,19 +1422,20 @@
       }
 
       this.hudScore.setText("SCORE " + this.score.toLocaleString());
-      this.hudDanger.setText("DANGER: x" + this.dangerMultiplier.toFixed(2));
+      this.hudDanger.setText("DANGER x" + effectiveDanger.toFixed(2));
       this.hudDist.setText(Math.floor(this.distance) + "m");
       this.hudCombo.setText(this.combo > 0 ? "COMBO x" + this.combo : "COMBO —");
+      this.hudStreak.setText("STREAK " + this.pipeStreak + (this.nearMisses ? " · NEAR " + this.nearMisses : ""));
       var powers = [];
-      if (this.shield > 0) powers.push("護盾");
+      if (this.shield > 0) powers.push("護盾x" + this.shield);
       if (this.rocketTimer > 0) powers.push("火箭 " + this.rocketTimer.toFixed(1) + "s");
+      if (this.slowTimer > 0) powers.push("慢放 " + this.slowTimer.toFixed(1) + "s");
+      if (this.magnetTimer > 0) powers.push("磁吸 " + this.magnetTimer.toFixed(1) + "s");
       this.hudPower.setText(powers.join(" · "));
     }
   }
 
-  /* ═══════════════ Game Over ═══════════════ */
-
-  /* ═══════════════ LeaderboardScene（本遊戲獨立排行榜） ═══════════════ */
+  /* ═══════════════ Leaderboard ═══════════════ */
   var LeaderboardScene = (window.RNFPhaserLeaderboard && RNFPhaserLeaderboard.createLeaderboardScene)
     ? RNFPhaserLeaderboard.createLeaderboardScene({
         Phaser: Phaser,
@@ -969,9 +1486,10 @@
       var meta = this.add.text(W / 2, H / 2 + 30,
         diff.label +
         "\n飛行 " + Math.floor(this.payload.distance || 0) + "m" +
-        " · 最高 Combo x" + (this.payload.combo || 0) +
-        " · DANGER x" + Number(this.payload.danger || 1).toFixed(2) +
-        "\n已執行 RNF.submitScore → 排行榜", {
+        " · Combo x" + (this.payload.combo || 0) +
+        " · 連過 " + (this.payload.streak || 0) +
+        " · 刮擦 " + (this.payload.near || 0) +
+        "\nDANGER x" + Number(this.payload.danger || 1).toFixed(2), {
         fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
         fontSize: "13px", color: "#94a3b8", align: "center", lineSpacing: 6
       }).setOrigin(0.5).setAlpha(0).setDepth(72);
@@ -983,7 +1501,7 @@
       neonBurst(this, W / 2, H / 2 - 40, 0x22d3ee, 22);
 
       var self = this;
-      var retry = makeButton(this, W / 2 - 110, H / 2 + 95, "再試一次", 0x22d3ee, function () {
+      var retry = makeButton(this, W / 2 - 110, H / 2 + 105, "再試一次", 0x22d3ee, function () {
         SFX.confirm();
         self.scene.stop("GameOverModal");
         self.scene.stop("GameScene");
@@ -991,22 +1509,23 @@
       }, 180);
       retry.bg.setDepth(73); retry.txt.setDepth(74);
 
-      var settings = makeButton(this, W / 2 + 110, H / 2 + 95, "排行榜", 0x34d399, function () {
+      var board = makeButton(this, W / 2 + 110, H / 2 + 105, "排行榜", 0x34d399, function () {
         SFX.click();
         self.scene.stop("GameOverModal");
         try { self.scene.stop("SettingsScene"); } catch (_e) {}
         self.scene.stop("GameScene");
         self.scene.start("LeaderboardScene", { difficulty: (typeof selectedDiff !== "undefined" && selectedDiff) ? selectedDiff : "standard" });
       }, 180);
-      settings.bg.setDepth(73); settings.txt.setDepth(74);
+      board.bg.setDepth(73); board.txt.setDepth(74);
 
-      var menu = makeButton(this, W / 2, H / 2 + 155, "主選單", 0x64748b, function () {
+      var menu = makeButton(this, W / 2, H / 2 + 165, "主選單", 0x64748b, function () {
         SFX.click();
         self.scene.stop("GameOverModal");
         self.scene.stop("SettingsScene");
         self.scene.stop("GameScene");
         self.scene.start("MainMenuScene");
       }, 200);
+      menu.bg.setDepth(73); menu.txt.setDepth(74);
     }
   }
 
@@ -1021,7 +1540,6 @@
       default: "arcade",
       arcade: { gravity: { y: 0 }, debug: false }
     },
-
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH

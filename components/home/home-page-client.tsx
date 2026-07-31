@@ -593,8 +593,6 @@ export function HomePageClient({ initialGames }: HomePageClientProps) {
           </section>
         )}
 
-        <HomeSupporterSection />
-
         <HomePersonalizedSections profileId={profile?.id} />
 
         {/* Game Grid */}
@@ -772,6 +770,8 @@ export function HomePageClient({ initialGames }: HomePageClientProps) {
           </AnimatePresence>
           </div>
         </section>
+
+        <HomeSupporterSection />
       </main>
     </div>
   );

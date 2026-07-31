@@ -174,10 +174,23 @@
     slide: function () { tone(200, 0.08, "sawtooth", 0.05, 90); },
     shoot: function () { tone(720, 0.05, "sawtooth", 0.07, 1200); },
     shatter: function () { tone(140, 0.16, "sawtooth", 0.13, 50); tone(380, 0.08, "square", 0.08); },
-    shield: function () { tone(480, 0.12, "sine", 0.1); },
+    shield: function () {
+      tone(220, 0.08, "sawtooth", 0.1); tone(440, 0.1, "square", 0.12); tone(880, 0.12, "sine", 0.09);
+    },
     shieldBreak: function () { tone(180, 0.2, "sawtooth", 0.12, 60); },
     die: function () { tone(120, 0.32, "sawtooth", 0.16, 40); },
-    coin: function () { tone(880, 0.05, "triangle", 0.06); },
+    coin: function (n) {
+      var f = 880 + Math.min(n || 0, 10) * 40;
+      tone(f, 0.05, "triangle", 0.08); tone(f * 1.5, 0.06, "sine", 0.06);
+    },
+    gem: function () {
+      tone(740, 0.05, "square", 0.1); tone(1100, 0.08, "triangle", 0.1); tone(1600, 0.1, "sine", 0.07);
+    },
+    ammo: function () { tone(520, 0.06, "square", 0.09); tone(780, 0.08, "triangle", 0.08); },
+    spring: function () { tone(200, 0.08, "sawtooth", 0.1, 900); tone(600, 0.1, "triangle", 0.08); },
+    power: function () {
+      tone(180, 0.06, "sawtooth", 0.1); tone(360, 0.08, "square", 0.12); tone(720, 0.1, "triangle", 0.09);
+    },
     toggle: function () { tone(440, 0.05, "triangle", 0.07); }
   };
 
@@ -189,18 +202,75 @@
   function neonBurst(scene, x, y, tint, count) {
     var n = Phaser.Math.Clamp(count || 20, 15, 40);
     var emitter = scene.add.particles(x, y, "spark", {
-      speed: { min: 80, max: 380 },
+      speed: { min: 90, max: 420 },
       angle: { min: 0, max: 360 },
-      lifespan: { min: 260, max: 700 },
-      scale: { start: 1.2, end: 0 },
+      lifespan: { min: 260, max: 720 },
+      scale: { start: 1.35, end: 0 },
       alpha: { start: 1, end: 0 },
-      gravityY: 80,
+      gravityY: 60,
       blendMode: "ADD",
       tint: tint,
       emitting: false
     });
     emitter.explode(n);
     scene.time.delayedCall(900, function () { if (emitter.destroy) emitter.destroy(); });
+  }
+
+  function dualBurst(scene, x, y, c1, c2, n) {
+    neonBurst(scene, x, y, c1, n || 22);
+    neonBurst(scene, x, y, c2, Math.floor((n || 22) * 0.7));
+  }
+
+  function shockwave(scene, x, y, color, maxR) {
+    var ring = scene.add.circle(x, y, 10, color, 0)
+      .setStrokeStyle(4, color, 1).setDepth(44).setBlendMode(Phaser.BlendModes.ADD);
+    scene.tweens.add({
+      targets: ring, scale: (maxR || 90) / 10, alpha: 0, duration: 360, ease: "Cubic.easeOut",
+      onComplete: function () { ring.destroy(); }
+    });
+  }
+
+  function floatText(scene, x, y, msg, color, size) {
+    var floater = scene.add.text(x, y, msg, {
+      fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif",
+      fontSize: (size || 15) + "px", fontStyle: "bold", color: color || "#fbbf24",
+      stroke: "#020617", strokeThickness: 3
+    }).setOrigin(0.5).setDepth(48).setScale(0.6).setAlpha(0);
+    scene.tweens.add({ targets: floater, y: y - 48, alpha: 1, scale: 1.15, duration: 220, ease: "Back.easeOut" });
+    scene.tweens.add({
+      targets: floater, y: y - 86, alpha: 0, duration: 400, delay: 220, ease: "Cubic.easeOut",
+      onComplete: function () { floater.destroy(); }
+    });
+  }
+
+  function powerBanner(scene, title, sub, colorHex) {
+    var wrap = scene.add.container(W / 2, H * 0.24).setDepth(55).setAlpha(0).setScale(0.4);
+    var col = Phaser.Display.Color.HexStringToColor(colorHex).color;
+    var glow = scene.add.rectangle(0, 0, 460, 72, col, 0.16);
+    var bar = scene.add.rectangle(0, 0, 440, 64, 0x020617, 0.9).setStrokeStyle(3, col, 1);
+    var t1 = scene.add.text(0, -8, title, {
+      fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif",
+      fontSize: "24px", fontStyle: "bold", color: "#ffffff", stroke: "#020617", strokeThickness: 4
+    }).setOrigin(0.5);
+    var t2 = scene.add.text(0, 16, sub, {
+      fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif",
+      fontSize: "13px", fontStyle: "bold", color: colorHex
+    }).setOrigin(0.5);
+    wrap.add([glow, bar, t1, t2]);
+    scene.tweens.add({ targets: wrap, alpha: 1, scale: 1, duration: 280, ease: "Back.easeOut" });
+    scene.tweens.add({
+      targets: wrap, alpha: 0, y: H * 0.18, scale: 1.08, duration: 420, delay: 700, ease: "Cubic.easeIn",
+      onComplete: function () { wrap.destroy(); }
+    });
+  }
+
+  function screenPunch(scene, color, alpha) {
+    var flash = scene.add.rectangle(W / 2, H / 2, W, H, color, alpha || 0.35).setDepth(58);
+    scene.tweens.add({
+      targets: flash, alpha: 0, duration: 280, ease: "Cubic.easeOut",
+      onComplete: function () { flash.destroy(); }
+    });
+    doShake(scene.cameras.main, 120, 0.014);
   }
 
   function makeTextures(scene) {
@@ -223,69 +293,174 @@
     g.fillCircle(12, 12, 4);
     g.generateTexture("runner-slide", 36, 26);
 
-    g.clear();
-    g.fillStyle(0xf472b6, 1);
-    g.fillRoundedRect(0, 0, 36, 28, 4);
-    g.fillStyle(0xffffff, 0.35);
-    g.fillCircle(12, 10, 4);
-    g.fillStyle(0xa78bfa, 1);
-    g.fillTriangle(36, 6, 48, 14, 36, 22);
-    g.generateTexture("drone", 48, 28);
-
+    // JUMP 低障：洋紅＋黃警示條＋上箭
     g.clear();
     g.fillStyle(0xf43f5e, 1);
-    g.fillRoundedRect(0, 0, 28, 14, 4);
+    g.fillRoundedRect(0, 8, 64, 28, 5);
     g.fillStyle(0xfbbf24, 1);
-    g.fillTriangle(28, 0, 40, 7, 28, 14);
-    g.generateTexture("missile", 40, 14);
+    g.fillRect(0, 8, 64, 6);
+    g.fillRect(0, 30, 64, 6);
+    g.fillStyle(0xffffff, 1);
+    g.fillTriangle(32, 0, 22, 12, 42, 12);
+    g.fillStyle(0xfef08a, 1);
+    g.fillRect(8, 16, 12, 4);
+    g.fillRect(28, 16, 12, 4);
+    g.fillRect(48, 16, 10, 4);
+    g.generateTexture("barrier", 64, 36);
 
+    // SLIDE 高牆：青藍＋下箭
     g.clear();
-    g.fillStyle(0x64748b, 1);
-    g.fillRoundedRect(0, 0, 40, 36, 4);
-    g.fillStyle(0xf472b6, 0.8);
-    g.fillRect(4, 8, 32, 6);
-    g.generateTexture("crate", 40, 36);
+    g.fillStyle(0x0e7490, 1);
+    g.fillRoundedRect(0, 0, 36, 110, 4);
+    g.fillStyle(0x22d3ee, 1);
+    g.fillRect(0, 0, 36, 10);
+    g.fillRect(0, 100, 36, 10);
+    g.fillStyle(0x67e8f9, 1);
+    g.fillTriangle(18, 98, 8, 78, 28, 78);
+    g.fillTriangle(18, 70, 8, 50, 28, 50);
+    g.fillStyle(0xa5f3fc, 0.8);
+    g.fillRect(8, 18, 20, 8);
+    g.fillRect(8, 34, 20, 8);
+    g.generateTexture("wall", 36, 110);
 
+    // SHOOT 無人機：洋紅＋準星
     g.clear();
-    g.fillStyle(0x334155, 1);
-    g.fillRect(0, 0, 28, 90);
-    g.fillStyle(0x22d3ee, 0.7);
-    g.fillRect(4, 10, 20, 8);
-    g.fillRect(4, 40, 20, 8);
-    g.generateTexture("wall", 28, 90);
-
-    g.clear();
+    g.lineStyle(2, 0xf472b6, 1);
+    g.strokeCircle(28, 18, 16);
+    g.fillStyle(0xbe123c, 1);
+    g.fillRoundedRect(8, 8, 40, 20, 6);
+    g.fillStyle(0xf472b6, 1);
+    g.fillTriangle(48, 10, 64, 18, 48, 26);
+    g.fillStyle(0xffffff, 1);
+    g.fillCircle(22, 16, 4);
     g.fillStyle(0xfbbf24, 1);
-    g.fillRoundedRect(0, 0, 52, 18, 4);
-    g.fillStyle(0xffffff, 0.4);
-    g.fillRect(6, 4, 40, 4);
-    g.generateTexture("barrier", 52, 18);
+    g.fillCircle(22, 16, 2);
+    g.lineStyle(2, 0xfbbf24, 1);
+    g.lineBetween(28, 2, 28, 8);
+    g.lineBetween(28, 28, 28, 34);
+    g.lineBetween(10, 18, 16, 18);
+    g.lineBetween(40, 18, 46, 18);
+    g.generateTexture("drone", 64, 36);
+
+    // BREAK 貨箱：琥珀＋裂紋 X
+    g.clear();
+    g.fillStyle(0xb45309, 1);
+    g.fillRoundedRect(0, 0, 48, 42, 5);
+    g.fillStyle(0xfbbf24, 1);
+    g.fillRect(0, 0, 48, 8);
+    g.fillRect(0, 34, 48, 8);
+    g.lineStyle(3, 0xfef3c7, 1);
+    g.lineBetween(12, 12, 36, 30);
+    g.lineBetween(36, 12, 12, 30);
+    g.fillStyle(0xfdba74, 1);
+    g.fillRect(6, 16, 36, 5);
+    g.generateTexture("crate", 48, 42);
+
+    // 飛彈更醒目
+    g.clear();
+    g.fillStyle(0xdc2626, 1);
+    g.fillRoundedRect(0, 4, 36, 16, 4);
+    g.fillStyle(0xfbbf24, 1);
+    g.fillTriangle(36, 2, 56, 12, 36, 22);
+    g.fillStyle(0xfef08a, 1);
+    g.fillCircle(12, 12, 4);
+    g.fillStyle(0xf97316, 1);
+    g.fillTriangle(0, 6, -10, 12, 0, 18);
+    g.generateTexture("missile", 56, 24);
+
+    // 旋轉鋸片
+    g.clear();
+    g.fillStyle(0xf43f5e, 1);
+    g.fillCircle(22, 22, 20);
+    g.fillStyle(0xfbbf24, 1);
+    for (var si = 0; si < 8; si++) {
+      var ang = (si / 8) * Math.PI * 2;
+      g.fillTriangle(
+        22 + Math.cos(ang) * 12, 22 + Math.sin(ang) * 12,
+        22 + Math.cos(ang - 0.25) * 22, 22 + Math.sin(ang - 0.25) * 22,
+        22 + Math.cos(ang + 0.25) * 22, 22 + Math.sin(ang + 0.25) * 22
+      );
+    }
+    g.fillStyle(0x1f2937, 1);
+    g.fillCircle(22, 22, 6);
+    g.fillStyle(0xffffff, 0.8);
+    g.fillCircle(22, 22, 3);
+    g.generateTexture("saw", 44, 44);
+
+    // 彈簧墊
+    g.clear();
+    g.fillStyle(0x22c55e, 1);
+    g.fillRoundedRect(0, 16, 56, 16, 4);
+    g.fillStyle(0x4ade80, 1);
+    g.fillRect(4, 8, 48, 10);
+    g.fillStyle(0xffffff, 1);
+    g.fillTriangle(28, 0, 16, 14, 40, 14);
+    g.generateTexture("spring", 56, 32);
 
     g.clear();
     g.fillStyle(0x67e8f9, 1);
-    g.fillRect(0, 0, 28, 5);
-    g.fillStyle(0xffffff, 0.8);
-    g.fillRect(20, 1, 8, 3);
-    g.generateTexture("laser", 28, 5);
+    g.fillRect(0, 0, 36, 6);
+    g.fillStyle(0xffffff, 0.9);
+    g.fillRect(24, 1, 12, 4);
+    g.generateTexture("laser", 36, 6);
 
+    // 金幣
     g.clear();
-    g.fillStyle(0xfbbf24, 1);
-    g.fillCircle(8, 8, 7);
-    g.fillStyle(0xffffff, 0.5);
-    g.fillCircle(5, 5, 2);
-    g.generateTexture("coin", 16, 16);
-
-    g.clear();
-    g.fillStyle(0x60a5fa, 1);
+    g.fillStyle(0xf59e0b, 1);
     g.fillCircle(12, 12, 11);
-    g.lineStyle(2, 0xe0f2fe, 1);
+    g.fillStyle(0xfbbf24, 1);
+    g.fillCircle(12, 12, 8);
+    g.fillStyle(0xfef08a, 1);
+    g.fillCircle(9, 9, 3);
+    g.lineStyle(2, 0xb45309, 0.9);
     g.strokeCircle(12, 12, 11);
-    g.generateTexture("shield-icon", 24, 24);
+    g.generateTexture("coin", 24, 24);
+
+    // 紫寶石
+    g.clear();
+    g.fillStyle(0xe879f9, 1);
+    g.fillTriangle(16, 2, 28, 16, 16, 30);
+    g.fillTriangle(16, 2, 4, 16, 16, 30);
+    g.fillStyle(0xf5d0fe, 1);
+    g.fillTriangle(16, 8, 22, 16, 16, 24);
+    g.fillStyle(0xffffff, 0.9);
+    g.fillCircle(12, 12, 2);
+    g.generateTexture("gem", 32, 32);
+
+    // 護盾道具
+    g.clear();
+    g.fillStyle(0x3b82f6, 0.45);
+    g.fillCircle(20, 20, 18);
+    g.lineStyle(3, 0x93c5fd, 1);
+    g.strokeCircle(20, 20, 16);
+    g.fillStyle(0x60a5fa, 1);
+    g.fillTriangle(20, 8, 30, 16, 30, 26);
+    g.fillTriangle(20, 8, 10, 16, 10, 26);
+    g.fillTriangle(10, 26, 20, 34, 30, 26);
+    g.fillStyle(0xffffff, 0.9);
+    g.fillCircle(20, 18, 4);
+    g.generateTexture("shield-icon", 40, 40);
+
+    // 彈藥包
+    g.clear();
+    g.fillStyle(0x0891b2, 1);
+    g.fillRoundedRect(4, 8, 32, 24, 4);
+    g.fillStyle(0x22d3ee, 1);
+    g.fillRect(10, 4, 20, 8);
+    g.fillStyle(0xffffff, 1);
+    g.fillRect(18, 14, 4, 12);
+    g.fillRect(12, 18, 16, 4);
+    g.generateTexture("ammo-icon", 40, 36);
 
     g.clear();
     g.fillStyle(0xffffff, 1);
     g.fillCircle(3, 3, 3);
     g.generateTexture("spark", 6, 6);
+
+    g.clear();
+    g.fillStyle(0xfbbf24, 1);
+    g.fillCircle(3, 3, 3);
+    g.generateTexture("spark-gold", 6, 6);
 
     g.clear();
     g.fillStyle(0x0b1224, 1);
@@ -359,8 +534,8 @@
       var t = this.add.text(W / 2, H / 2 - 8, "CYBER NEON RUNNER", {
         fontFamily: "Segoe UI, sans-serif", fontSize: "28px", fontStyle: "bold", color: "#22d3ee"
       }).setOrigin(0.5).setAlpha(0);
-      this.add.text(W / 2, H / 2 + 28, "Phaser 3 · RainyNightFrog", {
-        fontFamily: "Segoe UI, sans-serif", fontSize: "13px", color: "#64748b"
+      this.add.text(W / 2, H / 2 + 28, "障礙清晰化 · 獎勵強化 · build runnerJuice11", {
+        fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif", fontSize: "13px", color: "#fbbf24"
       }).setOrigin(0.5);
       this.tweens.add({ targets: t, alpha: 1, scale: 1.04, duration: 400, ease: "Back.easeOut" });
       this.time.delayedCall(520, function () { this.scene.start("MainMenuScene"); }, [], this);
@@ -392,9 +567,9 @@
         fontSize: "34px", fontStyle: "bold", color: "#ffffff"
       }).setOrigin(0.5).setScale(0.65).setAlpha(0);
 
-      var sub = this.add.text(W / 2, 195, "賽博霓虹無盡跑酷 · 跳躍／滑行／雷射 · 視差城市", {
+      var sub = this.add.text(W / 2, 195, "跳／滑／射 · 鋸片／彈簧／無人機 · 金幣連擊·寶石·護盾·彈藥", {
         fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
-        fontSize: "15px", color: "#94a3b8"
+        fontSize: "14px", color: "#94a3b8"
       }).setOrigin(0.5).setAlpha(0);
 
       this.tweens.add({ targets: badge, alpha: 1, y: 88, duration: 400, ease: "Cubic.easeOut" });
@@ -415,7 +590,10 @@
       });
       makeButton(this, W / 2, 504, "操作說明", 0x64748b, function () {
         if (window.RNFPhaserHelp && RNFPhaserHelp.showHelpOverlay) {
-          RNFPhaserHelp.showHelpOverlay(self, "↑／W 跳（二段）· ↓／S 滑行 · 空白／F 雷射 · 觸控上滑跳／下滑滑／點擊射", { W: W, H: H });
+          RNFPhaserHelp.showHelpOverlay(self,
+            "↑跳 · ↓滑 · 空白／F／點擊射擊\n洋紅低障＝跳過 · 青藍高牆＝滑過 · 粉紅無人機／琥珀箱＝射擊\n鋸片迴避 · 綠彈簧踩踏 · 收集金幣／寶石／護盾／彈藥",
+            { W: W, H: H }
+          );
         }
       }, 240);
     }
@@ -528,6 +706,9 @@
       this.jumpBuf = 0;
       this.wasGrounded = true;
       this.swipeStart = null;
+      this.coinCombo = 0;
+      this.coinComboTimer = 0;
+      this.bestCombo = 0;
     }
 
     create() {
@@ -592,7 +773,11 @@
       this.physics.add.overlap(this.player, this.missiles, this.onHitMissile, null, this);
       this.physics.add.overlap(this.lasers, this.obstacles, this.onLaserHit, null, this);
       this.physics.add.overlap(this.lasers, this.missiles, this.onLaserHitMissile, null, this);
-      this.physics.add.overlap(this.player, this.coins, this.onCoin, null, this);
+      this.physics.add.overlap(this.player, this.coins, this.onPickup, null, this);
+
+      this.shieldRing = this.add.circle(150, GROUND_Y - 40, 34, 0x60a5fa, 0.12)
+        .setStrokeStyle(2, 0x93c5fd, 0.9).setDepth(19).setVisible(this.shield > 0)
+        .setBlendMode(Phaser.BlendModes.ADD);
 
       this.cursors = this.input.keyboard.createCursorKeys();
       this.keys = this.input.keyboard.addKeys({
@@ -625,9 +810,12 @@
       this.hudShield = this.add.text(W / 2, 44, "", {
         fontFamily: "Consolas, monospace", fontSize: "13px", color: "#60a5fa"
       }).setOrigin(0.5, 0).setDepth(60).setScrollFactor(0);
-      this.hudTip = this.add.text(W / 2, 16, "↑跳 · ↓滑 · 空白／F／點擊射 · 上滑跳／下滑滑", {
+      this.hudCombo = this.add.text(W / 2, 66, "", {
+        fontFamily: "Consolas, monospace", fontSize: "13px", color: "#fbbf24"
+      }).setOrigin(0.5, 0).setDepth(60).setScrollFactor(0);
+      this.hudTip = this.add.text(W / 2, H - 28, "紅障跳 · 青牆滑 · 粉機／橘箱射 · 綠墊彈 · 收集發光獎勵", {
         fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
-        fontSize: "12px", color: "#64748b"
+        fontSize: "12px", color: "#94a3b8"
       }).setOrigin(0.5, 0).setDepth(60).setScrollFactor(0);
       var tipRun = this.hudTip;
       this.time.delayedCall(4500, function () {
@@ -774,71 +962,166 @@
       }
     }
 
+    decorateHazard(obs, label, color, colorHex) {
+      obs.setDepth(14);
+      var aura = this.add.circle(obs.x, obs.y, 28, color, 0.14)
+        .setStrokeStyle(2, color, 0.85).setDepth(13).setBlendMode(Phaser.BlendModes.ADD);
+      var tag = this.add.text(obs.x, obs.y - 36, label, {
+        fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif",
+        fontSize: "11px", fontStyle: "bold", color: colorHex || "#ffffff",
+        stroke: "#020617", strokeThickness: 3
+      }).setOrigin(0.5).setDepth(15);
+      obs.setData("aura", aura);
+      obs.setData("tag", tag);
+      this.tweens.add({
+        targets: [aura, tag], alpha: { from: 0.55, to: 1 }, duration: 420, yoyo: true, repeat: -1, ease: "Sine.easeInOut"
+      });
+      return obs;
+    }
+
+    syncDecor(obj) {
+      var aura = obj.getData("aura");
+      var tag = obj.getData("tag");
+      if (aura && aura.active) { aura.x = obj.x; aura.y = obj.y; }
+      if (tag && tag.active) { tag.x = obj.x; tag.y = obj.y - 36; }
+    }
+
+    clearDecor(obj) {
+      var aura = obj.getData("aura");
+      var tag = obj.getData("tag");
+      if (aura && aura.destroy) aura.destroy();
+      if (tag && tag.destroy) tag.destroy();
+    }
+
+    spawnPickupAt(x, y, type) {
+      var key = type === "gem" ? "gem" : (type === "shield" ? "shield-icon" : (type === "ammo" ? "ammo-icon" : "coin"));
+      var p = this.coins.create(x, y, key);
+      p.body.setAllowGravity(false);
+      p.setDepth(16);
+      p.setData("type", type || "coin");
+      p.setBlendMode(Phaser.BlendModes.ADD);
+      var col = type === "gem" ? 0xe879f9 : (type === "shield" ? 0x60a5fa : (type === "ammo" ? 0x22d3ee : 0xfbbf24));
+      var aura = this.add.circle(x, y, type === "coin" ? 16 : 22, col, 0.2)
+        .setStrokeStyle(2, col, 0.9).setDepth(15).setBlendMode(Phaser.BlendModes.ADD);
+      p.setData("aura", aura);
+      this.tweens.add({ targets: [p, aura], scale: 1.2, duration: 380, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+      if (type !== "coin") {
+        this.tweens.add({ targets: p, angle: 360, duration: 2000, repeat: -1, ease: "Linear" });
+      }
+      return p;
+    }
+
+    spawnRewardCluster(baseX) {
+      var roll = Math.random();
+      if (roll < 0.5) {
+        this.spawnPickupAt(baseX + 60, GROUND_Y - 70, "coin");
+        this.spawnPickupAt(baseX + 90, GROUND_Y - 110, "coin");
+        this.spawnPickupAt(baseX + 120, GROUND_Y - 70, "coin");
+      } else if (roll < 0.72) {
+        this.spawnPickupAt(baseX + 80, GROUND_Y - 100, "gem");
+      } else if (roll < 0.88) {
+        this.spawnPickupAt(baseX + 70, GROUND_Y - 90, "shield");
+      } else {
+        this.spawnPickupAt(baseX + 70, GROUND_Y - 90, "ammo");
+      }
+    }
+
     spawnObstacle() {
       var roll = Math.random();
-      var dens = this.diff.dens;
-      var x = W + 40;
+      var x = W + 50;
       var type;
-
-      if (roll < 0.28 * dens) type = "barrier";
-      else if (roll < 0.5 * dens) type = "wall";
-      else if (roll < 0.72) type = "drone";
-      else if (roll < 0.88) type = "crate";
-      else type = "highlow";
+      if (roll < 0.18) type = "barrier";
+      else if (roll < 0.34) type = "wall";
+      else if (roll < 0.5) type = "drone";
+      else if (roll < 0.62) type = "crate";
+      else if (roll < 0.74) type = "saw";
+      else if (roll < 0.84) type = "spring";
+      else if (roll < 0.93) type = "highlow";
+      else type = "triple";
 
       var obs;
       if (type === "barrier") {
-        obs = this.obstacles.create(x, GROUND_Y - 12, "barrier");
+        obs = this.obstacles.create(x, GROUND_Y - 18, "barrier");
         obs.setData("kind", "solid");
         obs.setData("breakable", false);
+        this.decorateHazard(obs, "JUMP ↑", 0xf43f5e, "#fda4af");
       } else if (type === "wall") {
-        obs = this.obstacles.create(x, GROUND_Y - 48, "wall");
+        obs = this.obstacles.create(x, GROUND_Y - 58, "wall");
         obs.setData("kind", "solid");
         obs.setData("breakable", false);
         obs.setData("needSlide", true);
+        this.decorateHazard(obs, "SLIDE ↓", 0x22d3ee, "#67e8f9");
       } else if (type === "drone") {
-        var dy = GROUND_Y - Phaser.Math.Between(70, 160);
+        var dy = GROUND_Y - Phaser.Math.Between(80, 170);
         obs = this.obstacles.create(x, dy, "drone");
         obs.setData("kind", "drone");
         obs.setData("breakable", true);
         obs.setData("bob", Phaser.Math.FloatBetween(0, Math.PI * 2));
+        this.decorateHazard(obs, "SHOT ✦", 0xf472b6, "#f9a8d4");
       } else if (type === "crate") {
-        obs = this.obstacles.create(x, GROUND_Y - 20, "crate");
+        obs = this.obstacles.create(x, GROUND_Y - 24, "crate");
         obs.setData("kind", "crate");
         obs.setData("breakable", true);
-      } else {
-        // high-low combo: low barrier + high floating
-        var low = this.obstacles.create(x, GROUND_Y - 12, "barrier");
+        this.decorateHazard(obs, "BREAK ✕", 0xfbbf24, "#fde68a");
+      } else if (type === "saw") {
+        obs = this.obstacles.create(x, GROUND_Y - Phaser.Math.Between(50, 120), "saw");
+        obs.setData("kind", "saw");
+        obs.setData("breakable", false);
+        obs.setData("spin", 1);
+        this.decorateHazard(obs, "AVOID", 0xef4444, "#fca5a5");
+      } else if (type === "spring") {
+        obs = this.obstacles.create(x, GROUND_Y - 16, "spring");
+        obs.setData("kind", "spring");
+        obs.setData("breakable", false);
+        obs.setData("boost", 1);
+        this.decorateHazard(obs, "BOOST ↑↑", 0x22c55e, "#86efac");
+      } else if (type === "highlow") {
+        var low = this.obstacles.create(x, GROUND_Y - 18, "barrier");
         low.setData("kind", "solid");
         low.setData("breakable", false);
-        var hi = this.obstacles.create(x + 90, GROUND_Y - 130, "drone");
+        this.decorateHazard(low, "JUMP ↑", 0xf43f5e, "#fda4af");
+        var hi = this.obstacles.create(x + 100, GROUND_Y - 140, "drone");
         hi.setData("kind", "drone");
         hi.setData("breakable", true);
         hi.setData("bob", 0);
+        this.decorateHazard(hi, "SHOT ✦", 0xf472b6, "#f9a8d4");
         obs = low;
+      } else {
+        // 三連挑戰：矮障 → 鋸 → 高牆
+        var a = this.obstacles.create(x, GROUND_Y - 18, "barrier");
+        a.setData("kind", "solid"); a.setData("breakable", false);
+        this.decorateHazard(a, "JUMP ↑", 0xf43f5e, "#fda4af");
+        var b = this.obstacles.create(x + 110, GROUND_Y - 90, "saw");
+        b.setData("kind", "saw"); b.setData("breakable", false); b.setData("spin", 1);
+        this.decorateHazard(b, "AVOID", 0xef4444, "#fca5a5");
+        var c = this.obstacles.create(x + 220, GROUND_Y - 58, "wall");
+        c.setData("kind", "solid"); c.setData("breakable", false); c.setData("needSlide", true);
+        this.decorateHazard(c, "SLIDE ↓", 0x22d3ee, "#67e8f9");
+        obs = a;
       }
 
-      if (Math.random() < 0.45) {
-        var coin = this.coins.create(x + Phaser.Math.Between(40, 100), GROUND_Y - Phaser.Math.Between(40, 120), "coin");
-        coin.setDepth(12);
-      }
+      if (Math.random() < 0.62) this.spawnRewardCluster(x);
     }
 
     spawnMissile() {
       var m = this.missiles.create(W + 30, this.player.y + Phaser.Math.Between(-40, 40), "missile");
       m.setDepth(18);
       m.setData("homing", 1);
+      this.decorateHazard(m, "MISSILE!", 0xf97316, "#fdba74");
       SFX.shoot();
     }
 
     destroyThing(obj, tint) {
       if (!obj || !obj.active) return;
-      neonBurst(this, obj.x, obj.y, tint || 0xf472b6, 25);
+      this.clearDecor(obj);
+      dualBurst(this, obj.x, obj.y, tint || 0xf472b6, 0xfbbf24, 26);
+      shockwave(this, obj.x, obj.y, tint || 0xf472b6, 70);
       doShake(this.cameras.main, 120, 0.015);
       SFX.shatter();
       obj.destroy();
       this.kills++;
       this.score += Math.floor(150 * this.diff.scoreMult * this.dangerMultiplier);
+      floatText(this, obj.x, obj.y - 10, "碎裂!", "#f9a8d4", 14);
     }
 
     onLaserHit(laser, obs) {
@@ -847,7 +1130,7 @@
         return;
       }
       if (laser.active) laser.destroy();
-      this.destroyThing(obs, obs.getData("kind") === "drone" ? 0xf472b6 : 0x94a3b8);
+      this.destroyThing(obs, obs.getData("kind") === "drone" ? 0xf472b6 : 0xfbbf24);
     }
 
     onLaserHitMissile(laser, missile) {
@@ -855,14 +1138,72 @@
       this.destroyThing(missile, 0xfbbf24);
     }
 
-    onCoin(player, coin) {
-      coin.destroy();
-      this.score += Math.floor(40 * this.diff.scoreMult);
-      SFX.coin();
+    onPickup(_player, item) {
+      if (!item.active) return;
+      var type = item.getData("type") || "coin";
+      var x = item.x, y = item.y;
+      this.clearDecor(item);
+      item.destroy();
+
+      if (type === "coin") {
+        this.coinCombo++;
+        this.bestCombo = Math.max(this.bestCombo, this.coinCombo);
+        this.coinComboTimer = 2.8;
+        var pts = Math.floor(35 * (1 + this.coinCombo * 0.2) * this.diff.scoreMult);
+        this.score += pts;
+        SFX.coin(this.coinCombo);
+        dualBurst(this, x, y, 0xfbbf24, 0xfef08a, 16);
+        shockwave(this, x, y, 0xfbbf24, 36);
+        floatText(this, x, y, "+" + pts + (this.coinCombo > 1 ? " x" + this.coinCombo : ""), "#fde68a", 15);
+      } else if (type === "gem") {
+        this.coinCombo += 2;
+        this.bestCombo = Math.max(this.bestCombo, this.coinCombo);
+        this.coinComboTimer = 3.2;
+        var gpts = Math.floor(120 * this.diff.scoreMult * (1 + this.coinCombo * 0.1));
+        this.score += gpts;
+        SFX.gem(); SFX.power();
+        powerBanner(this, "VOID GEM", "紫晶爆擊 · 高分入手", "#f0abfc");
+        screenPunch(this, 0xe879f9, 0.35);
+        dualBurst(this, x, y, 0xe879f9, 0xffffff, 28);
+        floatText(this, x, y - 16, "+" + gpts + " GEM", "#f0abfc", 18);
+      } else if (type === "shield") {
+        this.shield = Math.min(2, this.shield + 1);
+        this.shieldRing.setVisible(true);
+        SFX.shield(); SFX.power();
+        powerBanner(this, "ENERGY SHIELD", "護盾展開 · 擋下致命撞擊", "#93c5fd");
+        screenPunch(this, 0x60a5fa, 0.32);
+        dualBurst(this, x, y, 0x60a5fa, 0xe0f2fe, 24);
+        floatText(this, x, y - 12, "護盾 x" + this.shield, "#bfdbfe", 16);
+        this.updateHudAmmo();
+      } else if (type === "ammo") {
+        if (this.diff.limitedAmmo) this.ammo = Math.min(this.diff.ammo + 4, this.ammo + 3);
+        else this.laserCd = 0;
+        SFX.ammo(); SFX.power();
+        powerBanner(this, "OVERCHARGE", "雷射超載 · 火力補滿", "#67e8f9");
+        screenPunch(this, 0x22d3ee, 0.3);
+        dualBurst(this, x, y, 0x22d3ee, 0xffffff, 22);
+        floatText(this, x, y - 12, "AMMO ↑", "#a5f3fc", 16);
+        this.updateHudAmmo();
+      }
     }
 
     onHitObstacle(player, obs) {
       if (this.ended) return;
+      if (obs.getData("kind") === "spring") {
+        if (obs.getData("used")) return;
+        if (player.body.velocity.y >= -40) {
+          obs.setData("used", 1);
+          player.setVelocityY(-820);
+          SFX.spring();
+          dualBurst(this, obs.x, obs.y, 0x22c55e, 0x86efac, 18);
+          floatText(this, obs.x, obs.y - 30, "彈飛!", "#86efac", 15);
+          doShake(this.cameras.main, 60, 0.008);
+          this.time.delayedCall(900, function () {
+            if (obs.active) obs.setData("used", 0);
+          });
+        }
+        return;
+      }
       if (obs.getData("needSlide") && this.sliding) return;
       if (obs.getData("kind") === "drone" && this.sliding && player.y > obs.y + 10) return;
       this.takeDamage(obs.x, obs.y);
@@ -878,12 +1219,13 @@
       if (this.ended) return;
       if (this.shield > 0) {
         this.shield--;
+        this.shieldRing.setVisible(this.shield > 0);
         SFX.shieldBreak();
-        doShake(this.cameras.main, 100, 0.012);
-        neonBurst(this, x, y, 0x60a5fa, 18);
-        this.flash.setFillStyle(0x60a5fa, 0);
-        this.flash.setAlpha(0.35);
-        this.tweens.add({ targets: this.flash, alpha: 0, duration: 200 });
+        doShake(this.cameras.main, 120, 0.016);
+        screenPunch(this, 0x60a5fa, 0.35);
+        shockwave(this, x, y, 0x60a5fa, 90);
+        dualBurst(this, x, y, 0x60a5fa, 0xe0f2fe, 24);
+        powerBanner(this, "SHIELD BREAK", "護盾抵擋 · 繼續衝刺", "#93c5fd");
         this.updateHudAmmo();
         return;
       }
@@ -1021,34 +1363,65 @@
           var bob = o.getData("bob") || 0;
           bob += dt * 3;
           o.setData("bob", bob);
-          o.y += Math.sin(bob) * 18 * dt;
+          o.y += Math.sin(bob) * 22 * dt;
         }
-        if (o.x < -80) o.destroy();
+        if (o.getData("spin")) o.angle += 360 * dt;
+        // 接近玩家時警示放大
+        if (o.x < 420 && o.x > 160) {
+          var tag = o.getData("tag");
+          if (tag) tag.setScale(1.15);
+          var aura = o.getData("aura");
+          if (aura) aura.setScale(1.25);
+        }
+        self.syncDecor(o);
+        if (o.x < -100) {
+          self.clearDecor(o);
+          o.destroy();
+        }
       });
       this.coins.getChildren().forEach(function (c) {
         if (!c.active) return;
         c.x -= spd * dt;
-        if (c.x < -40) c.destroy();
+        var aura = c.getData("aura");
+        if (aura && aura.active) { aura.x = c.x; aura.y = c.y; }
+        if (c.x < -40) {
+          self.clearDecor(c);
+          c.destroy();
+        }
       });
       this.missiles.getChildren().forEach(function (m) {
         if (!m.active) return;
         var targetY = self.player.y;
         m.y += Phaser.Math.Clamp(targetY - m.y, -180, 180) * dt * 1.4;
         m.x -= (spd * 1.35 + 80) * dt;
-        if (m.x < -60) m.destroy();
+        self.syncDecor(m);
+        if (m.x < -60) {
+          self.clearDecor(m);
+          m.destroy();
+        }
       });
       this.lasers.getChildren().forEach(function (l) {
         if (!l.active) return;
         if (l.x > W + 40) l.destroy();
       });
 
-      // keep player x fixed-ish
+      this.coinComboTimer = Math.max(0, this.coinComboTimer - dt);
+      if (this.coinComboTimer <= 0) this.coinCombo = 0;
+
       this.player.x = 150;
+      if (this.shieldRing) {
+        this.shieldRing.setPosition(this.player.x, this.player.y);
+        this.shieldRing.setVisible(this.shield > 0);
+        this.shieldRing.setAlpha(0.35 + Math.sin((_t || 0) / 100) * 0.2);
+      }
 
       this.hudDist.setText("DIST " + Math.floor(this.distance) + "m");
       this.hudScore.setText("SCORE " + this.score.toLocaleString());
       this.hudDanger.setText("DANGER: x" + this.dangerMultiplier.toFixed(2));
       this.hudKills.setText("KILLS " + this.kills);
+      if (this.hudCombo) {
+        this.hudCombo.setText(this.coinCombo > 0 ? "COMBO x" + this.coinCombo : "");
+      }
       this.updateHudAmmo();
     }
   }

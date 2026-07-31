@@ -111,14 +111,11 @@ export function FeaturedGames({
         {featuredEntries.map(({ catalog, game, accent, styles }, index) => {
           const href =
             game.id > 0
-              ? buildGameHref(
-                  {
-                    id: game.id,
-                    slug:
-                      ("slug" in game ? game.slug : null) ?? catalog.slug,
-                  },
-                  "/forum"
-                )
+              ? buildGameHref({
+                  id: game.id,
+                  slug:
+                    ("slug" in game ? game.slug : null) ?? catalog.slug,
+                })
               : "#";
           const isClickable = game.id > 0 && !loading;
           const favoriteCount =
