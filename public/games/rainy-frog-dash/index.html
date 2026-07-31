@@ -17,8 +17,8 @@
   <script src="/sdk/phaser.min.js"></script>
   <script src="/sdk/rnf-i18n.js?v=20260730e"></script>
   <script src="/sdk/rnf-game-packs.js?v=20260730e"></script>
-  <script src="/sdk/rnf-game-sdk.js?v=20260731t"></script>
-  <script src="/games/_shared/rnf-phaser-leaderboard.js?v=20260731t"></script>
+  <script src="/sdk/rnf-game-sdk.js?v=20260731lb6"></script>
+  <script src="/games/_shared/rnf-phaser-leaderboard.js?v=20260731lb8"></script>
   <script src="/games/_shared/rnf-phaser-help.js?v=20260731d"></script>
 </head>
 <body>
@@ -43,56 +43,104 @@
     casual: {
       id: "casual",
       label: "Casual 輕鬆",
-      desc: "寬管道 · 連跳飛躍 · 開局護盾 · 手感寬鬆",
+      desc: "寬管 · 道具多 · 開局雙盾 · 無移動管",
       color: "#67e8f9",
       scoreMult: 1.0,
-      gravity: 720,
-      jump: -390,
+      gravity: 700,
+      jump: -380,
       jumpCooldown: 0.02,
-      gap: 250,
-      scroll: 115,
-      spawnEvery: 2.6,
+      gap: 265,
+      scroll: 105,
+      spawnEvery: 2.85,
       movingPipes: false,
-      startShield: 1,
-      gapFloor: 0.82,
-      pickupRate: 0.85,
-      powerRate: 0.22
+      movePipeFrom: 99,
+      moveAmp: [8, 12],
+      startShield: 2,
+      maxShield: 3,
+      gapFloor: 0.86,
+      pickupRate: 0.92,
+      powerRate: 0.34,
+      narrowChance: 0,
+      maxShiftEarly: 45,
+      maxShiftLate: 70,
+      hitW: 36,
+      rocketDur: 3.4,
+      rocketScroll: 1.25,
+      slowDur: 4.5,
+      slowScroll: 0.58,
+      magnetDur: 5.5,
+      magnetRange: 300,
+      magnetPullPowers: true,
+      featherDur: 4.2,
+      featherGrav: 0.48
     },
     standard: {
       id: "standard",
       label: "Standard 電競",
-      desc: "標準間隙 · 連跳飛躍 · 道具豐富",
+      desc: "標準間隙 · 後期微移管 · 道具均衡",
       color: "#a78bfa",
       scoreMult: 1.35,
       gravity: 820,
       jump: -410,
       jumpCooldown: 0.02,
-      gap: 210,
-      scroll: 140,
-      spawnEvery: 2.2,
-      movingPipes: false,
+      gap: 215,
+      scroll: 138,
+      spawnEvery: 2.25,
+      movingPipes: true,
+      movePipeFrom: 10,
+      moveAmp: [10, 16],
       startShield: 1,
+      maxShield: 2,
       gapFloor: 0.78,
-      pickupRate: 0.78,
-      powerRate: 0.18
+      pickupRate: 0.8,
+      powerRate: 0.22,
+      narrowChance: 0.12,
+      maxShiftEarly: 55,
+      maxShiftLate: 95,
+      hitW: 40,
+      rocketDur: 2.6,
+      rocketScroll: 1.38,
+      slowDur: 3.4,
+      slowScroll: 0.68,
+      magnetDur: 4.2,
+      magnetRange: 240,
+      magnetPullPowers: false,
+      featherDur: 3.2,
+      featherGrav: 0.55
     },
     extreme: {
       id: "extreme",
       label: "Extreme 狂暴",
-      desc: "較窄間隙 · 移動管 · 暴風階段 · 高分倍率",
+      desc: "窄管 · 早移管 · 窄縫突襲 · 道具偏少",
       color: "#f472b6",
       scoreMult: 2.2,
-      gravity: 960,
-      jump: -430,
+      gravity: 980,
+      jump: -435,
       jumpCooldown: 0.03,
-      gap: 175,
-      scroll: 170,
-      spawnEvery: 1.85,
+      gap: 168,
+      scroll: 175,
+      spawnEvery: 1.75,
       movingPipes: true,
+      movePipeFrom: 3,
+      moveAmp: [14, 26],
       startShield: 0,
-      gapFloor: 0.74,
-      pickupRate: 0.72,
-      powerRate: 0.2
+      maxShield: 2,
+      gapFloor: 0.7,
+      pickupRate: 0.62,
+      powerRate: 0.14,
+      narrowChance: 0.28,
+      maxShiftEarly: 70,
+      maxShiftLate: 115,
+      hitW: 42,
+      rocketDur: 2.0,
+      rocketScroll: 1.5,
+      slowDur: 2.6,
+      slowScroll: 0.72,
+      magnetDur: 3.4,
+      magnetRange: 200,
+      magnetPullPowers: false,
+      featherDur: 2.4,
+      featherGrav: 0.62
     }
   };
 
@@ -417,6 +465,20 @@
     g.fillRect(20, 42, 8, 4);
     g.generateTexture("magnet-icon", 48, 48);
 
+    // 輕羽：緩降翅膀
+    g.clear();
+    g.fillStyle(0xfef3c7, 1);
+    g.fillEllipse(14, 24, 18, 28);
+    g.fillEllipse(34, 24, 18, 28);
+    g.fillStyle(0xfde68a, 1);
+    g.fillEllipse(14, 24, 10, 18);
+    g.fillEllipse(34, 24, 10, 18);
+    g.fillStyle(0xfbbf24, 1);
+    g.fillCircle(24, 24, 6);
+    g.fillStyle(0xffffff, 0.9);
+    g.fillCircle(22, 22, 2);
+    g.generateTexture("feather-icon", 48, 48);
+
     g.clear();
     g.fillStyle(0xf97316, 1);
     g.fillCircle(5, 5, 5);
@@ -513,7 +575,7 @@
         fontSize: "38px", fontStyle: "bold", color: "#ffffff"
       }).setOrigin(0.5).setScale(0.65).setAlpha(0);
 
-      var sub = this.add.text(W / 2, 195, "雨夜飛天蛙 · 連跳飛躍 · 護盾／火箭／慢動作／磁吸 · 里程碑", {
+      var sub = this.add.text(W / 2, 195, "金雨滴 Combo · 護盾／火箭／慢放／磁吸／輕羽 · 三段難度管障", {
         fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
         fontSize: "14px", color: "#94a3b8"
       }).setOrigin(0.5).setAlpha(0);
@@ -537,7 +599,7 @@
       makeButton(this, W / 2, 504, "操作說明", 0x64748b, function () {
         if (window.RNFPhaserHelp && RNFPhaserHelp.showHelpOverlay) {
           RNFPhaserHelp.showHelpOverlay(self,
-            "空白／↑／點擊可持續跳躍 · 金雨滴 Combo · 紫寶石大分 · 護盾擋一次 · 火箭衝刺 · 慢動作 · 磁吸 · 近距刮擦加分 · 里程碑獎勵",
+            "空白／↑／點擊可持續跳躍\n金雨滴 Combo · 紫寶石高分\n護盾擋傷 · 火箭衝刺無敵 · 慢放 · 磁吸 · 輕羽緩降\n近距刮擦加分 · 里程碑獎勵 · 三段難度障礙不同",
             { W: W, H: H }
           );
         }
@@ -558,7 +620,7 @@
       }).setOrigin(0.5).setScale(0.7).setAlpha(0);
       this.tweens.add({ targets: head, alpha: 1, scale: 1, duration: 360, ease: "Back.easeOut" });
 
-      this.add.text(W / 2, 118, "前幾管較寬 · 危險緩慢上升 · 道具越多飛越遠", {
+      this.add.text(W / 2, 118, "輕鬆道具多／狂暴管更窄會動 · DANGER 緩慢上升", {
         fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
         fontSize: "14px", color: "#64748b"
       }).setOrigin(0.5);
@@ -653,7 +715,9 @@
       this.rocketTimer = 0;
       this.slowTimer = 0;
       this.magnetTimer = 0;
+      this.featherTimer = 0;
       this.invuln = 0;
+      this.baseGravity = this.diff.gravity;
       this.spawnAcc = 0;
       this.pipesCleared = 0;
       this.pipeStreak = 0;
@@ -855,13 +919,14 @@
       doShake(this.cameras.main, 35, 0.0035);
     }
 
-    /** 前幾管較寬，之後才逐漸收緊 */
-    currentGap() {
-      var introBoost = this.pipesCleared < 4 ? 1.35 : (this.pipesCleared < 8 ? 1.15 : 1);
-      var shrink = Math.pow(Math.max(1, this.dangerMultiplier * 0.22 + 0.78), 0.3);
+    /** 前幾管較寬，之後依難度收緊；窄縫管另算 */
+    currentGap(forceNarrow) {
+      var introBoost = this.pipesCleared < 4 ? 1.38 : (this.pipesCleared < 8 ? 1.16 : 1);
+      var shrink = Math.pow(Math.max(1, this.dangerMultiplier * 0.2 + 0.8), 0.32);
       var gap = (this.diff.gap * introBoost) / shrink;
-      var floor = this.diff.gap * this.diff.gapFloor;
-      return Phaser.Math.Clamp(gap, floor, this.diff.gap + 50);
+      if (forceNarrow) gap *= 0.78;
+      var floor = this.diff.gap * this.diff.gapFloor * (forceNarrow ? 0.92 : 1);
+      return Phaser.Math.Clamp(gap, floor, this.diff.gap + 55);
     }
 
     makePipeHit(x, y, w, h) {
@@ -902,12 +967,15 @@
     }
 
     spawnPipePair() {
-      var gap = this.currentGap();
-      var margin = 90;
+      var narrow = this.pipesCleared >= 6 && Math.random() < (this.diff.narrowChance || 0);
+      var gap = this.currentGap(narrow);
+      var margin = this.diffKey === "extreme" ? 72 : 90;
       var prevY = this.pipePairs.length
         ? this.pipePairs[this.pipePairs.length - 1].baseGapY
         : H / 2;
-      var maxShift = this.pipesCleared < 4 ? 55 : (this.pipesCleared < 8 ? 80 : 100);
+      var maxShift = this.pipesCleared < 4
+        ? this.diff.maxShiftEarly
+        : (this.pipesCleared < 9 ? (this.diff.maxShiftEarly + this.diff.maxShiftLate) / 2 : this.diff.maxShiftLate);
       var gapY = Phaser.Math.Clamp(
         prevY + Phaser.Math.Between(-maxShift, maxShift),
         margin + gap / 2,
@@ -917,12 +985,13 @@
       var topH = gapY - gap / 2;
       var botY = gapY + gap / 2;
       var botH = H - botY;
-      var tintCycle = [0xa78bfa, 0x22d3ee, 0x34d399, 0xf472b6];
+      var tintCycle = narrow
+        ? [0xf43f5e, 0xef4444, 0xfb7185]
+        : [0xa78bfa, 0x22d3ee, 0x34d399, 0xf472b6];
       var tint = tintCycle[this.pipesCleared % tintCycle.length];
       var x = W + 50;
-      var hitW = 40;
+      var hitW = this.diff.hitW || 40;
 
-      // 外觀與判定分離：拉伸圖片不會放大 hitbox
       var topVis = this.add.image(x, topH / 2, "pipe")
         .setDisplaySize(64, Math.max(8, topH)).setFlipY(true).setDepth(10).setTint(tint);
       var botVis = this.add.image(x, botY + botH / 2, "pipe")
@@ -931,7 +1000,8 @@
       var topHit = this.makePipeHit(x, topH / 2, hitW, topH);
       var botHit = this.makePipeHit(x, botY + botH / 2, hitW, botH);
 
-      var moveNow = this.diff.movingPipes && this.pipesCleared >= 5;
+      var moveNow = !!this.diff.movingPipes && this.pipesCleared >= (this.diff.movePipeFrom || 99);
+      var ampRange = this.diff.moveAmp || [10, 16];
       var pair = {
         topVis: topVis,
         botVis: botVis,
@@ -939,24 +1009,29 @@
         botHit: botHit,
         scored: false,
         moving: moveNow,
+        narrow: !!narrow,
         phase: Math.random() * Math.PI * 2,
         baseGapY: gapY,
         baseGapYLive: gapY,
         gap: gap,
         hitW: hitW,
         x: x,
-        amp: moveNow ? Phaser.Math.Between(10, 18) : 0
+        amp: moveNow ? Phaser.Math.Between(ampRange[0], ampRange[1]) : 0
       };
       this.pipePairs.push(pair);
-      this.spawnGapRewards(x, gapY, gap);
+      this.spawnGapRewards(x, gapY, gap, narrow);
+      if (narrow) {
+        floatText(this, W - 80, 100, "窄縫！", "#fda4af", 14);
+      }
     }
 
-    spawnGapRewards(x, gapY, gap) {
-      if (Math.random() < this.diff.pickupRate) {
+    spawnGapRewards(x, gapY, gap, narrow) {
+      var pickupRate = this.diff.pickupRate * (narrow ? 0.7 : 1);
+      if (Math.random() < pickupRate) {
         var pattern = Math.random();
-        if (pattern < 0.45) {
+        if (pattern < 0.42) {
           this.spawnPickup(x, gapY, "drop");
-        } else if (pattern < 0.75) {
+        } else if (pattern < 0.72) {
           this.spawnPickup(x - 18, gapY - 22, "drop");
           this.spawnPickup(x + 8, gapY, "drop");
           this.spawnPickup(x - 18, gapY + 22, "drop");
@@ -966,9 +1041,18 @@
           this.spawnPickup(x, gapY + gap * 0.18, "drop");
         }
       }
-      if (Math.random() < this.diff.powerRate) {
+      var powerRate = this.diff.powerRate * (narrow ? 0.55 : 1);
+      if (Math.random() < powerRate) {
         var roll = Math.random();
-        var type = roll < 0.28 ? "shield" : (roll < 0.52 ? "rocket" : (roll < 0.76 ? "slow" : "magnet"));
+        // 依難度調整掉落權重：輕鬆多護盾／輕羽，狂暴偏火箭／慢放
+        var type;
+        if (this.diffKey === "casual") {
+          type = roll < 0.28 ? "shield" : (roll < 0.46 ? "feather" : (roll < 0.64 ? "magnet" : (roll < 0.82 ? "slow" : "rocket")));
+        } else if (this.diffKey === "extreme") {
+          type = roll < 0.18 ? "shield" : (roll < 0.38 ? "rocket" : (roll < 0.58 ? "slow" : (roll < 0.78 ? "magnet" : "feather")));
+        } else {
+          type = roll < 0.22 ? "shield" : (roll < 0.4 ? "rocket" : (roll < 0.58 ? "slow" : (roll < 0.76 ? "magnet" : "feather")));
+        }
         this.spawnPickup(x + Phaser.Math.Between(-8, 28), gapY + Phaser.Math.Between(-28, 28), type);
       }
     }
@@ -980,9 +1064,10 @@
         shield: "shield-icon",
         rocket: "rocket-icon",
         slow: "slow-icon",
-        magnet: "magnet-icon"
+        magnet: "magnet-icon",
+        feather: "feather-icon"
       };
-      var isPower = type === "shield" || type === "rocket" || type === "slow" || type === "magnet" || type === "gem";
+      var isPower = type === "shield" || type === "rocket" || type === "slow" || type === "magnet" || type === "feather" || type === "gem";
       var p = this.pickups.create(x, y, keyMap[type] || "raindrop");
       p.body.setAllowGravity(false);
       p.setDepth(12);
@@ -991,7 +1076,8 @@
       p.setScale(isPower ? 0.95 : 1.1);
 
       var auraColor = {
-        shield: 0xa78bfa, rocket: 0xf97316, slow: 0x38bdf8, magnet: 0x34d399, gem: 0xe879f9, drop: 0xfbbf24
+        shield: 0xa78bfa, rocket: 0xf97316, slow: 0x38bdf8, magnet: 0x34d399,
+        feather: 0xfde68a, gem: 0xe879f9, drop: 0xfbbf24
       }[type] || 0xfbbf24;
       var aura = this.add.circle(x, y, isPower ? 26 : 14, auraColor, 0.18)
         .setStrokeStyle(2, auraColor, 0.85).setDepth(11).setBlendMode(Phaser.BlendModes.ADD);
@@ -1026,6 +1112,7 @@
         rocket: { title: "ROCKET OVERDRIVE", sub: "火箭衝刺 · 無敵疾行", color: "#fb923c", tint: 0xf97316, tint2: 0xfbbf24 },
         slow: { title: "TIME BREAK", sub: "時間裂縫 · 全域慢放", color: "#7dd3fc", tint: 0x38bdf8, tint2: 0xe0f2fe },
         magnet: { title: "MAGNET STORM", sub: "電磁場 · 吸爆金雨滴", color: "#6ee7b7", tint: 0x34d399, tint2: 0xa7f3d0 },
+        feather: { title: "SKY FEATHER", sub: "輕羽緩降 · 操控更穩", color: "#fde68a", tint: 0xfbbf24, tint2: 0xfef3c7 },
         gem: { title: "VOID GEM", sub: "紫晶爆擊 · 高分連擊", color: "#f0abfc", tint: 0xe879f9, tint2: 0xffffff }
       }[type];
       if (!meta) return;
@@ -1044,12 +1131,13 @@
       var aura = item.getData("aura");
       if (aura && aura.destroy) aura.destroy();
       item.destroy();
+      var d = this.diff;
 
       if (type === "drop") {
         this.combo++;
         this.bestCombo = Math.max(this.bestCombo, this.combo);
         this.comboTimer = 4.2;
-        var pts = Math.floor(18 * (1 + this.combo * 0.22) * this.diff.scoreMult * (0.85 + this.dangerMultiplier * 0.15));
+        var pts = Math.floor(18 * (1 + this.combo * 0.22) * d.scoreMult * (0.85 + this.dangerMultiplier * 0.15));
         this.score += pts;
         SFX.drop(this.combo);
         dualBurst(this, x, y, 0xfbbf24, 0xfde68a, 18);
@@ -1059,37 +1147,43 @@
         this.combo += 2;
         this.bestCombo = Math.max(this.bestCombo, this.combo);
         this.comboTimer = 4.5;
-        var gpts = Math.floor(70 * (1 + this.combo * 0.2) * this.diff.scoreMult * (0.85 + this.dangerMultiplier * 0.15));
+        var gpts = Math.floor(70 * (1 + this.combo * 0.2) * d.scoreMult * (0.85 + this.dangerMultiplier * 0.15));
         this.score += gpts;
         SFX.gem();
         this.playPowerGet("gem", x, y);
         floatText(this, x, y - 20, "+" + gpts + " GEM", "#f0abfc", 20);
       } else if (type === "shield") {
-        this.shield = Math.min(2, this.shield + 1);
+        this.shield = Math.min(d.maxShield || 2, this.shield + 1);
         this.shieldRing.setVisible(true);
         this.shieldRing2.setVisible(true);
         SFX.shield();
         this.playPowerGet("shield", x, y);
         floatText(this, x, y - 18, "護盾 x" + this.shield, "#e9d5ff", 18);
       } else if (type === "rocket") {
-        this.rocketTimer = 2.8;
-        this.invuln = Math.max(this.invuln, 2.8);
+        this.rocketTimer = Math.max(this.rocketTimer, d.rocketDur || 2.6);
+        this.invuln = Math.max(this.invuln, this.rocketTimer);
         this.rocketTrail.start();
         this.rocketSparks.start();
         SFX.rocket();
         this.playPowerGet("rocket", x, y);
         floatText(this, x, y - 18, "OVERDRIVE!", "#fdba74", 18);
       } else if (type === "slow") {
-        this.slowTimer = 3.5;
+        this.slowTimer = Math.max(this.slowTimer, d.slowDur || 3.4);
         SFX.slow();
         this.playPowerGet("slow", x, y);
         floatText(this, x, y - 18, "時間裂縫", "#bae6fd", 18);
       } else if (type === "magnet") {
-        this.magnetTimer = 4.5;
+        this.magnetTimer = Math.max(this.magnetTimer, d.magnetDur || 4.2);
         this.magnetAura.setVisible(true);
         SFX.magnet();
         this.playPowerGet("magnet", x, y);
         floatText(this, x, y - 18, "電磁場 ON", "#a7f3d0", 18);
+      } else if (type === "feather") {
+        this.featherTimer = Math.max(this.featherTimer, d.featherDur || 3.2);
+        this.physics.world.gravity.y = this.baseGravity * (d.featherGrav || 0.55);
+        SFX.power();
+        this.playPowerGet("feather", x, y);
+        floatText(this, x, y - 18, "輕羽緩降", "#fef08a", 18);
       }
     }
 
@@ -1133,16 +1227,16 @@
           neonBurst(this, this.frog.x, this.frog.y, 0x22d3ee, 24);
           floatText(this, W / 2, 120, mk.label + "  +" + pts, "#67e8f9", 22);
           if (mk.gift === "shield") {
-            this.shield = Math.min(2, this.shield + 1);
+            this.shield = Math.min(this.diff.maxShield || 2, this.shield + 1);
             this.shieldRing.setVisible(true);
             this.shieldRing2.setVisible(true);
             this.playPowerGet("shield", this.frog.x, this.frog.y);
           } else if (mk.gift === "slow") {
-            this.slowTimer = Math.max(this.slowTimer, 2.5);
+            this.slowTimer = Math.max(this.slowTimer, this.diff.slowDur * 0.7 || 2.5);
             this.playPowerGet("slow", this.frog.x, this.frog.y);
           } else if (mk.gift === "rocket") {
-            this.rocketTimer = Math.max(this.rocketTimer, 2.2);
-            this.invuln = Math.max(this.invuln, 2.2);
+            this.rocketTimer = Math.max(this.rocketTimer, this.diff.rocketDur * 0.85 || 2.2);
+            this.invuln = Math.max(this.invuln, this.rocketTimer);
             this.rocketTrail.start();
             this.rocketSparks.start();
             this.playPowerGet("rocket", this.frog.x, this.frog.y);
@@ -1293,8 +1387,8 @@
       var effectiveDanger = 1 + (this.dangerMultiplier - 1) * diffBias;
 
       this.scrollSpeed = this.diff.scroll * (0.9 + effectiveDanger * 0.22);
-      if (this.rocketTimer > 0) this.scrollSpeed *= 1.4;
-      if (this.slowTimer > 0) this.scrollSpeed *= 0.7;
+      if (this.rocketTimer > 0) this.scrollSpeed *= (this.diff.rocketScroll || 1.4);
+      if (this.slowTimer > 0) this.scrollSpeed *= (this.diff.slowScroll || 0.7);
 
       if (effectiveDanger < 1.35) this.setWeather("calm");
       else if (effectiveDanger < 1.9) this.setWeather("rain");
@@ -1367,13 +1461,18 @@
 
       this.pickups.getChildren().forEach(function (p) {
         if (!p.active) return;
-        if (self.magnetTimer > 0 && (p.getData("type") === "drop" || p.getData("type") === "gem")) {
+        var pType = p.getData("type");
+        var canPull = pType === "drop" || pType === "gem" ||
+          (self.diff.magnetPullPowers && (pType === "shield" || pType === "rocket" || pType === "slow" || pType === "magnet" || pType === "feather"));
+        if (self.magnetTimer > 0 && canPull) {
           var dx = self.frog.x - p.x;
           var dy = self.frog.y - p.y;
           var dist = Math.sqrt(dx * dx + dy * dy) || 1;
-          if (dist < 240) {
-            p.x += (dx / dist) * 320 * dt;
-            p.y += (dy / dist) * 320 * dt;
+          var range = self.diff.magnetRange || 240;
+          if (dist < range) {
+            var pull = 280 + (range - dist) * 0.8;
+            p.x += (dx / dist) * pull * dt;
+            p.y += (dy / dist) * pull * dt;
           }
         }
         p.x -= spd * dt;
@@ -1394,12 +1493,27 @@
       this.slowTimer = Math.max(0, this.slowTimer - rawDt);
       this.magnetTimer = Math.max(0, this.magnetTimer - rawDt);
       if (this.magnetTimer <= 0 && this.magnetAura) this.magnetAura.setVisible(false);
+
+      if (this.featherTimer > 0) {
+        this.featherTimer = Math.max(0, this.featherTimer - rawDt);
+        this.physics.world.gravity.y = this.baseGravity * (this.diff.featherGrav || 0.55);
+        if (this.featherTimer <= 0) {
+          this.physics.world.gravity.y = this.baseGravity;
+        }
+      } else {
+        this.physics.world.gravity.y = this.baseGravity;
+      }
+
       if (this.rocketTimer > 0) {
         this.rocketTimer = Math.max(0, this.rocketTimer - rawDt);
         if (this.rocketTimer <= 0) {
           this.rocketTrail.stop();
           if (this.rocketSparks) this.rocketSparks.stop();
         } else {
+          // 火箭期間略帶升力，手感更像衝刺而非純無敵
+          if (this.frog.body.velocity.y > 120) {
+            this.frog.setVelocityY(this.frog.body.velocity.y * 0.92);
+          }
           if (Math.random() < 0.12) doShake(this.cameras.main, 28, 0.005);
           if (Math.random() < 0.35) {
             var line = this.add.rectangle(
@@ -1417,6 +1531,8 @@
 
       if (this.invuln > 0 && this.rocketTimer <= 0) {
         this.frog.setAlpha(Math.sin(this.invuln * 20) > 0 ? 1 : 0.4);
+      } else if (this.featherTimer > 0) {
+        this.frog.setAlpha(0.85 + Math.sin((_t || 0) / 80) * 0.15);
       } else {
         this.frog.setAlpha(1);
       }
@@ -1431,6 +1547,7 @@
       if (this.rocketTimer > 0) powers.push("火箭 " + this.rocketTimer.toFixed(1) + "s");
       if (this.slowTimer > 0) powers.push("慢放 " + this.slowTimer.toFixed(1) + "s");
       if (this.magnetTimer > 0) powers.push("磁吸 " + this.magnetTimer.toFixed(1) + "s");
+      if (this.featherTimer > 0) powers.push("輕羽 " + this.featherTimer.toFixed(1) + "s");
       this.hudPower.setText(powers.join(" · "));
     }
   }

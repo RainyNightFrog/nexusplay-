@@ -17,8 +17,8 @@
   <script src="/sdk/phaser.min.js"></script>
   <script src="/sdk/rnf-i18n.js?v=20260730d"></script>
   <script src="/sdk/rnf-game-packs.js?v=20260731p"></script>
-  <script src="/sdk/rnf-game-sdk.js?v=20260731t"></script>
-  <script src="/games/_shared/rnf-phaser-leaderboard.js?v=20260731t"></script>
+  <script src="/sdk/rnf-game-sdk.js?v=20260731lb6"></script>
+  <script src="/games/_shared/rnf-phaser-leaderboard.js?v=20260731lb8"></script>
   <script src="/games/_shared/rnf-phaser-help.js?v=20260731d"></script>
 </head>
 <body>
@@ -512,10 +512,11 @@
       // 禁止物理位移：避免球撞擊時把底板「撞飛」
       this.paddle.body.moves = false;
       this.paddle.setDisplaySize(this.diff.paddleW, 16);
-      this.paddle.body.setSize(this.diff.paddleW, 16);
+      // 碰撞體略厚，減少高速球穿板
+      this.paddle.body.setSize(this.diff.paddleW, 22);
       this.paddle.body.setOffset(
         (this.paddle.width - this.diff.paddleW) / 2,
-        (this.paddle.height - 16) / 2
+        (this.paddle.height - 22) / 2
       );
       this.paddle.setCollideWorldBounds(false);
       this.paddle.setDepth(15);
@@ -603,7 +604,10 @@
       this.paddle.y = this.paddleY;
       this.paddle.setVelocity(0, 0);
       this.paddle.body.moves = false;
-      this.paddle.body.reset(this.paddle.x, this.paddleY);
+      this.paddle.body.enable = true;
+      // 勿每幀 body.reset：會打亂當幀球／板碰撞分離，造成「接住卻往下掉」
+      this.paddle.body.x = this.paddle.x - this.paddle.body.halfWidth;
+      this.paddle.body.y = this.paddle.y - this.paddle.body.halfHeight;
     }
 
     buildLevel() {
@@ -761,18 +765,38 @@
     }
 
     applyBallSpeed(ball) {
-      var spd = (ball.getData("speed") || this.diff.ballSpeed) * (0.85 + this.dangerMultiplier * 0.15);
       var body = ball.body;
-      if (!body || (body.velocity.x === 0 && body.velocity.y === 0)) return;
+      if (!body || !ball.active || ball.getData("stuck")) return;
+      var base = ball.getData("speed") || this.diff.ballSpeed;
+      var spd = Math.min(base * (0.85 + this.dangerMultiplier * 0.15), this.diff.ballSpeed * 2.4);
+      if (body.velocity.x === 0 && body.velocity.y === 0) return;
       var ang = Math.atan2(body.velocity.y, body.velocity.x);
-      // keep mostly upward-ish freedom but enforce speed
-      body.setVelocity(Math.cos(ang) * spd, Math.sin(ang) * spd);
-      // prevent too-flat angles
-      if (Math.abs(body.velocity.y) < spd * 0.28) {
-        body.velocity.y = (body.velocity.y >= 0 ? 1 : -1) * spd * 0.35;
-        var nx = Math.sqrt(Math.max(0, spd * spd - body.velocity.y * body.velocity.y));
-        body.velocity.x = (body.velocity.x >= 0 ? 1 : -1) * nx;
+      var vx = Math.cos(ang) * spd;
+      var vy = Math.sin(ang) * spd;
+      // 避免近水平角：保留原本上下方向，絕不無故改成往下
+      if (Math.abs(vy) < spd * 0.28) {
+        var dirY = vy > 0.01 ? 1 : (vy < -0.01 ? -1 : (ball.y > this.paddleY - 40 ? -1 : (vy >= 0 ? 1 : -1)));
+        // 靠近底板時強制向上，防止「擦到板卻往下掉」
+        if (ball.y >= this.paddleY - 40) dirY = -1;
+        vy = dirY * spd * 0.4;
+        vx = (vx >= 0 ? 1 : -1) * Math.sqrt(Math.max(0, spd * spd - vy * vy));
       }
+      body.setVelocity(vx, vy);
+    }
+
+    bounceOffPaddle(ball, paddle) {
+      if (!ball || !ball.active || !ball.body || ball.getData("stuck")) return;
+      var offset = (ball.x - paddle.x) / Math.max(8, paddle.displayWidth / 2);
+      offset = Phaser.Math.Clamp(offset, -1, 1);
+      var angle = offset * 1.15;
+      var spd = (ball.getData("speed") || this.diff.ballSpeed) * (0.9 + this.dangerMultiplier * 0.12);
+      spd = Math.min(spd * 1.02, this.diff.ballSpeed * 2.2);
+      ball.setData("speed", spd);
+      // 強制放在板上方再給向上速度，避免卡在板內被擠下去
+      var liftY = this.paddleY - 14;
+      ball.y = Math.min(ball.y, liftY);
+      ball.body.reset(ball.x, liftY);
+      ball.body.setVelocity(Math.sin(angle) * spd, -Math.abs(Math.cos(angle) * spd));
     }
 
     onBallPaddle(ball, paddle) {
@@ -791,18 +815,12 @@
         return;
       }
 
-      // precise angle from hit position
-      var offset = (ball.x - paddle.x) / (paddle.displayWidth / 2);
-      offset = Phaser.Math.Clamp(offset, -1, 1);
-      var angle = offset * 1.15; // radians from vertical
-      var spd = (ball.getData("speed") || this.diff.ballSpeed) * (0.9 + this.dangerMultiplier * 0.12);
-      ball.setData("speed", Math.min(spd * 1.02, this.diff.ballSpeed * 2.2));
-      ball.body.setVelocity(Math.sin(angle) * spd, -Math.abs(Math.cos(angle) * spd));
+      this.bounceOffPaddle(ball, paddle);
 
       this.bounces++;
       this.dangerMultiplier = 1 + Math.log(1 + this.elapsedTime / 30) * 0.8 + Math.log(1 + this.bounces / 24) * 0.2;
+      ball.setData("paddleGrace", 0.12);
 
-      // 視覺回饋，不縮放物理底板（避免碰撞體變形）
       this.tweens.killTweensOf(paddle);
       paddle.setAlpha(0.55);
       this.tweens.add({
@@ -959,10 +977,10 @@
 
     applyPaddleWidth(w) {
       this.paddle.setDisplaySize(w, 16);
-      this.paddle.body.setSize(w, 16);
+      this.paddle.body.setSize(w, 22);
       this.paddle.body.setOffset(
         (this.paddle.width - w) / 2,
-        (this.paddle.height - 16) / 2
+        (this.paddle.height - 22) / 2
       );
       this.movePaddleTo(this.paddle.x);
     }
@@ -1160,24 +1178,61 @@
         vb.refreshBody();
       }
 
-      // balls fell below
+      // balls fell below + 接球保險
       var living = 0;
       var self = this;
+      var halfPad = this.paddle.displayWidth / 2 + 6;
       this.balls.getChildren().forEach(function (b) {
         if (!b.active) return;
         if (b.getData("stuck")) {
-          // 黏球不因 y 判定銷毀，固定在底板上
           b.x = self.paddle.x;
           b.y = self.paddleY - 18;
           living++;
           return;
         }
+
+        var grace = b.getData("paddleGrace") || 0;
+        if (grace > 0) b.setData("paddleGrace", Math.max(0, grace - dt));
+
+        // 手動接球判定：球在板上方附近且往下走／擦到板 → 強制彈起
+        // （補物理穿模／分離方向錯誤）
+        if (grace <= 0 && b.body && b.body.enable) {
+          var nearX = Math.abs(b.x - self.paddle.x) <= halfPad;
+          var nearY = b.y >= self.paddleY - 28 && b.y <= self.paddleY + 10;
+          var goingDown = b.body.velocity.y >= -20;
+          if (nearX && nearY && goingDown) {
+            self.bounceOffPaddle(b, self.paddle);
+            b.setData("paddleGrace", 0.12);
+            self.bounces++;
+            SFX.paddle();
+            neonBurst(self, b.x, b.y, 0x22d3ee, 10);
+          }
+        }
+
+        // 剛彈起後若仍卡在板下方，拉回上方
+        if ((b.getData("paddleGrace") || 0) > 0 && b.y > self.paddleY - 8) {
+          b.y = self.paddleY - 14;
+          if (b.body) {
+            b.body.reset(b.x, b.y);
+            if (b.body.velocity.y > 0) b.body.velocity.y = -Math.abs(b.body.velocity.y);
+          }
+        }
+
         if (b.y > H + 20) {
           b.destroy();
           return;
         }
         living++;
-        self.applyBallSpeed(b);
+        // 只做速度正規化，不要每幀亂改方向（舊邏輯會把擦板球逼往下）
+        if ((b.getData("paddleGrace") || 0) <= 0) {
+          var body = b.body;
+          if (body && (body.velocity.x !== 0 || body.velocity.y !== 0)) {
+            var base = b.getData("speed") || self.diff.ballSpeed;
+            var spd = Math.min(base * (0.85 + self.dangerMultiplier * 0.15), self.diff.ballSpeed * 2.4);
+            var cur = Math.sqrt(body.velocity.x * body.velocity.x + body.velocity.y * body.velocity.y) || 1;
+            body.setVelocity(body.velocity.x / cur * spd, body.velocity.y / cur * spd);
+          }
+        }
       });
 
       if (living === 0) {

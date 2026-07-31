@@ -125,7 +125,7 @@
       ".rnf-score-big{font-size:clamp(2rem,6vw,3rem);font-weight:900;color:#22d3ee;margin:.5rem 0;font-variant-numeric:tabular-nums;text-shadow:0 0 24px rgba(34,211,238,.5)}" +
       ".rnf-hint{font-size:.72rem;color:#64748b;margin-top:.35rem}" +
       ".rnf-diff-label{font-size:.72rem;color:#64748b;letter-spacing:.12em;margin:.65rem 0 .35rem}" +
-      ".rnf-lb-list{text-align:left;margin:.55rem 0 .75rem;max-height:42vh;overflow-y:auto;border:1px solid rgba(34,211,238,.15);border-radius:10px;background:rgba(0,0,0,.35)}" +
+      ".rnf-lb-list{text-align:left;margin:.55rem 0 .35rem;max-height:34vh;overflow-y:auto;border:1px solid rgba(34,211,238,.15);border-radius:10px;background:rgba(0,0,0,.35)}" +
       ".rnf-lb-row{display:grid;grid-template-columns:2rem 1fr auto;gap:.45rem;align-items:center;padding:.5rem .65rem;border-bottom:1px solid rgba(255,255,255,.05);font-size:.78rem}" +
       ".rnf-lb-row:last-child{border-bottom:none}" +
       ".rnf-lb-row.me{background:rgba(34,211,238,.08)}" +
@@ -136,6 +136,10 @@
       ".rnf-lb-score{font-weight:700;color:#22d3ee;font-variant-numeric:tabular-nums}" +
       ".rnf-lb-meta{font-size:.62rem;color:#64748b;margin-top:.12rem;text-align:left}" +
       ".rnf-lb-empty{color:#64748b;font-size:.82rem;padding:1.25rem;text-align:center}" +
+      ".rnf-lb-pager{display:flex;align-items:center;justify-content:center;gap:.45rem;margin:.15rem 0 .55rem;flex-wrap:wrap}" +
+      ".rnf-lb-page-label{font-size:.72rem;color:#94a3b8;min-width:4.5rem;text-align:center;font-variant-numeric:tabular-nums}" +
+      ".rnf-lb-pager .rnf-btn{padding:.35rem .7rem;font-size:.72rem}" +
+      ".rnf-lb-pager .rnf-btn:disabled{opacity:.35;cursor:not-allowed;transform:none;box-shadow:none}" +
       ".rnf-lb-section-title{font-size:.72rem;color:#22d3ee;letter-spacing:.12em;text-align:center;margin:.85rem 0 .35rem;padding-left:0}" +
       ".rnf-lb-note{font-size:.72rem;color:#94a3b8;line-height:1.55;text-align:center;margin:.35rem 0 .15rem;padding:.45rem .6rem;border-radius:8px;background:rgba(15,23,42,.55);border:1px solid rgba(148,163,184,.2)}" +
       ".rnf-lb-note.warn{background:rgba(251,191,36,.08);border-color:rgba(251,191,36,.28)}" +
@@ -599,6 +603,16 @@
     }
   }
 
+  /** 同源 iframe（本機／主站嵌入 public/games）可直接 fetch，避免 postMessage 代理失敗導致空榜 */
+  function canDirectApiFromEmbed() {
+    if (!isEmbedded()) return true;
+    try {
+      return !!(global.parent && global.parent.location && global.parent.location.origin === location.origin);
+    } catch (_e) {
+      return false;
+    }
+  }
+
   function directApiFetch(method, path, body) {
     return fetch(path, {
       method: method,
@@ -613,14 +627,30 @@
   }
 
   function proxyApiFetch(method, path, body) {
-    if (!isEmbedded()) return directApiFetch(method, path, body);
+    if (canDirectApiFromEmbed()) return directApiFetch(method, path, body);
     return new Promise(function (resolve, reject) {
       var requestId = "rnf-" + Date.now() + "-" + Math.random().toString(36).slice(2);
+      var settled = false;
+      function finish(ok, value) {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        delete apiProxyWaiters[requestId];
+        if (ok) resolve(value);
+        else reject(value);
+      }
       var timer = setTimeout(function () {
         delete apiProxyWaiters[requestId];
-        reject(new Error("API proxy timeout"));
-      }, 15000);
-      apiProxyWaiters[requestId] = { resolve: resolve, reject: reject, timer: timer };
+        directApiFetch(method, path, body).then(
+          function (res) { finish(true, res); },
+          function () { finish(false, new Error("API proxy timeout")); }
+        );
+      }, 8000);
+      apiProxyWaiters[requestId] = {
+        resolve: function (res) { finish(true, res); },
+        reject: function (err) { finish(false, err); },
+        timer: timer,
+      };
       postToParent({
         type: API_PROXY_REQUEST,
         requestId: requestId,
@@ -872,14 +902,14 @@
     var cloudList = dedupeLeaderboardByPlayer(cloud || []);
     if (cloudList.length) {
       cloudList.sort(function (a, b) { return (b.score || 0) - (a.score || 0); });
-      return cloudList.slice(0, 15).map(function (e, i) {
+      return cloudList.slice(0, 30).map(function (e, i) {
         return Object.assign({}, e, { rank: i + 1 });
       });
     }
     var localMine = (local || []).filter(function (le) { return le && le.isMe; });
     localMine = dedupeLeaderboardByPlayer(localMine);
     localMine.sort(function (a, b) { return (b.score || 0) - (a.score || 0); });
-    return localMine.slice(0, 15).map(function (e, i) {
+    return localMine.slice(0, 30).map(function (e, i) {
       return Object.assign({}, e, { rank: i + 1 });
     });
   }
@@ -905,7 +935,7 @@
         bundle.merged = mergeDifficultyLeaderboard([], bundle.local, difficulty);
         return Promise.resolve(finalizeLeaderboardBundle(bundle));
       }
-      var path = "/api/games/" + gameId + "/leaderboard?limit=" + Math.max(limit, 20) + "&difficulty=" + encodeURIComponent(difficulty);
+      var path = "/api/games/" + gameId + "/leaderboard?limit=" + Math.max(limit, 30) + "&difficulty=" + encodeURIComponent(difficulty);
       return refreshAuthState()
         .then(function () {
           return proxyApiFetch("GET", path, null);
@@ -1003,6 +1033,30 @@
     return map[diff] || String(diff);
   }
 
+  var LB_PAGE_SIZE = 10;
+
+  function formatLbPageLabel(current, total) {
+    var tpl = rnfT("lb.page");
+    if (!tpl || tpl === "lb.page") return current + " / " + total;
+    return String(tpl)
+      .replace("{current}", String(current))
+      .replace("{total}", String(total));
+  }
+
+  function sliceLeaderboardPage(entries, page, pageSize) {
+    pageSize = pageSize || LB_PAGE_SIZE;
+    var list = entries || [];
+    var totalPages = Math.max(1, Math.ceil(list.length / pageSize) || 1);
+    var safePage = Math.min(Math.max(0, page | 0), totalPages - 1);
+    var start = safePage * pageSize;
+    return {
+      page: safePage,
+      totalPages: totalPages,
+      total: list.length,
+      entries: list.slice(start, start + pageSize),
+    };
+  }
+
   function renderLeaderboardHtml(entries, loading, error, options) {
     options = options || {};
     if (loading) return '<p class="rnf-lb-empty">' + rnfT("lb.loading") + "</p>";
@@ -1043,6 +1097,21 @@
     }).join("");
   }
 
+  function renderLeaderboardPager(page, totalPages) {
+    if (totalPages <= 1) return "";
+    var prevLabel = rnfT("lb.prev");
+    var nextLabel = rnfT("lb.next");
+    if (prevLabel === "lb.prev") prevLabel = "‹";
+    if (nextLabel === "lb.next") nextLabel = "›";
+    return (
+      '<div class="rnf-lb-pager">' +
+      '<button type="button" class="rnf-btn" id="rnf-lb-prev"' + (page <= 0 ? " disabled" : "") + ">" + prevLabel + "</button>" +
+      '<span class="rnf-lb-page-label">' + formatLbPageLabel(page + 1, totalPages) + "</span>" +
+      '<button type="button" class="rnf-btn" id="rnf-lb-next"' + (page >= totalPages - 1 ? " disabled" : "") + ">" + nextLabel + "</button>" +
+      "</div>"
+    );
+  }
+
   function formatCloudError(msg) {
     if (!msg) return rnfT("err.noConnect");
     if (msg.indexOf("game_leaderboard") >= 0 || msg.indexOf("relation") >= 0 && msg.indexOf("does not exist") >= 0) {
@@ -1051,50 +1120,59 @@
     return msg;
   }
 
-  function renderLeaderboardPanel(bundle) {
-    var html = "";
-    var entries = (bundle && (bundle.merged || bundle.cloud)) || [];
-
+  function extractLeaderboardEntries(bundle) {
+    if (!bundle) return { entries: [], noteHtml: "", emptyHtml: "" };
+    var noteHtml = "";
     if (!bundle.loggedIn) {
-      html +=
+      noteHtml =
         '<p class="rnf-lb-note warn">' + rnfT("lb.noteGuest") + "</p>";
     }
-
+    var entries = (bundle.merged || bundle.cloud) || [];
     if (entries.length) {
-      html += renderLeaderboardHtml(entries, false, null, {
-        showSourceTag: false,
-        showDiffMeta: false,
-      });
-      return html;
+      return { entries: entries, noteHtml: noteHtml, emptyHtml: "" };
     }
-
     if (bundle.cloudOk) {
-      html +=
-        '<p class="rnf-lb-empty">' +
-        (bundle.loggedIn
-          ? rnfT("lb.emptyCloud")
-          : rnfT("lb.emptyCloudGuest")) +
-        "</p>";
-      return html;
+      return {
+        entries: [],
+        noteHtml: noteHtml,
+        emptyHtml:
+          '<p class="rnf-lb-empty">' +
+          (bundle.loggedIn
+            ? rnfT("lb.emptyCloud")
+            : rnfT("lb.emptyCloudGuest")) +
+          "</p>",
+      };
     }
-
-    // 雲端失敗時仍顯示合併後本機分數（不當成另一個榜）
     var localOnly = (bundle.local || []).map(function (e, i) {
       return Object.assign({}, e, { rank: i + 1 });
     });
     if (localOnly.length) {
-      html += renderLeaderboardHtml(localOnly, false, null, {
-        showSourceTag: false,
-        showDiffMeta: false,
-      });
+      return { entries: localOnly, noteHtml: noteHtml, emptyHtml: "" };
+    }
+    return {
+      entries: [],
+      noteHtml: noteHtml,
+      emptyHtml:
+        '<p class="rnf-lb-empty">' +
+        rnfT("lb.cloudFail") +
+        (bundle.cloudError ? "：" + formatCloudError(bundle.cloudError) : "") +
+        "</p>",
+    };
+  }
+
+  function renderLeaderboardPanel(bundle, page) {
+    var extracted = extractLeaderboardEntries(bundle);
+    var html = extracted.noteHtml || "";
+    if (!extracted.entries.length) {
+      html += extracted.emptyHtml || "";
       return html;
     }
-
-    html +=
-      '<p class="rnf-lb-empty">' +
-      rnfT("lb.cloudFail") +
-      (bundle.cloudError ? "：" + formatCloudError(bundle.cloudError) : "") +
-      "</p>";
+    var sliced = sliceLeaderboardPage(extracted.entries, page || 0, LB_PAGE_SIZE);
+    html += renderLeaderboardHtml(sliced.entries, false, null, {
+      showSourceTag: false,
+      showDiffMeta: false,
+    });
+    html += renderLeaderboardPager(sliced.page, sliced.totalPages);
     return html;
   }
 
@@ -1600,6 +1678,51 @@
     var difficulties = options.difficulties || getDefaultDifficulties();
     var selectedDifficulty = localSave.difficulty || difficulties[1]?.id || difficulties[0].id;
     var lbDifficulty = selectedDifficulty;
+    var lbPage = 0;
+    var lbBundleCache = null;
+
+    function bindLeaderboardPager(listEl) {
+      var prevBtn = listEl.querySelector("#rnf-lb-prev");
+      var nextBtn = listEl.querySelector("#rnf-lb-next");
+      if (prevBtn) {
+        prevBtn.onclick = function () {
+          if (lbPage <= 0) return;
+          SFX.click();
+          lbPage -= 1;
+          paintLeaderboardList(listEl);
+        };
+      }
+      if (nextBtn) {
+        nextBtn.onclick = function () {
+          SFX.click();
+          lbPage += 1;
+          paintLeaderboardList(listEl);
+        };
+      }
+    }
+
+    function paintLeaderboardList(listEl) {
+      if (!listEl) return;
+      if (!lbBundleCache) {
+        listEl.innerHTML = '<p class="rnf-lb-empty">' + rnfT("lb.loadingShort") + "</p>";
+        return;
+      }
+      var extracted = extractLeaderboardEntries(lbBundleCache);
+      if (!extracted.entries.length) {
+        listEl.innerHTML = (extracted.noteHtml || "") + (extracted.emptyHtml || "");
+        return;
+      }
+      var sliced = sliceLeaderboardPage(extracted.entries, lbPage, LB_PAGE_SIZE);
+      lbPage = sliced.page;
+      listEl.innerHTML =
+        (extracted.noteHtml || "") +
+        renderLeaderboardHtml(sliced.entries, false, null, {
+          showSourceTag: false,
+          showDiffMeta: false,
+        }) +
+        renderLeaderboardPager(sliced.page, sliced.totalPages);
+      bindLeaderboardPager(listEl);
+    }
 
     function getBestForDifficulty(diffId) {
       if (localSave.bestScores && localSave.bestScores[diffId] != null) {
@@ -1719,7 +1842,6 @@
     }
 
     function renderLeaderboardScreen() {
-      var diffCfg = difficulties.find(function (d) { return d.id === lbDifficulty; }) || getDifficultyConfig();
       var tabButtons = difficulties.map(function (d) {
         return '<button class="rnf-btn' + (d.id === lbDifficulty ? " selected" : "") + '" data-lb-diff="' + d.id + '">' + d.label + "</button>";
       }).join("");
@@ -1730,16 +1852,66 @@
         '<p class="rnf-diff-label">' + rnfT("lb.diffLabel") + '</p>' +
         '<div class="rnf-btn-row" id="rnf-lb-diff-row">' + tabButtons + "</div>" +
         '<div class="rnf-lb-list rnf-scroll" id="rnf-lb-list"><p class="rnf-lb-empty">' + rnfT("lb.loadingShort") + '</p></div>' +
-        '<div class="rnf-btn-row"><button class="rnf-btn primary" id="rnf-lb-back">' + rnfT("help.back") + "</button></div>";
+        '<div id="rnf-lb-pager-host"></div>' +
+        '<div class="rnf-btn-row"><button class="rnf-btn primary" id="rnf-lb-back">' + rnfT("help.back") + '</button></div>';
       show("rnf-leaderboard");
       var listEl = leaderboardPanel.querySelector("#rnf-lb-list");
-      fetchLeaderboardBundle(15, lbDifficulty).then(function (bundle) {
-        listEl.innerHTML = renderLeaderboardPanel(bundle);
+      var pagerHost = leaderboardPanel.querySelector("#rnf-lb-pager-host");
+      lbPage = 0;
+      lbBundleCache = null;
+
+      function paintLb() {
+        if (!listEl) return;
+        if (!lbBundleCache) {
+          listEl.innerHTML = '<p class="rnf-lb-empty">' + rnfT("lb.loadingShort") + "</p>";
+          if (pagerHost) pagerHost.innerHTML = "";
+          return;
+        }
+        var extracted = extractLeaderboardEntries(lbBundleCache);
+        if (!extracted.entries.length) {
+          listEl.innerHTML = (extracted.noteHtml || "") + (extracted.emptyHtml || "");
+          if (pagerHost) pagerHost.innerHTML = "";
+          return;
+        }
+        var sliced = sliceLeaderboardPage(extracted.entries, lbPage, LB_PAGE_SIZE);
+        lbPage = sliced.page;
+        listEl.innerHTML =
+          (extracted.noteHtml || "") +
+          renderLeaderboardHtml(sliced.entries, false, null, {
+            showSourceTag: false,
+            showDiffMeta: false,
+          });
+        if (pagerHost) {
+          pagerHost.innerHTML = renderLeaderboardPager(sliced.page, sliced.totalPages);
+          var prevBtn = pagerHost.querySelector("#rnf-lb-prev");
+          var nextBtn = pagerHost.querySelector("#rnf-lb-next");
+          if (prevBtn) {
+            prevBtn.onclick = function () {
+              if (lbPage <= 0) return;
+              SFX.click();
+              lbPage -= 1;
+              paintLb();
+            };
+          }
+          if (nextBtn) {
+            nextBtn.onclick = function () {
+              SFX.click();
+              lbPage += 1;
+              paintLb();
+            };
+          }
+        }
+      }
+
+      fetchLeaderboardBundle(30, lbDifficulty).then(function (bundle) {
+        lbBundleCache = bundle;
+        paintLb();
       });
       leaderboardPanel.querySelectorAll("[data-lb-diff]").forEach(function (btn) {
         btn.onclick = function () {
           SFX.click();
           lbDifficulty = btn.getAttribute("data-lb-diff");
+          lbPage = 0;
           renderLeaderboardScreen();
         };
       });

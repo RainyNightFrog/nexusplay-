@@ -17,8 +17,8 @@
   <script src="/sdk/phaser.min.js"></script>
   <script src="/sdk/rnf-i18n.js?v=20260730i"></script>
   <script src="/sdk/rnf-game-packs.js?v=20260730i"></script>
-  <script src="/sdk/rnf-game-sdk.js?v=20260731t"></script>
-  <script src="/games/_shared/rnf-phaser-leaderboard.js?v=20260731t"></script>
+  <script src="/sdk/rnf-game-sdk.js?v=20260731lb6"></script>
+  <script src="/games/_shared/rnf-phaser-leaderboard.js?v=20260731lb8"></script>
   <script src="/games/_shared/rnf-phaser-help.js?v=20260731d"></script>
 </head>
 <body>
@@ -591,7 +591,7 @@
       makeButton(this, W / 2, 504, "操作說明", 0x64748b, function () {
         if (window.RNFPhaserHelp && RNFPhaserHelp.showHelpOverlay) {
           RNFPhaserHelp.showHelpOverlay(self,
-            "↑跳 · ↓滑 · 空白／F／點擊射擊\n洋紅低障＝跳過 · 青藍高牆＝滑過 · 粉紅無人機／琥珀箱＝射擊\n鋸片迴避 · 綠彈簧踩踏 · 收集金幣／寶石／護盾／彈藥",
+            "空白鍵／↑／W 跳躍 · ↓／S 滑行 · F／點擊射擊\n洋紅低障＝跳過 · 青藍高牆＝滑過 · 粉紅無人機／琥珀箱＝射擊\n鋸片迴避 · 綠彈簧踩踏 · 收集金幣／寶石／護盾／彈藥",
             { W: W, H: H }
           );
         }
@@ -699,6 +699,7 @@
       this.ammo = this.diff.ammo;
       this.laserCd = 0;
       this.shield = this.diff.startShield;
+      this.invuln = 0;
       this.sliding = false;
       this.slideTimer = 0;
       this.jumpsLeft = this.diff.airJumps;
@@ -813,7 +814,7 @@
       this.hudCombo = this.add.text(W / 2, 66, "", {
         fontFamily: "Consolas, monospace", fontSize: "13px", color: "#fbbf24"
       }).setOrigin(0.5, 0).setDepth(60).setScrollFactor(0);
-      this.hudTip = this.add.text(W / 2, H - 28, "紅障跳 · 青牆滑 · 粉機／橘箱射 · 綠墊彈 · 收集發光獎勵", {
+      this.hudTip = this.add.text(W / 2, H - 28, "空白／↑ 跳 · ↓ 滑 · F／點擊射擊 · 紅障跳 · 青牆滑 · 粉機射", {
         fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
         fontSize: "12px", color: "#94a3b8"
       }).setOrigin(0.5, 0).setDepth(60).setScrollFactor(0);
@@ -883,6 +884,7 @@
     }
 
     isGrounded() {
+      if (!this.player || !this.player.body) return false;
       return this.player.body.blocked.down || this.player.body.touching.down;
     }
 
@@ -910,7 +912,8 @@
     startSlide() {
       if (this.ended || !this.isGrounded() || this.sliding) return;
       this.sliding = true;
-      this.slideTimer = 0.55;
+      // 捲軸越快滑行越久，避免高速時滑到一半撞牆
+      this.slideTimer = 0.55 + Math.min(0.45, this.scrollSpeed / 900);
       this.player.setTexture("runner-slide");
       this.player.body.setSize(30, this.slideHeight);
       this.player.body.setOffset(3, 2);
@@ -1030,14 +1033,23 @@
       var roll = Math.random();
       var x = W + 50;
       var type;
-      if (roll < 0.18) type = "barrier";
-      else if (roll < 0.34) type = "wall";
-      else if (roll < 0.5) type = "drone";
-      else if (roll < 0.62) type = "crate";
-      else if (roll < 0.74) type = "saw";
-      else if (roll < 0.84) type = "spring";
-      else if (roll < 0.93) type = "highlow";
-      else type = "triple";
+      // 開場教學波：只出跳／滑／可射，避免鋸片三連秒殺
+      if (this.elapsed < 12) {
+        if (roll < 0.34) type = "barrier";
+        else if (roll < 0.62) type = "wall";
+        else if (roll < 0.82) type = "drone";
+        else if (roll < 0.92) type = "crate";
+        else type = "spring";
+      } else {
+        if (roll < 0.18) type = "barrier";
+        else if (roll < 0.34) type = "wall";
+        else if (roll < 0.5) type = "drone";
+        else if (roll < 0.62) type = "crate";
+        else if (roll < 0.74) type = "saw";
+        else if (roll < 0.84) type = "spring";
+        else if (roll < 0.93) type = "highlow";
+        else type = "triple";
+      }
 
       var obs;
       if (type === "barrier") {
@@ -1046,7 +1058,8 @@
         obs.setData("breakable", false);
         this.decorateHazard(obs, "JUMP ↑", 0xf43f5e, "#fda4af");
       } else if (type === "wall") {
-        obs = this.obstacles.create(x, GROUND_Y - 58, "wall");
+        // 牆底留空：站立會撞、滑行可過（cy≈373 時底邊≈428，滑行頂≈436）
+        obs = this.obstacles.create(x, GROUND_Y - 87, "wall");
         obs.setData("kind", "solid");
         obs.setData("breakable", false);
         obs.setData("needSlide", true);
@@ -1094,13 +1107,13 @@
         var b = this.obstacles.create(x + 110, GROUND_Y - 90, "saw");
         b.setData("kind", "saw"); b.setData("breakable", false); b.setData("spin", 1);
         this.decorateHazard(b, "AVOID", 0xef4444, "#fca5a5");
-        var c = this.obstacles.create(x + 220, GROUND_Y - 58, "wall");
+        var c = this.obstacles.create(x + 220, GROUND_Y - 87, "wall");
         c.setData("kind", "solid"); c.setData("breakable", false); c.setData("needSlide", true);
         this.decorateHazard(c, "SLIDE ↓", 0x22d3ee, "#67e8f9");
         obs = a;
       }
 
-      if (Math.random() < 0.62) this.spawnRewardCluster(x);
+      if (Math.random() < (this.elapsed < 10 ? 0.78 : 0.62)) this.spawnRewardCluster(x);
     }
 
     spawnMissile() {
@@ -1188,44 +1201,55 @@
     }
 
     onHitObstacle(player, obs) {
-      if (this.ended) return;
+      if (this.ended || this.invuln > 0) return;
       if (obs.getData("kind") === "spring") {
         if (obs.getData("used")) return;
-        if (player.body.velocity.y >= -40) {
-          obs.setData("used", 1);
-          player.setVelocityY(-820);
-          SFX.spring();
-          dualBurst(this, obs.x, obs.y, 0x22c55e, 0x86efac, 18);
-          floatText(this, obs.x, obs.y - 30, "彈飛!", "#86efac", 15);
-          doShake(this.cameras.main, 60, 0.008);
-          this.time.delayedCall(900, function () {
-            if (obs.active) obs.setData("used", 0);
-          });
-        }
+        // 彈簧只助跑，絕不扣血（含上跳穿過）
+        obs.setData("used", 1);
+        player.setVelocityY(-820);
+        this.endSlide();
+        SFX.spring();
+        dualBurst(this, obs.x, obs.y, 0x22c55e, 0x86efac, 18);
+        floatText(this, obs.x, obs.y - 30, "彈飛!", "#86efac", 15);
+        doShake(this.cameras.main, 60, 0.008);
+        this.time.delayedCall(500, function () {
+          if (obs.active) obs.setData("used", 0);
+        });
         return;
       }
       if (obs.getData("needSlide") && this.sliding) return;
-      if (obs.getData("kind") === "drone" && this.sliding && player.y > obs.y + 10) return;
-      this.takeDamage(obs.x, obs.y);
+      // 無人機：只有身體撞上才受傷（可跳過／射掉）
+      if (obs.getData("kind") === "drone") {
+        var dy = Math.abs(player.y - obs.y);
+        if (dy > 36) return;
+      }
+      // 鋸片：滑行貼地可躲較高鋸
+      if (obs.getData("kind") === "saw" && this.sliding && obs.y < GROUND_Y - 70) return;
+      this.takeDamage(obs.x, obs.y, obs);
     }
 
     onHitMissile(player, missile) {
-      if (this.ended) return;
+      if (this.ended || this.invuln > 0) return;
       this.destroyThing(missile, 0xfbbf24);
-      this.takeDamage(missile.x, missile.y);
+      this.takeDamage(missile.x, missile.y, null);
     }
 
-    takeDamage(x, y) {
-      if (this.ended) return;
+    takeDamage(x, y, sourceObs) {
+      if (this.ended || this.invuln > 0) return;
       if (this.shield > 0) {
         this.shield--;
+        this.invuln = 1.15;
         this.shieldRing.setVisible(this.shield > 0);
         SFX.shieldBreak();
         doShake(this.cameras.main, 120, 0.016);
         screenPunch(this, 0x60a5fa, 0.35);
         shockwave(this, x, y, 0x60a5fa, 90);
         dualBurst(this, x, y, 0x60a5fa, 0xe0f2fe, 24);
-        powerBanner(this, "SHIELD BREAK", "護盾抵擋 · 繼續衝刺", "#93c5fd");
+        powerBanner(this, "SHIELD BREAK", "護盾抵擋 · 短暫無敵", "#93c5fd");
+        // 撞到的障礙推開，避免無敵結束瞬間再死
+        if (sourceObs && sourceObs.active) {
+          sourceObs.x = Math.min(sourceObs.x, this.player.x - 80);
+        }
         this.updateHudAmmo();
         return;
       }
@@ -1251,9 +1275,9 @@
       SFX.die();
 
       var distScore = Math.floor(this.distance * 2.5);
-      var killScore = this.kills * 150;
-      var raw = distScore + killScore + this.score;
-      var finalScore = Math.floor(raw * this.diff.scoreMult * (0.85 + this.dangerMultiplier * 0.15));
+      // this.score 已含路程加成、擊殺與收集，結算不再重複加 kills
+      var raw = distScore + this.score;
+      var finalScore = Math.floor(raw * (0.9 + this.dangerMultiplier * 0.1));
 
       var meta = {
         difficulty: this.diff.id,
@@ -1307,12 +1331,16 @@
 
       this.scrollParallax(dt);
 
-      // input
-      if (Phaser.Input.Keyboard.JustDown(this.cursors.up) || Phaser.Input.Keyboard.JustDown(this.keys.W)) {
+      // input：空白／↑／W 跳躍；↓／S 滑行；F／點擊射擊
+      if (
+        Phaser.Input.Keyboard.JustDown(this.cursors.up) ||
+        Phaser.Input.Keyboard.JustDown(this.keys.W) ||
+        Phaser.Input.Keyboard.JustDown(this.keys.SPACE)
+      ) {
         this.doJump();
       }
       if (this.cursors.down.isDown || this.keys.S.isDown) this.startSlide();
-      if (Phaser.Input.Keyboard.JustDown(this.keys.SPACE) || Phaser.Input.Keyboard.JustDown(this.keys.F)) {
+      if (Phaser.Input.Keyboard.JustDown(this.keys.F)) {
         this.shoot();
       }
 
@@ -1330,6 +1358,13 @@
       if (this.sliding) {
         this.slideTimer -= dt;
         if (this.slideTimer <= 0 || !this.isGrounded()) this.endSlide();
+      }
+
+      this.invuln = Math.max(0, this.invuln - dt);
+      if (this.invuln > 0) {
+        this.player.setAlpha(Math.sin(this.elapsed * 30) > 0 ? 1 : 0.35);
+      } else {
+        this.player.setAlpha(1);
       }
 
       if (this.laserCd > 0) this.laserCd = Math.max(0, this.laserCd - dt);

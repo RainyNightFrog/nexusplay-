@@ -461,17 +461,17 @@
     // 以雲端為主；本機只在雲端完全沒資料時補上（避免同名雙開）
     var cloudList = dedupeLeaderboardByPlayer(cloud || []);
     if (cloudList.length) {
-      return finalizeLeaderboard(cloudList, 20);
+      return finalizeLeaderboard(cloudList, 30);
     }
     var localMine = (local || []).filter(function (le) {
       return le && le.isMe;
     });
-    return finalizeLeaderboard(localMine, 20);
+    return finalizeLeaderboard(localMine, 30);
   }
 
   async function cloudFetchLeaderboard(limit, difficulty) {
     if (!gameId) return [];
-    var path = "/api/games/" + gameId + "/leaderboard?limit=" + (limit || 20);
+    var path = "/api/games/" + gameId + "/leaderboard?limit=" + (limit || 30);
     if (difficulty) {
       path += "&difficulty=" + encodeURIComponent(normalizeDifficultyKey(difficulty));
     }
@@ -604,7 +604,7 @@
     style.textContent =
       ".np-save-hint{font-size:.72rem;color:#888;margin-top:.35rem;letter-spacing:.06em}" +
       ".np-save-hint.synced{color:#00ffc8}.np-save-hint.local{color:#d4af37}" +
-      ".np-lb-list{text-align:left;margin:1rem 0;max-height:42vh;overflow-y:auto}" +
+      ".np-lb-list{text-align:left;margin:1rem 0 .35rem;max-height:34vh;overflow-y:auto}" +
       ".np-lb-row{display:grid;grid-template-columns:2rem 1fr auto auto;gap:.5rem;align-items:center;" +
       "padding:.55rem .65rem;border-bottom:1px solid rgba(255,255,255,.06);font-size:.82rem}" +
       ".np-lb-row.me{background:rgba(0,255,200,.06);border-radius:4px}" +
@@ -618,6 +618,10 @@
       ".np-lb-score{font-weight:700;font-variant-numeric:tabular-nums}" +
       ".np-lb-grade{font-size:.75rem;opacity:.85;min-width:1.2rem;text-align:center}" +
       ".np-lb-empty{color:#888;font-size:.85rem;padding:1.5rem 0;text-align:center}" +
+      ".np-lb-pager{display:flex;align-items:center;justify-content:center;gap:.5rem;margin:.35rem 0 .75rem;flex-wrap:wrap}" +
+      ".np-lb-pager button{cursor:pointer;border:1px solid rgba(0,255,200,.35);background:rgba(0,0,0,.35);color:#9ff;padding:.35rem .75rem;border-radius:6px;font-size:.75rem}" +
+      ".np-lb-pager button:disabled{opacity:.35;cursor:not-allowed}" +
+      ".np-lb-page-label{font-size:.75rem;color:#9aa;min-width:4.5rem;text-align:center}" +
       "html.np-embed-mode,html.np-embed-mode body{height:100%!important;max-height:100%!important;overflow:hidden!important}" +
       "html.np-embed-mode .screen.active{height:100%;max-height:100%;min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}" +
       "html.np-embed-mode #game.active,html.np-embed-mode #gameScreen.active{justify-content:flex-start;padding:.25rem .35rem .4rem}" +
@@ -739,58 +743,108 @@
     renderLeaderboard: function (container, entries) {
       injectStyles();
       if (!container) return;
-      entries = finalizeLeaderboard(entries || [], 20);
+      var PAGE = 10;
+      entries = finalizeLeaderboard(entries || [], 30);
       if (!entries || !entries.length) {
         container.innerHTML = '<div class="np-lb-empty">' + demoBridgeT("lbEmpty", "尚無排行紀錄，完成一場對局即可上榜！") + '</div>';
         return;
       }
-      container.innerHTML = entries
-        .map(function (e) {
-          var rankCls = e.rank <= 3 ? " top" : "";
-          var meCls = e.isMe ? " me" : "";
-          var grade = e.grade ? e.grade : "\u2014";
-          var titleHtml = "";
-          if (e.equippedTitle && e.equippedTitle.name) {
-            var tier = e.equippedTitle.rarity_tier || "common";
-            var tierCls =
-              tier === "legendary"
-                ? " np-lb-title-legendary"
-                : tier === "epic"
-                  ? " np-lb-title-epic"
-                  : tier === "rare"
-                    ? " np-lb-title-rare"
-                    : "";
-            titleHtml =
-              '<span class="np-lb-title' +
-              tierCls +
-              '">\u300C' +
-              escapeHtml(e.equippedTitle.name) +
-              "\u300D</span>";
-          }
-          return (
-            '<div class="np-lb-row' +
-            meCls +
-            '">' +
-            '<span class="np-lb-rank' +
-            rankCls +
-            '">#' +
-            e.rank +
-            "</span>" +
-            '<span class="np-lb-name"><span class="np-lb-player">' +
-            escapeHtml(e.playerName) +
-            "</span>" +
-            titleHtml +
-            "</span>" +
-            '<span class="np-lb-grade">' +
-            grade +
-            "</span>" +
-            '<span class="np-lb-score">' +
-            Number(e.score).toLocaleString() +
-            "</span>" +
-            "</div>"
-          );
-        })
-        .join("");
+
+      var page = 0;
+      function rowHtml(e) {
+        var rankCls = e.rank <= 3 ? " top" : "";
+        var meCls = e.isMe ? " me" : "";
+        var grade = e.grade ? e.grade : "\u2014";
+        var titleHtml = "";
+        if (e.equippedTitle && e.equippedTitle.name) {
+          var tier = e.equippedTitle.rarity_tier || "common";
+          var tierCls =
+            tier === "legendary"
+              ? " np-lb-title-legendary"
+              : tier === "epic"
+                ? " np-lb-title-epic"
+                : tier === "rare"
+                  ? " np-lb-title-rare"
+                  : "";
+          titleHtml =
+            '<span class="np-lb-title' +
+            tierCls +
+            '">\u300C' +
+            escapeHtml(e.equippedTitle.name) +
+            "\u300D</span>";
+        }
+        return (
+          '<div class="np-lb-row' +
+          meCls +
+          '">' +
+          '<span class="np-lb-rank' +
+          rankCls +
+          '">#' +
+          e.rank +
+          "</span>" +
+          '<span class="np-lb-name"><span class="np-lb-player">' +
+          escapeHtml(e.playerName) +
+          "</span>" +
+          titleHtml +
+          "</span>" +
+          '<span class="np-lb-grade">' +
+          grade +
+          "</span>" +
+          '<span class="np-lb-score">' +
+          Number(e.score).toLocaleString() +
+          "</span>" +
+          "</div>"
+        );
+      }
+
+      function paint() {
+        var totalPages = Math.max(1, Math.ceil(entries.length / PAGE));
+        if (page >= totalPages) page = totalPages - 1;
+        if (page < 0) page = 0;
+        var slice = entries.slice(page * PAGE, page * PAGE + PAGE);
+        var pager =
+          totalPages > 1
+            ? '<div class="np-lb-pager">' +
+              '<button type="button" data-np-lb-prev' +
+              (page <= 0 ? " disabled" : "") +
+              ">" +
+              demoBridgeT("lbPrev", "上一頁") +
+              "</button>" +
+              '<span class="np-lb-page-label">' +
+              (page + 1) +
+              " / " +
+              totalPages +
+              "</span>" +
+              '<button type="button" data-np-lb-next' +
+              (page >= totalPages - 1 ? " disabled" : "") +
+              ">" +
+              demoBridgeT("lbNext", "下一頁") +
+              "</button>" +
+              "</div>"
+            : "";
+        container.innerHTML =
+          '<div class="np-lb-list">' +
+          slice.map(rowHtml).join("") +
+          "</div>" +
+          pager;
+        var prev = container.querySelector("[data-np-lb-prev]");
+        var next = container.querySelector("[data-np-lb-next]");
+        if (prev) {
+          prev.onclick = function () {
+            if (page <= 0) return;
+            page -= 1;
+            paint();
+          };
+        }
+        if (next) {
+          next.onclick = function () {
+            page += 1;
+            paint();
+          };
+        }
+      }
+
+      paint();
     },
     setGameSessionActive: function (active) {
       gameSessionActive = !!active;

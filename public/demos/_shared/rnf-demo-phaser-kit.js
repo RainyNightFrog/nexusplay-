@@ -492,25 +492,33 @@
         this._openDiff = resolveDiffKey(
           (data && data.difficulty) || registry.difficulty || "standard"
         );
+        this._page = 0;
+        this._entries = [];
+        this._pageSize = 10;
       }
       create() {
         var self = this;
+        var footerY = H - 40;
+        var pageLabelY = H - 78;
+        var diffBtnY = 148;
+        var listTop = 210;
+        var listBottom = H - 100;
+        var listHeight = Math.max(160, listBottom - listTop);
+        var listCenterY = listTop + listHeight / 2;
+        var panelW = Math.min(W - 64, 740);
+
         this.cameras.main.setBackgroundColor("#060a14");
         this.cameras.main.fadeIn(180, 4, 6, 12);
-        this.add.text(W / 2, 48, "本遊戲排行榜", {
-          fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif", fontSize: "28px", fontStyle: "bold", color: "#67e8f9"
-        }).setOrigin(0.5);
-        this.add.text(W / 2, 82, "依難度獨立計分 · 與其他作品互不影響", {
-          fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif", fontSize: "13px", color: "#64748b"
-        }).setOrigin(0.5);
+        this.add.text(W / 2, 36, "本遊戲排行榜", {
+          fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif", fontSize: "26px", fontStyle: "bold", color: "#67e8f9"
+        }).setOrigin(0.5).setDepth(5);
+        this.add.text(W / 2, 64, "依難度獨立計分 · 每頁 " + this._pageSize + " 名", {
+          fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif", fontSize: "12px", color: "#64748b"
+        }).setOrigin(0.5).setDepth(5);
 
-        this._diffLabel = this.add.text(W / 2, 112, "", {
-          fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif", fontSize: "14px", fontStyle: "bold", color: "#c4b5fd"
-        }).setOrigin(0.5);
-
-        this._list = this.add.text(W / 2, H / 2 + 24, "載入中…", {
-          fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif", fontSize: "15px", color: "#94a3b8", align: "center", lineSpacing: 8
-        }).setOrigin(0.5);
+        this._diffLabel = this.add.text(W / 2, 88, "", {
+          fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif", fontSize: "13px", fontStyle: "bold", color: "#c4b5fd"
+        }).setOrigin(0.5).setDepth(5);
 
         this._diffBtns = {};
         ["casual", "standard", "extreme"].forEach(function (key, i) {
@@ -518,25 +526,63 @@
           var color = Phaser.Display.Color.HexStringToColor(d.color).color;
           var btn = makeMenuButton(
             self,
-            W / 2 - 200 + i * 200,
-            155,
+            W / 2 - 190 + i * 190,
+            diffBtnY,
             d.label,
             key === self._openDiff ? color : 0x475569,
             function () {
               self._openDiff = key;
+              self._page = 0;
               self.refreshDiffButtons();
               self.reloadList();
             },
-            170,
-            40
+            160,
+            38
           );
+          if (btn && btn.bg) btn.bg.setDepth(20);
+          if (btn && btn.txt) btn.txt.setDepth(21);
           self._diffBtns[key] = { btn: btn, color: color };
         });
         this.refreshDiffButtons();
 
-        makeMenuButton(this, W / 2, H - 48, "返回", 0x64748b, function () {
+        this.add.rectangle(W / 2, listCenterY, panelW, listHeight, 0x0a1220, 0.65)
+          .setStrokeStyle(1, 0x22d3ee, 0.28)
+          .setDepth(1);
+
+        this._list = this.add.text(W / 2, listTop + 14, "載入中…", {
+          fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif",
+          fontSize: "14px",
+          color: "#cbd5e1",
+          align: "left",
+          lineSpacing: 4,
+          wordWrap: { width: panelW - 48 }
+        }).setOrigin(0.5, 0).setDepth(10);
+
+        this._pageLabel = this.add.text(W / 2, pageLabelY, "", {
+          fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif",
+          fontSize: "13px",
+          fontStyle: "bold",
+          color: "#67e8f9"
+        }).setOrigin(0.5).setDepth(25);
+
+        var prev = makeMenuButton(this, W / 2 - 170, footerY, "‹ 上一頁", 0x334155, function () {
+          if (self._page <= 0) return;
+          self._page -= 1;
+          self.paintPage();
+        }, 120, 38);
+        var next = makeMenuButton(this, W / 2 + 170, footerY, "下一頁 ›", 0x334155, function () {
+          var total = Math.max(1, Math.ceil((self._entries || []).length / self._pageSize) || 1);
+          if (self._page >= total - 1) return;
+          self._page += 1;
+          self.paintPage();
+        }, 120, 38);
+        var back = makeMenuButton(this, W / 2, footerY, "返回", 0x64748b, function () {
           self.scene.start("MainMenuScene");
-        }, 180);
+        }, 110, 38);
+        [prev, next, back].forEach(function (b) {
+          if (b && b.bg) b.bg.setDepth(30);
+          if (b && b.txt) b.txt.setDepth(31);
+        });
 
         if (!window.PlatformBridge) {
           this._list.setText("PlatformBridge 未就緒");
@@ -556,6 +602,29 @@
         });
       }
 
+      paintPage() {
+        var list = this._entries || [];
+        var pageSize = this._pageSize || 10;
+        var totalPages = Math.max(1, Math.ceil(list.length / pageSize) || 1);
+        if (this._page >= totalPages) this._page = totalPages - 1;
+        if (this._page < 0) this._page = 0;
+        if (!list.length) {
+          this._list.setText("此難度尚無紀錄，完成一局即可上榜");
+          if (this._pageLabel) this._pageLabel.setText("");
+          return;
+        }
+        var start = this._page * pageSize;
+        var slice = list.slice(start, start + pageSize);
+        this._list.setText(slice.map(function (e, i) {
+          var name = e.playerName || e.displayName || e.name || "Player";
+          var rank = e.rank || start + i + 1;
+          return rank + ". " + name + "  —  " + Number(e.score || 0).toLocaleString() + "  [" + (e.grade || "—") + "]";
+        }).join("\n"));
+        if (this._pageLabel) {
+          this._pageLabel.setText("第 " + (this._page + 1) + " / " + totalPages + " 頁（共 " + list.length + " 名）");
+        }
+      }
+
       reloadList() {
         var self = this;
         var diffKey = resolveDiffKey(this._openDiff);
@@ -563,11 +632,12 @@
         var legacy = preset.legacy;
         this._diffLabel.setText("難度：" + preset.label);
         this._list.setText("載入中…");
+        if (this._pageLabel) this._pageLabel.setText("");
         if (!window.PlatformBridge) {
           this._list.setText("PlatformBridge 未就緒");
           return;
         }
-        PlatformBridge.fetchLeaderboard(12, legacy).then(function (entries) {
+        PlatformBridge.fetchLeaderboard(30, legacy).then(function (entries) {
           if (!self.sys || !self.sys.isActive()) return;
           var seen = {};
           var unique = (entries || []).filter(function (e) {
@@ -581,17 +651,14 @@
             seen[key] = true;
             return true;
           });
-          if (!unique.length) {
-            self._list.setText("此難度尚無紀錄，完成一局即可上榜");
-            return;
-          }
-          self._list.setText(unique.slice(0, 10).map(function (e, i) {
-            var name = e.playerName || e.displayName || e.name || "Player";
-            return (i + 1) + ". " + name + "  —  " + (e.score || 0).toLocaleString() + "  [" + (e.grade || "—") + "]";
-          }).join("\n"));
+          self._entries = unique;
+          self._page = 0;
+          self.paintPage();
         }).catch(function () {
           if (!self.sys || !self.sys.isActive()) return;
+          self._entries = [];
           self._list.setText("排行榜載入失敗");
+          if (self._pageLabel) self._pageLabel.setText("");
         });
       }
     }

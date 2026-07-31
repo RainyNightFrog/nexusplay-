@@ -270,7 +270,7 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
     creator: "RNF Creator Pool",
     categories: ["動作", "2D"],
     description:
-      "揮舞霓虹光刃切碎敵方無人機，解放超高速突進與連續斬擊，在能量核心之間維持零失誤壓制。",
+      "定向光刃斬擊與蓄力月牙、突進穿敵，對抗偵察／突擊／槍襲／護盾／精銳等多型機體；吸收刃鋒、光盾、渦旋等能力核心，在 DANGER 升溫中維持連段。",
     coverPath: "/games/cyber-blade-dash/cover.png",
     playsCount: 8_460,
     likesCount: 412,
@@ -284,9 +284,9 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
     viewportHeight: 540,
     devlogs: [
       {
-        title: "光刃模式啟動",
-        content: "加入突進冷卻、連段倍率與無人機圍殺節奏，強化高速近戰打擊感。",
-        createdAtOffsetDays: 5,
+        title: "光刃重製：血防與能力",
+        content: "加入多型敵人血條、蓄力斬、突進傷害與限時能力掉落，強化近戰節奏與平衡。",
+        createdAtOffsetDays: 0,
       },
     ],
   },

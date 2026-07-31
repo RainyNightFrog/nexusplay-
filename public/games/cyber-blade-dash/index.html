@@ -10,26 +10,1323 @@
       width: 100%; height: 100%;
       background: #04060c; overflow: hidden;
       font-family: "Segoe UI", "Microsoft JhengHei", system-ui, sans-serif;
+      touch-action: none; user-select: none;
     }
-    #game-host {
-      width: 100%; height: 100%;
-      display: flex; align-items: center; justify-content: center;
-    }
+    #game-host { width: 100%; height: 100%; }
   </style>
   <script src="/sdk/phaser.min.js"></script>
-  <script src="/sdk/rnf-i18n.js?v=20260725a"></script>
-  <script src="/sdk/rnf-game-packs.js?v=20260725a"></script>
-  <script src="/sdk/rnf-game-sdk.js?v=20260731t"></script>
-  <script src="/games/_shared/rnf-phaser-leaderboard.js?v=20260731t"></script>
+  <script src="/sdk/rnf-i18n.js?v=20260730g"></script>
+  <script src="/sdk/rnf-game-packs.js?v=20260730g"></script>
+  <script src="/sdk/rnf-game-sdk.js?v=20260731lb6"></script>
+  <script src="/games/_shared/rnf-phaser-leaderboard.js?v=20260731lb8"></script>
   <script src="/games/_shared/rnf-phaser-help.js?v=20260731d"></script>
-  <script src="/games/_shared/rnf-phaser-arcade-suite.js?v=20260731o"></script>
 </head>
 <body>
   <div id="game-host"></div>
-  <script>
-    window.__RNF_CYBER_BLADE_DASH__ = window.RNFArcadeSuite.createGame({
-      slug: "cyber-blade-dash"
+<script>
+/**
+ * Cyber Blade Dash — 賽博光刃切擊（重製）
+ * 定向斬擊／蓄力／突進傷害 · 多型敵人血防 · 限時能力掉落 · 三段難度 + DANGER
+ */
+(function () {
+  "use strict";
+
+  if (typeof RNF !== "undefined" && RNF.init) RNF.init();
+
+  var W = 960;
+  var H = 540;
+  var SETTINGS_KEY = "rnf:cyber-blade-dash:settings";
+
+  var DIFF = {
+    casual: {
+      id: "casual", label: "Casual 輕鬆", color: "#67e8f9",
+      scoreMult: 1.0, base: 0.72, maxHp: 7, startShield: 2,
+      spawnBase: 1.45, enemyHpMult: 0.7, dropRate: 0.22, projectile: false
+    },
+    standard: {
+      id: "standard", label: "Standard 電競", color: "#a78bfa",
+      scoreMult: 1.25, base: 0.9, maxHp: 6, startShield: 1,
+      spawnBase: 1.15, enemyHpMult: 0.85, dropRate: 0.16, projectile: true
+    },
+    extreme: {
+      id: "extreme", label: "Extreme 狂暴", color: "#f472b6",
+      scoreMult: 1.6, base: 1.15, maxHp: 5, startShield: 1,
+      spawnBase: 0.9, enemyHpMult: 1.0, dropRate: 0.12, projectile: true
+    }
+  };
+
+  /** 敵人型別：低血可秒、速度偏慢，爽快清場 */
+  var ENEMY_DEFS = {
+    scout:   { key: "en-scout",   hp: 1, def: 0, spd: 78,  score: 60,  tint: 0xf472b6, w: 28, label: "偵察" },
+    assault: { key: "en-assault", hp: 2, def: 0, spd: 58,  score: 100, tint: 0xf97316, w: 34, label: "突擊" },
+    gunner:  { key: "en-gunner",  hp: 1, def: 0, spd: 48,  score: 120, tint: 0xa78bfa, w: 30, label: "槍襲", ranged: true },
+    shield:  { key: "en-shield",  hp: 2, def: 0, spd: 42,  score: 140, tint: 0x94a3b8, w: 36, label: "護盾" },
+    elite:   { key: "en-elite",   hp: 5, def: 0, spd: 55,  score: 280, tint: 0xef4444, w: 44, label: "精銳", elite: true }
+  };
+
+  var ABILITY_DEFS = {
+    hp:      { title: "維修核心", sub: "+1 HP", color: "#fb7185", key: "drop-hp" },
+    edge:    { title: "刃鋒過載", sub: "攻擊↑ 12秒", color: "#67e8f9", key: "drop-edge" },
+    swift:  { title: "光速斬", sub: "斬擊冷卻↓ 10秒", color: "#a78bfa", key: "drop-swift" },
+    phase:  { title: "相位突進", sub: "突進冷卻↓ 10秒", color: "#22d3ee", key: "drop-phase" },
+    barrier:{ title: "光盾", sub: "護盾 +1（最多2）", color: "#93c5fd", key: "drop-barrier" },
+    vortex: { title: "渦旋斬", sub: "下次斬擊 360°", color: "#fbbf24", key: "drop-vortex" }
+  };
+
+  var selectedDiff = "standard";
+  var gameSettings = loadSettings();
+
+  function loadSettings() {
+    var base = { sfx: true, shake: true };
+    try {
+      if (typeof RNF !== "undefined" && RNF.getSettings) {
+        var s = RNF.getSettings();
+        base.sfx = (s.sfxVolume == null ? 0.75 : s.sfxVolume) > 0.02;
+        base.shake = s.screenShake !== false;
+      }
+      var raw = localStorage.getItem(SETTINGS_KEY);
+      if (raw) Object.assign(base, JSON.parse(raw));
+    } catch (_e) {}
+    return base;
+  }
+
+  function saveSettings() {
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(gameSettings));
+      if (typeof RNF !== "undefined" && RNF.setSettings) {
+        RNF.setSettings({
+          sfxVolume: gameSettings.sfx ? 0.75 : 0,
+          screenShake: !!gameSettings.shake
+        });
+      }
+    } catch (_e) {}
+  }
+
+  var audioCtx = null;
+  function ensureAudio() {
+    if (!audioCtx) {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    }
+    if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+    return audioCtx;
+  }
+  function volMul() {
+    try {
+      if (typeof RNF !== "undefined" && RNF.getGameVolume) return RNF.getGameVolume();
+      if (typeof window.__RNF_GAME_VOLUME__ === "number") return window.__RNF_GAME_VOLUME__;
+    } catch (_e) {}
+    return 1;
+  }
+  function tone(freq, dur, type, vol, slide) {
+    if (!gameSettings.sfx || volMul() <= 0) return;
+    var ctx = ensureAudio();
+    if (!ctx) return;
+    var t0 = ctx.currentTime;
+    var o = ctx.createOscillator();
+    var g = ctx.createGain();
+    o.type = type || "square";
+    o.frequency.setValueAtTime(freq, t0);
+    if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(40, slide), t0 + dur);
+    g.gain.setValueAtTime((vol || 0.1) * volMul(), t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(t0); o.stop(t0 + dur + 0.02);
+  }
+  var SFX = {
+    click: function () { tone(520, 0.05, "triangle", 0.07); },
+    confirm: function () { tone(660, 0.07, "square", 0.09); tone(990, 0.08, "triangle", 0.07); },
+    slash: function () { tone(440, 0.06, "sawtooth", 0.09, 1100); },
+    heavy: function () { tone(280, 0.1, "sawtooth", 0.12, 900); tone(600, 0.08, "triangle", 0.08); },
+    dash: function () { tone(200, 0.09, "triangle", 0.1, 720); },
+    hit: function () { tone(180, 0.1, "sawtooth", 0.12, 70); },
+    kill: function () { tone(520, 0.05, "square", 0.08); tone(780, 0.08, "triangle", 0.07); },
+    power: function () { tone(300, 0.06, "sawtooth", 0.1); tone(640, 0.1, "square", 0.1); tone(980, 0.1, "triangle", 0.08); },
+    shoot: function () { tone(700, 0.04, "square", 0.06, 400); },
+    die: function () { tone(150, 0.28, "sawtooth", 0.14, 40); },
+    toggle: function () { tone(440, 0.05, "triangle", 0.07); }
+  };
+
+  function doShake(cam, dur, intens) {
+    if (!gameSettings.shake || !cam) return;
+    cam.shake(dur, intens);
+  }
+
+  function neonBurst(scene, x, y, tint, count) {
+    var n = Phaser.Math.Clamp(count || 20, 15, 30);
+    var emitter = scene.add.particles(x, y, "spark", {
+      speed: { min: 80, max: 320 },
+      angle: { min: 0, max: 360 },
+      lifespan: { min: 240, max: 620 },
+      scale: { start: 1.2, end: 0 },
+      alpha: { start: 1, end: 0 },
+      blendMode: "ADD",
+      tint: tint,
+      emitting: false
     });
-  </script>
+    emitter.explode(n);
+    scene.time.delayedCall(800, function () { if (emitter.destroy) emitter.destroy(); });
+  }
+
+  function floatText(scene, x, y, msg, color, size) {
+    var t = scene.add.text(x, y, msg, {
+      fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif",
+      fontSize: (size || 14) + "px", fontStyle: "bold", color: color || "#fff",
+      stroke: "#020617", strokeThickness: 3
+    }).setOrigin(0.5).setDepth(48).setScale(0.6).setAlpha(0);
+    scene.tweens.add({ targets: t, y: y - 36, alpha: 1, scale: 1.1, duration: 180, ease: "Back.easeOut" });
+    scene.tweens.add({
+      targets: t, y: y - 64, alpha: 0, duration: 360, delay: 180, ease: "Cubic.easeOut",
+      onComplete: function () { t.destroy(); }
+    });
+  }
+
+  function powerBanner(scene, title, sub, colorHex) {
+    var wrap = scene.add.container(W / 2, 80).setDepth(55).setAlpha(0).setScale(0.55);
+    var col = Phaser.Display.Color.HexStringToColor(colorHex).color;
+    var bar = scene.add.rectangle(0, 0, 380, 58, 0x020617, 0.9).setStrokeStyle(3, col, 0.95);
+    var glow = scene.add.rectangle(0, 0, 384, 62, col, 0.12).setBlendMode(Phaser.BlendModes.ADD);
+    var t1 = scene.add.text(0, -10, title, {
+      fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif",
+      fontSize: "20px", fontStyle: "bold", color: "#f8fafc",
+      stroke: "#020617", strokeThickness: 4
+    }).setOrigin(0.5);
+    var t2 = scene.add.text(0, 14, sub, {
+      fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif",
+      fontSize: "14px", fontStyle: "bold", color: colorHex
+    }).setOrigin(0.5);
+    wrap.add([glow, bar, t1, t2]);
+    scene.tweens.add({ targets: wrap, alpha: 1, scale: 1.06, y: 92, duration: 240, ease: "Back.easeOut" });
+    scene.tweens.add({ targets: wrap, scale: 1, duration: 140, delay: 240, ease: "Cubic.easeOut" });
+    scene.tweens.add({
+      targets: wrap, alpha: 0, y: 68, scale: 0.9, duration: 300, delay: 1400, ease: "Cubic.easeIn",
+      onComplete: function () { wrap.destroy(); }
+    });
+  }
+
+  function makeTextures(scene) {
+    var g = scene.make.graphics({ x: 0, y: 0, add: false });
+
+    // 玩家機甲劍士
+    g.clear();
+    g.fillStyle(0x0ea5e9, 1);
+    g.fillRoundedRect(10, 8, 20, 28, 4);
+    g.fillStyle(0x22d3ee, 1);
+    g.fillTriangle(20, 2, 30, 14, 10, 14);
+    g.fillStyle(0x67e8f9, 1);
+    g.fillCircle(20, 16, 4);
+    g.fillStyle(0xfbbf24, 1);
+    g.fillTriangle(32, 10, 54, 18, 32, 26);
+    g.fillStyle(0xffffff, 0.7);
+    g.fillTriangle(34, 14, 46, 18, 34, 22);
+    g.generateTexture("player-blade", 56, 40);
+
+    // 敵人
+    g.clear();
+    g.fillStyle(0xf472b6, 1);
+    g.fillTriangle(14, 1, 27, 26, 1, 26);
+    g.fillStyle(0xffffff, 0.45);
+    g.fillCircle(14, 14, 3);
+    g.generateTexture("en-scout", 28, 28);
+
+    g.clear();
+    g.fillStyle(0xf97316, 1);
+    g.fillRoundedRect(2, 2, 30, 30, 5);
+    g.fillStyle(0xfed7aa, 0.55);
+    g.fillRect(8, 10, 18, 8);
+    g.fillStyle(0xef4444, 1);
+    g.fillCircle(17, 14, 3);
+    g.generateTexture("en-assault", 34, 34);
+
+    g.clear();
+    g.fillStyle(0xa78bfa, 1);
+    g.fillTriangle(15, 1, 29, 15, 15, 29);
+    g.fillTriangle(15, 1, 1, 15, 15, 29);
+    g.fillStyle(0xffffff, 0.4);
+    g.fillCircle(15, 15, 4);
+    g.generateTexture("en-gunner", 30, 30);
+
+    g.clear();
+    g.fillStyle(0x64748b, 1);
+    g.fillCircle(18, 18, 16);
+    g.lineStyle(3, 0x94a3b8, 1);
+    g.strokeCircle(18, 18, 13);
+    g.fillStyle(0x22d3ee, 0.75);
+    g.fillCircle(18, 18, 5);
+    g.generateTexture("en-shield", 36, 36);
+
+    g.clear();
+    g.fillStyle(0xef4444, 1);
+    g.fillRoundedRect(2, 2, 40, 40, 6);
+    g.fillStyle(0xfbbf24, 0.6);
+    g.fillCircle(22, 22, 10);
+    g.fillStyle(0xffffff, 0.45);
+    g.fillRect(10, 8, 24, 6);
+    g.fillStyle(0x22d3ee, 1);
+    g.fillTriangle(42, 14, 52, 22, 42, 30);
+    g.generateTexture("en-elite", 54, 44);
+
+    // 掉落物
+    g.clear();
+    g.fillStyle(0xfb7185, 1);
+    g.fillCircle(12, 12, 10);
+    g.fillStyle(0xffffff, 0.7);
+    g.fillRect(10, 5, 4, 14);
+    g.fillRect(5, 10, 14, 4);
+    g.generateTexture("drop-hp", 24, 24);
+
+    g.clear();
+    g.fillStyle(0x67e8f9, 1);
+    g.fillTriangle(6, 4, 30, 18, 6, 32);
+    g.fillStyle(0xffffff, 0.5);
+    g.fillTriangle(10, 12, 22, 18, 10, 24);
+    g.generateTexture("drop-edge", 36, 36);
+
+    g.clear();
+    g.fillStyle(0xa78bfa, 1);
+    g.fillCircle(18, 18, 14);
+    g.fillStyle(0xffffff, 0.55);
+    g.fillTriangle(12, 18, 26, 10, 26, 26);
+    g.generateTexture("drop-swift", 36, 36);
+
+    g.clear();
+    g.fillStyle(0x22d3ee, 1);
+    g.fillRoundedRect(4, 10, 28, 16, 6);
+    g.fillStyle(0xffffff, 0.5);
+    g.fillTriangle(8, 18, 20, 12, 20, 24);
+    g.generateTexture("drop-phase", 36, 36);
+
+    g.clear();
+    g.fillStyle(0x93c5fd, 1);
+    g.fillCircle(18, 18, 14);
+    g.lineStyle(3, 0xffffff, 0.8);
+    g.strokeCircle(18, 18, 10);
+    g.generateTexture("drop-barrier", 36, 36);
+
+    g.clear();
+    g.fillStyle(0xfbbf24, 1);
+    g.fillCircle(18, 18, 14);
+    g.lineStyle(2, 0xffffff, 0.9);
+    g.strokeCircle(18, 18, 8);
+    g.strokeCircle(18, 18, 4);
+    g.generateTexture("drop-vortex", 36, 36);
+
+    g.clear();
+    g.fillStyle(0xf472b6, 1);
+    g.fillCircle(6, 6, 5);
+    g.generateTexture("ebullet", 12, 12);
+
+    g.clear();
+    g.fillStyle(0x67e8f9, 1);
+    g.fillCircle(4, 4, 4);
+    g.generateTexture("spark", 8, 8);
+
+    g.clear();
+    g.fillStyle(0xfbbf24, 1);
+    g.fillCircle(5, 5, 5);
+    g.generateTexture("spark-gold", 10, 10);
+
+    g.destroy();
+  }
+
+  function makeButton(scene, x, y, label, color, onClick, width) {
+    var bw = width || 280;
+    var bg = scene.add.rectangle(x, y, bw, 50, color, 0.22)
+      .setStrokeStyle(2, color, 0.85).setInteractive({ useHandCursor: true });
+    var txt = scene.add.text(x, y, label, {
+      fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif",
+      fontSize: "18px", fontStyle: "bold", color: "#e2e8f0"
+    }).setOrigin(0.5);
+    bg.on("pointerover", function () {
+      scene.tweens.add({ targets: [bg, txt], scale: 1.05, duration: 110, ease: "Cubic.easeOut" });
+    });
+    bg.on("pointerout", function () {
+      scene.tweens.add({ targets: [bg, txt], scale: 1, duration: 110, ease: "Cubic.easeOut" });
+    });
+    bg.on("pointerdown", function () {
+      scene.tweens.add({ targets: [bg, txt], scale: 1.08, duration: 80, yoyo: true, ease: "Back.easeOut" });
+      SFX.click();
+      onClick();
+    });
+    return { bg: bg, txt: txt };
+  }
+
+  class BootScene extends Phaser.Scene {
+    constructor() { super("BootScene"); }
+    create() {
+      makeTextures(this);
+      this.cameras.main.setBackgroundColor("#04060c");
+      this.cameras.main.fadeIn(280, 4, 6, 12);
+      var t = this.add.text(W / 2, H / 2 - 8, "CYBER BLADE DASH", {
+        fontFamily: "Segoe UI, sans-serif", fontSize: "26px", fontStyle: "bold", color: "#22d3ee"
+      }).setOrigin(0.5).setAlpha(0);
+      this.add.text(W / 2, H / 2 + 28, "賽博光刃切擊 · 重製版", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif", fontSize: "13px", color: "#94a3b8"
+      }).setOrigin(0.5);
+      this.tweens.add({ targets: t, alpha: 1, scale: 1.04, duration: 360, ease: "Back.easeOut" });
+      this.time.delayedCall(480, function () { this.scene.start("MainMenuScene"); }, [], this);
+    }
+  }
+
+  class MainMenuScene extends Phaser.Scene {
+    constructor() { super("MainMenuScene"); }
+    create() {
+      ensureAudio();
+      this.cameras.main.setBackgroundColor("#060a14");
+      this.cameras.main.fadeIn(180, 4, 6, 12);
+      for (var i = 0; i < 40; i++) {
+        var star = this.add.circle(
+          Phaser.Math.Between(0, W), Phaser.Math.Between(0, H),
+          Phaser.Math.Between(1, 2), 0x22d3ee, Phaser.Math.FloatBetween(0.12, 0.5)
+        );
+        this.tweens.add({
+          targets: star, alpha: 0.08, duration: Phaser.Math.Between(700, 1500),
+          yoyo: true, repeat: -1, ease: "Sine.easeInOut"
+        });
+      }
+      this.add.text(W / 2, 70, "RAINYNIGHTFROG · CYBER ARCADE", {
+        fontFamily: "Segoe UI, sans-serif", fontSize: "11px", fontStyle: "bold",
+        color: "#22d3ee", letterSpacing: 2
+      }).setOrigin(0.5);
+      var title = this.add.text(W / 2, 130, "賽博光刃切擊", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+        fontSize: "36px", fontStyle: "bold", color: "#ffffff"
+      }).setOrigin(0.5).setScale(0.7).setAlpha(0);
+      this.add.text(W / 2, 178, "按住連斬 · 自動瞄準 · 突進穿敵 · 多型敵機 · 能力掉落", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif", fontSize: "13px", color: "#94a3b8"
+      }).setOrigin(0.5);
+      this.tweens.add({ targets: title, alpha: 1, scale: 1, duration: 420, ease: "Back.easeOut" });
+
+      var self = this;
+      makeButton(this, W / 2, 260, "開始遊戲 START", 0x22d3ee, function () {
+        SFX.confirm();
+        self.cameras.main.fadeOut(150, 4, 6, 12);
+        self.time.delayedCall(160, function () { self.scene.start("DifficultyScene"); });
+      });
+      makeButton(this, W / 2, 330, "設定 SETTINGS", 0xa78bfa, function () {
+        self.scene.launch("SettingsScene");
+      });
+      makeButton(this, W / 2, 400, "排行榜", 0x34d399, function () {
+        self.scene.start("LeaderboardScene", { difficulty: selectedDiff || "standard" });
+      });
+      makeButton(this, W / 2, 470, "操作說明", 0x64748b, function () {
+        if (window.RNFPhaserHelp && RNFPhaserHelp.showHelpOverlay) {
+          RNFPhaserHelp.showHelpOverlay(self,
+            "WASD／方向鍵移動 · 按住 Space 自動連斬（蓄滿變重斬）· Shift 突進\n斬擊會自動瞄準最近敵人，範圍大、好清場\n護盾可擋傷 · 連段提高分數 · DANGER 隨時間上升",
+            { W: W, H: H }
+          );
+        }
+      }, 220);
+    }
+  }
+
+  class DifficultyScene extends Phaser.Scene {
+    constructor() { super("DifficultyScene"); }
+    create() {
+      this.cameras.main.setBackgroundColor("#060a14");
+      this.cameras.main.fadeIn(140, 4, 6, 12);
+      var head = this.add.text(W / 2, 70, "選擇難度", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+        fontSize: "32px", fontStyle: "bold", color: "#e2e8f0"
+      }).setOrigin(0.5).setScale(0.75).setAlpha(0);
+      this.tweens.add({ targets: head, alpha: 1, scale: 1, duration: 320, ease: "Back.easeOut" });
+      this.add.text(W / 2, 115, "生存越久 → 敵機越快越多 · HUD 顯示 DANGER", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif", fontSize: "13px", color: "#64748b"
+      }).setOrigin(0.5);
+
+      var self = this;
+      ["casual", "standard", "extreme"].forEach(function (key, i) {
+        var d = DIFF[key];
+        var col = Phaser.Display.Color.HexStringToColor(d.color).color;
+        var y = 180 + i * 85;
+        makeButton(self, W / 2, y, d.label, col, function () {
+          selectedDiff = key;
+          SFX.confirm();
+          self.cameras.main.fadeOut(140, 4, 6, 12);
+          self.time.delayedCall(150, function () {
+            self.scene.start("GameScene", { difficulty: key });
+          });
+        });
+        self.add.text(W / 2, y + 32,
+          "血量 " + d.maxHp + " · 掉落 " + Math.round(d.dropRate * 100) + "% · 分數 x" + d.scoreMult.toFixed(2),
+          { fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif", fontSize: "12px", color: "#94a3b8" }
+        ).setOrigin(0.5);
+      });
+      makeButton(this, W / 2, 480, "返回", 0x475569, function () {
+        self.scene.start("MainMenuScene");
+      }, 160);
+    }
+  }
+
+  class SettingsScene extends Phaser.Scene {
+    constructor() { super("SettingsScene"); }
+    create() {
+      var dim = this.add.rectangle(W / 2, H / 2, W, H, 0x02040a, 0.75).setInteractive().setDepth(100);
+      var panel = this.add.rectangle(W / 2, H / 2, 400, 280, 0x0b1220, 0.98)
+        .setStrokeStyle(2, 0x22d3ee, 0.85).setScale(0.8).setAlpha(0).setDepth(101);
+      var title = this.add.text(W / 2, H / 2 - 100, "設定選單", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+        fontSize: "24px", fontStyle: "bold", color: "#e2e8f0"
+      }).setOrigin(0.5).setAlpha(0).setDepth(102);
+      this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 280, ease: "Back.easeOut" });
+      this.tweens.add({ targets: title, alpha: 1, duration: 240, delay: 40, ease: "Cubic.easeOut" });
+
+      var self = this;
+      var sfxBtn = makeButton(this, W / 2, H / 2 - 20, gameSettings.sfx ? "音效：開" : "音效：關", 0x22d3ee, function () {
+        gameSettings.sfx = !gameSettings.sfx; saveSettings(); SFX.toggle();
+        sfxBtn.txt.setText(gameSettings.sfx ? "音效：開" : "音效：關");
+      }, 240);
+      sfxBtn.bg.setDepth(102); sfxBtn.txt.setDepth(103);
+
+      var shakeBtn = makeButton(this, W / 2, H / 2 + 50, gameSettings.shake ? "震屏：開" : "震屏：關", 0xa78bfa, function () {
+        gameSettings.shake = !gameSettings.shake; saveSettings(); SFX.toggle();
+        shakeBtn.txt.setText(gameSettings.shake ? "震屏：開" : "震屏：關");
+      }, 240);
+      shakeBtn.bg.setDepth(102); shakeBtn.txt.setDepth(103);
+
+      var closeBtn = makeButton(this, W / 2, H / 2 + 110, "關閉", 0x64748b, function () {
+        self.scene.stop("SettingsScene");
+      }, 160);
+      closeBtn.bg.setDepth(102); closeBtn.txt.setDepth(103);
+      dim.on("pointerdown", function () { self.scene.stop("SettingsScene"); });
+    }
+  }
+
+  class GameScene extends Phaser.Scene {
+    constructor() { super("GameScene"); }
+
+    init(data) {
+      this.diffKey = (data && data.difficulty) || selectedDiff || "standard";
+      this.diff = DIFF[this.diffKey] || DIFF.standard;
+      selectedDiff = this.diffKey;
+    }
+
+    create() {
+      ensureAudio();
+      this.cameras.main.setBackgroundColor("#050814");
+      this.cameras.main.fadeIn(160, 4, 6, 12);
+
+      this.score = 0;
+      this.combo = 0;
+      this.comboTimer = 0;
+      this.elapsed = 0;
+      this.dangerMultiplier = 1;
+      this.alive = true;
+      this.spawnAcc = 0;
+      this.eliteAcc = 0;
+      this.kills = 0;
+
+      this.drawArena();
+
+      this.player = this.physics.add.sprite(W / 2, H / 2, "player-blade");
+      this.player.setDepth(20);
+      this.player.setDrag(0, 0);
+      this.player.setMaxVelocity(520, 520);
+      this.player.setCollideWorldBounds(true);
+      this.player.body.setSize(28, 28);
+      this.player.body.setOffset(8, 6);
+      this.player.maxHp = this.diff.maxHp;
+      this.player.hp = this.diff.maxHp;
+      this.player.shield = this.diff.startShield;
+      this.player.invuln = 0;
+      this.player.face = 0;
+      this.player.bladeAtk = 2;
+      this.player.slashCd = 0;
+      this.player.dashCd = 0;
+      this.player.charge = 0;
+      this.player.charging = false;
+      this.player.buffEdge = 0;
+      this.player.buffSwift = 0;
+      this.player.buffPhase = 0;
+      this.player.vortexReady = false;
+      this.player.dashIframes = 0;
+      this.player.dashLock = 0;
+      this.dragPtr = false;
+      this.ptrDown = false;
+
+      this.bladeGlow = this.add.circle(this.player.x, this.player.y, 22, 0x22d3ee, 0.12)
+        .setStrokeStyle(2, 0x67e8f9, 0.55).setDepth(19).setBlendMode(Phaser.BlendModes.ADD);
+      this.shieldRing = this.add.circle(this.player.x, this.player.y, 30, 0x60a5fa, 0.1)
+        .setStrokeStyle(2, 0x93c5fd, 0.9).setDepth(19).setVisible(this.player.shield > 0)
+        .setBlendMode(Phaser.BlendModes.ADD);
+      this.chargeRing = this.add.circle(this.player.x, this.player.y, 36, 0xfbbf24, 0)
+        .setStrokeStyle(2, 0xfbbf24, 0).setDepth(21).setBlendMode(Phaser.BlendModes.ADD);
+
+      this.enemies = this.physics.add.group();
+      this.pickups = this.physics.add.group();
+      this.ebullets = this.physics.add.group();
+
+      this.physics.add.overlap(this.player, this.enemies, this.onTouchEnemy, null, this);
+      this.physics.add.overlap(this.player, this.pickups, this.onPickup, null, this);
+      this.physics.add.overlap(this.player, this.ebullets, this.onBulletHit, null, this);
+
+      this.createHud();
+      this.bindInput();
+
+      powerBanner(this, "光刃模式", "斬破敵機 · 吸收能力", "#67e8f9");
+    }
+
+    drawArena() {
+      var g = this.add.graphics().setDepth(0);
+      g.fillStyle(0x050814, 1);
+      g.fillRect(0, 0, W, H);
+      g.lineStyle(1, 0x22d3ee, 0.08);
+      for (var x = 0; x < W; x += 48) g.lineBetween(x, 0, x, H);
+      for (var y = 0; y < H; y += 48) g.lineBetween(0, y, W, y);
+      g.lineStyle(2, 0x22d3ee, 0.2);
+      g.strokeRect(12, 12, W - 24, H - 24);
+      this.stars = [];
+      for (var i = 0; i < 36; i++) {
+        var s = this.add.circle(
+          Phaser.Math.Between(20, W - 20), Phaser.Math.Between(20, H - 20),
+          Phaser.Math.Between(1, 2), 0x67e8f9, Phaser.Math.FloatBetween(0.15, 0.45)
+        ).setDepth(1);
+        this.stars.push(s);
+      }
+    }
+
+    createHud() {
+      this.hudScore = this.add.text(14, 10, "SCORE 0", {
+        fontFamily: "Segoe UI, sans-serif", fontSize: "16px", fontStyle: "bold", color: "#67e8f9"
+      }).setDepth(50);
+      this.hudDanger = this.add.text(14, 32, "DANGER x1.00", {
+        fontFamily: "Segoe UI, sans-serif", fontSize: "13px", fontStyle: "bold", color: "#f472b6"
+      }).setDepth(50);
+      this.hudHp = this.add.text(W / 2, 10, "", {
+        fontFamily: "Segoe UI, sans-serif", fontSize: "15px", fontStyle: "bold", color: "#fb7185"
+      }).setOrigin(0.5, 0).setDepth(50);
+      this.hudCombo = this.add.text(W / 2, 32, "", {
+        fontFamily: "Segoe UI, sans-serif", fontSize: "13px", color: "#fbbf24"
+      }).setOrigin(0.5, 0).setDepth(50);
+      this.hudDiff = this.add.text(W - 14, 10, this.diff.label, {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif", fontSize: "12px", color: this.diff.color
+      }).setOrigin(1, 0).setDepth(50);
+      this.hudBuff = this.add.text(W - 14, 32, "", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif", fontSize: "12px", color: "#94a3b8"
+      }).setOrigin(1, 0).setDepth(50);
+      this.hudHint = this.add.text(W / 2, H - 18, "按住 Space 自動連斬 · 蓄滿變重斬 · Shift 突進", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif", fontSize: "11px", color: "#475569"
+      }).setOrigin(0.5).setDepth(50);
+    }
+
+    bindInput() {
+      this.cursors = this.input.keyboard.createCursorKeys();
+      this.keys = this.input.keyboard.addKeys("W,A,S,D,SPACE,SHIFT");
+      this.shiftKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
+      this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+      var self = this;
+      this.lastTap = 0;
+      this.ptrOrigin = { x: 0, y: 0 };
+      // 點一下＝斬擊；拖夠距離才進觸控移動，避免滑鼠點擊鎖死鍵盤
+      this.input.on("pointerdown", function (p) {
+        if (!self.alive) return;
+        var now = self.time.now;
+        if (now - self.lastTap < 280) {
+          self.tryDash();
+        } else {
+          self.trySlash(false);
+        }
+        self.lastTap = now;
+        self.ptrDown = true;
+        self.dragPtr = false;
+        self.ptrOrigin.x = p.x;
+        self.ptrOrigin.y = p.y;
+      });
+      this.input.on("pointermove", function (p) {
+        if (!self.alive || !self.ptrDown) return;
+        var dx0 = p.x - self.ptrOrigin.x;
+        var dy0 = p.y - self.ptrOrigin.y;
+        if (!self.dragPtr && (dx0 * dx0 + dy0 * dy0) > 18 * 18) {
+          self.dragPtr = true;
+        }
+        if (!self.dragPtr) return;
+        self.aimTo(p.x, p.y);
+        var dx = p.x - self.player.x;
+        var dy = p.y - self.player.y;
+        var len = Math.sqrt(dx * dx + dy * dy) || 1;
+        if (self.player.dashLock <= 0) {
+          self.player.setVelocity((dx / len) * 300, (dy / len) * 300);
+        }
+      });
+      this.input.on("pointerup", function () {
+        self.ptrDown = false;
+        self.dragPtr = false;
+        if (self.player.dashLock <= 0) {
+          self.player.setVelocity(0, 0);
+        }
+      });
+    }
+
+    aimTo(x, y) {
+      this.player.face = Math.atan2(y - this.player.y, x - this.player.x);
+      this.player.setRotation(this.player.face);
+    }
+
+    // —— 戰鬥 ——
+    slashCdMax() {
+      var base = 0.26;
+      if (this.player.buffSwift > 0) base *= 0.62;
+      return base;
+    }
+    dashCdMax() {
+      // 相位只略降冷卻，避免狂突進失控
+      var base = 1.05;
+      if (this.player.buffPhase > 0) base *= 0.72;
+      return base;
+    }
+    currentAtk() {
+      var atk = this.player.bladeAtk;
+      if (this.player.buffEdge > 0) atk += 1;
+      return atk;
+    }
+
+    nearestEnemy(maxRange) {
+      var best = null;
+      var bestD = maxRange || 9999;
+      var self = this;
+      this.enemies.getChildren().forEach(function (enemy) {
+        if (!enemy.active) return;
+        var d = Phaser.Math.Distance.Between(self.player.x, self.player.y, enemy.x, enemy.y);
+        if (d < bestD) { bestD = d; best = enemy; }
+      });
+      return best;
+    }
+
+    trySlash(heavy) {
+      if (!this.alive || this.player.slashCd > 0) return false;
+      var isHeavy = !!heavy;
+      var vortex = this.player.vortexReady;
+      this.player.vortexReady = false;
+      this.player.slashCd = isHeavy ? this.slashCdMax() * 1.25 : this.slashCdMax();
+      if (isHeavy) SFX.heavy(); else SFX.slash();
+      // 輕斬不震屏，避免連斬時畫面狂晃像失控
+      if (isHeavy || vortex) doShake(this.cameras.main, 90, 0.01);
+
+      // 斬擊方向只影響特效，不硬轉角色（角色面向跟移動）
+      var lock = this.nearestEnemy(150);
+      var slashDir = this.player.face;
+      if (lock) {
+        slashDir = Math.atan2(lock.y - this.player.y, lock.x - this.player.x);
+      }
+
+      var range = isHeavy ? 145 : 120;
+      var halfArc = Math.PI; // 全周斬，不需轉向也能打中
+      if (vortex) range = 150;
+
+      this.drawSlashFx(slashDir, range, halfArc, isHeavy || vortex);
+      neonBurst(this, this.player.x + Math.cos(slashDir) * 28, this.player.y + Math.sin(slashDir) * 28,
+        isHeavy || vortex ? 0xfbbf24 : 0x22d3ee, isHeavy ? 20 : 15);
+
+      var atk = this.currentAtk() + (isHeavy ? 2 : 0) + (vortex ? 1 : 0);
+      var self = this;
+      this.enemies.getChildren().forEach(function (enemy) {
+        if (!enemy.active) return;
+        var d = Phaser.Math.Distance.Between(self.player.x, self.player.y, enemy.x, enemy.y);
+        if (d <= range + 14) self.hurtEnemy(enemy, atk);
+      });
+      return true;
+    }
+
+    drawSlashFx(face, range, halfArc, heavy) {
+      var gfx = this.add.graphics().setDepth(22).setBlendMode(Phaser.BlendModes.ADD);
+      var col = heavy ? 0xfbbf24 : 0x22d3ee;
+      gfx.fillStyle(col, 0.2);
+      gfx.slice(this.player.x, this.player.y, range, face - halfArc, face + halfArc, false);
+      gfx.fillPath();
+      gfx.lineStyle(3, col, 0.9);
+      gfx.beginPath();
+      gfx.arc(this.player.x, this.player.y, range * 0.92, face - halfArc, face + halfArc, false);
+      gfx.strokePath();
+      var tipX = this.player.x + Math.cos(face) * range;
+      var tipY = this.player.y + Math.sin(face) * range;
+      var line = this.add.rectangle(
+        (this.player.x + tipX) / 2, (this.player.y + tipY) / 2,
+        range, heavy ? 10 : 6, col, 0.8
+      ).setDepth(23).setBlendMode(Phaser.BlendModes.ADD).setRotation(face);
+      this.tweens.add({
+        targets: [gfx, line], alpha: 0, duration: heavy ? 200 : 140, ease: "Cubic.easeOut",
+        onComplete: function () { gfx.destroy(); line.destroy(); }
+      });
+    }
+
+    tryDash() {
+      if (!this.alive || this.player.dashCd > 0) return;
+      var left = this.cursors.left.isDown || this.keys.A.isDown;
+      var right = this.cursors.right.isDown || this.keys.D.isDown;
+      var up = this.cursors.up.isDown || this.keys.W.isDown;
+      var down = this.cursors.down.isDown || this.keys.S.isDown;
+      var vx = (right ? 1 : 0) - (left ? 1 : 0);
+      var vy = (down ? 1 : 0) - (up ? 1 : 0);
+      // 只朝移動／面向方向突進，不自動飛向敵人（避免失控）
+      var ang = this.player.face;
+      if (vx !== 0 || vy !== 0) ang = Math.atan2(vy, vx);
+      this.player.face = ang;
+      this.player.setRotation(ang);
+      this.player.dashCd = this.dashCdMax();
+      this.player.dashIframes = 0.35;
+      this.player.dashLock = 0.16;
+      this.player.setAcceleration(0, 0);
+      this.player.setVelocity(Math.cos(ang) * 480, Math.sin(ang) * 480);
+      SFX.dash();
+      neonBurst(this, this.player.x, this.player.y, 0x67e8f9, 16);
+
+      var self = this;
+      var dashAtk = this.currentAtk() + 1;
+      this.enemies.getChildren().forEach(function (enemy) {
+        if (!enemy.active) return;
+        var d = Phaser.Math.Distance.Between(self.player.x, self.player.y, enemy.x, enemy.y);
+        if (d < 90) self.hurtEnemy(enemy, dashAtk);
+      });
+      var ghost = this.add.image(this.player.x, this.player.y, "player-blade")
+        .setAlpha(0.45).setTint(0x67e8f9).setRotation(ang).setDepth(18)
+        .setBlendMode(Phaser.BlendModes.ADD);
+      this.tweens.add({
+        targets: ghost, alpha: 0, scale: 1.2, duration: 200, ease: "Cubic.easeOut",
+        onComplete: function () { ghost.destroy(); }
+      });
+    }
+
+    hurtEnemy(enemy, dmg) {
+      if (!enemy.active) return;
+      var def = enemy.getData("def") || 0;
+      var real = Math.max(1, dmg - def);
+      var armor = enemy.getData("armor") || 0;
+      // 輕微擊退，不飛太遠
+      var knock = Phaser.Math.Angle.Between(this.player.x, this.player.y, enemy.x, enemy.y);
+      enemy.setVelocity(Math.cos(knock) * 180, Math.sin(knock) * 180);
+
+      if (armor > 0) {
+        enemy.setData("armor", armor - 1);
+        enemy.setData("def", Math.max(0, def - 1));
+        floatText(this, enemy.x, enemy.y - 18, "破盾", "#93c5fd", 12);
+        neonBurst(this, enemy.x, enemy.y, 0x93c5fd, 15);
+        SFX.hit();
+        enemy.setTint(0xffffff);
+        var self = this;
+        this.time.delayedCall(80, function () {
+          if (enemy.active) enemy.clearTint();
+        });
+        return;
+      }
+      enemy.setData("hp", (enemy.getData("hp") || 1) - real);
+      SFX.hit();
+      neonBurst(this, enemy.x, enemy.y, enemy.getData("tint") || 0xf472b6, 15);
+      floatText(this, enemy.x, enemy.y - 10, "-" + real, "#f8fafc", 12);
+      this.refreshEnemyBar(enemy);
+      if ((enemy.getData("hp") || 0) <= 0) this.killEnemy(enemy);
+    }
+
+    killEnemy(enemy) {
+      if (!enemy.active) return;
+      var base = enemy.getData("scoreBase") || 80;
+      this.combo += 1;
+      this.comboTimer = 2.4;
+      var gain = Math.floor((base + this.combo * 14) * this.diff.scoreMult * (0.9 + this.dangerMultiplier * 0.1));
+      this.score += gain;
+      this.kills += 1;
+      floatText(this, enemy.x, enemy.y, "+" + gain, "#67e8f9", 14);
+      neonBurst(this, enemy.x, enemy.y, 0xa78bfa, 22);
+      SFX.kill();
+      this.tryDrop(enemy.x, enemy.y, !!enemy.getData("elite"));
+      var bar = enemy.getData("hpBar");
+      var barBg = enemy.getData("hpBarBg");
+      if (bar && bar.destroy) bar.destroy();
+      if (barBg && barBg.destroy) barBg.destroy();
+      enemy.destroy();
+    }
+
+    tryDrop(x, y, fromElite) {
+      var rate = this.diff.dropRate * (fromElite ? 2.2 : 1);
+      if (Math.random() > rate) return;
+      // 血量較稀有，維持張力
+      var roll = Math.random();
+      var kind;
+      if (roll < 0.14) kind = "hp";
+      else if (roll < 0.28) kind = "barrier";
+      else if (roll < 0.44) kind = "edge";
+      else if (roll < 0.60) kind = "swift";
+      else if (roll < 0.76) kind = "phase";
+      else kind = "vortex";
+      if (fromElite && Math.random() < 0.35) kind = "hp";
+
+      var def = ABILITY_DEFS[kind];
+      var p = this.pickups.create(x, y, def.key);
+      p.body.allowGravity = false;
+      p.body.moves = false;
+      p.setVelocity(0, 0);
+      p.setDepth(14);
+      p.setData("kind", kind);
+      p.setData("life", 8);
+      var aura = this.add.circle(x, y, 18, Phaser.Display.Color.HexStringToColor(def.color).color, 0.2)
+        .setStrokeStyle(2, Phaser.Display.Color.HexStringToColor(def.color).color, 0.8)
+        .setDepth(13).setBlendMode(Phaser.BlendModes.ADD);
+      p.setData("aura", aura);
+      this.tweens.add({
+        targets: [p, aura], scale: 1.15, duration: 420, yoyo: true, repeat: -1, ease: "Sine.easeInOut"
+      });
+    }
+
+    onPickup(_p, item) {
+      if (!item.active || !this.alive) return;
+      var kind = item.getData("kind");
+      var aura = item.getData("aura");
+      if (aura && aura.destroy) aura.destroy();
+      item.destroy();
+      SFX.power();
+      neonBurst(this, this.player.x, this.player.y, 0xfbbf24, 18);
+      this.applyAbility(kind);
+    }
+
+    applyAbility(kind) {
+      var def = ABILITY_DEFS[kind];
+      if (!def) return;
+      powerBanner(this, def.title, def.sub, def.color);
+      if (kind === "hp") {
+        this.player.hp = Math.min(this.player.maxHp, this.player.hp + 1);
+        floatText(this, this.player.x, this.player.y - 28, "+HP", "#fb7185", 14);
+      } else if (kind === "edge") {
+        this.player.buffEdge = Math.min(14, this.player.buffEdge + 12);
+      } else if (kind === "swift") {
+        this.player.buffSwift = Math.min(12, this.player.buffSwift + 10);
+      } else if (kind === "phase") {
+        this.player.buffPhase = Math.min(12, this.player.buffPhase + 10);
+      } else if (kind === "barrier") {
+        this.player.shield = Math.min(2, this.player.shield + 1);
+        this.shieldRing.setVisible(true);
+      } else if (kind === "vortex") {
+        this.player.vortexReady = true;
+      }
+    }
+
+    hurtPlayer(amount) {
+      if (!this.alive) return;
+      if (this.player.invuln > 0 || this.player.dashIframes > 0) return;
+      amount = amount || 1;
+      if (this.player.shield > 0) {
+        this.player.shield -= 1;
+        this.player.invuln = 0.85;
+        this.shieldRing.setVisible(this.player.shield > 0);
+        SFX.hit();
+        floatText(this, this.player.x, this.player.y - 24, "護盾吸收", "#93c5fd", 13);
+        neonBurst(this, this.player.x, this.player.y, 0x93c5fd, 18);
+        doShake(this.cameras.main, 100, 0.012);
+        return;
+      }
+      this.player.hp -= amount;
+      this.player.invuln = 1.05;
+      this.combo = 0;
+      this.comboTimer = 0;
+      SFX.hit();
+      doShake(this.cameras.main, 160, 0.02);
+      neonBurst(this, this.player.x, this.player.y, 0xf472b6, 24);
+      if (this.player.hp <= 0) this.endGame();
+    }
+
+    onTouchEnemy(_p, enemy) {
+      if (!enemy.active) return;
+      this.hurtPlayer(1);
+    }
+
+    onBulletHit(_p, bullet) {
+      if (!bullet.active) return;
+      bullet.destroy();
+      this.hurtPlayer(1);
+    }
+
+    spawnEnemy(threat) {
+      var t = this.elapsed;
+      var pool = ["scout", "scout", "assault"];
+      if (t > 12) pool.push("gunner", "assault");
+      if (t > 22) pool.push("shield", "gunner");
+      if (t > 40) pool.push("assault", "shield");
+      if (this.diffKey === "extreme") pool.push("gunner", "shield");
+      if (!this.diff.projectile) pool = pool.filter(function (k) { return k !== "gunner"; });
+
+      var id = pool[Phaser.Math.Between(0, pool.length - 1)];
+      var def = ENEMY_DEFS[id];
+      var edge = Phaser.Math.Between(0, 3);
+      var sx, sy;
+      if (edge === 0) { sx = -20; sy = Phaser.Math.Between(30, H - 30); }
+      else if (edge === 1) { sx = W + 20; sy = Phaser.Math.Between(30, H - 30); }
+      else if (edge === 2) { sx = Phaser.Math.Between(30, W - 30); sy = -20; }
+      else { sx = Phaser.Math.Between(30, W - 30); sy = H + 20; }
+
+      var e = this.enemies.create(sx, sy, def.key);
+      e.body.allowGravity = false;
+      e.setDepth(12);
+      e.setBlendMode(Phaser.BlendModes.ADD);
+      var hp = Math.ceil(def.hp * this.diff.enemyHpMult * (1 + Math.floor(t / 35) * 0.25));
+      e.setData("hp", hp);
+      e.setData("maxHp", hp);
+      e.setData("def", def.def);
+      e.setData("armor", id === "shield" || id === "elite" ? 1 : 0);
+      e.setData("spd", def.spd);
+      e.setData("scoreBase", def.score);
+      e.setData("tint", def.tint);
+      e.setData("kind", id);
+      e.setData("elite", !!def.elite);
+      e.setData("ranged", !!def.ranged);
+      e.setData("fireAcc", Phaser.Math.FloatBetween(0.4, 1.2));
+      e.setData("chargeAcc", 0);
+      var barBg = this.add.rectangle(e.x, e.y - 22, 28, 4, 0x1e293b, 1).setDepth(13);
+      var bar = this.add.rectangle(e.x - 14, e.y - 22, 28, 3, 0x22c55e, 1).setOrigin(0, 0.5).setDepth(14);
+      e.setData("hpBarBg", barBg);
+      e.setData("hpBar", bar);
+    }
+
+    spawnElite(threat) {
+      var def = ENEMY_DEFS.elite;
+      var e = this.enemies.create(W / 2, -30, def.key);
+      e.body.allowGravity = false;
+      e.setDepth(15);
+      var hp = Math.ceil(def.hp * this.diff.enemyHpMult * (1 + this.dangerMultiplier * 0.3));
+      e.setData("hp", hp);
+      e.setData("maxHp", hp);
+      e.setData("def", def.def);
+      e.setData("armor", 1);
+      e.setData("spd", def.spd);
+      e.setData("scoreBase", def.score);
+      e.setData("tint", def.tint);
+      e.setData("kind", "elite");
+      e.setData("elite", true);
+      e.setData("ranged", false);
+      e.setData("fireAcc", 0);
+      e.setData("chargeAcc", 0);
+      var barBg = this.add.rectangle(e.x, e.y - 28, 40, 5, 0x1e293b, 1).setDepth(13);
+      var bar = this.add.rectangle(e.x - 20, e.y - 28, 40, 4, 0xef4444, 1).setOrigin(0, 0.5).setDepth(14);
+      e.setData("hpBarBg", barBg);
+      e.setData("hpBar", bar);
+      powerBanner(this, "精銳降臨", "高血防 · 衝鋒斬", "#ef4444");
+      doShake(this.cameras.main, 140, 0.016);
+      neonBurst(this, W / 2, 80, 0xef4444, 26);
+    }
+
+    refreshEnemyBar(enemy) {
+      var bar = enemy.getData("hpBar");
+      var barBg = enemy.getData("hpBarBg");
+      if (!bar || !bar.active) return;
+      var ratio = Phaser.Math.Clamp((enemy.getData("hp") || 0) / (enemy.getData("maxHp") || 1), 0, 1);
+      var w = enemy.getData("elite") ? 40 : 28;
+      bar.width = w * ratio;
+      bar.setFillStyle(ratio > 0.5 ? 0x22c55e : (ratio > 0.25 ? 0xfbbf24 : 0xef4444), 1);
+      if (barBg) { barBg.x = enemy.x; barBg.y = enemy.y - (enemy.getData("elite") ? 28 : 22); }
+      bar.x = enemy.x - w / 2;
+      bar.y = enemy.y - (enemy.getData("elite") ? 28 : 22);
+    }
+
+    endGame() {
+      if (!this.alive) return;
+      this.alive = false;
+      SFX.die();
+      doShake(this.cameras.main, 280, 0.03);
+      neonBurst(this, this.player.x, this.player.y, 0xf472b6, 28);
+      this.player.setVelocity(0, 0);
+      var self = this;
+      this.time.delayedCall(500, function () {
+        self.scene.start("GameOverModal", {
+          score: self.score,
+          diff: self.diff,
+          difficulty: self.diffKey,
+          kills: self.kills,
+          combo: self.combo,
+          elapsed: self.elapsed
+        });
+      });
+    }
+
+    update(_t, delta) {
+      if (!this.alive) return;
+      var dt = Math.min(0.05, delta / 1000);
+      this.elapsed += dt;
+      this.dangerMultiplier = 1 + Math.log(1 + this.elapsed / 30) * 0.8;
+      var threat = this.dangerMultiplier * this.diff.base;
+
+      // 移動：直接設速度，手感穩定；鍵盤優先於觸控拖曳
+      var left = this.cursors.left.isDown || this.keys.A.isDown;
+      var right = this.cursors.right.isDown || this.keys.D.isDown;
+      var up = this.cursors.up.isDown || this.keys.W.isDown;
+      var down = this.cursors.down.isDown || this.keys.S.isDown;
+      var vx = (right ? 1 : 0) - (left ? 1 : 0);
+      var vy = (down ? 1 : 0) - (up ? 1 : 0);
+      if (vx !== 0 || vy !== 0) {
+        this.dragPtr = false;
+        this.ptrDown = false;
+      }
+
+      this.player.dashLock = Math.max(0, this.player.dashLock - dt);
+      if (this.player.dashLock <= 0) {
+        this.player.setAcceleration(0, 0);
+        if (!this.dragPtr) {
+          if (vx !== 0 || vy !== 0) {
+            var len = Math.sqrt(vx * vx + vy * vy);
+            var moveSpd = 310;
+            this.player.setVelocity((vx / len) * moveSpd, (vy / len) * moveSpd);
+            this.player.face = Math.atan2(vy, vx);
+            this.player.setRotation(this.player.face);
+          } else {
+            this.player.setVelocity(0, 0);
+          }
+        }
+      }
+
+      this.player.invuln = Math.max(0, this.player.invuln - dt);
+      this.player.dashIframes = Math.max(0, this.player.dashIframes - dt);
+      this.player.slashCd = Math.max(0, this.player.slashCd - dt);
+      this.player.dashCd = Math.max(0, this.player.dashCd - dt);
+      this.player.buffEdge = Math.max(0, this.player.buffEdge - dt);
+      this.player.buffSwift = Math.max(0, this.player.buffSwift - dt);
+      this.player.buffPhase = Math.max(0, this.player.buffPhase - dt);
+      this.comboTimer = Math.max(0, this.comboTimer - dt);
+      if (this.comboTimer <= 0) this.combo = 0;
+
+      this.player.setAlpha(
+        (this.player.invuln > 0 || this.player.dashIframes > 0)
+          ? (Math.sin(this.elapsed * 28) > 0 ? 1 : 0.4) : 1
+      );
+
+      this.bladeGlow.setPosition(this.player.x, this.player.y);
+      this.bladeGlow.setScale(1 + Math.sin(this.elapsed * 5) * 0.06);
+      if (this.player.buffEdge > 0) this.bladeGlow.setStrokeStyle(2, 0xfbbf24, 0.8);
+      else if (this.player.buffSwift > 0) this.bladeGlow.setStrokeStyle(2, 0xa78bfa, 0.8);
+      else this.bladeGlow.setStrokeStyle(2, 0x67e8f9, 0.55);
+      this.shieldRing.setPosition(this.player.x, this.player.y);
+      this.shieldRing.setVisible(this.player.shield > 0);
+      this.shieldRing.rotation += dt * 2.2;
+      this.chargeRing.setPosition(this.player.x, this.player.y);
+
+      // 按住 Space：自動連斬；蓄滿約 0.5 秒變重斬
+      var spaceDown = this.spaceKey.isDown || this.cursors.space.isDown;
+      if (spaceDown) {
+        this.player.charge += dt;
+        var cRatio = Phaser.Math.Clamp(this.player.charge / 0.5, 0, 1);
+        this.chargeRing.setStrokeStyle(2 + cRatio * 3, 0xfbbf24, 0.25 + cRatio * 0.7);
+        this.chargeRing.setScale(0.85 + cRatio * 0.45);
+        if (this.player.slashCd <= 0) {
+          var heavy = this.player.charge >= 0.5;
+          this.trySlash(heavy);
+          this.player.charge = 0;
+          this.chargeRing.setStrokeStyle(2, 0xfbbf24, 0);
+        }
+      } else if (this.dragPtr && this.ptrDown) {
+        // 僅真正拖曳時才自動連斬，點一下不會一直砍
+        if (this.player.slashCd <= 0) this.trySlash(false);
+        this.chargeRing.setStrokeStyle(2, 0xfbbf24, 0);
+      } else {
+        this.player.charge = 0;
+        this.chargeRing.setStrokeStyle(2, 0xfbbf24, 0);
+      }
+
+      if (Phaser.Input.Keyboard.JustDown(this.shiftKey)) this.tryDash();
+
+      // 生成（較疏，不堆怪）
+      this.spawnAcc += dt;
+      this.eliteAcc += dt;
+      var softCap = this.diffKey === "casual" ? 7 : this.diffKey === "extreme" ? 12 : 9;
+      var spawnEvery = Math.max(0.55, this.diff.spawnBase / threat);
+      if (this.enemies.countActive(true) < softCap && this.spawnAcc >= spawnEvery) {
+        this.spawnAcc = 0;
+        this.spawnEnemy(threat);
+        if (threat > 1.8 && Math.random() < 0.25) this.spawnEnemy(threat);
+      }
+      if (this.elapsed > 35 && this.eliteAcc >= Math.max(18, 26 / threat)) {
+        this.eliteAcc = 0;
+        this.spawnElite(threat);
+      }
+
+      // 敵人 AI
+      var self = this;
+      this.enemies.getChildren().forEach(function (e) {
+        if (!e.active) return;
+        var spd = (e.getData("spd") || 80) * threat;
+        var kind = e.getData("kind");
+        // 精銳衝鋒
+        if (kind === "elite") {
+          var cAcc = (e.getData("chargeAcc") || 0) + dt;
+          e.setData("chargeAcc", cAcc);
+          if (cAcc > 3.2) {
+            e.setData("chargeAcc", 0);
+            var a = Phaser.Math.Angle.Between(e.x, e.y, self.player.x, self.player.y);
+            e.setVelocity(Math.cos(a) * spd * 2.4, Math.sin(a) * spd * 2.4);
+            neonBurst(self, e.x, e.y, 0xef4444, 15);
+            var warn = self.add.circle(e.x, e.y, 20, 0xef4444, 0.2)
+              .setStrokeStyle(2, 0xef4444, 0.9).setDepth(11);
+            self.tweens.add({
+              targets: warn, scale: 2.5, alpha: 0, duration: 280, ease: "Cubic.easeOut",
+              onComplete: function () { warn.destroy(); }
+            });
+          } else if (cAcc < 2.6) {
+            var a2 = Phaser.Math.Angle.Between(e.x, e.y, self.player.x, self.player.y);
+            e.setVelocity(Math.cos(a2) * spd * 0.85, Math.sin(a2) * spd * 0.85);
+          }
+        } else {
+          var ang = Phaser.Math.Angle.Between(e.x, e.y, self.player.x, self.player.y);
+          e.setVelocity(Math.cos(ang) * spd, Math.sin(ang) * spd);
+          e.rotation += dt * 2.5;
+        }
+        if (e.getData("ranged")) {
+          var fa = (e.getData("fireAcc") || 0) + dt;
+          if (fa >= Math.max(1.6, 2.4 / threat)) {
+            e.setData("fireAcc", 0);
+            self.enemyShoot(e);
+          } else e.setData("fireAcc", fa);
+        }
+        self.refreshEnemyBar(e);
+      });
+
+      this.ebullets.getChildren().forEach(function (b) {
+        if (!b.active) return;
+        if (b.x < -40 || b.x > W + 40 || b.y < -40 || b.y > H + 40) b.destroy();
+      });
+
+      this.pickups.getChildren().forEach(function (p) {
+        if (!p.active) return;
+        var life = (p.getData("life") || 0) - dt;
+        p.setData("life", life);
+        var aura = p.getData("aura");
+        if (aura && aura.active) { aura.x = p.x; aura.y = p.y; }
+        if (life <= 0) {
+          if (aura && aura.destroy) aura.destroy();
+          p.destroy();
+        }
+      });
+
+      // HUD
+      var hearts = "";
+      for (var h = 0; h < this.player.maxHp; h++) hearts += h < this.player.hp ? "❤" : "♡";
+      if (this.player.shield > 0) hearts += " 🛡×" + this.player.shield;
+      this.hudHp.setText(hearts);
+      this.hudScore.setText("SCORE " + this.score.toLocaleString());
+      this.hudDanger.setText("DANGER x" + this.dangerMultiplier.toFixed(2));
+      this.hudCombo.setText(this.combo > 1 ? ("COMBO x" + this.combo) : "");
+      var buffs = [];
+      if (this.player.buffEdge > 0) buffs.push("刃" + this.player.buffEdge.toFixed(0) + "s");
+      if (this.player.buffSwift > 0) buffs.push("速" + this.player.buffSwift.toFixed(0) + "s");
+      if (this.player.buffPhase > 0) buffs.push("突" + this.player.buffPhase.toFixed(0) + "s");
+      if (this.player.vortexReady) buffs.push("渦旋就緒");
+      this.hudBuff.setText(buffs.join(" · "));
+    }
+
+    enemyShoot(enemy) {
+      if (!this.diff.projectile) return;
+      SFX.shoot();
+      var b = this.ebullets.create(enemy.x, enemy.y, "ebullet");
+      b.body.allowGravity = false;
+      b.setDepth(11);
+      b.setBlendMode(Phaser.BlendModes.ADD);
+      var ang = Phaser.Math.Angle.Between(enemy.x, enemy.y, this.player.x, this.player.y);
+      var spd = 160 + this.dangerMultiplier * 25;
+      b.setVelocity(Math.cos(ang) * spd, Math.sin(ang) * spd);
+    }
+  }
+
+  class GameOverModal extends Phaser.Scene {
+    constructor() { super("GameOverModal"); }
+    init(data) { this.payload = data || {}; }
+    create() {
+      this.add.rectangle(W / 2, H / 2, W, H, 0x02040a, 0.72).setInteractive().setDepth(70);
+      var panel = this.add.rectangle(W / 2, H / 2, 460, 420, 0x0b1220, 0.97)
+        .setStrokeStyle(2, 0x22d3ee, 0.85).setScale(0.7).setAlpha(0).setDepth(71);
+      this.tweens.add({ targets: panel, alpha: 1, scale: 1, duration: 320, ease: "Back.easeOut" });
+
+      this.add.text(W / 2, H / 2 - 160, "GAME OVER", {
+        fontFamily: "Segoe UI, sans-serif", fontSize: "14px", fontStyle: "bold", color: "#f472b6"
+      }).setOrigin(0.5).setDepth(72);
+      this.add.text(W / 2, H / 2 - 128, "霓虹結算", {
+        fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+        fontSize: "28px", fontStyle: "bold", color: "#e2e8f0"
+      }).setOrigin(0.5).setDepth(72);
+
+      var score = this.payload.score || 0;
+      var scoreTxt = this.add.text(W / 2, H / 2 - 50, score.toLocaleString(), {
+        fontFamily: "Segoe UI, sans-serif", fontSize: "48px", fontStyle: "bold", color: "#67e8f9"
+      }).setOrigin(0.5).setDepth(72).setScale(0.5).setAlpha(0);
+      this.tweens.add({ targets: scoreTxt, alpha: 1, scale: 1, duration: 360, ease: "Back.easeOut", delay: 80 });
+
+      var diff = this.payload.diff || DIFF.standard;
+      this.add.text(W / 2, H / 2 + 20,
+        diff.label + " · 擊殺 " + (this.payload.kills || 0) + " · 存活 " + Math.floor(this.payload.elapsed || 0) + "s",
+        { fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif", fontSize: "13px", color: "#94a3b8" }
+      ).setOrigin(0.5).setDepth(72);
+
+      neonBurst(this, W / 2, H / 2 - 40, 0x22d3ee, 20);
+
+      if (typeof RNF !== "undefined" && RNF.submitScore) {
+        try {
+          RNF.submitScore(score, {
+            metadata: {
+              difficulty: this.payload.difficulty || "standard",
+              rawScore: score,
+              slug: "cyber-blade-dash",
+              kills: this.payload.kills || 0
+            }
+          });
+        } catch (_e) {}
+      }
+
+      var self = this;
+      var retry = makeButton(this, W / 2 - 100, H / 2 + 90, "再試一次", 0x22d3ee, function () {
+        SFX.confirm();
+        self.scene.start("GameScene", { difficulty: self.payload.difficulty || selectedDiff });
+      }, 180);
+      retry.bg.setDepth(72); retry.txt.setDepth(73);
+
+      var board = makeButton(this, W / 2 + 100, H / 2 + 90, "排行榜", 0x34d399, function () {
+        self.scene.start("LeaderboardScene", { difficulty: self.payload.difficulty || selectedDiff });
+      }, 180);
+      board.bg.setDepth(72); board.txt.setDepth(73);
+
+      var menu = makeButton(this, W / 2, H / 2 + 155, "主選單", 0x64748b, function () {
+        self.scene.start("MainMenuScene");
+      }, 200);
+      menu.bg.setDepth(72); menu.txt.setDepth(73);
+    }
+  }
+
+  var LeaderboardScene = (window.RNFPhaserLeaderboard && RNFPhaserLeaderboard.createLeaderboardScene)
+    ? RNFPhaserLeaderboard.createLeaderboardScene({
+        Phaser: Phaser,
+        makeButton: makeButton,
+        W: W,
+        H: H,
+        accent: 0x22d3ee,
+        returnScene: "MainMenuScene",
+        getDefaultDiff: function () {
+          return (typeof selectedDiff !== "undefined" && selectedDiff) ? selectedDiff : "standard";
+        }
+      })
+    : class LeaderboardSceneMissing extends Phaser.Scene {
+        constructor() { super("LeaderboardScene"); }
+        create() {
+          this.add.text(W / 2, H / 2, "排行榜模組未載入", {
+            fontFamily: "Microsoft JhengHei, sans-serif", fontSize: "18px", color: "#94a3b8"
+          }).setOrigin(0.5);
+          var self = this;
+          makeButton(this, W / 2, H / 2 + 60, "返回", 0x64748b, function () {
+            self.scene.start("MainMenuScene");
+          }, 160);
+        }
+      };
+
+  var config = {
+    type: Phaser.WEBGL,
+    parent: "game-host",
+    width: W,
+    height: H,
+    backgroundColor: "#04060c",
+    banner: false,
+    physics: { default: "arcade", arcade: { gravity: { y: 0 }, debug: false } },
+    scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+    fps: { target: 144, forceSet: false, smoothStep: true },
+    scene: [BootScene, MainMenuScene, DifficultyScene, GameScene, GameOverModal, LeaderboardScene, SettingsScene]
+  };
+
+  try {
+    window.__RNF_CYBER_BLADE_DASH__ = new Phaser.Game(config);
+  } catch (_e) {
+    config.type = Phaser.AUTO;
+    window.__RNF_CYBER_BLADE_DASH__ = new Phaser.Game(config);
+  }
+})();
+</script>
 </body>
 </html>

@@ -8,8 +8,14 @@ import {
   submitLeaderboardScore,
   validateLeaderboardSubmit,
 } from "@/lib/game-leaderboard";
+import {
+  buildVirtualGameLeaderboardEntries,
+  isVirtualGameLeaderboardSlug,
+  mergeGameLeaderboardWithVirtual,
+} from "@/lib/game-leaderboard-virtual";
 import { canViewGame } from "@/lib/game-publish";
 import { resolvePurchaseEntitlementForGame } from "@/lib/game-entitlement-service";
+import { getPlatformGameMeta } from "@/lib/platform-catalog";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
 
@@ -17,7 +23,7 @@ async function loadGame(gameId: number) {
   const supabase = createServerSupabase();
   const { data: record, error } = await supabase
     .from("games")
-    .select("id, publish_status, creator_id, status, pricing_type, price, min_price")
+    .select("id, slug, title, publish_status, creator_id, status, pricing_type, price, min_price")
     .eq("id", gameId)
     .maybeSingle();
 
@@ -26,6 +32,18 @@ async function loadGame(gameId: number) {
   }
 
   return record;
+}
+
+function resolveLeaderboardSlug(
+  record: { slug?: string | null; title?: string | null } | null
+): string | null {
+  if (!record) return null;
+  const slug = typeof record.slug === "string" ? record.slug.trim() : "";
+  if (slug && isVirtualGameLeaderboardSlug(slug)) return slug;
+  const title = typeof record.title === "string" ? record.title : "";
+  const meta = title ? getPlatformGameMeta(title) : null;
+  if (meta && isVirtualGameLeaderboardSlug(meta.slug)) return meta.slug;
+  return slug || null;
 }
 
 export async function GET(
@@ -69,7 +87,7 @@ export async function GET(
     const url = new URL(request.url);
     const limit = Math.min(
       50,
-      Math.max(1, Number.parseInt(url.searchParams.get("limit") ?? "20", 10) || 20)
+      Math.max(1, Number.parseInt(url.searchParams.get("limit") ?? "30", 10) || 30)
     );
     const difficulty = url.searchParams.get("difficulty")?.trim() || null;
 
@@ -79,8 +97,19 @@ export async function GET(
       rows.map((row) => row.user_id)
     );
 
+    const realEntries = mapPublicLeaderboard(rows, user?.id, titleMap);
+    const slug = resolveLeaderboardSlug(record);
+    const entries =
+      slug && isVirtualGameLeaderboardSlug(slug)
+        ? mergeGameLeaderboardWithVirtual(
+            realEntries,
+            buildVirtualGameLeaderboardEntries(slug, difficulty || "normal"),
+            limit
+          )
+        : realEntries;
+
     return NextResponse.json({
-      entries: mapPublicLeaderboard(rows, user?.id, titleMap),
+      entries,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "讀取排行榜失敗";

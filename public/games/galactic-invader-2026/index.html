@@ -17,8 +17,8 @@
   <script src="/sdk/phaser.min.js"></script>
   <script src="/sdk/rnf-i18n.js?v=20260730g"></script>
   <script src="/sdk/rnf-game-packs.js?v=20260730g"></script>
-  <script src="/sdk/rnf-game-sdk.js?v=20260731t"></script>
-  <script src="/games/_shared/rnf-phaser-leaderboard.js?v=20260731t"></script>
+  <script src="/sdk/rnf-game-sdk.js?v=20260731lb6"></script>
+  <script src="/games/_shared/rnf-phaser-leaderboard.js?v=20260731lb8"></script>
   <script src="/games/_shared/rnf-phaser-help.js?v=20260731d"></script>
 </head>
 <body>
@@ -33,8 +33,8 @@
 
   if (typeof RNF !== "undefined" && RNF.init) RNF.init();
 
-  var W = 960;
-  var H = 540;
+  var W = 1280;
+  var H = 720;
   var SETTINGS_KEY = "rnf:galactic-invader-2026:settings";
 
   var DIFF = {
@@ -236,22 +236,28 @@
   }
 
   function powerBanner(scene, title, sub, colorHex) {
-    // 精簡角落提示，避免全屏刺眼大橫幅
-    var wrap = scene.add.container(W - 130, 78).setDepth(55).setAlpha(0).setScale(0.85);
+    var wrap = scene.add.container(W / 2, 88).setDepth(55).setAlpha(0).setScale(0.55);
     var col = Phaser.Display.Color.HexStringToColor(colorHex).color;
-    var bar = scene.add.rectangle(0, 0, 220, 36, 0x020617, 0.78).setStrokeStyle(1, col, 0.75);
-    var t1 = scene.add.text(0, -6, title, {
+    var bar = scene.add.rectangle(0, 0, 420, 64, 0x020617, 0.88).setStrokeStyle(3, col, 0.95);
+    var glow = scene.add.rectangle(0, 0, 424, 68, col, 0.12).setBlendMode(Phaser.BlendModes.ADD);
+    var t1 = scene.add.text(0, -12, title, {
       fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif",
-      fontSize: "12px", fontStyle: "bold", color: "#e2e8f0"
+      fontSize: "22px", fontStyle: "bold", color: "#f8fafc",
+      stroke: "#020617", strokeThickness: 4
     }).setOrigin(0.5);
-    var t2 = scene.add.text(0, 8, sub, {
+    var t2 = scene.add.text(0, 16, sub, {
       fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif",
-      fontSize: "10px", color: colorHex
+      fontSize: "16px", fontStyle: "bold", color: colorHex
     }).setOrigin(0.5);
-    wrap.add([bar, t1, t2]);
-    scene.tweens.add({ targets: wrap, alpha: 1, x: W - 118, duration: 180, ease: "Cubic.easeOut" });
+    wrap.add([glow, bar, t1, t2]);
     scene.tweens.add({
-      targets: wrap, alpha: 0, x: W - 100, duration: 280, delay: 900, ease: "Cubic.easeIn",
+      targets: wrap, alpha: 1, scale: 1.08, y: 100, duration: 260, ease: "Back.easeOut"
+    });
+    scene.tweens.add({
+      targets: wrap, scale: 1, duration: 160, delay: 260, ease: "Cubic.easeOut"
+    });
+    scene.tweens.add({
+      targets: wrap, alpha: 0, y: 72, scale: 0.92, duration: 320, delay: 1500, ease: "Cubic.easeIn",
       onComplete: function () { wrap.destroy(); }
     });
   }
@@ -527,38 +533,38 @@
         });
       }
 
-      var badge = this.add.text(W / 2, 78, "RAINYNIGHTFROG · CYBER ARCADE", {
+      var badge = this.add.text(W / 2, 100, "RAINYNIGHTFROG · CYBER ARCADE", {
         fontFamily: "Segoe UI, sans-serif", fontSize: "11px", fontStyle: "bold",
         color: "#22d3ee", letterSpacing: 3
       }).setOrigin(0.5).setAlpha(0);
 
-      var title = this.add.text(W / 2, 140, "GALACTIC INVADER 2026", {
+      var title = this.add.text(W / 2, 180, "GALACTIC INVADER 2026", {
         fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif",
-        fontSize: "32px", fontStyle: "bold", color: "#ffffff"
+        fontSize: "36px", fontStyle: "bold", color: "#ffffff"
       }).setOrigin(0.5).setScale(0.65).setAlpha(0);
 
-      var sub = this.add.text(W / 2, 195, "霸氣戰機 · 多型敵人 · 雷電／火焰／冰凍／追蹤彈限時武裝", {
+      var sub = this.add.text(W / 2, 250, "霸氣戰機 · 多型敵人 · 雷電／火焰／冰凍／追蹤彈限時武裝", {
         fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
-        fontSize: "14px", color: "#94a3b8"
+        fontSize: "15px", color: "#94a3b8"
       }).setOrigin(0.5).setAlpha(0);
 
-      this.tweens.add({ targets: badge, alpha: 1, y: 88, duration: 400, ease: "Cubic.easeOut" });
+      this.tweens.add({ targets: badge, alpha: 1, y: 110, duration: 400, ease: "Cubic.easeOut" });
       this.tweens.add({ targets: title, alpha: 1, scale: 1, duration: 480, ease: "Back.easeOut", delay: 50 });
       this.tweens.add({ targets: sub, alpha: 1, duration: 380, ease: "Cubic.easeOut", delay: 120 });
 
       var self = this;
-      makeButton(this, W / 2, 300, "開始遊戲 START", 0x22d3ee, function () {
+      makeButton(this, W / 2, 360, "開始遊戲 START", 0x22d3ee, function () {
         SFX.confirm();
         self.cameras.main.fadeOut(160, 4, 6, 12);
         self.time.delayedCall(170, function () { self.scene.start("DifficultyScene"); });
       });
-      makeButton(this, W / 2, 370, "設定 SETTINGS", 0xa78bfa, function () {
+      makeButton(this, W / 2, 440, "設定 SETTINGS", 0xa78bfa, function () {
         self.scene.launch("SettingsScene");
       });
-      makeButton(this, W / 2, 440, "排行榜", 0x34d399, function () {
+      makeButton(this, W / 2, 520, "排行榜", 0x34d399, function () {
         self.scene.start("LeaderboardScene", { difficulty: (typeof selectedDiff !== "undefined" && selectedDiff) ? selectedDiff : "standard" });
       });
-      makeButton(this, W / 2, 504, "操作說明", 0x64748b, function () {
+      makeButton(this, W / 2, 600, "操作說明", 0x64748b, function () {
         if (window.RNFPhaserHelp && RNFPhaserHelp.showHelpOverlay) {
           RNFPhaserHelp.showHelpOverlay(self,
             "拖曳／WASD／方向鍵移動 · 空白射擊 · B 核爆\n掉落限時武裝：雷電連鎖 · 火焰高傷 · 冰凍緩敵 · 追蹤飛彈\n敵人依難度切換偵察／士兵／重甲／精銳／攔截機 · 高血防",
@@ -575,13 +581,13 @@
       this.cameras.main.setBackgroundColor("#060a14");
       this.cameras.main.fadeIn(160, 4, 6, 12);
 
-      var head = this.add.text(W / 2, 70, "選擇難度", {
+      var head = this.add.text(W / 2, 90, "選擇難度", {
         fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
         fontSize: "34px", fontStyle: "bold", color: "#e2e8f0"
       }).setOrigin(0.5).setScale(0.7).setAlpha(0);
       this.tweens.add({ targets: head, alpha: 1, scale: 1, duration: 360, ease: "Back.easeOut" });
 
-      this.add.text(W / 2, 118, "生存越久 → 敵機與子彈越快 · HUD 顯示 DANGER", {
+      this.add.text(W / 2, 150, "生存越久 → 敵機與子彈越快 · HUD 顯示 DANGER", {
         fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
         fontSize: "14px", color: "#64748b"
       }).setOrigin(0.5);
@@ -590,7 +596,7 @@
       ["casual", "standard", "extreme"].forEach(function (key, i) {
         var d = DIFF[key];
         var col = Phaser.Display.Color.HexStringToColor(d.color).color;
-        var y = 190 + i * 88;
+        var y = 250 + i * 100;
         makeButton(self, W / 2, y, d.label, col, function () {
           selectedDiff = key;
           SFX.confirm();
@@ -599,13 +605,13 @@
             self.scene.start("GameScene", { difficulty: key });
           });
         });
-        self.add.text(W / 2, y + 32, d.desc + " · 分數 x" + d.scoreMult.toFixed(2), {
+        self.add.text(W / 2, y + 36, d.desc + " · 分數 x" + d.scoreMult.toFixed(2), {
           fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
           fontSize: "12px", color: "#94a3b8"
         }).setOrigin(0.5);
       });
 
-      makeButton(this, W / 2, 490, "返回", 0x475569, function () {
+      makeButton(this, W / 2, 640, "返回", 0x475569, function () {
         self.scene.start("MainMenuScene");
       }, 160);
     }
@@ -689,12 +695,12 @@
 
       this.drawStars();
 
-      this.player = this.physics.add.image(W / 2, H - 70, "player");
+      this.player = this.physics.add.image(W / 2, H - 90, "player");
       this.player.setCollideWorldBounds(true);
       this.player.body.allowGravity = false;
       this.player.setDepth(20);
       this.player.setDrag(1200);
-      this.player.setMaxVelocity(460, 0);
+      this.player.setMaxVelocity(560, 0);
       this.player.body.setSize(36, 40);
       this.player.body.setOffset(10, 12);
 
@@ -845,9 +851,11 @@
       this.enemies.clear(true, true);
       this.formation = [];
       var rows = Math.min(3 + Math.floor(this.wave / 2), 5);
-      var cols = 8;
-      var startX = 140;
-      var startY = 80;
+      var cols = 10;
+      var gapX = 100;
+      var gapY = 60;
+      var startX = (W - (cols - 1) * gapX) / 2;
+      var startY = 100;
       var threat = this.dangerMultiplier;
       var pool = this.diff.enemyPool || ["scout", "soldier"];
 
@@ -860,7 +868,7 @@
           }
           if (this.diffKey === "extreme" && r >= 2 && Math.random() < 0.3) kind = "interceptor";
           var st = ENEMY_STATS[kind] || ENEMY_STATS.scout;
-          var e = this.enemies.create(startX + c * 80, startY + r * 52, st.key);
+          var e = this.enemies.create(startX + c * gapX, startY + r * gapY, st.key);
           e.body.allowGravity = false;
           e.setImmovable(true);
           e.setDepth(12);
@@ -958,46 +966,54 @@
 
       var mx = this.player.x;
       var my = this.player.y - 30;
+      var powered = elem !== "normal";
 
-      // 槍口雙層炫彩閃光（局部）
-      var muzzleOuter = this.add.circle(mx, my, 14, muzzleAlt, 0.55)
-        .setDepth(21).setBlendMode(Phaser.BlendModes.ADD);
-      var muzzle = this.add.circle(mx, my, 8, muzzleTint, 1)
-        .setDepth(22).setBlendMode(Phaser.BlendModes.ADD);
-      var muzzleCore = this.add.circle(mx, my, 3, 0xffffff, 1)
-        .setDepth(23).setBlendMode(Phaser.BlendModes.ADD);
-      this.tweens.add({
-        targets: [muzzleOuter, muzzle, muzzleCore], scale: 2.8, alpha: 0, duration: 160, ease: "Cubic.easeOut",
-        onComplete: function () {
-          muzzleOuter.destroy(); muzzle.destroy(); muzzleCore.destroy();
+      if (powered) {
+        // 撿到元素道具後才用誇張槍口特效
+        var muzzleOuter = this.add.circle(mx, my, 14, muzzleAlt, 0.55)
+          .setDepth(21).setBlendMode(Phaser.BlendModes.ADD);
+        var muzzle = this.add.circle(mx, my, 8, muzzleTint, 1)
+          .setDepth(22).setBlendMode(Phaser.BlendModes.ADD);
+        var muzzleCore = this.add.circle(mx, my, 3, 0xffffff, 1)
+          .setDepth(23).setBlendMode(Phaser.BlendModes.ADD);
+        this.tweens.add({
+          targets: [muzzleOuter, muzzle, muzzleCore], scale: 2.8, alpha: 0, duration: 160, ease: "Cubic.easeOut",
+          onComplete: function () {
+            muzzleOuter.destroy(); muzzle.destroy(); muzzleCore.destroy();
+          }
+        });
+        var ring = this.add.circle(mx, my, 6, muzzleTint, 0)
+          .setStrokeStyle(2, muzzleTint, 0.95).setDepth(22).setBlendMode(Phaser.BlendModes.ADD);
+        this.tweens.add({
+          targets: ring, scale: 3.2, alpha: 0, duration: 200, ease: "Cubic.easeOut",
+          onComplete: function () { ring.destroy(); }
+        });
+        dualBurst(this, mx, my + 4, muzzleTint, muzzleAlt, 16);
+        neonBurst(this, mx, my, 0xffffff, 10);
+        for (var s = -1; s <= 1; s += 2) {
+          (function (side) {
+            var spark = this.add.circle(mx + side * 18, my + 8, 4, side < 0 ? 0x22d3ee : 0xa78bfa, 1)
+              .setDepth(21).setBlendMode(Phaser.BlendModes.ADD);
+            this.tweens.add({
+              targets: spark, x: spark.x + side * 34, y: spark.y - 48, alpha: 0, scale: 0.15, duration: 180,
+              ease: "Cubic.easeOut", onComplete: function () { spark.destroy(); }
+            });
+          }).call(this, s);
         }
-      });
-      // 槍口能量環
-      var ring = this.add.circle(mx, my, 6, muzzleTint, 0)
-        .setStrokeStyle(2, muzzleTint, 0.95).setDepth(22).setBlendMode(Phaser.BlendModes.ADD);
-      this.tweens.add({
-        targets: ring, scale: 3.2, alpha: 0, duration: 200, ease: "Cubic.easeOut",
-        onComplete: function () { ring.destroy(); }
-      });
-      dualBurst(this, mx, my + 4, muzzleTint, muzzleAlt, 16);
-      neonBurst(this, mx, my, 0xffffff, 10);
-
-      // 側翼能量弧
-      for (var s = -1; s <= 1; s += 2) {
-        (function (side) {
-          var spark = this.add.circle(mx + side * 18, my + 8, 4, side < 0 ? 0x22d3ee : 0xa78bfa, 1)
-            .setDepth(21).setBlendMode(Phaser.BlendModes.ADD);
-          this.tweens.add({
-            targets: spark, x: spark.x + side * 34, y: spark.y - 48, alpha: 0, scale: 0.15, duration: 180,
-            ease: "Cubic.easeOut", onComplete: function () { spark.destroy(); }
-          });
-        }).call(this, s);
+      } else {
+        // 普通攻擊：低調槍口閃光
+        var muzzleN = this.add.circle(mx, my, 4, 0x67e8f9, 0.85)
+          .setDepth(22).setBlendMode(Phaser.BlendModes.ADD);
+        this.tweens.add({
+          targets: muzzleN, scale: 1.6, alpha: 0, duration: 90, ease: "Cubic.easeOut",
+          onComplete: function () { muzzleN.destroy(); }
+        });
       }
 
       var self = this;
       for (var i = 0; i < angles.length; i++) {
         (function (i) {
-          var bKey = elem === "normal" ? (i % 2 === 0 ? "bullet-cyan" : "bullet-violet") : key;
+          var bKey = elem === "normal" ? "bullet-cyan" : key;
           var b = self.bullets.create(mx, my, bKey);
           b.body.allowGravity = false;
           b.setDepth(16);
@@ -1009,33 +1025,35 @@
           b.setData("elem", elem);
           b.setData("pierce", elem === "lightning" ? 1 : 0);
           if (elem === "track") b.setData("homingAlly", true);
-          b.setScale(1.25);
-          // 子彈外光暈
-          var glow = self.add.circle(mx, my, 7, i % 2 === 0 ? muzzleTint : muzzleAlt, 0.35)
-            .setDepth(15).setBlendMode(Phaser.BlendModes.ADD);
-          b.setData("glow", glow);
-          var trailTint = elem === "normal" ? (i % 2 === 0 ? 0x22d3ee : 0xa78bfa) : muzzleTint;
-          var trail = self.add.particles(0, 0, "spark", {
-            follow: b,
-            speed: { min: 20, max: 90 },
-            angle: { min: 50, max: 130 },
-            lifespan: { min: 100, max: 220 },
-            scale: { start: 1.1, end: 0 },
-            alpha: { start: 0.95, end: 0 },
-            blendMode: "ADD",
-            frequency: 14,
-            tint: [trailTint, muzzleAlt, 0xffffff],
-            quantity: 2
-          }).setDepth(15);
-          b.setData("trail", trail);
-          self.time.delayedCall(1000, function () {
-            self.destroyBulletFx(b);
-          });
+          b.setScale(powered ? 1.25 : 1);
+          if (powered) {
+            var glow = self.add.circle(mx, my, 7, i % 2 === 0 ? muzzleTint : muzzleAlt, 0.35)
+              .setDepth(15).setBlendMode(Phaser.BlendModes.ADD);
+            b.setData("glow", glow);
+            var trail = self.add.particles(0, 0, "spark", {
+              follow: b,
+              speed: { min: 20, max: 90 },
+              angle: { min: 50, max: 130 },
+              lifespan: { min: 100, max: 220 },
+              scale: { start: 1.1, end: 0 },
+              alpha: { start: 0.95, end: 0 },
+              blendMode: "ADD",
+              frequency: 14,
+              tint: [muzzleTint, muzzleAlt, 0xffffff],
+              quantity: 2
+            }).setDepth(15);
+            b.setData("trail", trail);
+            self.time.delayedCall(1000, function () {
+              self.destroyBulletFx(b);
+            });
+          }
         })(i);
       }
 
-      neonBurst(this, this.player.x, this.player.y + 22, 0xf97316, 12);
-      neonBurst(this, this.player.x, this.player.y + 18, 0x22d3ee, 10);
+      if (powered) {
+        neonBurst(this, this.player.x, this.player.y + 22, 0xf97316, 12);
+        neonBurst(this, this.player.x, this.player.y + 18, 0x22d3ee, 10);
+      }
     }
 
     destroyBulletFx(b) {
@@ -1498,7 +1516,7 @@
       }
 
       // keyboard move
-      var spd = 380;
+      var spd = 460;
       var vx = 0;
       if (this.cursors.left.isDown || this.keys.A.isDown) vx = -spd;
       if (this.cursors.right.isDown || this.keys.D.isDown) vx = spd;
@@ -1532,10 +1550,10 @@
 
       // formation movement
       if (!this.boss && this.formation.length) {
-        this.formOffset += this.formDir * 55 * this.diff.enemySpd * threat * freezeField * dt;
-        if (Math.abs(this.formOffset) > 70) {
+        this.formOffset += this.formDir * 70 * this.diff.enemySpd * threat * freezeField * dt;
+        if (Math.abs(this.formOffset) > 140) {
           this.formDir *= -1;
-          this.formDrop += 10 * freezeField;
+          this.formDrop += 12 * freezeField;
         }
         for (var f = 0; f < this.formation.length; f++) {
           var e = this.formation[f];
@@ -1587,7 +1605,7 @@
         } else {
           this.boss.clearTint();
         }
-        this.boss.x = W / 2 + Math.sin(this.elapsed * 1.2 * (bslow > 0 ? 0.5 : 1)) * 180;
+        this.boss.x = W / 2 + Math.sin(this.elapsed * 1.2 * (bslow > 0 ? 0.5 : 1)) * 320;
         var bburn = this.boss.getData("burn") || 0;
         if (bburn > 0) {
           this.boss.setData("burn", bburn - dt);
