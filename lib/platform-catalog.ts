@@ -68,6 +68,9 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
     featuredBadge: "平台旗艦",
     featuredAccent: "violet",
     demoUrl: "/demos/void-gacha-preview.html",
+    /* 響應式網頁遊戲：預覽框用較寬比例，全螢幕另走鋪滿邏輯 */
+    viewportWidth: 1440,
+    viewportHeight: 900,
   },
   {
     slug: "core-defense",

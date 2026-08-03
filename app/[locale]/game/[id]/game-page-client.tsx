@@ -487,6 +487,17 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
   const viewportWidth = game?.viewportWidth ?? 960;
   const viewportHeight = game?.viewportHeight ?? 600;
   const playerMaxWidth = Math.min(viewportWidth, 1024);
+  /* VOID GACHA 等響應式網頁遊戲：全螢幕應鋪滿舞台，勿用固定比例 letterbox 擠壓 */
+  const fillFullscreen = useMemo(() => {
+    if (!game) return false;
+    const slug = String(game.slug || "")
+      .trim()
+      .toLowerCase();
+    const title = String(game.title || "")
+      .trim()
+      .toUpperCase();
+    return slug === "void-gacha" || title === "VOID GACHA";
+  }, [game]);
   const showCreatorFullscreen = game?.fullscreenButton ?? true;
   const isGameOwner = Boolean(
     profile?.id && ownerCreatorId && profile.id === ownerCreatorId
@@ -756,11 +767,15 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
             <div
               className={cn(
                 showFullscreen && iframeSrc
-                  ? "fixed inset-0 z-[71] flex flex-col overflow-hidden overscroll-contain touch-manipulation sm:inset-3 md:inset-4 md:z-[61] lg:inset-6"
+                  ? fillFullscreen
+                    ? "fixed inset-0 z-[71] flex flex-col overflow-hidden overscroll-contain touch-manipulation md:z-[61]"
+                    : "fixed inset-0 z-[71] flex flex-col overflow-hidden overscroll-contain touch-manipulation sm:inset-3 md:inset-4 md:z-[61] lg:inset-6"
                   : "overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/60 shadow-2xl shadow-black/50 ring-1 ring-white/5",
                 showFullscreen &&
                   iframeSrc &&
-                  "border-0 bg-zinc-950 shadow-2xl shadow-black/60 sm:rounded-2xl sm:border sm:border-white/10"
+                  (fillFullscreen
+                    ? "border-0 bg-zinc-950 shadow-2xl shadow-black/60"
+                    : "border-0 bg-zinc-950 shadow-2xl shadow-black/60 sm:rounded-2xl sm:border sm:border-white/10")
               )}
               style={
                 showFullscreen && iframeSrc
@@ -844,12 +859,14 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
                 </div>
               )}
 
-              {/* 全螢幕：外層舞台 + 內層等比 letterbox；非全螢幕維持桌面比例框 */}
+              {/* 全螢幕：響應式遊戲鋪滿；其他維持等比 letterbox。非全螢幕維持桌面比例框 */}
               <div
                 className={cn(
                   "relative w-full bg-black",
                   showFullscreen && iframeSrc
-                    ? "flex min-h-0 flex-1 items-center justify-center overflow-hidden [container-type:size]"
+                    ? fillFullscreen
+                      ? "flex min-h-0 flex-1 overflow-hidden"
+                      : "flex min-h-0 flex-1 items-center justify-center overflow-hidden [container-type:size]"
                     : "mx-auto max-h-[min(70dvh,80vh)]"
                 )}
                 style={
@@ -867,11 +884,13 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
                   className={cn(
                     "relative bg-black",
                     showFullscreen && iframeSrc
-                      ? "max-h-full max-w-full"
+                      ? fillFullscreen
+                        ? "size-full min-h-0 min-w-0"
+                        : "max-h-full max-w-full"
                       : "absolute inset-0 size-full"
                   )}
                   style={
-                    showFullscreen && iframeSrc
+                    showFullscreen && iframeSrc && !fillFullscreen
                       ? {
                           aspectRatio: `${viewportWidth} / ${viewportHeight}`,
                           width: `min(100cqw, calc(100cqh * ${viewportWidth} / ${viewportHeight}))`,
