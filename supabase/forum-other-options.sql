@@ -1,4 +1,6 @@
--- 擴充社群討論區貼文分類（在既有 forum_posts 表上執行）
+-- 論壇：分類「其他」+ 允許所屬遊戲為空（hub「其他」）
+-- 請在 Supabase SQL Editor 執行一次
+
 alter table public.forum_posts
   drop constraint if exists forum_posts_category_check;
 
@@ -10,6 +12,5 @@ alter table public.forum_posts
     'meme', 'lore', 'speedrun', 'update', 'other'
   ));
 
--- 允許 hub 發文選擇「其他」時不綁定特定遊戲
 alter table public.forum_posts
   alter column game_id drop not null;

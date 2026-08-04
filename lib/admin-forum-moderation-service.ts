@@ -2,7 +2,7 @@ import { createServerSupabase } from "@/lib/supabase-server";
 
 export type AdminForumPostRecord = {
   id: number;
-  gameId: number;
+  gameId: number | null;
   gameTitle: string;
   userId: string;
   authorName: string;
@@ -43,7 +43,13 @@ export async function listAdminForumPosts(params: {
   if (error) throw new Error(error.message);
 
   const records = posts ?? [];
-  const gameIds = [...new Set(records.map((row) => row.game_id as number))];
+  const gameIds = [
+    ...new Set(
+      records
+        .map((row) => row.game_id as number | null)
+        .filter((id): id is number => typeof id === "number")
+    ),
+  ];
   const userIds = [...new Set(records.map((row) => row.user_id as string))];
 
   const [{ data: games }, { data: profiles }, commentCounts] = await Promise.all([
@@ -79,8 +85,11 @@ export async function listAdminForumPosts(params: {
   return records
     .map((post) => ({
       id: post.id as number,
-      gameId: post.game_id as number,
-      gameTitle: gameMap.get(post.game_id as number) ?? "",
+      gameId: (post.game_id as number | null) ?? null,
+      gameTitle:
+        post.game_id == null
+          ? "其他"
+          : gameMap.get(post.game_id as number) ?? "",
       userId: post.user_id as string,
       authorName:
         profileMap.get(post.user_id as string) ??
@@ -136,7 +145,11 @@ export async function listAdminForumComments(params: {
     : { data: [] };
 
   const gameIds = [
-    ...new Set((posts ?? []).map((post) => post.game_id as number)),
+    ...new Set(
+      (posts ?? [])
+        .map((post) => post.game_id as number | null)
+        .filter((id): id is number => typeof id === "number")
+    ),
   ];
 
   const [{ data: games }, { data: profiles }] = await Promise.all([
@@ -153,7 +166,7 @@ export async function listAdminForumComments(params: {
       post.id as number,
       {
         title: post.title as string,
-        gameId: post.game_id as number,
+        gameId: (post.game_id as number | null) ?? null,
       },
     ])
   );
@@ -169,7 +182,11 @@ export async function listAdminForumComments(params: {
 
   return records.map((comment) => {
     const post = postMap.get(comment.post_id as number);
-    const gameTitle = post ? (gameMap.get(post.gameId) ?? "") : "";
+    const gameTitle = !post
+      ? ""
+      : post.gameId == null
+        ? "其他"
+        : gameMap.get(post.gameId) ?? "";
     return {
       id: comment.id as number,
       postId: comment.post_id as number,

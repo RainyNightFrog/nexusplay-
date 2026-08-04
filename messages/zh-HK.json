@@ -401,14 +401,14 @@
       "upload": "創作者專區開放：上傳 ZIP 遊戲，一鍵發布到首頁",
       "community": "加入社群討論區，分享心得、開發日誌與遊戲攻略",
       "feeds": "訂閱 RSS / Atom，不錯過平台新作與論壇動態",
-      "featured": "平台明星遊戲熱玩中：VOID GACHA · CoreDefense · CyberFortune — 點擊查看",
+      "featured": "平台明星遊戲熱玩中：VOID GACHA · CoreDefense · Galactic Invader 2026 — 點擊查看",
       "multilingual": "支援 11 種語言介面，右上角可隨時切換語言",
       "leaderboard": "衝刺收藏榜與遊玩榜，解鎖專屬成就稱號",
       "achievements": "完成成就、收集稱號，在個人檔案展示你的戰績",
       "forumRules": "發文前請先閱讀社群守則，共建友善討論環境",
       "followCreators": "追蹤喜愛的創作者，第一時間收到新作通知",
       "zeroDownload": "純網頁遊戲體驗：無需下載、跨裝置即刻開玩",
-      "starGames": "三大台柱熱玩中：VOID GACHA · CoreDefense · CyberFortune — 點擊查看",
+      "starGames": "三大台柱熱玩中：VOID GACHA · CoreDefense · Galactic Invader 2026 — 點擊查看",
       "tipSearch": "想找特定遊戲？用頂部搜尋框輸入關鍵字即可",
       "tipFilter": "首頁下方可依分類、標籤、價格篩選，快速找到適合你的遊戲",
       "tipBrowse": "往下滑到遊戲牆，點封面就能直接進入遊玩",
@@ -483,7 +483,7 @@
     "footer": "© 2026 RainyNightFrog · 保留所有權利",
     "featuredBadge": "三大台柱",
     "featuredTitle": "平台明星遊戲",
-    "featuredDesc": "VOID GACHA · CoreDefense · CyberFortune — 華麗設計 × 硬核體驗",
+    "featuredDesc": "VOID GACHA · CoreDefense · Galactic Invader 2026 — 華麗設計 × 硬核體驗",
     "hotPickBadge": "熱門首推",
     "upcomingBadge": "🚀 即將推出",
     "favoritesSectionTitle": "我的收藏",
@@ -1632,8 +1632,11 @@
       "lore": "劇情世界觀",
       "speedrun": "競速挑戰",
       "meme": "趣味梗圖",
-      "update": "版本動態"
-    }
+      "update": "版本動態",
+      "other": "其他"
+    },
+    "gameOther": "其他",
+    "gameSearchPlaceholder": "搜尋遊戲名稱…"
   },
   "rules": {
     "title": "社群規則",

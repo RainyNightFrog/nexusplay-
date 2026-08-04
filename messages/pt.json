@@ -163,7 +163,7 @@
     "footer": "© 2026 RainyNightFrog · Todos os direitos reservados",
     "featuredBadge": "Os Três Grandes",
     "featuredTitle": "Jogos estrela da plataforma",
-    "featuredDesc": "VOID GACHA · CoreDefense · CyberFortune — Design impressionante × Experiência hardcore",
+    "featuredDesc": "VOID GACHA · CoreDefense · Galactic Invader 2026 — Design impressionante × Experiência hardcore",
     "categories": {
       "全部": "Todos",
       "動作": "Ação",
@@ -317,14 +317,14 @@
       "upload": "Creator hub is open: upload a ZIP game and publish to the homepage in one click",
       "community": "Join the community forum to share tips, devlogs, and game strategies",
       "feeds": "Subscribe via RSS / Atom and never miss new releases or forum updates",
-      "featured": "Platform star games are trending: VOID GACHA · CoreDefense · CyberFortune — tap to view",
+      "featured": "Platform star games are trending: VOID GACHA · CoreDefense · Galactic Invader 2026 — tap to view",
       "multilingual": "11 interface languages supported — switch anytime from the top-right menu",
       "leaderboard": "Climb the favorites and playtime leaderboards to unlock exclusive titles",
       "achievements": "Complete achievements and collect titles to showcase on your profile",
       "forumRules": "Read the community rules before posting — help keep discussions friendly",
       "followCreators": "Follow your favorite creators to get notified when they release new games",
       "zeroDownload": "Pure browser gaming: no downloads, play instantly on any device",
-      "starGames": "Platform stars are trending: VOID GACHA · CoreDefense · CyberFortune — tap to view",
+      "starGames": "Platform stars are trending: VOID GACHA · CoreDefense · Galactic Invader 2026 — tap to view",
       "tipSearch": "Looking for a game? Use the search box at the top",
       "tipFilter": "Filter the homepage by category, tags, or price to find your next play",
       "tipBrowse": "Scroll to the game wall and tap a cover to start playing",
@@ -1162,7 +1162,8 @@
       "lore": "História",
       "speedrun": "Speedrun",
       "meme": "Memes",
-      "update": "Atualizações"
+      "update": "Atualizações",
+      "other": "Outro"
     },
     "searchPlaceholder": "Pesquise tópicos, conteúdo ou autores…",
     "searchNoResults": "Não há tópicos correspondentes",
@@ -1187,7 +1188,9 @@
     "richTextCharCount": "{count} characters",
     "insertImage": "Insert image",
     "imageUploadFailed": "Image upload failed",
-    "replyTooLong": "Reply is too long. Please shorten it before posting."
+    "replyTooLong": "Reply is too long. Please shorten it before posting.",
+    "gameOther": "Outro",
+    "gameSearchPlaceholder": "Pesquisar jogos…"
   },
   "rules": {
     "title": "Regras da comunidade",

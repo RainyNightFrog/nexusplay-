@@ -312,12 +312,14 @@ export function SiteSearch({
                     {ts("suggestedGames")}
                   </p>
                   {suggestedGames.map((game) => (
-                    <button
+                    <a
                       key={game.id}
-                      type="button"
-                      onClick={() => {
+                      href={buildGameHref(game)}
+                      onClick={(event) => {
+                        // 強制整頁載入，避开 Next 軟導航 + Suspense 造成的黑屏
+                        event.preventDefault();
                         setOpen(false);
-                        router.push(buildGameHref(game));
+                        window.location.assign(buildGameHref(game));
                       }}
                       className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm hover:bg-white/5"
                     >
@@ -330,7 +332,7 @@ export function SiteSearch({
                           {localizedTag(game.genre)}
                         </span>
                       )}
-                    </button>
+                    </a>
                   ))}
                 </section>
               )}
@@ -372,18 +374,19 @@ export function SiteSearch({
                     </button>
                   ))}
                   {games.map((game) => (
-                    <button
+                    <a
                       key={game.id}
-                      type="button"
-                      onClick={() => {
+                      href={buildGameHref(game)}
+                      onClick={(event) => {
+                        event.preventDefault();
                         setOpen(false);
-                        router.push(buildGameHref(game));
+                        window.location.assign(buildGameHref(game));
                       }}
                       className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-white/5"
                     >
                       <Gamepad2 className="size-4 shrink-0 text-cyan-400" />
                       <span className="truncate text-zinc-200">{game.title}</span>
-                    </button>
+                    </a>
                   ))}
                   <button
                     type="button"

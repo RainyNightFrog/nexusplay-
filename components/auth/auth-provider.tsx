@@ -1,5 +1,6 @@
 "use client";
 
+import type { User } from "@supabase/supabase-js";
 import {
   createContext,
   useCallback,
@@ -62,6 +63,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(true);
       }
 
+      let sessionUser: User | null = null;
+
       try {
         const supabase = createClient();
         const {
@@ -77,15 +80,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         const user = session.user;
+        sessionUser = user;
         const cachedProfile = readProfileSessionCache();
+        // 有快取才樂觀顯示；無快取時勿用 user_metadata.avatar_url（Google 登入常寫在這），
+        // 否則會在 /api/auth/profile 回來前短暫閃出錯誤頭像。
         if (cachedProfile?.id === user.id) {
           setProfile(cachedProfile);
-        } else {
-          setProfile(profileFromUserMetadata(user));
-        }
-
-        if (!silent) {
-          finishInitialLoad();
+          if (!silent) {
+            finishInitialLoad();
+          }
         }
 
         const response = await fetchWithTimeout(
@@ -101,12 +104,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setProfile(nextProfile);
           writeProfileSessionCache(nextProfile);
         } else if (!cachedProfile || cachedProfile.id !== user.id) {
-          const fallback = profileFromUserMetadata(user);
-          setProfile(fallback);
-          writeProfileSessionCache(fallback);
+          setProfile((prev) => {
+            if (prev?.id === user.id) return prev;
+            const fallback = profileFromUserMetadata(user);
+            writeProfileSessionCache(fallback);
+            return fallback;
+          });
         }
       } catch {
-        // 保留 session / 快取 / metadata 的暫時 profile，避免刷新卡住
+        // 網路失敗：保留既有／快取；完全沒資料時才退回 metadata（可能含 Google）
+        const cachedProfile = readProfileSessionCache();
+        setProfile((prev) => {
+          if (prev) return prev;
+          if (cachedProfile) return cachedProfile;
+          if (sessionUser) return profileFromUserMetadata(sessionUser);
+          return prev;
+        });
       } finally {
         if (generation === loadGeneration.current) {
           finishInitialLoad();
@@ -143,8 +156,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        setProfile(profileFromUserMetadata(session.user));
-        finishInitialLoad();
+        // 已登入但無快取：維持 loading，交給 loadProfile 等 DB profile，
+        // 避免先畫出 Google OAuth 的 user_metadata 頭像。
       })
       .catch(() => {
         if (cancelled) return;

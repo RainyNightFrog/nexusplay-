@@ -84,6 +84,9 @@ const nextConfig: NextConfig = {
             key: "Cache-Control",
             value: "public, max-age=60, must-revalidate",
           },
+          // iframe 內街機頁勿套主站完整 CSP，避免引擎腳本／WebGL 被擋成黑屏
+          { key: "Content-Security-Policy", value: "frame-ancestors 'self'" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
         ],
       },
       {
@@ -93,6 +96,8 @@ const nextConfig: NextConfig = {
             key: "Cache-Control",
             value: "public, max-age=60, must-revalidate",
           },
+          { key: "Content-Security-Policy", value: "frame-ancestors 'self'" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
         ],
       },
       {
@@ -113,7 +118,9 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        source: "/((?!api/games/.*/embed).*)",
+        // 排除街機／demo／sdk／embed，避免完整 CSP 套到 iframe 遊戲文件
+        source:
+          "/((?!api/games/.*/embed|games/|demos/|sdk/|_next/static).*)",
         headers: [
           { key: "X-Frame-Options", value: "SAMEORIGIN" },
           { key: "X-Content-Type-Options", value: "nosniff" },

@@ -72,7 +72,7 @@ export async function sendForumReplyNotificationEmail(params: {
 
 export async function notifyForumPostAuthorOfReply(params: {
   postId: number;
-  gameId: number;
+  gameId: number | null;
   replierUserId: string;
   replyContent: string;
 }) {
@@ -89,17 +89,28 @@ export async function notifyForumPostAuthorOfReply(params: {
     return;
   }
 
-  const { data: game } = await supabase
-    .from("games")
-    .select("title, slug")
-    .eq("id", params.gameId)
-    .maybeSingle();
+  const resolvedGameId =
+    params.gameId ??
+    (typeof post.game_id === "number" ? post.game_id : null);
+
+  let game: { title: string; slug: string | null } | null = null;
+  if (resolvedGameId != null) {
+    const { data } = await supabase
+      .from("games")
+      .select("title, slug")
+      .eq("id", resolvedGameId)
+      .maybeSingle();
+    game = data as { title: string; slug: string | null } | null;
+  }
 
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "").replace(/\/$/, "");
-  const forumPath = buildGameHref(
-    { id: params.gameId, slug: (game?.slug as string | null) ?? null },
-    `/forum?post=${params.postId}`
-  );
+  const forumPath =
+    resolvedGameId != null
+      ? buildGameHref(
+          { id: resolvedGameId, slug: game?.slug ?? null },
+          `/forum?post=${params.postId}`
+        )
+      : `/community?post=${params.postId}`;
   const forumUrl = siteUrl ? `${siteUrl}${forumPath}` : forumPath;
 
   try {
@@ -124,7 +135,7 @@ export async function notifyForumPostAuthorOfReply(params: {
   try {
     await sendForumReplyNotificationEmail({
       recipientUserId: post.user_id,
-      gameTitle: game?.title ?? `#${params.gameId}`,
+      gameTitle: game?.title ?? "其他",
       postTitle: post.title,
       replyPreview: params.replyContent,
       forumUrl,

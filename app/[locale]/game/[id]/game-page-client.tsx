@@ -1,9 +1,8 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useLocale, useTranslations } from "next-intl";
-import { useSearchParams } from "next/navigation";
 import { useGameRouteId } from "@/hooks/use-game-route-id";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -80,17 +79,6 @@ const GameDetailSections = dynamic(
   { ssr: false }
 );
 
-function GamePageFallback() {
-  const tc = useTranslations("common");
-
-  return (
-    <div className="dark flex min-h-full flex-col items-center justify-center px-4 text-zinc-100">
-      <Loader2 className="mb-4 size-10 animate-spin text-cyan-400" />
-      <p className="text-sm text-zinc-400">{tc("loadingGame")}</p>
-    </div>
-  );
-}
-
 type GamePageClientProps = {
   initialGame?: Game | null;
 };
@@ -98,14 +86,6 @@ type GamePageClientProps = {
 export default function GamePageClient({
   initialGame = null,
 }: GamePageClientProps) {
-  return (
-    <Suspense fallback={<GamePageFallback />}>
-      <GamePageContent initialGame={initialGame} />
-    </Suspense>
-  );
-}
-
-function GamePageContent({ initialGame }: { initialGame: Game | null }) {
   const t = useTranslations("game");
   const tw = useTranslations("wishlist");
   const tChat = useTranslations("chat");
@@ -117,7 +97,6 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
   const { formatCount } = useFormatCount();
   const { translateApiError } = useApiError();
   const { profile } = useAuth();
-  const searchParams = useSearchParams();
   const router = useRouter();
   const gameId = useGameRouteId();
 
@@ -148,7 +127,10 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
   const [canPlay, setCanPlay] = useState(true);
   const [requiresPurchase, setRequiresPurchase] = useState(false);
   const [hasPurchased, setHasPurchased] = useState(false);
+  const [iframeReady, setIframeReady] = useState(false);
+  const [stageReady, setStageReady] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
 
   const showToast = useCallback((message: string) => {
     setToast(message);
@@ -178,7 +160,14 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
   useEffect(() => {
     let cancelled = false;
 
-    if (!gameId) return;
+    if (!gameId) {
+      setLoading(false);
+      if (!initialGame) {
+        setGame(null);
+        setLoadError(tc("notFound"));
+      }
+      return;
+    }
 
     async function loadGame() {
       // 已有 SSR 預填時不再整頁轉圈，只在背景補權限／購買狀態
@@ -289,6 +278,14 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
     }
   }, [initialGame]);
 
+  // 進頁／換遊戲時捲回頂部，並關閉上一輪全螢幕狀態
+  useEffect(() => {
+    setShowFullscreen(false);
+    mobileAutoExpandDoneRef.current = false;
+    setIframeReady(false);
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [gameId]);
+
   useEffect(() => {
     if (!game?.id) return;
 
@@ -398,9 +395,10 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
   useEffect(() => {
     if (!game?.title) return;
 
-    const draftSaved = searchParams.get("draftSaved") === "1";
-    const published = searchParams.get("published") === "1";
-    const submitted = searchParams.get("submitted") === "1";
+    const params = new URLSearchParams(window.location.search);
+    const draftSaved = params.get("draftSaved") === "1";
+    const published = params.get("published") === "1";
+    const submitted = params.get("submitted") === "1";
 
     if (!draftSaved && !published && !submitted) return;
 
@@ -417,7 +415,7 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
     url.searchParams.delete("published");
     url.searchParams.delete("submitted");
     window.history.replaceState({}, "", url.toString());
-  }, [game?.title, game?.id, searchParams, showToast, td]);
+  }, [game?.title, game?.id, showToast, td]);
 
   useEffect(() => {
     if (!game?.id || !canPlay) return;
@@ -465,10 +463,66 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
     const bust =
       /\/games\/[^/?#]+\/index\.html/i.test(trustedEmbedUrl) ||
       /\/demos\/[^/?#]+\.html/i.test(trustedEmbedUrl)
-        ? "&v=20260731lb8"
+        ? "&v=20260805auto1"
         : "";
     return `${trustedEmbedUrl}${sep}gid=${game.id}&locale=${encodeURIComponent(locale)}${bust}`;
   }, [trustedEmbedUrl, game, locale]);
+
+  useEffect(() => {
+    setIframeReady(false);
+    setStageReady(false);
+    if (!iframeSrc) return;
+
+    const el = stageRef.current;
+    const markReady = () => {
+      if (!el) {
+        setStageReady(true);
+        return;
+      }
+      if (el.clientWidth >= 48 && el.clientHeight >= 48) {
+        setStageReady(true);
+      }
+    };
+
+    markReady();
+    const ro =
+      typeof ResizeObserver !== "undefined" && el
+        ? new ResizeObserver(() => markReady())
+        : null;
+    if (el && ro) ro.observe(el);
+
+    // 防止觀察器未觸發時永遠不掛 iframe
+    const bootTimer = window.setTimeout(() => setStageReady(true), 400);
+    // 部分瀏覽器／沙箱下 onLoad 可能不觸發，逾時仍揭開遊戲避免永遠黑遮罩
+    const readyTimer = window.setTimeout(() => setIframeReady(true), 2000);
+
+    return () => {
+      ro?.disconnect();
+      window.clearTimeout(bootTimer);
+      window.clearTimeout(readyTimer);
+    };
+  }, [iframeSrc]);
+
+  const gameSlug = String(game?.slug || "")
+    .trim()
+    .toLowerCase();
+  /* 霓虹方塊：邏輯解析度 960×640，嵌入框需對齊，否則 FIT 會被舊的 600 高擠小 */
+  const viewportWidth =
+    gameSlug === "neon-tetromino-rush"
+      ? 960
+      : (game?.viewportWidth ?? 960);
+  const viewportHeight =
+    gameSlug === "neon-tetromino-rush"
+      ? 640
+      : (game?.viewportHeight ?? 600);
+  const playerMaxWidth = Math.min(
+    viewportWidth,
+    gameSlug === "neon-tetromino-rush" ? 1120 : 1024
+  );
+  const playerMaxHeightClass =
+    gameSlug === "neon-tetromino-rush"
+      ? "max-h-[min(82dvh,88vh)]"
+      : "max-h-[min(70dvh,80vh)]";
 
   const embedCode = useMemo(() => {
     if (!iframeSrc) return "";
@@ -477,16 +531,9 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
     const absoluteUrl = iframeSrc.startsWith("/")
       ? `${origin}${iframeSrc}`
       : iframeSrc;
-    return buildEmbedCode(
-      absoluteUrl,
-      game?.viewportWidth ?? 960,
-      game?.viewportHeight ?? 600
-    );
-  }, [iframeSrc, game?.viewportWidth, game?.viewportHeight]);
+    return buildEmbedCode(absoluteUrl, viewportWidth, viewportHeight);
+  }, [iframeSrc, viewportWidth, viewportHeight]);
 
-  const viewportWidth = game?.viewportWidth ?? 960;
-  const viewportHeight = game?.viewportHeight ?? 600;
-  const playerMaxWidth = Math.min(viewportWidth, 1024);
   /* VOID GACHA 等響應式網頁遊戲：全螢幕應鋪滿舞台，勿用固定比例 letterbox 擠壓 */
   const fillFullscreen = useMemo(() => {
     if (!game) return false;
@@ -512,19 +559,10 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
   const showPurchaseGate = showCheckout;
   const editGameHref = game ? `/dashboard/edit/${game.id}` : "/dashboard";
 
-  /* 手機／觸控裝置：進頁自動展開，避免 VOID 閘道鎖死且觸控被頁面捲動吃掉 */
+  /* 不再進頁自動全螢幕：觸控筆電／窄窗會整頁黑底蓋住，改由玩家手動展開 */
   useEffect(() => {
-    if (mobileAutoExpandDoneRef.current) return;
-    if (!iframeSrc || !playable || !showCreatorFullscreen || showPurchaseGate) {
-      return;
-    }
-    const isCoarseOrNarrow = window.matchMedia(
-      "(max-width: 768px), (pointer: coarse)"
-    ).matches;
-    if (!isCoarseOrNarrow) return;
     mobileAutoExpandDoneRef.current = true;
-    setShowFullscreen(true);
-  }, [iframeSrc, playable, showCreatorFullscreen, showPurchaseGate]);
+  }, []);
 
   const refreshGameAfterPurchase = useCallback(async () => {
     try {
@@ -552,7 +590,9 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
   }, [gameId]);
 
   useEffect(() => {
-    const checkoutState = searchParams.get("checkout");
+    const checkoutState = new URLSearchParams(window.location.search).get(
+      "checkout"
+    );
     if (checkoutState === "success") {
       showToast(t("checkoutSuccessLive"));
       const target = game ? buildGameHref(game) : `/game/${gameId}`;
@@ -564,7 +604,6 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
       router.replace(target, { scroll: false });
     }
   }, [
-    searchParams,
     showToast,
     t,
     router,
@@ -664,9 +703,27 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
 
   if (loading) {
     return (
-      <div className="dark flex min-h-full flex-col items-center justify-center px-4 text-zinc-100">
-        <Loader2 className="mb-4 size-10 animate-spin text-cyan-400" />
-        <p className="text-sm text-zinc-400">{tc("loadingGame")}</p>
+      <div className="dark relative min-h-dvh text-zinc-100">
+        <SiteHeader hideBrandOnMobile>
+          <Link
+            href="/"
+            className={cn(
+              buttonVariants({ variant: "ghost", size: "sm" }),
+              "min-h-10 min-w-10 shrink-0 gap-1.5 px-2 text-zinc-400 hover:text-cyan-300 touch-manipulation sm:min-h-0 sm:min-w-0 sm:px-3"
+            )}
+            aria-label={tn("backHome")}
+          >
+            <ArrowLeft className="size-4" />
+            <span className="hidden sm:inline">{tn("backHome")}</span>
+          </Link>
+          <p className="min-w-0 flex-1 truncate text-sm text-zinc-400">
+            {tc("loadingGame")}
+          </p>
+        </SiteHeader>
+        <div className="flex min-h-[50vh] flex-col items-center justify-center px-4">
+          <Loader2 className="mb-4 size-10 animate-spin text-cyan-400" />
+          <p className="text-sm text-zinc-400">{tc("loadingGame")}</p>
+        </div>
       </div>
     );
   }
@@ -755,9 +812,9 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
       <main className="relative mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
           <motion.section
-            initial={{ opacity: 0 }}
+            initial={false}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.4 }}
+            transition={{ duration: 0.25 }}
             className={cn(
               "min-w-0",
               /* 手機提高層級避免遮罩擋觸控；電腦維持原本 z 軸 */
@@ -861,13 +918,14 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
 
               {/* 全螢幕：響應式遊戲鋪滿；其他維持等比 letterbox。非全螢幕維持桌面比例框 */}
               <div
+                ref={stageRef}
                 className={cn(
                   "relative w-full bg-black",
                   showFullscreen && iframeSrc
                     ? fillFullscreen
                       ? "flex min-h-0 flex-1 overflow-hidden"
                       : "flex min-h-0 flex-1 items-center justify-center overflow-hidden [container-type:size]"
-                    : "mx-auto max-h-[min(70dvh,80vh)]"
+                    : cn("mx-auto", playerMaxHeightClass)
                 )}
                 style={
                   showFullscreen
@@ -876,8 +934,9 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
                       ? {
                           aspectRatio: `${viewportWidth} / ${viewportHeight}`,
                           width: `min(100%, ${playerMaxWidth}px)`,
+                          minHeight: "min(50dvh, 360px)",
                         }
-                      : undefined
+                      : { minHeight: "240px" }
                 }
               >
                 <div
@@ -974,17 +1033,28 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
                   </div>
                 ) : iframeSrc ? (
                   <>
-                    <iframe
-                      ref={iframeRef}
-                      src={iframeSrc}
-                      title={game.title}
-                      tabIndex={0}
-                      className="absolute inset-0 size-full border-0 touch-none md:touch-auto"
-                      sandbox={sandboxForEmbedUrl(iframeSrc)}
-                      allowFullScreen
-                      referrerPolicy="no-referrer"
-                    />
-                    {showCreatorFullscreen && !showFullscreen && (
+                    {stageReady ? (
+                      <iframe
+                        key={iframeSrc}
+                        ref={iframeRef}
+                        src={iframeSrc}
+                        title={game.title}
+                        tabIndex={0}
+                        className="absolute inset-0 size-full border-0 touch-none md:touch-auto"
+                        sandbox={sandboxForEmbedUrl(iframeSrc)}
+                        allowFullScreen
+                        allow="gamepad *; fullscreen *"
+                        referrerPolicy="no-referrer"
+                        onLoad={() => setIframeReady(true)}
+                      />
+                    ) : null}
+                    {(!stageReady || !iframeReady) && (
+                      <div className="absolute inset-0 z-[1] flex flex-col items-center justify-center gap-3 bg-zinc-950">
+                        <Loader2 className="size-8 animate-spin text-cyan-400" />
+                        <p className="text-sm text-zinc-400">{tc("loadingGame")}</p>
+                      </div>
+                    )}
+                    {showCreatorFullscreen && !showFullscreen && stageReady && (
                       <Button
                         type="button"
                         variant="ghost"
@@ -1002,13 +1072,15 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
                         <Maximize2 className="size-5 sm:size-4" />
                       </Button>
                     )}
-                    <GameEmbedBridge
-                      iframeRef={iframeRef}
-                      gameId={String(game.id)}
-                      expanded={showFullscreen}
-                      creatorId={game.creatorId}
-                      onExpandRequest={() => setShowFullscreen(true)}
-                    />
+                    {stageReady && (
+                      <GameEmbedBridge
+                        iframeRef={iframeRef}
+                        gameId={String(game.id)}
+                        expanded={showFullscreen}
+                        creatorId={game.creatorId}
+                        onExpandRequest={() => setShowFullscreen(true)}
+                      />
+                    )}
                   </>
                 ) : (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-6 text-center">
@@ -1143,7 +1215,7 @@ function GamePageContent({ initialGame }: { initialGame: Game | null }) {
 
             {showFullscreen && iframeSrc && (
               <div
-                className="mx-auto w-full max-h-[min(70dvh,80vh)]"
+                className={cn("mx-auto w-full", playerMaxHeightClass)}
                 style={{
                   aspectRatio: `${viewportWidth} / ${viewportHeight}`,
                   width: `min(100%, ${playerMaxWidth}px)`,

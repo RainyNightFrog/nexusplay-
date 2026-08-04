@@ -34,6 +34,7 @@ import { requestOpenPlayerDm } from "@/lib/open-player-dm";
 import { useApiError } from "@/hooks/use-api-error";
 import {
   FORUM_CATEGORIES,
+  FORUM_COMPOSE_GAME_OTHER,
   FORUM_LIMITS,
   getForumCategoryMeta,
   type ForumCategory,
@@ -76,7 +77,8 @@ type CommunityForumProps = {
 };
 
 type CategoryFilter = "all" | ForumCategory;
-type GameFilter = "all" | number;
+type GameFilter = "all" | "other" | number;
+type ComposeGameValue = number | typeof FORUM_COMPOSE_GAME_OTHER;
 
 function CategoryBadge({ category }: { category: string }) {
   const t = useTranslations("forum");
@@ -266,9 +268,10 @@ export function CommunityForum({
   const [commentsLoading, setCommentsLoading] = useState(false);
 
   const [creating, setCreating] = useState(false);
-  const [composeGameId, setComposeGameId] = useState<number | null>(
+  const [composeGameId, setComposeGameId] = useState<ComposeGameValue | null>(
     games?.[0]?.id ?? gameId ?? null
   );
+  const [gameSearchQuery, setGameSearchQuery] = useState("");
   const [newTitle, setNewTitle] = useState("");
   const [newCategory, setNewCategory] = useState<ForumCategory>("general");
   const [newContent, setNewContent] = useState("");
@@ -276,9 +279,27 @@ export function CommunityForum({
   const [replyContent, setReplyContent] = useState("");
   const [replying, setReplying] = useState(false);
 
+  const filteredComposeGames = useMemo(() => {
+    if (!games?.length) return [];
+    const q = gameSearchQuery.trim().toLowerCase();
+    let list = q
+      ? games.filter((game) => game.title.toLowerCase().includes(q))
+      : games;
+    if (
+      typeof composeGameId === "number" &&
+      !list.some((game) => game.id === composeGameId)
+    ) {
+      const selected = games.find((game) => game.id === composeGameId);
+      if (selected) list = [selected, ...list];
+    }
+    return list;
+  }, [games, gameSearchQuery, composeGameId]);
+
   const filteredPosts = useMemo(() => {
     let result = posts;
-    if (gameFilter !== "all") {
+    if (gameFilter === "other") {
+      result = result.filter((post) => post.game_id == null);
+    } else if (gameFilter !== "all") {
       result = result.filter((post) => post.game_id === gameFilter);
     }
     if (categoryFilter !== "all") {
@@ -294,6 +315,7 @@ export function CommunityForum({
         stripHtmlForPreview(post.content),
         post.author_name,
         post.game_title ?? "",
+        post.game_id == null ? "其他 other" : "",
       ]
         .join(" ")
         .toLowerCase();
@@ -304,10 +326,15 @@ export function CommunityForum({
 
   const gameCounts = useMemo(() => {
     const counts: Record<number, number> = {};
+    let otherCount = 0;
     for (const post of posts) {
-      counts[post.game_id] = (counts[post.game_id] ?? 0) + 1;
+      if (post.game_id == null) {
+        otherCount += 1;
+      } else {
+        counts[post.game_id] = (counts[post.game_id] ?? 0) + 1;
+      }
     }
-    return counts;
+    return { counts, otherCount };
   }, [posts]);
 
   const categoryCounts = useMemo(() => {
@@ -362,12 +389,14 @@ export function CommunityForum({
   }, [gameId, isHub, locale, onPostsChange, onPostsLoaded, onToast, t, translateApiError]);
 
   const loadComments = useCallback(
-    async (postId: number, postGameId: number) => {
+    async (postId: number, postGameId: number | null) => {
       setCommentsLoading(true);
       try {
-        const response = await fetch(
-          `/api/games/${postGameId}/forum/posts/${postId}/comments?locale=${encodeURIComponent(locale)}`
-        );
+        const url =
+          postGameId == null
+            ? `/api/forum/posts/${postId}/comments?locale=${encodeURIComponent(locale)}`
+            : `/api/games/${postGameId}/forum/posts/${postId}/comments?locale=${encodeURIComponent(locale)}`;
+        const response = await fetch(url);
         const data = (await response.json()) as {
           comments?: ForumComment[];
           error?: string;
@@ -504,7 +533,11 @@ export function CommunityForum({
     }
 
     const targetGameId = isHub ? composeGameId : gameId;
-    if (!targetGameId) {
+    if (isHub && targetGameId == null) {
+      onToast(t("selectGamePost"));
+      return;
+    }
+    if (!isHub && !targetGameId) {
       onToast(t("selectGamePost"));
       return;
     }
@@ -527,15 +560,30 @@ export function CommunityForum({
 
     setCreating(true);
     try {
-      const response = await fetch(`/api/games/${targetGameId}/forum/posts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title,
-          category: newCategory,
-          content,
-        }),
-      });
+      const isOtherGame = targetGameId === FORUM_COMPOSE_GAME_OTHER;
+      const response = await fetch(
+        isOtherGame || (isHub && targetGameId == null)
+          ? "/api/community/forum/posts"
+          : `/api/games/${targetGameId}/forum/posts`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(
+            isOtherGame
+              ? {
+                  title,
+                  category: newCategory,
+                  content,
+                  gameId: null,
+                }
+              : {
+                  title,
+                  category: newCategory,
+                  content,
+                }
+          ),
+        }
+      );
       const data = (await response.json()) as {
         post?: ForumPostWithGame;
         error?: string;
@@ -546,12 +594,13 @@ export function CommunityForum({
         return;
       }
 
-      const gameLabel =
-        games?.find((g) => g.id === targetGameId)?.title ?? gameTitle;
+      const gameLabel = isOtherGame
+        ? t("gameOther")
+        : games?.find((g) => g.id === targetGameId)?.title ?? gameTitle;
       const createdPost: ForumPostWithGame = {
         ...data.post,
         comment_count: 0,
-        game_title: gameLabel,
+        game_title: isOtherGame ? undefined : gameLabel,
       };
       setPosts((prev) => {
         const next = [createdPost, ...prev];
@@ -591,7 +640,9 @@ export function CommunityForum({
     setReplying(true);
     try {
       const response = await fetch(
-        `/api/games/${selectedPost.game_id}/forum/posts/${selectedPost.id}/comments`,
+        selectedPost.game_id == null
+          ? `/api/forum/posts/${selectedPost.id}/comments`
+          : `/api/games/${selectedPost.game_id}/forum/posts/${selectedPost.id}/comments`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -724,7 +775,13 @@ export function CommunityForum({
               <div className="p-5 text-center sm:p-6">
                 <div className="flex flex-wrap items-center justify-center gap-2">
                   <CategoryBadge category={selectedPost.category} />
-                  {isHub && selectedPost.game_title && (
+                  {isHub && selectedPost.game_id == null && (
+                    <span className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] font-medium text-zinc-400">
+                      <Gamepad2 className="size-3" />
+                      {t("gameOther")}
+                    </span>
+                  )}
+                  {isHub && selectedPost.game_id != null && selectedPost.game_title && (
                     <Link
                       href={buildGameHref({ id: selectedPost.game_id }, "/forum")}
                       className="inline-flex items-center gap-1 rounded-md border border-violet-400/25 bg-violet-500/10 px-2 py-0.5 text-[11px] font-medium text-violet-300 transition-colors hover:bg-violet-500/20"
@@ -904,22 +961,43 @@ export function CommunityForum({
                       <Label className="w-full justify-center text-zinc-300">
                         {t("gameField")}
                       </Label>
+                      <Input
+                        value={gameSearchQuery}
+                        onChange={(event) => setGameSearchQuery(event.target.value)}
+                        placeholder={t("gameSearchPlaceholder")}
+                        className="border-white/10 bg-white/5 text-center text-zinc-100 placeholder:text-center placeholder:text-zinc-500 focus-visible:border-violet-400/40 focus-visible:ring-violet-500/20"
+                      />
                       <Select
-                        value={composeGameId?.toString() ?? ""}
+                        value={
+                          composeGameId === FORUM_COMPOSE_GAME_OTHER
+                            ? FORUM_COMPOSE_GAME_OTHER
+                            : composeGameId?.toString() ?? ""
+                        }
                         onValueChange={(value) => {
-                          if (value) {
-                            setComposeGameId(Number.parseInt(value, 10));
+                          if (!value) return;
+                          if (value === FORUM_COMPOSE_GAME_OTHER) {
+                            setComposeGameId(FORUM_COMPOSE_GAME_OTHER);
+                            return;
                           }
+                          setComposeGameId(Number.parseInt(value, 10));
                         }}
                       >
                         <SelectTrigger className="w-full justify-center border-white/10 bg-white/5 text-center text-zinc-100">
                           <SelectDisplayValue>
-                            {games.find((game) => game.id === composeGameId)?.title ??
-                              t("selectGame")}
+                            {composeGameId === FORUM_COMPOSE_GAME_OTHER
+                              ? t("gameOther")
+                              : games.find((game) => game.id === composeGameId)
+                                  ?.title ?? t("selectGame")}
                           </SelectDisplayValue>
                         </SelectTrigger>
                         <SelectContent className="border-white/10 bg-zinc-900 text-zinc-100 ring-white/10">
-                          {games.map((game) => (
+                          <SelectItem
+                            value={FORUM_COMPOSE_GAME_OTHER}
+                            className="focus:bg-violet-500/10 focus:text-violet-100"
+                          >
+                            {t("gameOther")}
+                          </SelectItem>
+                          {filteredComposeGames.map((game) => (
                             <SelectItem
                               key={game.id}
                               value={game.id.toString()}
@@ -1003,7 +1081,7 @@ export function CommunityForum({
                         !newTitle.trim() ||
                         isForumContentEmpty(newContent) ||
                         newContent.length > FORUM_LIMITS.content ||
-                        (isHub && !composeGameId)
+                        (isHub && composeGameId == null)
                       }
                       className="gap-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white hover:from-violet-500 hover:to-fuchsia-500"
                     >
@@ -1061,6 +1139,19 @@ export function CommunityForum({
                 >
                   {tc("all")} ({posts.length})
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setGameFilter("other")}
+                  className={cn(
+                    "rounded-full px-3 py-1 text-xs font-medium transition-all",
+                    gameFilter === "other"
+                      ? "bg-cyan-500/20 text-cyan-200 ring-1 ring-cyan-400/40"
+                      : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-zinc-200"
+                  )}
+                >
+                  {t("gameOther")}
+                  {gameCounts.otherCount > 0 && ` (${gameCounts.otherCount})`}
+                </button>
                 {games.map((game) => (
                   <button
                     key={game.id}
@@ -1074,8 +1165,8 @@ export function CommunityForum({
                     )}
                   >
                     {game.title}
-                    {(gameCounts[game.id] ?? 0) > 0 &&
-                      ` (${gameCounts[game.id]})`}
+                    {(gameCounts.counts[game.id] ?? 0) > 0 &&
+                      ` (${gameCounts.counts[game.id]})`}
                   </button>
                 ))}
               </div>
@@ -1149,7 +1240,13 @@ export function CommunityForum({
                   >
                     <div className="flex flex-wrap items-center justify-center gap-2">
                       <CategoryBadge category={post.category} />
-                      {isHub && post.game_title && (
+                      {isHub && post.game_id == null && (
+                        <span className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] text-zinc-400">
+                          <Gamepad2 className="size-3" />
+                          {t("gameOther")}
+                        </span>
+                      )}
+                      {isHub && post.game_id != null && post.game_title && (
                         <span className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] text-zinc-400">
                           <Gamepad2 className="size-3" />
                           {post.game_title}

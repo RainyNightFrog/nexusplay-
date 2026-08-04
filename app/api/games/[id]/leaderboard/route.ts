@@ -7,20 +7,30 @@ import {
   mapPublicLeaderboard,
   submitLeaderboardScore,
   validateLeaderboardSubmit,
+  type LeaderboardPublicEntry,
 } from "@/lib/game-leaderboard";
+import {
+  attachIsMeAndStripUid,
+  gameLeaderboardCacheKey,
+  invalidateGameLeaderboardCache,
+  readGameLeaderboardCache,
+  writeGameLeaderboardCache,
+} from "@/lib/game-leaderboard-cache";
 import {
   buildVirtualGameLeaderboardEntries,
   isVirtualGameLeaderboardSlug,
   mergeGameLeaderboardWithVirtual,
 } from "@/lib/game-leaderboard-virtual";
 import { canViewGame } from "@/lib/game-publish";
-import { resolvePurchaseEntitlementForGame } from "@/lib/game-entitlement-service";
+import {
+  gameRequiresPurchase,
+  resolvePurchaseEntitlementForGame,
+} from "@/lib/game-entitlement-service";
 import { getPlatformGameMeta } from "@/lib/platform-catalog";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
 
-async function loadGame(gameId: number) {
-  const supabase = createServerSupabase();
+async function loadGame(gameId: number, supabase = createServerSupabase()) {
   const { data: record, error } = await supabase
     .from("games")
     .select("id, slug, title, publish_status, creator_id, status, pricing_type, price, min_price")
@@ -46,6 +56,17 @@ function resolveLeaderboardSlug(
   return slug || null;
 }
 
+function leaderboardJson(entries: LeaderboardPublicEntry[]) {
+  return NextResponse.json(
+    { entries },
+    {
+      headers: {
+        "Cache-Control": "private, max-age=15, stale-while-revalidate=30",
+      },
+    }
+  );
+}
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -58,46 +79,71 @@ export async function GET(
       return NextResponse.json({ error: "無效的遊戲 ID" }, { status: 400 });
     }
 
-    const record = await loadGame(gameId);
-    if (!record) {
-      return NextResponse.json({ error: "找不到此遊戲" }, { status: 404 });
-    }
-
-    const authClient = await createAuthServerClient();
-    const {
-      data: { user },
-    } = await authClient.auth.getUser();
-
-    const supabase = createServerSupabase();
-    const hasPurchaseEntitlement = await resolvePurchaseEntitlementForGame(
-      supabase,
-      gameId,
-      user?.id
-    );
-
-    if (
-      !canViewGame(record, user?.id, {
-        isAdmin: await resolveAdminAccess(user),
-        hasPurchaseEntitlement,
-      })
-    ) {
-      return NextResponse.json({ error: "找不到此遊戲" }, { status: 404 });
-    }
-
     const url = new URL(request.url);
     const limit = Math.min(
       50,
       Math.max(1, Number.parseInt(url.searchParams.get("limit") ?? "30", 10) || 30)
     );
     const difficulty = url.searchParams.get("difficulty")?.trim() || null;
+    const withTitles = url.searchParams.get("titles") === "1";
+    const cacheKey = gameLeaderboardCacheKey(gameId, difficulty, limit, withTitles);
 
-    const rows = await getTopLeaderboard(createServerSupabase(), gameId, limit, difficulty);
-    const titleMap = await resolveEquippedTitles(
-      createServerSupabase(),
-      rows.map((row) => row.user_id)
+    const supabase = createServerSupabase();
+    const authClientPromise = createAuthServerClient();
+
+    const [record, authClient] = await Promise.all([
+      loadGame(gameId, supabase),
+      authClientPromise,
+    ]);
+
+    if (!record) {
+      return NextResponse.json({ error: "找不到此遊戲" }, { status: 404 });
+    }
+
+    const {
+      data: { user },
+    } = await authClient.auth.getUser();
+
+    const needsEntitlement =
+      Boolean(user?.id) && gameRequiresPurchase(record);
+
+    const [hasPurchaseEntitlement, isAdmin] = await Promise.all([
+      needsEntitlement
+        ? resolvePurchaseEntitlementForGame(supabase, gameId, user?.id)
+        : Promise.resolve(false),
+      // 未登入免查；已登入共用 supabase，避免再開一個 client
+      user ? resolveAdminAccess(user, supabase) : Promise.resolve(false),
+    ]);
+
+    if (
+      !canViewGame(record, user?.id, {
+        isAdmin,
+        hasPurchaseEntitlement,
+      })
+    ) {
+      return NextResponse.json({ error: "找不到此遊戲" }, { status: 404 });
+    }
+
+    const cached = readGameLeaderboardCache(cacheKey);
+    if (cached) {
+      return leaderboardJson(attachIsMeAndStripUid(cached, user?.id));
+    }
+
+    const rows = await getTopLeaderboard(supabase, gameId, limit, difficulty);
+    const titleMap = withTitles
+      ? await resolveEquippedTitles(
+          supabase,
+          rows.map((row) => row.user_id)
+        )
+      : undefined;
+
+    const realEntries = mapPublicLeaderboard(rows, null, titleMap).map(
+      (entry, index) => ({
+        ...entry,
+        _uid: rows[index]?.user_id,
+      })
     );
 
-    const realEntries = mapPublicLeaderboard(rows, user?.id, titleMap);
     const slug = resolveLeaderboardSlug(record);
     const entries =
       slug && isVirtualGameLeaderboardSlug(slug)
@@ -108,9 +154,8 @@ export async function GET(
           )
         : realEntries;
 
-    return NextResponse.json({
-      entries,
-    });
+    writeGameLeaderboardCache(cacheKey, entries);
+    return leaderboardJson(attachIsMeAndStripUid(entries, user?.id));
   } catch (error) {
     const message = error instanceof Error ? error.message : "讀取排行榜失敗";
     return NextResponse.json({ error: message, entries: [] }, { status: 500 });
@@ -138,21 +183,23 @@ export async function POST(
       return NextResponse.json({ error: "請先登入後提交排行榜" }, { status: 401 });
     }
 
-    const record = await loadGame(gameId);
+    const supabase = createServerSupabase();
+    const record = await loadGame(gameId, supabase);
     if (!record) {
       return NextResponse.json({ error: "找不到此遊戲" }, { status: 404 });
     }
 
-    const supabase = createServerSupabase();
-    const hasPurchaseEntitlement = await resolvePurchaseEntitlementForGame(
-      supabase,
-      gameId,
-      user.id
-    );
+    const needsEntitlement = gameRequiresPurchase(record);
+    const [hasPurchaseEntitlement, isAdmin] = await Promise.all([
+      needsEntitlement
+        ? resolvePurchaseEntitlementForGame(supabase, gameId, user.id)
+        : Promise.resolve(false),
+      resolveAdminAccess(user, supabase),
+    ]);
 
     if (
       !canViewGame(record, user.id, {
-        isAdmin: await resolveAdminAccess(user),
+        isAdmin,
         hasPurchaseEntitlement,
       })
     ) {
@@ -190,6 +237,8 @@ export async function POST(
       typeof body.grade === "string" ? body.grade : null,
       body.meta ?? {}
     );
+
+    invalidateGameLeaderboardCache(gameId);
 
     void checkLeaderboardAchievements(
       createServerSupabase(),

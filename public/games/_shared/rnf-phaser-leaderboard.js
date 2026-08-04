@@ -1,7 +1,7 @@
 /**
  * Phaser 街機共用排行榜：每款遊戲以 RNF gameId（gid）對應獨立雲端榜。
  * 依賴：/sdk/rnf-game-sdk.js（RNF.fetchLeaderboard / submitScore / pushLocalScore）
- * build: 20260731lb8 — 分頁每頁 10 名，名單與難度鈕拉開間距
+ * build: 20260805lb9 — 難度 tab 客戶端快取，切換不整包重抓
  */
 (function (global) {
   "use strict";
@@ -16,7 +16,10 @@
     hard: "困難",
   };
   var PAGE_SIZE = 10;
-  var BUILD_TAG = "lb8";
+  var BUILD_TAG = "lb9";
+  /** scene 外共用：difficulty → { expiresAt, entries } */
+  var entriesDiffCache = Object.create(null);
+  var ENTRIES_CACHE_TTL_MS = 25000;
 
   function normalizeDiff(key) {
     var k = String(key || "standard").toLowerCase();
@@ -382,12 +385,43 @@
         if (this._diffLabel) {
           this._diffLabel.setText("難度：" + (DIFF_LABEL[diff] || diff));
         }
+        var cached = entriesDiffCache[diff];
+        if (cached && cached.expiresAt > Date.now() && cached.entries) {
+          self._entries = cached.entries;
+          if (!self._entries.length) {
+            self._list.setText("尚無紀錄，完成一局即可上榜");
+            if (self._pageLabel) self._pageLabel.setText("");
+          } else {
+            self.paintPage();
+          }
+          // 背景輕量刷新（不擋 UI）
+          fetchEntries(30, diff).then(function (entries) {
+            if (!self.sys || !self.sys.isActive()) return;
+            entriesDiffCache[diff] = {
+              expiresAt: Date.now() + ENTRIES_CACHE_TTL_MS,
+              entries: entries || [],
+            };
+            if (self._openDiff !== diff) return;
+            self._entries = entries || [];
+            if (!self._entries.length) {
+              self._list.setText("尚無紀錄，完成一局即可上榜");
+              if (self._pageLabel) self._pageLabel.setText("");
+              return;
+            }
+            self.paintPage();
+          }).catch(function () {});
+          return;
+        }
         this._list.setText("載入中…");
         if (this._pageLabel) this._pageLabel.setText("");
         fetchEntries(30, diff)
           .then(function (entries) {
             if (!self.sys || !self.sys.isActive()) return;
             self._entries = entries || [];
+            entriesDiffCache[diff] = {
+              expiresAt: Date.now() + ENTRIES_CACHE_TTL_MS,
+              entries: self._entries,
+            };
             if (!self._entries.length) {
               self._list.setText("尚無紀錄，完成一局即可上榜");
               if (self._pageLabel) self._pageLabel.setText("");

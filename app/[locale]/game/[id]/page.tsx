@@ -15,5 +15,6 @@ export default async function GamePage({ params }: Props) {
     initialGame = null;
   }
 
-  return <GamePageClient initialGame={initialGame} />;
+  // key 強制依路由重掛，避免軟導航沿用上一款遊戲的 fullscreen／iframe 狀態
+  return <GamePageClient key={id} initialGame={initialGame} />;
 }

@@ -176,7 +176,7 @@
     "footer": "© 2026 RainyNightFrog · 保留所有权利",
     "featuredBadge": "三大台柱",
     "featuredTitle": "平台明星游戏",
-    "featuredDesc": "VOID GACHA · CoreDefense · CyberFortune — 华丽设计 × 硬核体验",
+    "featuredDesc": "VOID GACHA · CoreDefense · Galactic Invader 2026 — 华丽设计 × 硬核体验",
     "categories": {
       "全部": "全部",
       "動作": "动作",
@@ -327,7 +327,7 @@
       "upload": "创作者专区开放：上传 ZIP 游戏，一键发布到首页",
       "community": "加入社群讨论区，分享心得、开发日志与游戏攻略",
       "feeds": "订阅 RSS / Atom，不错过平台新作与论坛动态",
-      "featured": "平台明星游戏热玩中：VOID GACHA · CoreDefense · CyberFortune — 点击查看",
+      "featured": "平台明星游戏热玩中：VOID GACHA · CoreDefense · Galactic Invader 2026 — 点击查看",
       "multilingual": "支援 11 种语言介面，右上角可随时切换语言",
       "leaderboard": "冲刺收藏榜与游玩榜，解锁专属成就称号",
       "achievements": "完成成就、收集称号，在个人档案展示你的战绩",
@@ -335,7 +335,7 @@
       "forumRules": "发文前请先阅读社群守则，共建友善讨论环境",
       "followCreators": "追踪喜爱的创作者，第一时间收到新作通知",
       "zeroDownload": "纯网页游戏体验：无需下载、跨装置即刻开玩",
-      "starGames": "三大台柱热玩中：VOID GACHA · CoreDefense · CyberFortune — 点击查看",
+      "starGames": "三大台柱热玩中：VOID GACHA · CoreDefense · Galactic Invader 2026 — 点击查看",
       "tipSearch": "想找特定游戏？用顶部搜索框输入关键字即可",
       "tipFilter": "首页下方可按分类、标签、价格筛选，快速找到适合你的游戏",
       "tipBrowse": "往下滚到游戏墙，点封面就能直接进入游玩",
@@ -1171,7 +1171,8 @@
       "lore": "剧情世界观",
       "speedrun": "竞速挑战",
       "meme": "趣味梗图",
-      "update": "版本动态"
+      "update": "版本动态",
+      "other": "其他"
     },
     "searchPlaceholder": "搜索讨论标题、内容或作者…",
     "searchHintIdle": "可搜索标题、作者、分类、游戏名称或内容",
@@ -1183,7 +1184,9 @@
     "searchHintGame": "游戏",
     "searchHintContent": "内容",
     "searchNoResults": "找不到符合的讨论",
-    "searchNoResultsHint": "试试其他关键字或清除筛选条件"
+    "searchNoResultsHint": "试试其他关键字或清除筛选条件",
+    "gameOther": "其他",
+    "gameSearchPlaceholder": "搜索游戏名称…"
   },
   "rules": {
     "title": "社区规则",

@@ -230,8 +230,12 @@ function SearchPageContent() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.35, delay: index * 0.04 }}
                       >
-                        <Link
+                        <a
                           href={buildGameHref(game)}
+                          onClick={(event) => {
+                            event.preventDefault();
+                            window.location.assign(buildGameHref(game));
+                          }}
                           className="group block overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/60 shadow-lg transition hover:border-cyan-400/30"
                         >
                           <div className="relative aspect-[16/10] overflow-hidden">
@@ -269,7 +273,7 @@ function SearchPageContent() {
                               </button>
                             </div>
                           </div>
-                        </Link>
+                        </a>
                       </motion.div>
                     );
                   })}

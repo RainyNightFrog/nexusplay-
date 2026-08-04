@@ -10,11 +10,15 @@ export type ForumCategory =
   | "meme"
   | "lore"
   | "speedrun"
-  | "update";
+  | "update"
+  | "other";
+
+/** 社群 hub 發文「所屬遊戲 → 其他」的 Select 值 */
+export const FORUM_COMPOSE_GAME_OTHER = "other" as const;
 
 export type ForumPostRecord = {
   id: number;
-  game_id: number;
+  game_id: number | null;
   user_id: string;
   title: string;
   category: ForumCategory;
@@ -155,6 +159,14 @@ export const FORUM_CATEGORIES: {
     badgeClass:
       "bg-blue-500/15 text-blue-300 ring-blue-500/30 border-blue-500/20",
     accentClass: "border-l-blue-400",
+  },
+  {
+    value: "other",
+    label: "其他",
+    emoji: "📌",
+    badgeClass:
+      "bg-zinc-500/15 text-zinc-300 ring-zinc-500/30 border-zinc-500/20",
+    accentClass: "border-l-zinc-400",
   },
 ];
 

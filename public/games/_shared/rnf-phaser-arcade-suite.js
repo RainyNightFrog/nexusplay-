@@ -3409,7 +3409,7 @@
 
     if (typeof RNF !== "undefined" && RNF.init) RNF.init();
     var game = new Phaser.Game({
-      type: Phaser.WEBGL,
+      type: Phaser.AUTO,
       parent: "game-host",
       width: W,
       height: H,

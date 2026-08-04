@@ -31,23 +31,28 @@ export type PlatformGameMeta = {
 
 export const VOID_GACHA_TITLE = "VOID GACHA";
 
-const VIRTUAL_PLATFORM_GAMES: PlatformGameMeta[] = VIRTUAL_GAMES_SEED.map((game) => ({
-  slug: game.slug,
-  title: game.title,
-  creator: game.creatorName,
-  categories: [game.category],
-  description: game.description,
-  coverPath: `/covers/${game.slug}-cover.webp`,
-  playsCount: game.playsCount,
-  likesCount: game.likesCount,
-  sharesCount: game.sharesCount,
-  ratingAvg: game.ratingAvg,
-  featured: false,
-  featuredAccent: "cyan" as const,
-  demoUrl: `/games/${game.slug}/index.html`,
-  viewportWidth: 960,
-  viewportHeight: 600,
-}));
+const VIRTUAL_PLATFORM_GAMES: PlatformGameMeta[] = VIRTUAL_GAMES_SEED.map((game) => {
+  const isGalacticInvader = game.slug === "galactic-invader-2026";
+  return {
+    slug: game.slug,
+    title: game.title,
+    creator: game.creatorName,
+    categories: [game.category],
+    description: game.description,
+    coverPath: `/covers/${game.slug}-cover.webp`,
+    playsCount: game.playsCount,
+    likesCount: game.likesCount,
+    sharesCount: game.sharesCount,
+    ratingAvg: game.ratingAvg,
+    featured: isGalacticInvader,
+    platformStar: isGalacticInvader,
+    featuredBadge: isGalacticInvader ? "星際射擊旗艦" : undefined,
+    featuredAccent: "cyan" as const,
+    demoUrl: `/games/${game.slug}/index.html`,
+    viewportWidth: 960,
+    viewportHeight: 600,
+  };
+});
 
 export const PLATFORM_GAMES: PlatformGameMeta[] = [
   {
@@ -123,7 +128,6 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
     sharesCount: 534,
     ratingAvg: 4.76,
     featured: true,
-    platformStar: true,
     featuredBadge: "賽博博弈旗艦",
     featuredAccent: "cyan",
     demoUrl: "/demos/cyber-fortune-preview.html",

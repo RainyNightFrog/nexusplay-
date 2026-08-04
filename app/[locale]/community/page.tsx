@@ -70,6 +70,7 @@ export default function CommunityPage() {
   const handlePostsLoaded = useCallback((posts: ForumPostWithGame[]) => {
     const counts: Record<number, number> = {};
     for (const post of posts) {
+      if (post.game_id == null) continue;
       counts[post.game_id] = (counts[post.game_id] ?? 0) + 1;
     }
     setForumCounts(counts);

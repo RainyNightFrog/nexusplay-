@@ -328,52 +328,79 @@ export async function getAllForumPosts(
     .select("id, title")
     .order("id", { ascending: true });
 
-  if (!games?.length) {
-    return [];
-  }
-
-  const gameIds = games.map((game) => game.id);
-  const { data: records, error } = await supabase
-    .from("forum_posts")
-    .select("*")
-    .in("game_id", gameIds)
-    .eq("is_hidden", false)
-    .order("created_at", { ascending: false });
-
   const allPosts: ForumPostWithGame[] = [];
-  const dbRecords = error ? [] : ((records ?? []) as ForumPostRecord[]);
-  const mappedByGame = new Map<number, ForumPost[]>();
+  const gameList = games ?? [];
 
-  if (dbRecords.length > 0) {
-    const { nameMap, titleMap, supporterMap } = await resolveAuthorDisplay(
-      dbRecords.map((row) => row.user_id)
-    );
-    const commentCounts = await attachCommentCounts(
-      supabase,
-      dbRecords.map((row) => row.id)
-    );
+  if (gameList.length > 0) {
+    const gameIds = gameList.map((game) => game.id);
+    const { data: records, error } = await supabase
+      .from("forum_posts")
+      .select("*")
+      .in("game_id", gameIds)
+      .eq("is_hidden", false)
+      .order("created_at", { ascending: false });
 
-    for (const record of dbRecords) {
-      const mapped = mapPosts([record], nameMap, titleMap, commentCounts, supporterMap)[0];
-      if (!mapped) continue;
-      const list = mappedByGame.get(record.game_id) ?? [];
-      list.push(mapped);
-      mappedByGame.set(record.game_id, list);
+    const dbRecords = error ? [] : ((records ?? []) as ForumPostRecord[]);
+    const mappedByGame = new Map<number, ForumPost[]>();
+
+    if (dbRecords.length > 0) {
+      const { nameMap, titleMap, supporterMap } = await resolveAuthorDisplay(
+        dbRecords.map((row) => row.user_id)
+      );
+      const commentCounts = await attachCommentCounts(
+        supabase,
+        dbRecords.map((row) => row.id)
+      );
+
+      for (const record of dbRecords) {
+        if (record.game_id == null) continue;
+        const mapped = mapPosts([record], nameMap, titleMap, commentCounts, supporterMap)[0];
+        if (!mapped) continue;
+        const list = mappedByGame.get(record.game_id) ?? [];
+        list.push(mapped);
+        mappedByGame.set(record.game_id, list);
+      }
+    }
+
+    for (const game of gameList) {
+      const realPosts = mappedByGame.get(game.id) ?? [];
+      const merged = mergeRealPostsWithRemainingSeeds(
+        game.id,
+        game.title,
+        realPosts,
+        locale
+      );
+      for (const post of merged) {
+        allPosts.push({
+          ...post,
+          game_title: game.title,
+        });
+      }
     }
   }
 
-  for (const game of games) {
-    const realPosts = mappedByGame.get(game.id) ?? [];
-    const merged = mergeRealPostsWithRemainingSeeds(
-      game.id,
-      game.title,
-      realPosts,
-      locale
+  const { data: unscopedRecords, error: unscopedError } = await supabase
+    .from("forum_posts")
+    .select("*")
+    .is("game_id", null)
+    .eq("is_hidden", false)
+    .order("created_at", { ascending: false });
+
+  if (!unscopedError && unscopedRecords?.length) {
+    const records = unscopedRecords as ForumPostRecord[];
+    const { nameMap, titleMap, supporterMap } = await resolveAuthorDisplay(
+      records.map((row) => row.user_id)
     );
-    for (const post of merged) {
+    const commentCounts = await attachCommentCounts(
+      supabase,
+      records.map((row) => row.id)
+    );
+    for (const record of records) {
+      const mapped = mapPosts([record], nameMap, titleMap, commentCounts, supporterMap)[0];
+      if (!mapped) continue;
       allPosts.push({
-        ...post,
-        game_title: game.title,
+        ...mapped,
+        game_title: undefined,
       });
     }
   }
@@ -477,7 +504,7 @@ export async function getForumCommentsByPostId(
 
 export async function createForumPost(
   input: {
-    gameId: number;
+    gameId: number | null;
     userId: string;
     title: string;
     category: ForumCategory;
@@ -567,6 +594,22 @@ export async function forumPostBelongsToGame(
     .select("id")
     .eq("id", postId)
     .eq("game_id", gameId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`驗證貼文失敗：${error.message}`);
+  }
+
+  return Boolean(data);
+}
+
+export async function forumPostExists(postId: number): Promise<boolean> {
+  const supabase = createServerSupabase();
+  const { data, error } = await supabase
+    .from("forum_posts")
+    .select("id")
+    .eq("id", postId)
+    .eq("is_hidden", false)
     .maybeSingle();
 
   if (error) {
