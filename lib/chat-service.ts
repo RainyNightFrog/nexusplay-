@@ -8,6 +8,7 @@ import {
 } from "@/lib/chat";
 import { assertNoChatUrls } from "@/lib/chat-content-policy";
 import { getAmbientUserPlayerMap } from "@/lib/ambient-user-index";
+import { toDisplayAvatarUrl } from "@/lib/avatar-display-url";
 import { resolveVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
 import { resolveEquippedTitles } from "@/lib/equipped-title-service";
 import { buildCosmeticsCssMap } from "@/lib/cosmetics-resolve";
@@ -124,9 +125,11 @@ function mapChatMessage(
   return {
     ...record,
     author_name: formatForumAuthor(record.user_id, displayName),
-    author_avatar_url: virtualPlayerId
-      ? resolveVirtualPlayerAvatarUrl(virtualPlayerId)
-      : (profile?.avatar_url ?? null),
+    author_avatar_url: toDisplayAvatarUrl(
+      virtualPlayerId
+        ? resolveVirtualPlayerAvatarUrl(virtualPlayerId)
+        : (profile?.avatar_url ?? null)
+    ),
     author_equipped_title: titleMap.get(record.user_id) ?? null,
     // 虛擬玩家：僅少數抽中者掛外觀；其餘不套 DB／預設框，避免全員特效
     author_avatar_frame_class: virtualPlayerId

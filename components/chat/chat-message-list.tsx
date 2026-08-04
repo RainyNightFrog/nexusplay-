@@ -5,6 +5,7 @@ import { Loader2, Undo2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ChatMessage } from "@/lib/chat";
 import { UserBadge } from "@/components/UserBadge";
+import { ChatAvatar } from "@/components/chat/chat-avatar";
 import { SupporterAvatarInsignia } from "@/components/supporter/supporter-avatar-insignia";
 import { RainbowSafeText } from "@/components/supporter/rainbow-safe-text";
 import { useAppSettings } from "@/components/settings/app-settings-provider";
@@ -285,28 +286,20 @@ export function ChatMessageList({
                 onClick={() => onAuthorClick?.(message)}
                 disabled={!onAuthorClick}
                 className={cn(
-                  "relative flex size-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold uppercase transition-opacity",
-                  message.is_creator && !showSupporterFx
-                    ? "bg-gradient-to-br from-violet-500/30 to-cyan-500/30 text-cyan-100 ring-1 ring-cyan-400/20"
-                    : !showSupporterFx && "bg-white/8 text-zinc-300",
+                  "relative flex size-7 shrink-0 items-center justify-center rounded-full bg-white/8 text-[10px] font-semibold uppercase text-zinc-300 transition-opacity",
+                  message.is_creator &&
+                    !showSupporterFx &&
+                    "bg-gradient-to-br from-violet-500/30 to-cyan-500/30 text-cyan-100 ring-1 ring-cyan-400/20",
                   hasAvatarFrame && message.author_avatar_frame_class,
                   onAuthorClick && "cursor-pointer hover:opacity-80"
                 )}
                 aria-label={message.author_name}
               >
                 <span className="absolute inset-0 overflow-hidden rounded-full">
-                  {message.author_avatar_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={message.author_avatar_url}
-                      alt=""
-                      className="size-full object-cover"
-                    />
-                  ) : (
-                    <span className="flex size-full items-center justify-center">
-                      {message.author_name.slice(0, 1)}
-                    </span>
-                  )}
+                  <ChatAvatar
+                    url={message.author_avatar_url}
+                    name={message.author_name}
+                  />
                 </span>
               </button>
               </div>

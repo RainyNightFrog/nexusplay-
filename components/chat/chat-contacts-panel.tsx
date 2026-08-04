@@ -3,6 +3,7 @@
 import { ArrowLeft, Loader2, MessageCircle, Shield } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import { ChatAvatar } from "@/components/chat/chat-avatar";
 import { ChatInput } from "@/components/chat/chat-input";
 import { RainbowSafeText } from "@/components/supporter/rainbow-safe-text";
 import { UserBadge } from "@/components/UserBadge";
@@ -143,32 +144,27 @@ function ContactListItem({
           avatarFrameClass
         )}
       >
-        <div className="absolute inset-0 overflow-hidden rounded-full">
-        {avatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={avatarUrl}
-            alt=""
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <div
-            className={cn(
-              "flex h-full w-full items-center justify-center",
-              isAdminContact
-                ? "bg-gradient-to-br from-amber-500/30 to-cyan-500/20 text-amber-200"
-                : "bg-white/8 text-zinc-300"
-            )}
-          >
-            {isAdminContact ? (
-              <Shield className="size-5" />
-            ) : (
-              <span className="text-sm font-semibold">
-                {contact.displayName.slice(0, 1)}
-              </span>
-            )}
-          </div>
-        )}
+        <div className="absolute inset-0 overflow-hidden rounded-full bg-white/8 text-zinc-300">
+          {avatarUrl ? (
+            <ChatAvatar url={avatarUrl} name={contact.displayName} />
+          ) : (
+            <div
+              className={cn(
+                "flex h-full w-full items-center justify-center",
+                isAdminContact
+                  ? "bg-gradient-to-br from-amber-500/30 to-cyan-500/20 text-amber-200"
+                  : "bg-white/8 text-zinc-300"
+              )}
+            >
+              {isAdminContact ? (
+                <Shield className="size-5" />
+              ) : (
+                <span className="text-sm font-semibold">
+                  {contact.displayName.slice(0, 1)}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
       <div className="min-w-0 flex-1">
@@ -359,19 +355,14 @@ function PlayerDmThread({
               peerAvatarFrameClass
             )}
           >
-            <span className="absolute inset-0 overflow-hidden rounded-full">
-            {peerAvatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={peerAvatarUrl}
-                alt=""
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <span className="flex size-full items-center justify-center">
-                <MessageCircle className="size-4" />
-              </span>
-            )}
+            <span className="absolute inset-0 overflow-hidden rounded-full bg-white/8 text-zinc-200">
+              {peerAvatarUrl ? (
+                <ChatAvatar url={peerAvatarUrl} name={title} />
+              ) : (
+                <span className="flex size-full items-center justify-center">
+                  <MessageCircle className="size-4" />
+                </span>
+              )}
             </span>
           </div>
           <div className="min-w-0 flex-1 text-left">

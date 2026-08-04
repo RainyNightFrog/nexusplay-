@@ -66,7 +66,7 @@ function styleForSeed(seed: string) {
   return AVATAR_STYLES[hashString(seed, 37) % AVATAR_STYLES.length]!;
 }
 
-/** 依種子產生穩定 DiceBear 頭像 URL */
+/** 依種子產生穩定 DiceBear 頭像 URL（走同源代理，避免手機擋 api.dicebear.com） */
 export function resolveDiceBearAvatarUrl(
   seed: string,
   size: number = 128
@@ -74,7 +74,7 @@ export function resolveDiceBearAvatarUrl(
   const style = styleForSeed(seed);
   const encoded = encodeURIComponent(seed);
   const safeSize = Math.min(Math.max(Math.round(size), 32), 512);
-  return `https://api.dicebear.com/9.x/${style}/png?seed=${encoded}&size=${safeSize}`;
+  return `/api/avatar/dicebear/9.x/${style}/png?seed=${encoded}&size=${safeSize}`;
 }
 
 /** 依虛擬玩家 ID 產生穩定 DiceBear 頭像 URL */
@@ -124,8 +124,11 @@ export function avatarUrlMatchesPresetId(
 ): boolean {
   if (!avatarUrl) return false;
   try {
-    const url = new URL(avatarUrl);
-    if (!url.hostname.includes("dicebear.com")) return false;
+    const url = new URL(avatarUrl, "http://localhost");
+    const isDicebear =
+      url.hostname.includes("dicebear.com") ||
+      url.pathname.startsWith("/api/avatar/dicebear/");
+    if (!isDicebear) return false;
     return url.searchParams.get("seed") === presetId;
   } catch {
     return false;

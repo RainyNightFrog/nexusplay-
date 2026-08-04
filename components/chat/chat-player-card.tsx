@@ -1,7 +1,6 @@
 "use client";
 
 import type { ReactNode } from "react";
-import Image from "next/image";
 import {
   CalendarDays,
   Clock3,
@@ -45,6 +44,7 @@ import {
 } from "@/lib/platform-leaderboard-virtual";
 import { Link } from "@/i18n/navigation";
 import { FollowCreatorButton } from "@/components/creator/follow-creator-button";
+import { ChatAvatar } from "@/components/chat/chat-avatar";
 import { SupporterAvatarInsignia } from "@/components/supporter/supporter-avatar-insignia";
 import { useAppSettings } from "@/components/settings/app-settings-provider";
 import { cn } from "@/lib/utils";
@@ -372,20 +372,8 @@ export function ChatPlayerCard({
                         avatarFrameClass
                       )}
                     >
-                      <div className="absolute inset-0 overflow-hidden rounded-full">
-                        {avatarUrl ? (
-                          <Image
-                            src={avatarUrl}
-                            alt={displayName}
-                            fill
-                            className="object-cover"
-                            unoptimized
-                          />
-                        ) : (
-                          <div className="flex size-full items-center justify-center bg-white/8 text-2xl font-semibold text-zinc-300">
-                            {displayName.slice(0, 1)}
-                          </div>
-                        )}
+                      <div className="absolute inset-0 overflow-hidden rounded-full bg-white/8 text-2xl font-semibold text-zinc-300">
+                        <ChatAvatar url={avatarUrl} name={displayName} />
                       </div>
                     </div>
                   </div>

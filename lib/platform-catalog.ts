@@ -49,8 +49,9 @@ const VIRTUAL_PLATFORM_GAMES: PlatformGameMeta[] = VIRTUAL_GAMES_SEED.map((game)
     featuredBadge: isGalacticInvader ? "星際射擊旗艦" : undefined,
     featuredAccent: "cyan" as const,
     demoUrl: `/games/${game.slug}/index.html`,
-    viewportWidth: 960,
-    viewportHeight: 600,
+    /* 對齊 Phaser 邏輯解析度，避免外殼 letterbox 與遊戲雙重黑邊 */
+    viewportWidth: isGalacticInvader ? 1280 : 960,
+    viewportHeight: isGalacticInvader ? 720 : 540,
   };
 });
 
@@ -95,7 +96,7 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
     featuredAccent: "amber",
     demoUrl: "/demos/core-defense-preview.html",
     viewportWidth: 960,
-    viewportHeight: 700,
+    viewportHeight: 540,
     galleryImages: [
       "/covers/core-defense-cover.webp",
       "/covers/core-defense-screenshot-1.webp",
@@ -132,7 +133,7 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
     featuredAccent: "cyan",
     demoUrl: "/demos/cyber-fortune-preview.html",
     viewportWidth: 960,
-    viewportHeight: 760,
+    viewportHeight: 540,
     galleryImages: [
       "/covers/cyber-fortune-cover.webp",
       "/covers/cyber-fortune-screenshot-1.webp",
@@ -162,7 +163,7 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
     featuredAccent: "cyan",
     demoUrl: "/demos/neon-abyss-runner-preview.html",
     viewportWidth: 960,
-    viewportHeight: 600,
+    viewportHeight: 540,
     devlogs: [
       {
         title: "深淵領主系統上線",
@@ -187,7 +188,7 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
     featuredAccent: "cyan",
     demoUrl: "/demos/signal-breach-preview.html",
     viewportWidth: 960,
-    viewportHeight: 680,
+    viewportHeight: 540,
     devlogs: [
       {
         title: "ICE 巡邏 AI 2.0",
@@ -212,7 +213,7 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
     featuredAccent: "violet",
     demoUrl: "/demos/void-relay-preview.html",
     viewportWidth: 960,
-    viewportHeight: 720,
+    viewportHeight: 540,
     devlogs: [
       {
         title: "深淵領主三部曲",
@@ -237,7 +238,7 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
     featuredAccent: "violet",
     demoUrl: "/demos/pulse-protocol-preview.html",
     viewportWidth: 960,
-    viewportHeight: 640,
+    viewportHeight: 540,
     devlogs: [
       {
         title: "Fever 狂熱模式",
@@ -262,7 +263,7 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
     featuredAccent: "amber",
     demoUrl: "/demos/orbital-salvage-preview.html",
     viewportWidth: 960,
-    viewportHeight: 700,
+    viewportHeight: 540,
     devlogs: [
       {
         title: "環形軌道系統",

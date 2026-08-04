@@ -26,6 +26,7 @@ import {
   X,
 } from "lucide-react";
 import { GameEmbedBridge } from "@/components/game/game-embed-bridge";
+import { MobileLandscapePlayGate } from "@/components/game/mobile-landscape-play-gate";
 import { FollowCreatorButton } from "@/components/creator/follow-creator-button";
 import {
   ChatPlayerCard,
@@ -54,6 +55,11 @@ import { useApiError } from "@/hooks/use-api-error";
 import { useEscapeKey, useScrollLock } from "@/hooks/use-scroll-lock";
 import { cn } from "@/lib/utils";
 import { trackGaEvent } from "@/components/analytics/google-analytics";
+import {
+  isLandscapeViewport,
+  isMobileNarrowPlayViewport,
+  isPlatformLandscapePlaySlug,
+} from "@/lib/platform-landscape-play";
 
 const GameSupportSection = dynamic(
   () =>
@@ -140,6 +146,8 @@ export default function GamePageClient({
   const closeFullscreen = useCallback(() => setShowFullscreen(false), []);
   const closeEmbed = useCallback(() => setShowEmbed(false), []);
   const mobileAutoExpandDoneRef = useRef(false);
+  const [isMobilePlayShell, setIsMobilePlayShell] = useState(false);
+  const [isLandscape, setIsLandscape] = useState(true);
 
   useScrollLock(showFullscreen || showEmbed);
   useEscapeKey(showFullscreen, closeFullscreen);
@@ -506,23 +514,24 @@ export default function GamePageClient({
   const gameSlug = String(game?.slug || "")
     .trim()
     .toLowerCase();
-  /* 霓虹方塊：邏輯解析度 960×640，嵌入框需對齊，否則 FIT 會被舊的 600 高擠小 */
+  const prefersLandscapePlay = isPlatformLandscapePlaySlug(gameSlug);
+  /* 對齊 Phaser 邏輯解析度：街機 960×540／星際 1280×720，避免外殼與遊戲雙重黑邊 */
   const viewportWidth =
-    gameSlug === "neon-tetromino-rush"
-      ? 960
-      : (game?.viewportWidth ?? 960);
+    gameSlug === "galactic-invader-2026"
+      ? 1280
+      : prefersLandscapePlay
+        ? 960
+        : (game?.viewportWidth ?? 960);
   const viewportHeight =
-    gameSlug === "neon-tetromino-rush"
-      ? 640
-      : (game?.viewportHeight ?? 600);
-  const playerMaxWidth = Math.min(
-    viewportWidth,
-    gameSlug === "neon-tetromino-rush" ? 1120 : 1024
-  );
-  const playerMaxHeightClass =
-    gameSlug === "neon-tetromino-rush"
-      ? "max-h-[min(82dvh,88vh)]"
-      : "max-h-[min(70dvh,80vh)]";
+    gameSlug === "galactic-invader-2026"
+      ? 720
+      : prefersLandscapePlay
+        ? 540
+        : (game?.viewportHeight ?? 600);
+  const playerMaxWidth = Math.min(viewportWidth, 1024);
+  const playerMaxHeightClass = prefersLandscapePlay
+    ? "max-h-[min(78dvh,84vh)]"
+    : "max-h-[min(70dvh,80vh)]";
 
   const embedCode = useMemo(() => {
     if (!iframeSrc) return "";
@@ -559,10 +568,65 @@ export default function GamePageClient({
   const showPurchaseGate = showCheckout;
   const editGameHref = game ? `/dashboard/edit/${game.id}` : "/dashboard";
 
-  /* 不再進頁自動全螢幕：觸控筆電／窄窗會整頁黑底蓋住，改由玩家手動展開 */
+  /* 手機虛擬橫向遊戲：自動進全螢幕；直屏顯示強制橫持閘門 */
   useEffect(() => {
-    mobileAutoExpandDoneRef.current = true;
+    const syncViewport = () => {
+      setIsMobilePlayShell(isMobileNarrowPlayViewport());
+      setIsLandscape(isLandscapeViewport());
+    };
+    syncViewport();
+    window.addEventListener("resize", syncViewport);
+    window.addEventListener("orientationchange", syncViewport);
+    const vv = window.visualViewport;
+    vv?.addEventListener("resize", syncViewport);
+    return () => {
+      window.removeEventListener("resize", syncViewport);
+      window.removeEventListener("orientationchange", syncViewport);
+      vv?.removeEventListener("resize", syncViewport);
+    };
   }, []);
+
+  useEffect(() => {
+    if (!prefersLandscapePlay) return;
+    if (!isMobilePlayShell) return;
+    if (!iframeSrc || !canPlay || isUpcoming || showPurchaseGate) return;
+    if (mobileAutoExpandDoneRef.current) return;
+    mobileAutoExpandDoneRef.current = true;
+    setShowFullscreen(true);
+  }, [
+    prefersLandscapePlay,
+    isMobilePlayShell,
+    iframeSrc,
+    canPlay,
+    isUpcoming,
+    showPurchaseGate,
+  ]);
+
+  const tryLockLandscape = useCallback(() => {
+    const orientation = screen.orientation as ScreenOrientation & {
+      lock?: (orientation: string) => Promise<void>;
+    };
+    if (typeof orientation?.lock === "function") {
+      void orientation.lock("landscape").catch(() => undefined);
+    }
+  }, []);
+
+  const showLandscapeGate =
+    showFullscreen &&
+    Boolean(iframeSrc) &&
+    prefersLandscapePlay &&
+    isMobilePlayShell &&
+    !isLandscape &&
+    !isUpcoming &&
+    !showPurchaseGate;
+
+  /* 橫屏全螢幕：隱藏頂欄，只留浮動關閉，把空間全給遊戲 */
+  const compactMobileLandscapeChrome =
+    showFullscreen &&
+    Boolean(iframeSrc) &&
+    prefersLandscapePlay &&
+    isMobilePlayShell &&
+    isLandscape;
 
   const refreshGameAfterPurchase = useCallback(async () => {
     try {
@@ -854,7 +918,7 @@ export default function GamePageClient({
                 if (showFullscreen) event.stopPropagation();
               }}
             >
-              {showFullscreen && iframeSrc && (
+              {showFullscreen && iframeSrc && !compactMobileLandscapeChrome && (
                 <div className="flex shrink-0 items-center justify-between gap-1.5 border-b border-white/10 px-1.5 py-1.5 sm:gap-3 sm:px-4 sm:py-3">
                   <div className="min-w-0">
                     <p className="truncate text-xs font-semibold text-white sm:text-sm">
@@ -914,6 +978,23 @@ export default function GamePageClient({
                     </Button>
                   </div>
                 </div>
+              )}
+
+              {compactMobileLandscapeChrome && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={closeFullscreen}
+                  className="absolute z-[45] size-10 rounded-full border border-white/20 bg-zinc-950/80 text-zinc-200 shadow-lg backdrop-blur-sm touch-manipulation"
+                  style={{
+                    top: "max(0.5rem, env(safe-area-inset-top, 0px))",
+                    right: "max(0.5rem, env(safe-area-inset-right, 0px))",
+                  }}
+                  aria-label={tc("exitFullscreenPlay")}
+                >
+                  <X className="size-5" />
+                </Button>
               )}
 
               {/* 全螢幕：響應式遊戲鋪滿；其他維持等比 letterbox。非全螢幕維持桌面比例框 */}
@@ -1072,6 +1153,23 @@ export default function GamePageClient({
                         <Maximize2 className="size-5 sm:size-4" />
                       </Button>
                     )}
+                    {!showFullscreen &&
+                      prefersLandscapePlay &&
+                      isMobilePlayShell &&
+                      stageReady &&
+                      !isUpcoming &&
+                      !showPurchaseGate && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowFullscreen(true);
+                            tryLockLandscape();
+                          }}
+                          className="absolute inset-x-3 bottom-14 z-20 rounded-xl border border-cyan-400/40 bg-zinc-950/90 px-3 py-2.5 text-center text-xs font-medium text-cyan-100 shadow-lg backdrop-blur-sm touch-manipulation sm:hidden"
+                        >
+                          {tc("rotateToLandscapeTitle")} · {tc("expandGameTitle")}
+                        </button>
+                      )}
                     {stageReady && (
                       <GameEmbedBridge
                         iframeRef={iframeRef}
@@ -1079,6 +1177,12 @@ export default function GamePageClient({
                         expanded={showFullscreen}
                         creatorId={game.creatorId}
                         onExpandRequest={() => setShowFullscreen(true)}
+                      />
+                    )}
+                    {showLandscapeGate && (
+                      <MobileLandscapePlayGate
+                        onExit={closeFullscreen}
+                        onRetryLock={tryLockLandscape}
                       />
                     )}
                   </>
