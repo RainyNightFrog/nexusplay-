@@ -1,8 +1,8 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useState } from "react";
-import Image from "next/image";
 import { GameCoverImage } from "@/components/ui/game-cover-image";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
@@ -173,17 +173,12 @@ function SearchPageContent() {
                         className="flex min-w-0 flex-1 items-center gap-3 transition hover:opacity-90"
                       >
                         <div className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-zinc-950">
-                          {creator.avatarUrl ? (
-                            <Image
-                              src={creator.avatarUrl}
-                              alt={creator.displayName}
-                              width={48}
-                              height={48}
-                              className="size-full object-cover"
-                            />
-                          ) : (
-                            <UserRound className="size-6 text-violet-400" />
-                          )}
+                          <UserAvatar
+                            url={creator.avatarUrl}
+                            name={creator.displayName}
+                            className="text-violet-400"
+                            fallback={<UserRound className="size-6" />}
+                          />
                         </div>
                         <div className="min-w-0 text-left">
                           <UserBadge

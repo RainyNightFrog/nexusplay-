@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import { useTranslations, useLocale } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -25,6 +24,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { formatCountryName } from "@/lib/request-geo";
 import { formatPlayerIdLabel } from "@/lib/player-id";
 import { getInitials } from "@/lib/auth";
@@ -331,19 +331,12 @@ export default function ProfilePage() {
                 )}
               >
               <span className="absolute inset-0 overflow-hidden rounded-full">
-              {avatarPreview ? (
-                <Image
-                  src={avatarPreview}
-                  alt={displayName}
-                  fill
-                  className="object-cover transition-transform duration-300 group-hover:scale-105"
-                  unoptimized={avatarPreview.startsWith("blob:")}
-                />
-              ) : (
-                <div className="flex size-full items-center justify-center bg-gradient-to-br from-cyan-500/30 to-violet-600/40 text-2xl font-bold text-white">
-                  {initials}
-                </div>
-              )}
+              <UserAvatar
+                url={avatarPreview}
+                name={displayName}
+                className="bg-gradient-to-br from-cyan-500/30 to-violet-600/40 text-2xl font-bold text-white transition-transform duration-300 group-hover:scale-105"
+                fallback={initials}
+              />
               <div
                 className={cn(
                   "absolute inset-0 flex items-center justify-center bg-zinc-950/50 transition-opacity",

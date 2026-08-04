@@ -1,10 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { Check, ChevronLeft, ChevronRight, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { cn } from "@/lib/utils";
 import {
   AVATAR_PRESET_PAGE_SIZE,
@@ -78,12 +78,10 @@ export function PresetAvatarPicker({
               aria-label={t("presetAvatarsTitle")}
             >
               <span className="relative block size-full overflow-hidden rounded-full bg-zinc-900">
-                <Image
-                  src={preset.url}
-                  alt=""
-                  fill
-                  className="object-cover transition-transform duration-200 group-hover:scale-105"
-                  sizes="72px"
+                <UserAvatar
+                  url={preset.url}
+                  name={preset.id}
+                  className="transition-transform duration-200 group-hover:scale-105"
                 />
                 {isPending ? (
                   <span className="absolute inset-0 flex items-center justify-center bg-zinc-950/55">

@@ -19,7 +19,7 @@
   <script src="/sdk/phaser.min.js"></script>
   <script src="/sdk/rnf-i18n.js?v=20260725a"></script>
   <script src="/sdk/rnf-game-packs.js?v=20260725a"></script>
-  <script src="/sdk/rnf-game-sdk.js?v=20260805lb9"></script>
+  <script src="/sdk/rnf-game-sdk.js?v=20260805lb11"></script>
   <script src="/games/_shared/rnf-phaser-help.js?v=20260731d"></script>
 </head>
 <body>
@@ -28,8 +28,8 @@
 /**
  * RainyNightFrog Phaser 3 Skill ç¯„æœ¬
  * Boot ??MainMenu ??Difficulty ??Game ??GameOverModal
- * Juiceï¼šé?å±?/ ?“è™¹ç²’å? / Tween / Web Audio
- * ??º¦ï¼šCasual / Standard / Extreme + dangerMultiplier HUD
+ * Juiceï¼šï¿½?ï¿½?/ ?ï¿½è™¹ç²’ï¿½? / Tween / Web Audio
+ * ??ï¿½ï¿½ï¼šCasual / Standard / Extreme + dangerMultiplier HUD
  */
 (function () {
   "use strict";
@@ -39,13 +39,13 @@
   var W = 960;
   var H = 540;
   var DIFF_PRESETS = {
-    casual: { id: "casual", label: "Casual è¼•é?", base: 0.75, scoreMult: 1.0, color: "#67e8f9" },
-    standard: { id: "standard", label: "Standard ?»ç«¶", base: 1.0, scoreMult: 1.25, color: "#a78bfa" },
-    extreme: { id: "extreme", label: "Extreme ?‚æš´", base: 1.45, scoreMult: 1.75, color: "#f472b6" }
+    casual: { id: "casual", label: "Casual è¼•ï¿½?", base: 0.75, scoreMult: 1.0, color: "#67e8f9" },
+    standard: { id: "standard", label: "Standard ?ï¿½ç«¶", base: 1.0, scoreMult: 1.25, color: "#a78bfa" },
+    extreme: { id: "extreme", label: "Extreme ?ï¿½æš´", base: 1.45, scoreMult: 1.75, color: "#f472b6" }
   };
   var selectedDiff = "standard";
 
-  /* ?€?€ Web Audio è³½å??³æ? ?€?€ */
+  /* ?ï¿½?ï¿½ Web Audio è³½ï¿½??ï¿½ï¿½? ?ï¿½?ï¿½ */
   var audioCtx = null;
   function ensureAudio() {
     if (!audioCtx) {
@@ -185,7 +185,7 @@
     return { bg: bg, txt: txt };
   }
 
-  /* ?â??â??â??â??â??â??â???BootScene ?â??â??â??â??â??â??â???*/
+  /* ?ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½???BootScene ?ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½???*/
   class BootScene extends Phaser.Scene {
     constructor() { super("BootScene"); }
     preload() {}
@@ -209,7 +209,7 @@
     }
   }
 
-  /* ?â??â??â??â??â??â??â???MainMenuScene ?â??â??â??â??â??â??â???*/
+  /* ?ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½???MainMenuScene ?ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½???*/
   class MainMenuScene extends Phaser.Scene {
     constructor() { super("MainMenuScene"); }
     create() {
@@ -249,7 +249,7 @@
         color: "#ffffff"
       }).setOrigin(0.5).setScale(0.6).setAlpha(0);
 
-      var sub = this.add.text(W / 2, 210, "è³½å??»ç«¶ç¤ºç? Â· ?“æ??Ÿå?è¦ç? Â· ?•æ??±éšª?ç?", {
+      var sub = this.add.text(W / 2, 210, "è³½ï¿½??ï¿½ç«¶ç¤ºï¿½? Â· ?ï¿½ï¿½??ï¿½ï¿½?è¦ï¿½? Â· ?ï¿½ï¿½??ï¿½éšª?ï¿½ï¿½?", {
         fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
         fontSize: "16px",
         color: "#94a3b8"
@@ -260,29 +260,29 @@
       this.tweens.add({ targets: sub, alpha: 1, duration: 400, ease: "Cubic.easeOut", delay: 160 });
 
       var self = this;
-      makeMenuButton(this, W / 2, 320, "?‹å??Šæˆ² START", 0x22d3ee, function () {
+      makeMenuButton(this, W / 2, 320, "?ï¿½ï¿½??ï¿½æˆ² START", 0x22d3ee, function () {
         SFX.confirm();
         self.cameras.main.fadeOut(220, 4, 6, 12);
         self.time.delayedCall(230, function () {
           self.scene.start("DifficultyScene");
         });
       });
-      makeMenuButton(this, W / 2, 390, "?ä?èªªæ?", 0xa78bfa, function () {
+      makeMenuButton(this, W / 2, 390, "?ï¿½ï¿½?èªªï¿½?", 0xa78bfa, function () {
         if (window.RNFPhaserHelp && RNFPhaserHelp.showHelpOverlay) {
-          RNFPhaserHelp.showHelpOverlay(self, "???’ï?A D ç§»å? Â· ç©ºç™½ï¼â? è·³è? Â· ?¶é??‘å¹£?ƒé¿ä¸‰è???, { W: W, H: H });
+          RNFPhaserHelp.showHelpOverlay(self, "???ï¿½ï¿½?A D ç§»ï¿½? Â· ç©ºç™½ï¼ï¿½? è·³ï¿½? Â· ?ï¿½ï¿½??ï¿½å¹£?ï¿½é¿ä¸‰ï¿½???, { W: W, H: H });
         }
       });
     }
   }
 
-  /* ?â??â??â??â??â??â??â???DifficultyScene ?â??â??â??â??â??â??â???*/
+  /* ?ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½???DifficultyScene ?ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½???*/
   class DifficultyScene extends Phaser.Scene {
     constructor() { super("DifficultyScene"); }
     create() {
       this.cameras.main.setBackgroundColor("#060a14");
       this.cameras.main.fadeIn(200, 4, 6, 12);
 
-      var head = this.add.text(W / 2, 100, "?¸æ???º¦", {
+      var head = this.add.text(W / 2, 100, "?ï¿½ï¿½???ï¿½ï¿½", {
         fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
         fontSize: "36px",
         fontStyle: "bold",
@@ -290,7 +290,7 @@
       }).setOrigin(0.5).setScale(0.7).setAlpha(0);
       this.tweens.add({ targets: head, alpha: 1, scale: 1, duration: 400, ease: "Back.easeOut" });
 
-      this.add.text(W / 2, 150, "ä¸‰æ®µ?æ¢¯ Â· ?²å…¥?œå¡å¾Œä??ƒéš¨?‚é??å??±éšª?ç?", {
+      this.add.text(W / 2, 150, "ä¸‰æ®µ?ï¿½æ¢¯ Â· ?ï¿½å…¥?ï¿½å¡å¾Œï¿½??ï¿½éš¨?ï¿½ï¿½??ï¿½ï¿½??ï¿½éšª?ï¿½ï¿½?", {
         fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
         fontSize: "14px",
         color: "#64748b"
@@ -313,7 +313,7 @@
     }
   }
 
-  /* ?â??â??â??â??â??â??â???GameScene ?â??â??â??â??â??â??â???*/
+  /* ?ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½???GameScene ?ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½???*/
   class GameScene extends Phaser.Scene {
     constructor() { super("GameScene"); }
 
@@ -333,7 +333,7 @@
       this.cameras.main.setBackgroundColor("#050814");
       this.cameras.main.fadeIn(250, 4, 6, 12);
 
-      // ?Œæ™¯ç¶²æ ¼??
+      // ?ï¿½æ™¯ç¶²æ ¼??
       var gfx = this.add.graphics().setAlpha(0.12);
       gfx.lineStyle(1, 0x22d3ee, 1);
       for (var x = 0; x < W; x += 40) gfx.lineBetween(x, 0, x, H);
@@ -375,7 +375,7 @@
       this.hudDiff = this.add.text(W - 24, 18, this.diff.label, {
         fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif", fontSize: "14px", color: this.diff.color
       }).setOrigin(1, 0).setScrollFactor(0).setDepth(20);
-      this.hudHint = this.add.text(W / 2, 18, "?¶é??‘å¹£ Â· ?ƒé¿?µæ?", {
+      this.hudHint = this.add.text(W / 2, 18, "?ï¿½ï¿½??ï¿½å¹£ Â· ?ï¿½é¿?ï¿½ï¿½?", {
         fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif", fontSize: "13px", color: "#64748b"
       }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(20);
 
@@ -389,14 +389,14 @@
       var dt = delta / 1000;
       this.elapsedTime += dt;
 
-      // ?•æ???º¦?å??¬å?ï¼ˆSkill è¦ç?ï¼?
+      // ?ï¿½ï¿½???ï¿½ï¿½?ï¿½ï¿½??ï¿½ï¿½?ï¼ˆSkill è¦ï¿½?ï¿½?
       this.dangerMultiplier = 1 + Math.log(1 + this.elapsedTime / 30) * 0.8;
       var threat = this.dangerMultiplier * this.diff.base;
 
       this.hudDanger.setText("DANGER x" + this.dangerMultiplier.toFixed(2));
       this.hudScore.setText("SCORE " + this.score.toLocaleString());
 
-      // ?©å®¶ç§»å?ï¼ˆArcade Physics + è¼¸å…¥ï¼›é€Ÿåº¦ä¸ç›´?¥å¯«æ­»å?ç´ ï?å¹€ï¼?
+      // ?ï¿½å®¶ç§»ï¿½?ï¼ˆArcade Physics + è¼¸å…¥ï¼›é€Ÿåº¦ä¸ç›´?ï¿½å¯«æ­»ï¿½?ç´ ï¿½?å¹€ï¿½?
       var left = this.cursors.left.isDown || this.keys.A.isDown;
       var right = this.cursors.right.isDown || this.keys.D.isDown;
       var jump = this.cursors.up.isDown || this.cursors.space.isDown || this.keys.W.isDown || this.keys.SPACE.isDown;
@@ -412,7 +412,7 @@
         neonBurst(this, this.player.x, this.player.y + 14, "spark-cyan", 16);
       }
 
-      // ?Ÿæ??»ç??¨å±?ªå€ç??å?
+      // ?ï¿½ï¿½??ï¿½ï¿½??ï¿½å±?ï¿½å€ï¿½??ï¿½ï¿½?
       this.spawnAcc += dt;
       var spawnEvery = Math.max(0.35, 1.35 / threat);
       if (this.spawnAcc >= spawnEvery) {
@@ -425,7 +425,7 @@
         this.spawnOrb();
       }
 
-      // ?µäºº?ç©å®¶æ¨?²ï??Ÿåº¦ ? threat ? dt è§?€¦æ–¼å¹€?‡ï?
+      // ?ï¿½äºº?ï¿½ç©å®¶æ¨?ï¿½ï¿½??ï¿½åº¦ ? threat ? dt ï¿½?ï¿½ï¿½æ–¼å¹€?ï¿½ï¿½?
       var self = this;
       this.enemies.getChildren().forEach(function (e) {
         if (!e.active) return;
@@ -540,7 +540,7 @@
     }
   }
 
-  /* ?â??â??â??â??â??â??â???GameOverModal ?â??â??â??â??â??â??â???*/
+  /* ?ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½???GameOverModal ?ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½???*/
   class GameOverModal extends Phaser.Scene {
     constructor() { super("GameOverModal"); }
 
@@ -569,7 +569,7 @@
         letterSpacing: 3
       }).setOrigin(0.5).setAlpha(0);
 
-      var title = this.add.text(W / 2, H / 2 - 90, "?“è™¹çµç?", {
+      var title = this.add.text(W / 2, H / 2 - 90, "?ï¿½è™¹çµï¿½?", {
         fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
         fontSize: "32px",
         fontStyle: "bold",
@@ -584,7 +584,7 @@
       }).setOrigin(0.5).setScale(0.4).setAlpha(0);
 
       var meta = this.add.text(W / 2, H / 2 + 45,
-        diff.label + " Â· ?ç? x" + (diff.scoreMult || 1).toFixed(2) +
+        diff.label + " Â· ?ï¿½ï¿½? x" + (diff.scoreMult || 1).toFixed(2) +
         " Â· DANGER x" + Number(danger).toFixed(2) +
         " Â· " + Math.floor(elapsed) + "s" +
         (raw !== score ? " Â· RAW " + raw.toLocaleString() : ""), {
@@ -595,7 +595,7 @@
         wordWrap: { width: 380 }
       }).setOrigin(0.5).setAlpha(0);
 
-      var uploaded = this.add.text(W / 2, H / 2 + 85, "å·²åŸ·è¡?RNF.submitScore ??ä¸»ç??’è?æ¦?, {
+      var uploaded = this.add.text(W / 2, H / 2 + 85, "å·²åŸ·ï¿½?RNF.submitScore ??ä¸»ï¿½??ï¿½ï¿½?ï¿½?, {
         fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
         fontSize: "12px",
         color: "#a78bfa"
@@ -616,7 +616,7 @@
       neonBurst(this, W / 2, H / 2 - 20, "spark-violet", 18);
 
       var self = this;
-      makeMenuButton(this, W / 2 - 110, H / 2 + 135, "?ä?ä¸€æ¬?, 0x22d3ee, function () {
+      makeMenuButton(this, W / 2 - 110, H / 2 + 135, "?ï¿½ï¿½?ä¸€ï¿½?, 0x22d3ee, function () {
         SFX.confirm();
         self.scene.stop("GameOverModal");
         self.scene.stop("GameScene");

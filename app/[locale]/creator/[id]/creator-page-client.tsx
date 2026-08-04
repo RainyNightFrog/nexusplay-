@@ -1,13 +1,13 @@
 "use client";
 
 import { GameCoverImage } from "@/components/ui/game-cover-image";
-import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Globe, Heart, UserRound } from "lucide-react";
 import { Link, useRouter } from "@/i18n/navigation";
 import { FollowCreatorButton } from "@/components/creator/follow-creator-button";
 import { UserBadge } from "@/components/UserBadge";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { RssFeedLink } from "@/components/feeds/rss-feed-link";
 import { FeedJsonLink } from "@/components/feeds/feed-json-link";
 import { SiteHeader } from "@/components/layout/site-header";
@@ -124,17 +124,12 @@ export default function CreatorPageClient({
       <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
         <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
           <div className="flex size-20 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-zinc-900">
-            {creator.avatarUrl ? (
-              <Image
-                src={creator.avatarUrl}
-                alt={creator.displayName}
-                width={80}
-                height={80}
-                className="size-full object-cover"
-              />
-            ) : (
-              <UserRound className="size-10 text-violet-400" />
-            )}
+            <UserAvatar
+              url={creator.avatarUrl}
+              name={creator.displayName}
+              className="text-violet-400"
+              fallback={<UserRound className="size-10" />}
+            />
           </div>
           <div>
             <h1 className="text-3xl font-bold text-white">

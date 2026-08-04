@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserBadge } from "@/components/UserBadge";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { useAuth } from "@/hooks/use-auth";
 import { useApiError } from "@/hooks/use-api-error";
 import { localizeApStoreItem } from "@/lib/ap-store-i18n";
@@ -320,18 +321,12 @@ export function ApStoreModal({ open, onOpenChange }: ApStoreModalProps) {
                         )}
                       >
                         <span className="absolute inset-0 overflow-hidden rounded-full">
-                        {profile.avatar_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={profile.avatar_url}
-                            alt=""
-                            className="size-full object-cover"
-                          />
-                        ) : (
-                          <span className="flex size-full items-center justify-center text-sm font-bold text-white">
-                            {(profile.display_name ?? "?").slice(0, 2)}
-                          </span>
-                        )}
+                        <UserAvatar
+                          url={profile.avatar_url}
+                          name={profile.display_name ?? "?"}
+                          className="bg-gradient-to-br from-cyan-500/30 to-violet-600/40 text-sm font-bold text-white"
+                          fallback={(profile.display_name ?? "?").slice(0, 2)}
+                        />
                         </span>
                       </div>
                       <UserBadge

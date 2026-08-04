@@ -143,11 +143,22 @@ export default function GamePageClient({
     window.setTimeout(() => setToast(null), 2500);
   }, []);
 
-  const closeFullscreen = useCallback(() => setShowFullscreen(false), []);
+  const closeFullscreen = useCallback(() => {
+    setShowFullscreen(false);
+    setAllowPortraitPlay(false);
+  }, []);
   const closeEmbed = useCallback(() => setShowEmbed(false), []);
-  const mobileAutoExpandDoneRef = useRef(false);
   const [isMobilePlayShell, setIsMobilePlayShell] = useState(false);
   const [isLandscape, setIsLandscape] = useState(true);
+  /** 玩家已選擇直屏繼續，不再擋全螢幕 */
+  const [allowPortraitPlay, setAllowPortraitPlay] = useState(false);
+  /** 綁定 visualViewport，減少手機瀏覽器 chrome 伸縮造成畫面漂移 */
+  const [mobileViewportBox, setMobileViewportBox] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+  } | null>(null);
 
   useScrollLock(showFullscreen || showEmbed);
   useEscapeKey(showFullscreen, closeFullscreen);
@@ -289,7 +300,7 @@ export default function GamePageClient({
   // 進頁／換遊戲時捲回頂部，並關閉上一輪全螢幕狀態
   useEffect(() => {
     setShowFullscreen(false);
-    mobileAutoExpandDoneRef.current = false;
+    setAllowPortraitPlay(false);
     setIframeReady(false);
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, [gameId]);
@@ -568,39 +579,36 @@ export default function GamePageClient({
   const showPurchaseGate = showCheckout;
   const editGameHref = game ? `/dashboard/edit/${game.id}` : "/dashboard";
 
-  /* 手機虛擬橫向遊戲：自動進全螢幕；直屏顯示強制橫持閘門 */
+  /* 手機橫向遊戲：同步直／橫屏；全螢幕時鎖定 visualViewport 盒，減少畫面漂移 */
   useEffect(() => {
     const syncViewport = () => {
       setIsMobilePlayShell(isMobileNarrowPlayViewport());
       setIsLandscape(isLandscapeViewport());
+      const vv = window.visualViewport;
+      if (vv && isMobileNarrowPlayViewport()) {
+        setMobileViewportBox({
+          top: vv.offsetTop,
+          left: vv.offsetLeft,
+          width: vv.width,
+          height: vv.height,
+        });
+      } else {
+        setMobileViewportBox(null);
+      }
     };
     syncViewport();
     window.addEventListener("resize", syncViewport);
     window.addEventListener("orientationchange", syncViewport);
     const vv = window.visualViewport;
     vv?.addEventListener("resize", syncViewport);
+    vv?.addEventListener("scroll", syncViewport);
     return () => {
       window.removeEventListener("resize", syncViewport);
       window.removeEventListener("orientationchange", syncViewport);
       vv?.removeEventListener("resize", syncViewport);
+      vv?.removeEventListener("scroll", syncViewport);
     };
   }, []);
-
-  useEffect(() => {
-    if (!prefersLandscapePlay) return;
-    if (!isMobilePlayShell) return;
-    if (!iframeSrc || !canPlay || isUpcoming || showPurchaseGate) return;
-    if (mobileAutoExpandDoneRef.current) return;
-    mobileAutoExpandDoneRef.current = true;
-    setShowFullscreen(true);
-  }, [
-    prefersLandscapePlay,
-    isMobilePlayShell,
-    iframeSrc,
-    canPlay,
-    isUpcoming,
-    showPurchaseGate,
-  ]);
 
   const tryLockLandscape = useCallback(() => {
     const orientation = screen.orientation as ScreenOrientation & {
@@ -617,6 +625,7 @@ export default function GamePageClient({
     prefersLandscapePlay &&
     isMobilePlayShell &&
     !isLandscape &&
+    !allowPortraitPlay &&
     !isUpcoming &&
     !showPurchaseGate;
 
@@ -888,19 +897,37 @@ export default function GamePageClient({
             <div
               className={cn(
                 showFullscreen && iframeSrc
-                  ? fillFullscreen
-                    ? "fixed inset-0 z-[71] flex flex-col overflow-hidden overscroll-contain touch-manipulation md:z-[61]"
-                    : "fixed inset-0 z-[71] flex flex-col overflow-hidden overscroll-contain touch-manipulation sm:inset-3 md:inset-4 md:z-[61] lg:inset-6"
-                  : "overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/60 shadow-2xl shadow-black/50 ring-1 ring-white/5",
-                showFullscreen &&
-                  iframeSrc &&
-                  (fillFullscreen
-                    ? "border-0 bg-zinc-950 shadow-2xl shadow-black/60"
-                    : "border-0 bg-zinc-950 shadow-2xl shadow-black/60 sm:rounded-2xl sm:border sm:border-white/10")
+                  ? cn(
+                      "fixed z-[71] flex flex-col overflow-hidden overscroll-none",
+                      fillFullscreen
+                        ? "border-0 bg-zinc-950 shadow-2xl shadow-black/60"
+                        : "border-0 bg-zinc-950 shadow-2xl shadow-black/60 sm:rounded-2xl sm:border sm:border-white/10",
+                      isMobilePlayShell
+                        ? "touch-none"
+                        : fillFullscreen
+                          ? "inset-0 touch-manipulation md:z-[61]"
+                          : "inset-3 touch-manipulation md:inset-4 md:z-[61] lg:inset-6"
+                    )
+                  : "overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/60 shadow-2xl shadow-black/50 ring-1 ring-white/5"
               )}
               style={
                 showFullscreen && iframeSrc
                   ? {
+                      ...(isMobilePlayShell
+                        ? mobileViewportBox
+                          ? {
+                              top: mobileViewportBox.top,
+                              left: mobileViewportBox.left,
+                              width: mobileViewportBox.width,
+                              height: mobileViewportBox.height,
+                            }
+                          : {
+                              top: 0,
+                              left: 0,
+                              width: "100%",
+                              height: "100dvh",
+                            }
+                        : undefined),
                       paddingTop: "env(safe-area-inset-top, 0px)",
                       paddingRight: "env(safe-area-inset-right, 0px)",
                       paddingBottom: "env(safe-area-inset-bottom, 0px)",
@@ -1146,7 +1173,9 @@ export default function GamePageClient({
                           "border border-white/15 bg-zinc-950/85 text-zinc-200 backdrop-blur-sm",
                           "hover:border-cyan-400/40 hover:bg-zinc-900 hover:text-cyan-200",
                           "shadow-[0_0_20px_rgba(34,211,238,0.15)]",
-                          "touch-manipulation"
+                          "touch-manipulation",
+                          /* 手機改由下方操作列「全螢幕」進入，避免與音量列疊成一團 */
+                          "hidden sm:inline-flex"
                         )}
                         aria-label={tc("expandGame")}
                       >
@@ -1159,16 +1188,9 @@ export default function GamePageClient({
                       stageReady &&
                       !isUpcoming &&
                       !showPurchaseGate && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowFullscreen(true);
-                            tryLockLandscape();
-                          }}
-                          className="absolute inset-x-3 bottom-14 z-20 rounded-xl border border-cyan-400/40 bg-zinc-950/90 px-3 py-2.5 text-center text-xs font-medium text-cyan-100 shadow-lg backdrop-blur-sm touch-manipulation sm:hidden"
-                        >
-                          {tc("rotateToLandscapeTitle")} · {tc("expandGameTitle")}
-                        </button>
+                        <p className="pointer-events-none absolute inset-x-3 bottom-3 z-20 rounded-lg border border-white/10 bg-zinc-950/75 px-2.5 py-1.5 text-center text-[11px] leading-snug text-zinc-400 backdrop-blur-sm sm:hidden">
+                          {tc("landscapePlayOptionalTip")}
+                        </p>
                       )}
                     {stageReady && (
                       <GameEmbedBridge
@@ -1183,6 +1205,7 @@ export default function GamePageClient({
                       <MobileLandscapePlayGate
                         onExit={closeFullscreen}
                         onRetryLock={tryLockLandscape}
+                        onContinuePortrait={() => setAllowPortraitPlay(true)}
                       />
                     )}
                   </>
@@ -1220,97 +1243,107 @@ export default function GamePageClient({
                           ? t("startPlayHint")
                           : t("reuploadHint")}
                   </p>
-                  <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-                    {isUpcoming && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        disabled={wishlistSubmitting}
-                        onClick={() => void toggleWishlist()}
-                        className={cn(
-                          "min-h-10 justify-center gap-1.5 border border-fuchsia-400/40 bg-fuchsia-500/15 text-fuchsia-100 touch-manipulation",
-                          "shadow-[0_0_16px_rgba(232,121,249,0.35)] hover:bg-fuchsia-500/25 sm:min-h-0"
-                        )}
-                      >
-                        {wishlistSubmitting ? (
-                          <Loader2 className="size-3.5 animate-spin" />
-                        ) : (
-                          <Star
+                  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+                    {(isUpcoming || isGameOwner) && (
+                      <div className="flex flex-wrap gap-2">
+                        {isUpcoming && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            disabled={wishlistSubmitting}
+                            onClick={() => void toggleWishlist()}
                             className={cn(
-                              "size-3.5",
-                              wishlisted && "fill-amber-300 text-amber-300"
+                              "min-h-10 flex-1 justify-center gap-1.5 border border-fuchsia-400/40 bg-fuchsia-500/15 text-fuchsia-100 touch-manipulation",
+                              "shadow-[0_0_16px_rgba(232,121,249,0.35)] hover:bg-fuchsia-500/25 sm:min-h-0 sm:flex-none"
                             )}
-                          />
+                          >
+                            {wishlistSubmitting ? (
+                              <Loader2 className="size-3.5 animate-spin" />
+                            ) : (
+                              <Star
+                                className={cn(
+                                  "size-3.5",
+                                  wishlisted && "fill-amber-300 text-amber-300"
+                                )}
+                              />
+                            )}
+                            {wishlisted ? tw("remove") : tw("add")}
+                          </Button>
                         )}
-                        {wishlisted ? tw("remove") : tw("add")}
-                      </Button>
-                    )}
-                    {isGameOwner && (
-                      <Link
-                        href={editGameHref}
-                        className={cn(
-                          buttonVariants({ variant: "outline", size: "sm" }),
-                          "min-h-10 justify-center gap-1.5 border-amber-400/30 bg-amber-500/10 text-amber-100 touch-manipulation hover:border-amber-400/50 hover:bg-amber-500/15 sm:min-h-0"
+                        {isGameOwner && (
+                          <Link
+                            href={editGameHref}
+                            className={cn(
+                              buttonVariants({ variant: "outline", size: "sm" }),
+                              "min-h-10 flex-1 justify-center gap-1.5 border-amber-400/30 bg-amber-500/10 text-amber-100 touch-manipulation hover:border-amber-400/50 hover:bg-amber-500/15 sm:min-h-0 sm:flex-none"
+                            )}
+                          >
+                            <Pencil className="size-3.5" />
+                            {td("editGame")}
+                          </Link>
                         )}
-                      >
-                        <Pencil className="size-3.5" />
-                        {td("editGame")}
-                      </Link>
+                      </div>
                     )}
                     {showGameMenuButton && (
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleBackToGameMenu}
+                          disabled={!iframeSrc || !playable}
+                          className="min-h-10 min-w-0 flex-1 justify-center gap-1.5 border-white/10 bg-white/5 text-zinc-300 touch-manipulation hover:border-emerald-400/30 hover:text-white disabled:opacity-40 sm:min-h-0 sm:flex-none"
+                        >
+                          <Gamepad2 className="size-3.5 shrink-0" />
+                          <span className="truncate">{tc("backToGameMenu")}</span>
+                        </Button>
+                        <GameVolumeControl
+                          iframeRef={iframeRef}
+                          compact
+                          className="shrink-0 [&_button]:size-10 [&_button]:min-h-10 sm:[&_button]:size-auto sm:[&_button]:min-h-0"
+                        />
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+                      {game.tipsEnabled && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleScrollToTip}
+                          className="min-h-10 justify-center gap-1.5 border-fuchsia-400/30 bg-fuchsia-500/10 text-fuchsia-100 touch-manipulation hover:border-fuchsia-400/50 hover:bg-fuchsia-500/15 sm:min-h-0"
+                        >
+                          <Coins className="size-3.5" />
+                          {t("tipSupportButton")}
+                        </Button>
+                      )}
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={handleBackToGameMenu}
-                        disabled={!iframeSrc || !playable}
-                        className="min-h-10 justify-center gap-1.5 border-white/10 bg-white/5 text-zinc-300 touch-manipulation hover:border-emerald-400/30 hover:text-white disabled:opacity-40 sm:min-h-0"
+                        onClick={handleShare}
+                        className="min-h-10 justify-center gap-1.5 border-white/10 bg-white/5 text-zinc-300 touch-manipulation hover:border-cyan-400/30 hover:text-white sm:min-h-0"
                       >
-                        <Gamepad2 className="size-3.5" />
-                        {tc("backToGameMenu")}
+                        <Share2 className="size-3.5" />
+                        {tc("share")}
                       </Button>
-                    )}
-                    {showGameMenuButton && (
-                      <GameVolumeControl iframeRef={iframeRef} />
-                    )}
-                    {game.tipsEnabled && (
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={handleScrollToTip}
-                        className="min-h-10 justify-center gap-1.5 border-fuchsia-400/30 bg-fuchsia-500/10 text-fuchsia-100 touch-manipulation hover:border-fuchsia-400/50 hover:bg-fuchsia-500/15 sm:min-h-0"
+                        onClick={() => setShowEmbed(true)}
+                        disabled={!iframeSrc}
+                        className="hidden gap-1.5 border-white/10 bg-white/5 text-zinc-300 hover:border-violet-400/30 hover:text-white disabled:opacity-40 sm:inline-flex"
                       >
-                        <Coins className="size-3.5" />
-                        {t("tipSupportButton")}
+                        <Code2 className="size-3.5" />
+                        {tc("embed")}
                       </Button>
-                    )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleShare}
-                      className="min-h-10 justify-center gap-1.5 border-white/10 bg-white/5 text-zinc-300 touch-manipulation hover:border-cyan-400/30 hover:text-white sm:min-h-0"
-                    >
-                      <Share2 className="size-3.5" />
-                      {tc("share")}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowEmbed(true)}
-                      disabled={!iframeSrc}
-                      className="hidden gap-1.5 border-white/10 bg-white/5 text-zinc-300 hover:border-violet-400/30 hover:text-white disabled:opacity-40 sm:inline-flex"
-                    >
-                      <Code2 className="size-3.5" />
-                      {tc("embed")}
-                    </Button>
+                    </div>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => setShowFullscreen(true)}
                       disabled={!iframeSrc || !showCreatorFullscreen}
-                      className="col-span-2 min-h-11 justify-center gap-1.5 border-amber-400/30 bg-amber-500/10 text-amber-100 touch-manipulation hover:border-amber-400/50 hover:bg-amber-500/15 disabled:opacity-40 sm:col-span-1 sm:min-h-0"
+                      className="min-h-10 w-full justify-center gap-1.5 border-cyan-400/25 bg-cyan-500/10 text-cyan-100 touch-manipulation hover:border-cyan-400/45 hover:bg-cyan-500/15 disabled:opacity-40 sm:min-h-0 sm:w-auto"
                     >
                       <Maximize2 className="size-3.5" />
-                      {tc("expandGame")}
+                      {tc("expandGameOptional")}
                     </Button>
                   </div>
                 </div>

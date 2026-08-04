@@ -26,6 +26,7 @@ import {
   isTimeoutError,
   withTimeout,
 } from "@/lib/with-timeout";
+import { toDisplayAvatarUrl } from "@/lib/avatar-display-url";
 
 type ProfileRow = {
   id: string;
@@ -337,7 +338,7 @@ function mapEntries(
       rank: index + 1,
       userId: row.user_id,
       displayName: profile?.display_name?.trim() || "匿名玩家",
-      avatarUrl: profile?.avatar_url ?? null,
+      avatarUrl: toDisplayAvatarUrl(profile?.avatar_url ?? null),
       equippedTitle: titleMap.get(row.user_id) ?? null,
       avatarFrameClass: cos?.avatar_frame_class ?? null,
       nameColorClass: cos?.name_color_class ?? null,

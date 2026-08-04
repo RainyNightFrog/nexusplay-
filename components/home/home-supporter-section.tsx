@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { motion, useReducedMotion } from "framer-motion";
 import {
@@ -20,6 +19,7 @@ import {
 import { UserBadge } from "@/components/UserBadge";
 import { SupporterAvatarInsignia } from "@/components/supporter/supporter-avatar-insignia";
 import { Button } from "@/components/ui/button";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { useAuth } from "@/hooks/use-auth";
 import { getInitials } from "@/lib/auth";
 import { deferClientTask } from "@/lib/defer-client";
@@ -164,20 +164,12 @@ function SupporterWallGroup({
                   )}
                 >
                   <div className="relative size-11 overflow-hidden rounded-full sm:size-12">
-                  {supporter.avatarUrl ? (
-                    <Image
-                      src={supporter.avatarUrl}
-                      alt={supporter.displayName}
-                      fill
-                      className="object-cover"
-                      sizes="48px"
-                      unoptimized={Boolean(supporter.virtualPlayerId)}
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-amber-500/30 to-violet-600/35 text-sm font-bold text-white">
-                      {getInitials(supporter.displayName)}
-                    </div>
-                  )}
+                  <UserAvatar
+                    url={supporter.avatarUrl}
+                    name={supporter.displayName}
+                    className="bg-gradient-to-br from-amber-500/30 to-violet-600/35 text-sm font-bold text-white"
+                    fallback={getInitials(supporter.displayName)}
+                  />
                   </div>
                 </div>
                 <SupporterAvatarInsignia

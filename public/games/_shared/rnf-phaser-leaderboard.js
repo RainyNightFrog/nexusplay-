@@ -1,7 +1,7 @@
 /**
  * Phaser 街機共用排行榜：每款遊戲以 RNF gameId（gid）對應獨立雲端榜。
  * 依賴：/sdk/rnf-game-sdk.js（RNF.fetchLeaderboard / submitScore / pushLocalScore）
- * build: 20260805lb9 — 難度 tab 客戶端快取，切換不整包重抓
+ * build: 20260805lb11 — 排行榜置中、字級適中、版面更自然
  */
 (function (global) {
   "use strict";
@@ -16,7 +16,7 @@
     hard: "困難",
   };
   var PAGE_SIZE = 10;
-  var BUILD_TAG = "lb9";
+  var BUILD_TAG = "lb11";
   /** scene 外共用：difficulty → { expiresAt, entries } */
   var entriesDiffCache = Object.create(null);
   var ENTRIES_CACHE_TTL_MS = 25000;
@@ -67,11 +67,14 @@
       .map(function (e, i) {
         var rank = e.rank || start + i + 1;
         var grade = e.grade ? "  [" + e.grade + "]" : "";
+        var name = entryName(e);
+        // 置中閱讀：排名固定兩位寬，分數與名稱用中點分隔
+        var rankLabel = rank < 10 ? " " + rank : String(rank);
         return (
-          rank +
-          ". " +
-          entryName(e) +
-          "  —  " +
+          rankLabel +
+          ".  " +
+          name +
+          "  ·  " +
           Number(e.score || 0).toLocaleString() +
           grade
         );
@@ -182,18 +185,25 @@
       throw new Error("RNFPhaserLeaderboard.createLeaderboardScene 需要 Phaser 與 makeButton");
     }
 
-    // 依畫布高度配置，名單與難度鈕／底部分頁鈕留足空隙
+    // 置中卡片：標題區 → 難度鈕 → 名單 → 分頁／返回
     var footerY = H - 40;
-    var pageLabelY = H - 78;
+    var pageLabelY = H - 76;
     var listBottom = H - 100;
-    var diffBtnY = Math.min(118, Math.floor(H * 0.21));
-    // 難度鈕高約 44，下方至少再留 56px，避免第 1 名貼邊被擋
-    var listTop = diffBtnY + 56;
+    var titleY = Math.max(26, Math.floor(H * 0.055));
+    var subY = titleY + 24;
+    var diffLabelY = subY + 22;
+    var diffBtnY = Math.min(120, diffLabelY + 34);
+    var listTop = diffBtnY + 52;
     var listHeight = Math.max(150, listBottom - listTop);
     var listCenterY = listTop + listHeight / 2;
-    var listFontSize = H < 560 ? "13px" : H < 640 ? "14px" : "15px";
-    var listLineSpacing = H < 560 ? 3 : 5;
-    var panelW = Math.min(W - 64, 740);
+    // 適中字級（介於過細與過大之間）
+    var listFontSize = H < 560 ? "15px" : H < 640 ? "16px" : "16px";
+    var listLineSpacing = H < 560 ? 5 : 6;
+    var titleFontSize = H < 560 ? "24px" : "26px";
+    var metaFontSize = "13px";
+    var panelW = Math.min(W - 96, 640);
+    var diffGap = Math.min(200, Math.floor(panelW / 3 + 8));
+    var diffBtnW = Math.min(168, diffGap - 16);
 
     return class LeaderboardScene extends PhaserLib.Scene {
       constructor() {
@@ -217,9 +227,9 @@
         this.cameras.main.fadeIn(180, 4, 6, 12);
 
         this.add
-          .text(W / 2, 28, "本遊戲排行榜", {
+          .text(W / 2, titleY, "本遊戲排行榜", {
             fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
-            fontSize: H < 560 ? "22px" : "26px",
+            fontSize: titleFontSize,
             fontStyle: "bold",
             color: "#67e8f9",
           })
@@ -227,18 +237,18 @@
           .setDepth(5);
 
         this.add
-          .text(W / 2, 52, "依難度獨立計分 · 每頁 " + PAGE_SIZE + " 名", {
+          .text(W / 2, subY, "依難度獨立計分 · 每頁 " + PAGE_SIZE + " 名", {
             fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
-            fontSize: "12px",
-            color: "#64748b",
+            fontSize: metaFontSize,
+            color: "#94a3b8",
           })
           .setOrigin(0.5)
           .setDepth(5);
 
         this._diffLabel = this.add
-          .text(W / 2, 72, "", {
-            fontFamily: "Segoe UI, sans-serif",
-            fontSize: "12px",
+          .text(W / 2, diffLabelY, "", {
+            fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif",
+            fontSize: metaFontSize,
             fontStyle: "bold",
             color: "#c4b5fd",
           })
@@ -247,7 +257,7 @@
 
         this._diffBtns = [];
         DIFF_ORDER.forEach(function (key, i) {
-          var x = W / 2 - 190 + i * 190;
+          var x = W / 2 + (i - 1) * diffGap;
           var btn = makeButton(
             self,
             x,
@@ -260,44 +270,45 @@
               self._refreshDiffBtnColors();
               self.reloadList();
             },
-            160
+            diffBtnW
           );
           if (btn && btn.bg) btn.bg.setDepth(20);
           if (btn && btn.txt) btn.txt.setDepth(21);
           self._diffBtns.push({ key: key, btn: btn });
         });
 
-        // 名單底板（只覆蓋名單區，不延伸到分頁鈕）
+        // 置中名單底板
         this.add
           .rectangle(W / 2, listCenterY, panelW, listHeight, 0x0a1220, 0.65)
           .setStrokeStyle(1, 0x22d3ee, 0.28)
           .setDepth(1);
 
         this._list = this.add
-          .text(W / 2, listTop + 12, "載入中…", {
+          .text(W / 2, listCenterY, "載入中…", {
             fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif",
             fontSize: listFontSize,
-            color: "#cbd5e1",
-            align: "left",
+            color: "#e2e8f0",
+            align: "center",
             lineSpacing: listLineSpacing,
             wordWrap: { width: panelW - 48 },
           })
-          .setOrigin(0.5, 0)
+          .setOrigin(0.5, 0.5)
           .setDepth(10);
 
         this._pageLabel = this.add
           .text(W / 2, pageLabelY, "", {
             fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif",
-            fontSize: "13px",
+            fontSize: metaFontSize,
             fontStyle: "bold",
             color: "#67e8f9",
           })
           .setOrigin(0.5)
           .setDepth(25);
 
+        var pagerGap = Math.min(168, Math.floor(panelW / 3));
         var prev = makeButton(
           this,
-          W / 2 - 170,
+          W / 2 - pagerGap,
           footerY,
           "‹ 上一頁",
           0x334155,
@@ -306,11 +317,11 @@
             self._page -= 1;
             self.paintPage();
           },
-          120
+          118
         );
         var next = makeButton(
           this,
-          W / 2 + 170,
+          W / 2 + pagerGap,
           footerY,
           "下一頁 ›",
           0x334155,
@@ -320,7 +331,7 @@
             self._page += 1;
             self.paintPage();
           },
-          120
+          118
         );
         var back = makeButton(
           this,
@@ -336,7 +347,7 @@
             }
             self.scene.start(returnScene);
           },
-          110
+          108
         );
         [prev, next, back].forEach(function (b) {
           if (b && b.bg) b.bg.setDepth(30);

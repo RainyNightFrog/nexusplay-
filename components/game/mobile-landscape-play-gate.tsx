@@ -7,12 +7,15 @@ import { Button } from "@/components/ui/button";
 type MobileLandscapePlayGateProps = {
   onExit: () => void;
   onRetryLock?: () => void;
+  /** 玩家選擇繼續直屏遊玩（不強制橫持） */
+  onContinuePortrait?: () => void;
 };
 
-/** 直屏阻擋層：強制提示橫持，避免 16:9 遊戲在直屏縮成一條 */
+/** 直屏建議層：推薦橫持以獲得較大畫面，但可由玩家選擇直屏繼續 */
 export function MobileLandscapePlayGate({
   onExit,
   onRetryLock,
+  onContinuePortrait,
 }: MobileLandscapePlayGateProps) {
   const t = useTranslations("common");
 
@@ -55,11 +58,21 @@ export function MobileLandscapePlayGate({
             {t("rotateToLandscapeAction")}
           </Button>
         ) : null}
+        {onContinuePortrait ? (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onContinuePortrait}
+            className="min-h-11 w-full border-white/15 bg-white/5 text-zinc-200 touch-manipulation"
+          >
+            {t("continuePortraitPlay")}
+          </Button>
+        ) : null}
         <Button
           type="button"
-          variant="outline"
+          variant="ghost"
           onClick={onExit}
-          className="min-h-11 w-full gap-2 border-white/15 bg-white/5 text-zinc-200 touch-manipulation"
+          className="min-h-11 w-full gap-2 text-zinc-400 touch-manipulation hover:text-zinc-200"
         >
           <X className="size-4" />
           {t("exitFullscreenPlay")}

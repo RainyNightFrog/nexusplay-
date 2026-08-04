@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { Loader2, LogOut, Heart, LayoutDashboard, Palette, Settings, Shield, UserRound, Bell, Trophy, Sparkles, Download } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { AchievementsModal } from "@/components/AchievementsModal";
 import { UserBadge } from "@/components/UserBadge";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { getInitials } from "@/lib/auth";
 import { getCreatorDashboardHref } from "@/lib/creator-nav";
 import { NotificationBell } from "@/components/layout/notification-bell";
@@ -109,18 +109,12 @@ export function UserNav() {
         aria-label={t("userMenu")}
       >
         <span className="absolute inset-0 overflow-hidden rounded-full">
-          {profile.avatar_url ? (
-            <Image
-              src={profile.avatar_url}
-              alt={profile.display_name}
-              fill
-              className="object-cover"
-            />
-          ) : (
-            <span className="flex size-full items-center justify-center text-xs font-bold text-white">
-              {initials}
-            </span>
-          )}
+          <UserAvatar
+            url={profile.avatar_url}
+            name={profile.display_name}
+            className="bg-gradient-to-br from-cyan-500/30 to-violet-600/40 text-xs font-bold text-white"
+            fallback={initials}
+          />
         </span>
       </button>
 

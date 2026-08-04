@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Loader2, UserRound, UserX } from "lucide-react";
@@ -8,6 +7,7 @@ import { Link, useRouter } from "@/i18n/navigation";
 import { AccountSettingsPageHeader } from "@/components/settings/account-settings-layout";
 import { AccountContentSkeleton } from "@/components/account/account-content-skeleton";
 import { UserBadge } from "@/components/UserBadge";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { accountCardClassName, settingsListRowClassName } from "@/components/settings/account-shell";
 import { Button } from "@/components/ui/button";
 import type { FollowedCreator } from "@/lib/creator-follows-service";
@@ -85,17 +85,12 @@ export default function FollowingSettingsPage() {
                   className="flex min-w-0 items-center gap-3"
                 >
                   <div className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-zinc-900">
-                    {creator.avatarUrl ? (
-                      <Image
-                        src={creator.avatarUrl}
-                        alt={creator.displayName}
-                        width={44}
-                        height={44}
-                        className="size-full object-cover"
-                      />
-                    ) : (
-                      <UserRound className="size-5 text-violet-400" />
-                    )}
+                    <UserAvatar
+                      url={creator.avatarUrl}
+                      name={creator.displayName}
+                      className="text-violet-400"
+                      fallback={<UserRound className="size-5" />}
+                    />
                   </div>
                   <div className="min-w-0 text-left">
                     <UserBadge

@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { ArrowLeft, Crown, ChevronLeft, ChevronRight, Loader2, Medal, RefreshCw, Trophy } from "lucide-react";
@@ -19,6 +18,7 @@ import { requestOpenPlayerDm } from "@/lib/open-player-dm";
 import { OPEN_LEADERBOARD_EVENT } from "@/lib/open-leaderboard";
 import { getInitials } from "@/lib/auth";
 import { UserBadge } from "@/components/UserBadge";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { SupporterAvatarInsignia } from "@/components/supporter/supporter-avatar-insignia";
 import {
   ChatPlayerCard,
@@ -143,25 +143,17 @@ function PlayerAvatar({
           )}
         >
           <div className="absolute inset-0 overflow-hidden rounded-full">
-            {avatarUrl ? (
-              <Image
-                src={avatarUrl}
-                alt={displayName}
-                fill
-                className="object-cover"
-              />
-            ) : (
-              <div
-                className={cn(
-                  "flex h-full w-full items-center justify-center bg-gradient-to-br font-bold text-white",
-                  isTopThree
-                    ? "from-cyan-500/40 via-violet-500/40 to-fuchsia-500/40 text-lg"
-                    : "from-cyan-500/25 to-violet-600/30 text-base"
-                )}
-              >
-                {initials}
-              </div>
-            )}
+            <UserAvatar
+              url={avatarUrl}
+              name={displayName}
+              className={cn(
+                "bg-gradient-to-br font-bold text-white",
+                isTopThree
+                  ? "from-cyan-500/40 via-violet-500/40 to-fuchsia-500/40 text-lg"
+                  : "from-cyan-500/25 to-violet-600/30 text-base"
+              )}
+              fallback={initials}
+            />
           </div>
         </div>
       </div>

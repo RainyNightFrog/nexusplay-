@@ -488,8 +488,7 @@ function VirtualDmThread({
           className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-1 py-0.5 text-left transition-colors hover:bg-white/5 disabled:pointer-events-none"
         >
           <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/8 text-zinc-200 ring-1 ring-white/10">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+            <ChatAvatar url={avatarUrl} name={title} />
           </div>
           <div className="min-w-0 flex-1 text-left">
             <p className="truncate text-sm font-semibold text-zinc-100 underline-offset-2 hover:underline">

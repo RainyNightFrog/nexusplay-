@@ -3,6 +3,7 @@ import {
   type PlatformLeaderboardEntry,
 } from "@/lib/platform-leaderboard";
 import { resolveVirtualPlayerAvatarUrl } from "@/lib/virtual-player-avatar";
+import { toDisplayAvatarUrl } from "@/lib/avatar-display-url";
 import { getVirtualPlayerCosmeticsCss } from "@/lib/virtual-player-cosmetics";
 import {
   getVirtualPlayerEquippedTitle,
@@ -238,7 +239,7 @@ function toEntries(
         rank: index + 1,
         userId: `${VIRTUAL_LEADERBOARD_USER_PREFIX}${row.playerId}`,
         displayName: row.displayName,
-        avatarUrl: resolveVirtualPlayerAvatarUrl(row.playerId),
+        avatarUrl: toDisplayAvatarUrl(resolveVirtualPlayerAvatarUrl(row.playerId)),
         equippedTitle: presentation.equippedTitle,
         avatarFrameClass: presentation.avatarFrameClass,
         nameColorClass: presentation.nameColorClass,
@@ -288,7 +289,7 @@ function toDonationEntries(
         rank: 0,
         userId: `${VIRTUAL_LEADERBOARD_USER_PREFIX}${player.id}`,
         displayName: player.displayName,
-        avatarUrl: resolveVirtualPlayerAvatarUrl(player.id),
+        avatarUrl: toDisplayAvatarUrl(resolveVirtualPlayerAvatarUrl(player.id)),
         equippedTitle: presentation.equippedTitle,
         avatarFrameClass: presentation.avatarFrameClass,
         nameColorClass: presentation.nameColorClass,
