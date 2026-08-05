@@ -1,0 +1,10 @@
+/**
+ * 執行全部撲克引擎單元測試
+ * 用法：npx tsx lib/poker/__tests__/run-all.ts
+ */
+
+import "./hand-evaluator.test";
+import "./pot.test";
+import "./engine.test";
+
+console.log("✅ lib/poker — all Step 2 unit tests passed");

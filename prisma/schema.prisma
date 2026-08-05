@@ -1,0 +1,319 @@
+// =============================================================================
+// RainyNightFrog · Virtual Texas Hold'em — Prisma Schema (Step 1)
+// Pure virtual points economy. No real-money fields.
+// userId 對應既有 Supabase Auth UUID（profiles.id）。
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// -----------------------------------------------------------------------------
+// Enums
+// -----------------------------------------------------------------------------
+
+enum PointsLedgerReason {
+  DAILY_CHECKIN
+  PLAYTIME_TICKER
+  QUEST_REWARD
+  HAND_BUY_IN
+  HAND_CASH_OUT
+  HAND_WIN
+  HAND_LOSS
+  BANKRUPTCY_REBUY
+  ADMIN_ADJUST
+  STREAK_BONUS
+}
+
+enum TableTier {
+  MICRO
+  LOW
+  MID
+  HIGH
+}
+
+enum TableRoomStatus {
+  WAITING
+  RUNNING
+  PAUSED
+  CLOSED
+}
+
+enum QuestKind {
+  PLAY_HANDS
+  WIN_HAND_PAIR_OR_BETTER
+  FOLD_PREFLOP
+  WIN_POTS
+  STAY_ACTIVE_MINUTES
+  ALL_IN_COUNT
+}
+
+enum SeatOccupantType {
+  HUMAN
+  AI_BOT
+}
+
+enum AiBotProfile {
+  LOOSE_PASSIVE
+  BALANCED
+  TIGHT_AGGRESSIVE
+  GTO_LITE
+}
+
+// -----------------------------------------------------------------------------
+// PokerUser — 撲克積分帳戶（與平台 User/Profile 1:1，用 userId 關聯）
+// -----------------------------------------------------------------------------
+
+model PokerUser {
+  id            String   @id @default(cuid())
+  /// Supabase auth.users / profiles.id
+  userId        String   @unique
+  displayName   String
+  avatarUrl     String?
+  /// 當前可用積分餘額（與 PointsLedger 對帳）
+  pointsBalance Int      @default(5000)
+  /// 破產保護：當日已使用的免費補碼次數
+  bankruptcyRebuysToday Int @default(0)
+  bankruptcyRebuyDate   DateTime? @db.Date
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  ledgerEntries   PointsLedger[]
+  checkins        DailyCheckin[]
+  questProgress   QuestProgress[]
+  seats           TableSeat[]
+  handResults     GameHandPlayerResult[]
+  playtimeTicks   PlaytimeTickerLog[]
+
+  @@index([pointsBalance])
+  @@map("poker_users")
+}
+
+// -----------------------------------------------------------------------------
+// PointsLedger — 積分流水（不可變帳本）
+// -----------------------------------------------------------------------------
+
+model PointsLedger {
+  id          String             @id @default(cuid())
+  pokerUserId String
+  delta       Int
+  balanceAfter Int
+  reason      PointsLedgerReason
+  /// 可選關聯：牌局、任務、簽到等
+  refType     String?
+  refId       String?
+  metadata    Json?
+  createdAt   DateTime           @default(now())
+
+  pokerUser PokerUser @relation(fields: [pokerUserId], references: [id], onDelete: Cascade)
+
+  @@index([pokerUserId, createdAt])
+  @@index([reason, createdAt])
+  @@map("poker_points_ledger")
+}
+
+// -----------------------------------------------------------------------------
+// DailyCheckin — 每日簽到與連續天數
+// Day 1: 1000 … Day 7: 50000（見 lib/poker/economy.ts）
+// -----------------------------------------------------------------------------
+
+model DailyCheckin {
+  id            String   @id @default(cuid())
+  pokerUserId   String
+  /// 簽到日（UTC date）
+  checkinDate   DateTime @db.Date
+  streakDay     Int
+  pointsAwarded Int
+  createdAt     DateTime @default(now())
+
+  pokerUser PokerUser @relation(fields: [pokerUserId], references: [id], onDelete: Cascade)
+
+  @@unique([pokerUserId, checkinDate])
+  @@index([pokerUserId, checkinDate])
+  @@map("poker_daily_checkins")
+}
+
+// -----------------------------------------------------------------------------
+// Quest / QuestProgress — 每日任務定義與進度
+// -----------------------------------------------------------------------------
+
+model Quest {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  kind        QuestKind
+  /// 目標數值，例如 PLAY_HANDS → 20
+  targetValue Int
+  rewardPoints Int
+  /// 任務標題／描述鍵（供 i18n）
+  titleKey    String
+  descriptionKey String
+  /// 是否每日重置
+  isDaily     Boolean   @default(true)
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+
+  progress QuestProgress[]
+
+  @@map("poker_quests")
+}
+
+model QuestProgress {
+  id          String   @id @default(cuid())
+  pokerUserId String
+  questId     String
+  /// 進度所屬日（UTC date）
+  progressDate DateTime @db.Date
+  currentValue Int      @default(0)
+  completed   Boolean  @default(false)
+  claimed     Boolean  @default(false)
+  claimedAt   DateTime?
+  updatedAt   DateTime @updatedAt
+
+  pokerUser PokerUser @relation(fields: [pokerUserId], references: [id], onDelete: Cascade)
+  quest     Quest     @relation(fields: [questId], references: [id], onDelete: Cascade)
+
+  @@unique([pokerUserId, questId, progressDate])
+  @@index([pokerUserId, progressDate])
+  @@map("poker_quest_progress")
+}
+
+// -----------------------------------------------------------------------------
+// PlaytimeTickerLog — 在線獎勵（每 10 分鐘，每日最多 6 次，需至少打 1 手）
+// -----------------------------------------------------------------------------
+
+model PlaytimeTickerLog {
+  id            String   @id @default(cuid())
+  pokerUserId   String
+  tickDate      DateTime @db.Date
+  tickIndex     Int
+  pointsAwarded Int
+  handsInWindow Int
+  createdAt     DateTime @default(now())
+
+  pokerUser PokerUser @relation(fields: [pokerUserId], references: [id], onDelete: Cascade)
+
+  @@unique([pokerUserId, tickDate, tickIndex])
+  @@index([pokerUserId, tickDate])
+  @@map("poker_playtime_ticker_logs")
+}
+
+// -----------------------------------------------------------------------------
+// TableRoom / TableSeat — 24/7 動態牌桌
+// -----------------------------------------------------------------------------
+
+model TableRoom {
+  id            String          @id @default(cuid())
+  /// 對外短碼，例如 micro-a3f2
+  code          String          @unique
+  tier          TableTier
+  status        TableRoomStatus @default(WAITING)
+  smallBlind    Int
+  bigBlind      Int
+  minBuyIn      Int
+  maxBuyIn      Int
+  maxSeats      Int             @default(9)
+  /// 預設 AI 行為檔（該級別基底）
+  defaultBotProfile AiBotProfile
+  /// 當前手牌序號（遞增）
+  handNumber    Int             @default(0)
+  /// Redis 快取鍵提示（可選）
+  redisKey      String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  closedAt      DateTime?
+
+  seats TableSeat[]
+  hands GameHandHistory[]
+
+  @@index([tier, status])
+  @@map("poker_table_rooms")
+}
+
+model TableSeat {
+  id            String           @id @default(cuid())
+  roomId        String
+  seatIndex     Int
+  occupantType  SeatOccupantType
+  pokerUserId   String?
+  /// AI bot 顯示用
+  botName       String?
+  botAvatarUrl  String?
+  botProfile    AiBotProfile?
+  stack         Int              @default(0)
+  isSittingOut  Boolean          @default(false)
+  /// 真人加入後，AI 於本手結束離席
+  leaveAfterHand Boolean         @default(false)
+  joinedAt      DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  room      TableRoom  @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  pokerUser PokerUser? @relation(fields: [pokerUserId], references: [id], onDelete: SetNull)
+
+  @@unique([roomId, seatIndex])
+  @@index([pokerUserId])
+  @@map("poker_table_seats")
+}
+
+// -----------------------------------------------------------------------------
+// GameHandHistory — 完整手牌紀錄（審計／重播／任務統計）
+// -----------------------------------------------------------------------------
+
+model GameHandHistory {
+  id              String   @id @default(cuid())
+  roomId          String
+  handNumber      Int
+  tier            TableTier
+  smallBlind      Int
+  bigBlind        Int
+  /// 街道狀態機快照序列（JSON）
+  streetTimeline  Json
+  /// 公牌 [flop1, flop2, flop3, turn, river] 編碼字串
+  boardCards      String[]
+  potTotal        Int
+  sidePots        Json?
+  startedAt       DateTime
+  endedAt         DateTime?
+  /// 完整動作日誌
+  actionLog       Json
+  metadata        Json?
+
+  room    TableRoom              @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  players GameHandPlayerResult[]
+
+  @@unique([roomId, handNumber])
+  @@index([startedAt])
+  @@map("poker_game_hand_history")
+}
+
+model GameHandPlayerResult {
+  id            String  @id @default(cuid())
+  handId        String
+  pokerUserId   String?
+  seatIndex     Int
+  occupantType  SeatOccupantType
+  botName       String?
+  /// 起手牌編碼（僅結算後寫入；進行中不洩漏）
+  holeCards     String[]
+  startingStack Int
+  endingStack   Int
+  netDelta      Int
+  /// 是否攤牌
+  showedDown    Boolean @default(false)
+  /// 牌力描述，例如 "Two Pair, Aces and Kings"
+  handLabel     String?
+  handRankValue BigInt?
+  wonAmount     Int     @default(0)
+  folded        Boolean @default(false)
+  wentAllIn     Boolean @default(false)
+
+  hand      GameHandHistory @relation(fields: [handId], references: [id], onDelete: Cascade)
+  pokerUser PokerUser?      @relation(fields: [pokerUserId], references: [id], onDelete: SetNull)
+
+  @@index([pokerUserId, handId])
+  @@map("poker_game_hand_player_results")
+}
