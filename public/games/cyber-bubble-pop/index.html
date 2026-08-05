@@ -27,7 +27,7 @@
 /**
  * Cyber Bubble Pop — Phaser 3 商業級電競重構
  * Boot → MainMenu → Difficulty → Game → GameOverModal (+ Settings)
- * Juice：連擊震屏／星塵／雷電／黑洞／掉落拖尾
+ * Juice：連擊震屏／炫彩得分彈幕／星塵／雷電／黑洞／掉落拖尾
  * 難度：Casual（長瞄準線+慢下壓）／Standard／Extreme（5 秒下壓+迷霧）
  */
 (function () {
@@ -37,10 +37,14 @@
 
   var W = 960;
   var H = 540;
-  var RADIUS = 18;
-  var ROWS = 14;
-  var COLS = 16;
-  var TOP_PAD = 36;
+  // 縮小球體 + 加行列 = 視野拉遠、操作空間更大
+  var RADIUS = 12;
+  var ROWS = 18;
+  var COLS = 20;
+  var TOP_PAD = 44;
+  var BOARD_W = COLS * RADIUS * 2;
+  var BOARD_LEFT = Math.floor((W - BOARD_W) / 2);
+  var BOARD_RIGHT = BOARD_LEFT + BOARD_W;
   var SETTINGS_KEY = "rnf:cyber-bubble-pop:settings";
 
   var COLOR_HEX = [0x22d3ee, 0xa78bfa, 0xf472b6, 0x34d399, 0xfbbf24, 0xfb7185];
@@ -50,42 +54,52 @@
     casual: {
       id: "casual",
       label: "Casual 輕鬆",
-      desc: "發射線較長 · 泡泡下降慢",
+      desc: "5 色 · 長瞄準 · 壓陣很慢",
       color: "#67e8f9",
       scoreMult: 1.0,
-      initRows: 4,
-      dropEvery: 16,
-      shootCd: 0.28,
-      aimLen: 14,
-      specialRate: 0.08,
+      initRows: 3,
+      initFill: 0.78,
+      dropEvery: 22,
+      shootCd: 0.22,
+      aimLen: 16,
+      specialRate: 0.11,
+      paletteSize: 5,
+      dropThreat: 0.35,
       fog: false,
       forceDrop: false
     },
     standard: {
       id: "standard",
       label: "Standard 電競",
-      desc: "標準極速 · 霓虹連擊",
+      desc: "標準節奏 · 霓虹連擊",
       color: "#a78bfa",
       scoreMult: 1.35,
-      initRows: 5,
-      dropEvery: 11,
-      shootCd: 0.22,
-      aimLen: 9,
-      specialRate: 0.07,
+      initRows: 4,
+      initFill: 0.84,
+      dropEvery: 15,
+      shootCd: 0.18,
+      aimLen: 12,
+      specialRate: 0.09,
+      paletteSize: 6,
+      dropThreat: 0.65,
       fog: false,
       forceDrop: false
     },
     extreme: {
       id: "extreme",
       label: "Extreme 狂暴",
-      desc: "每 5 秒強制下壓 · 隨機迷霧泡泡",
+      desc: "約 7 秒壓陣上限 · 迷霧干擾",
       color: "#f472b6",
-      scoreMult: 2.5,
-      initRows: 6,
-      dropEvery: 5,
-      shootCd: 0.16,
-      aimLen: 7,
-      specialRate: 0.1,
+      scoreMult: 2.2,
+      initRows: 5,
+      initFill: 0.88,
+      dropEvery: 9,
+      shootCd: 0.14,
+      aimLen: 9,
+      specialRate: 0.12,
+      paletteSize: 6,
+      dropThreat: 0.95,
+      forceDropCap: 7,
       fog: true,
       forceDrop: true
     }
@@ -173,6 +187,18 @@
     lightning: function () { tone(900, 0.05, "sawtooth", 0.1); tone(200, 0.18, "square", 0.1, 80); },
     blackhole: function () { tone(140, 0.25, "sawtooth", 0.12, 40); tone(90, 0.3, "sine", 0.08); },
     drop: function () { tone(180, 0.08, "triangle", 0.07); },
+    score: function (tier) {
+      var t = Math.min(tier || 0, 5);
+      tone(640 + t * 80, 0.08, "square", 0.1);
+      tone(960 + t * 60, 0.12, "triangle", 0.09);
+      if (t >= 2) tone(1280, 0.1, "sine", 0.06);
+    },
+    mega: function () {
+      tone(520, 0.08, "square", 0.12);
+      tone(780, 0.1, "triangle", 0.1);
+      tone(1040, 0.14, "sine", 0.08);
+      tone(1560, 0.18, "triangle", 0.07);
+    },
     die: function () { tone(160, 0.22, "sawtooth", 0.14, 45); tone(70, 0.4, "triangle", 0.1); },
     toggle: function () { tone(440, 0.05, "triangle", 0.07); }
   };
@@ -201,6 +227,180 @@
     scene.time.delayedCall(850, function () { if (emitter.destroy) emitter.destroy(); });
   }
 
+  /** 多色星塵噴泉 — 得分華麗感核心 */
+  function rainbowConfetti(scene, x, y, intensity) {
+    var power = Phaser.Math.Clamp(intensity || 1, 0.6, 3);
+    var keys = ["spark-cyan", "spark-violet", "spark-gold", "spark-pink", "spark-white"];
+    for (var i = 0; i < COLOR_HEX.length; i++) {
+      keys.push("spark-" + COLOR_HEX[i].toString(16));
+    }
+    var bursts = Math.min(5, 2 + Math.floor(power));
+    for (var b = 0; b < bursts; b++) {
+      var key = keys[b % keys.length];
+      var n = Phaser.Math.Clamp(Math.floor(12 + power * 8), 15, 30);
+      var emitter = scene.add.particles(x, y, key, {
+        speed: { min: 90 * power, max: 380 * power },
+        angle: { min: 0, max: 360 },
+        lifespan: { min: 320, max: 780 },
+        scale: { start: 1.4, end: 0 },
+        alpha: { start: 1, end: 0 },
+        gravityY: 140,
+        blendMode: "ADD",
+        emitting: false
+      }).setDepth(34);
+      emitter.explode(n);
+      scene.time.delayedCall(900, function (em) {
+        return function () { if (em && em.destroy) em.destroy(); };
+      }(emitter));
+    }
+  }
+
+  /** 霓虹衝擊波環 */
+  function shockRing(scene, x, y, color, scaleTo) {
+    var ring = scene.add.circle(x, y, 10, color, 0)
+      .setStrokeStyle(3, color, 0.95)
+      .setDepth(32)
+      .setBlendMode(Phaser.BlendModes.ADD);
+    scene.tweens.add({
+      targets: ring,
+      scale: scaleTo || 4.5,
+      alpha: 0,
+      duration: 420,
+      ease: "Cubic.easeOut",
+      onComplete: function () { ring.destroy(); }
+    });
+  }
+
+  /**
+   * 華麗得分彈幕：色差幽靈字 + 主字彈跳 + 光暈 + 可選連擊標語
+   * opts: { combo, label, mega, colorIdx }
+   */
+  function glamScoreFx(scene, x, y, pts, opts) {
+    opts = opts || {};
+    var combo = opts.combo || 0;
+    var colorIdx = opts.colorIdx != null ? opts.colorIdx : 0;
+    var css = COLOR_CSS[colorIdx % COLOR_CSS.length];
+    var hex = COLOR_HEX[colorIdx % COLOR_HEX.length];
+    var mega = !!opts.mega || combo >= 5 || pts >= 200;
+    var tier = mega ? 3 : (combo >= 3 || pts >= 80 ? 2 : (combo > 1 ? 1 : 0));
+    var label = opts.label || ("+" + pts + (combo > 1 ? "  ×" + combo : ""));
+    var fontSize = mega ? "36px" : (tier >= 2 ? "28px" : "22px");
+    var rise = mega ? 78 : (tier >= 2 ? 62 : 50);
+    var dur = mega ? 780 : 560;
+
+    // 色差幽靈（粉／青偏移）
+    var ghostL = scene.add.text(x - 3, y, label, {
+      fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif",
+      fontSize: fontSize, fontStyle: "bold", color: "#f472b6"
+    }).setOrigin(0.5).setAlpha(0.55).setDepth(35).setBlendMode(Phaser.BlendModes.ADD);
+    var ghostR = scene.add.text(x + 3, y, label, {
+      fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif",
+      fontSize: fontSize, fontStyle: "bold", color: "#22d3ee"
+    }).setOrigin(0.5).setAlpha(0.55).setDepth(35).setBlendMode(Phaser.BlendModes.ADD);
+
+    var main = scene.add.text(x, y, label, {
+      fontFamily: "Segoe UI, Microsoft JhengHei, sans-serif",
+      fontSize: fontSize, fontStyle: "bold", color: "#ffffff",
+      stroke: css, strokeThickness: mega ? 6 : 4,
+      shadow: { offsetX: 0, offsetY: 0, color: css, blur: 16, fill: true, stroke: true }
+    }).setOrigin(0.5).setDepth(36).setScale(0.35).setAlpha(0);
+
+    scene.tweens.add({
+      targets: [ghostL, ghostR, main],
+      alpha: { from: 0, to: 1 },
+      scale: mega ? 1.35 : 1.2,
+      duration: 160,
+      ease: "Back.easeOut"
+    });
+    scene.tweens.add({
+      targets: [ghostL, ghostR, main],
+      y: y - rise,
+      duration: dur,
+      ease: "Cubic.easeOut"
+    });
+    scene.tweens.add({
+      targets: ghostL, x: x - 10, alpha: 0, duration: dur * 0.85, delay: 120, ease: "Cubic.easeIn"
+    });
+    scene.tweens.add({
+      targets: ghostR, x: x + 10, alpha: 0, duration: dur * 0.85, delay: 120, ease: "Cubic.easeIn"
+    });
+    scene.tweens.add({
+      targets: main, alpha: 0, scale: mega ? 1.55 : 1.35, duration: dur * 0.7, delay: 180,
+      ease: "Cubic.easeIn",
+      onComplete: function () {
+        ghostL.destroy(); ghostR.destroy(); main.destroy();
+      }
+    });
+
+    shockRing(scene, x, y, hex, mega ? 6 : 4);
+    if (tier >= 1) shockRing(scene, x, y, 0xffffff, mega ? 3.2 : 2.4);
+    rainbowConfetti(scene, x, y, 0.7 + tier * 0.55 + (mega ? 0.8 : 0));
+    neonBurst(scene, x, y, hex, mega ? 28 : 22);
+
+    // 次要彩屑環繞飄散
+    for (var i = 0; i < (mega ? 8 : 5); i++) {
+      (function (ang, dist) {
+        var px = x + Math.cos(ang) * dist;
+        var py = y + Math.sin(ang) * dist;
+        var c = COLOR_HEX[i % COLOR_HEX.length];
+        var mote = scene.add.circle(px, py, Phaser.Math.Between(2, 5), c, 0.95)
+          .setDepth(33).setBlendMode(Phaser.BlendModes.ADD);
+        scene.tweens.add({
+          targets: mote,
+          x: px + Math.cos(ang) * Phaser.Math.Between(40, 110),
+          y: py + Math.sin(ang) * Phaser.Math.Between(40, 110) - 30,
+          alpha: 0, scale: 0.2,
+          duration: Phaser.Math.Between(380, 620),
+          ease: "Cubic.easeOut",
+          onComplete: function () { mote.destroy(); }
+        });
+      })((Math.PI * 2 * i) / (mega ? 8 : 5) + Math.random() * 0.4, Phaser.Math.Between(8, 22));
+    }
+
+    if (combo >= 3 || opts.banner) {
+      var bannerTxt = opts.banner || (combo >= 8 ? "ULTRA COMBO" : combo >= 5 ? "MEGA COMBO" : "NICE COMBO");
+      var bannerCol = combo >= 8 ? "#fbbf24" : combo >= 5 ? "#f472b6" : "#a78bfa";
+      var ban = scene.add.text(x, y - 36, bannerTxt, {
+        fontFamily: "Segoe UI, sans-serif", fontSize: mega ? "18px" : "14px",
+        fontStyle: "bold", color: bannerCol, letterSpacing: 2
+      }).setOrigin(0.5).setDepth(37).setAlpha(0).setScale(0.5);
+      scene.tweens.add({
+        targets: ban, alpha: 1, scale: 1.1, y: y - 58, duration: 220, ease: "Back.easeOut"
+      });
+      scene.tweens.add({
+        targets: ban, alpha: 0, y: y - 90, duration: 420, delay: 280, ease: "Cubic.easeIn",
+        onComplete: function () { ban.destroy(); }
+      });
+    }
+
+    SFX.score(tier);
+    if (mega) SFX.mega();
+  }
+
+  /** HUD 分數跳動 + 彩光閃爍 */
+  function pulseHudScore(scene) {
+    if (!scene.hudScore) return;
+    scene.tweens.killTweensOf(scene.hudScore);
+    scene.hudScore.setScale(1);
+    scene.tweens.add({
+      targets: scene.hudScore, scale: 1.22, duration: 90, yoyo: true, ease: "Back.easeOut"
+    });
+    var flashCols = ["#67e8f9", "#fbbf24", "#f472b6", "#a78bfa", "#34d399"];
+    var ci = 0;
+    var flash = scene.time.addEvent({
+      delay: 50, repeat: 4,
+      callback: function () {
+        scene.hudScore.setColor(flashCols[ci % flashCols.length]);
+        ci++;
+        if (ci > 4) scene.hudScore.setColor("#67e8f9");
+      }
+    });
+    scene.time.delayedCall(320, function () {
+      if (flash) flash.remove(false);
+      if (scene.hudScore) scene.hudScore.setColor("#67e8f9");
+    });
+  }
+
   function makeTextures(scene) {
     var g = scene.make.graphics({ x: 0, y: 0, add: false });
     var i, hex, name;
@@ -210,9 +410,9 @@
       name = "bubble-" + i;
       g.clear();
       g.fillStyle(hex, 1);
-      g.fillCircle(RADIUS, RADIUS, RADIUS - 2);
-      g.fillStyle(0xffffff, 0.4);
-      g.fillCircle(RADIUS - 5, RADIUS - 5, 5);
+      g.fillCircle(RADIUS, RADIUS, RADIUS - 1.5);
+      g.fillStyle(0xffffff, 0.42);
+      g.fillCircle(RADIUS - 3.5, RADIUS - 3.5, Math.max(2.5, RADIUS * 0.32));
       g.generateTexture(name, RADIUS * 2, RADIUS * 2);
     }
 
@@ -235,9 +435,9 @@
 
     g.clear();
     g.fillStyle(0x94a3b8, 0.55);
-    g.fillCircle(RADIUS, RADIUS, RADIUS - 2);
+    g.fillCircle(RADIUS, RADIUS, RADIUS - 1.5);
     g.fillStyle(0xe2e8f0, 0.25);
-    g.fillCircle(RADIUS - 4, RADIUS - 6, 8);
+    g.fillCircle(RADIUS - 3, RADIUS - 4, Math.max(4, RADIUS * 0.45));
     g.generateTexture("bubble-fog", RADIUS * 2, RADIUS * 2);
 
     g.clear();
@@ -259,6 +459,11 @@
     g.fillStyle(0xf472b6, 1);
     g.fillCircle(4, 4, 4);
     g.generateTexture("spark-pink", 8, 8);
+
+    g.clear();
+    g.fillStyle(0xffffff, 1);
+    g.fillCircle(3, 3, 3);
+    g.generateTexture("spark-white", 6, 6);
 
     // per-color sparks
     for (i = 0; i < COLOR_HEX.length; i++) {
@@ -355,7 +560,7 @@
         fontSize: "40px", fontStyle: "bold", color: "#ffffff"
       }).setOrigin(0.5).setScale(0.65).setAlpha(0);
 
-      var sub = this.add.text(W / 2, 202, "賽博泡泡龍 · 雷射瞄準 · 雷電／黑洞 · 連擊星塵", {
+      var sub = this.add.text(W / 2, 202, "賽博泡泡龍 · 雷射瞄準 · 炫彩連擊 · 雷電／黑洞", {
         fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
         fontSize: "15px", color: "#94a3b8"
       }).setOrigin(0.5).setAlpha(0);
@@ -378,7 +583,7 @@
       });
       makeButton(this, W / 2, 504, "操作說明", 0x64748b, function () {
         if (window.RNFPhaserHelp && RNFPhaserHelp.showHelpOverlay) {
-          RNFPhaserHelp.showHelpOverlay(self, "拖曳瞄準 · 放開／點擊發射 · 同色 ≥3 消除 · 雷電清整行 · 黑洞清 3×3", { W: W, H: H });
+          RNFPhaserHelp.showHelpOverlay(self, "拖曳瞄準 · 放開發射 · 同色 ≥3 消除 · 雷電清整行 · 黑洞清 3×3 · Casual 較遠視野較輕鬆", { W: W, H: H });
         }
       }, 240);
     }
@@ -397,7 +602,7 @@
       }).setOrigin(0.5).setScale(0.7).setAlpha(0);
       this.tweens.add({ targets: head, alpha: 1, scale: 1, duration: 360, ease: "Back.easeOut" });
 
-      this.add.text(W / 2, 118, "危險倍率隨時間遞增 · 壓陣間隔會越來越短", {
+      this.add.text(W / 2, 118, "視野拉遠 · 危險倍率隨時間遞增 · 三段節奏分明", {
         fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
         fontSize: "14px", color: "#64748b"
       }).setOrigin(0.5);
@@ -484,6 +689,7 @@
       this.cameras.main.fadeIn(180, 4, 6, 12);
 
       this.score = 0;
+      this.displayScore = 0;
       this.combo = 0;
       this.maxCombo = 0;
       this.comboTimer = 0;
@@ -501,7 +707,7 @@
       this.bubbleLayer = this.add.container(0, 0).setDepth(10);
       this.fxLayer = this.add.container(0, 0).setDepth(20);
 
-      this.dangerRow = ROWS - 3;
+      this.dangerRow = ROWS - 4;
       this.dangerY = this.rowY(this.dangerRow);
 
       this.drawArena();
@@ -510,12 +716,12 @@
       this.next = this.rollBubble();
 
       this.cannonX = W / 2;
-      this.cannonY = H - 48;
-      this.cannon = this.add.image(this.cannonX, this.cannonY, "cannon").setDepth(15);
+      this.cannonY = H - 36;
+      this.cannon = this.add.image(this.cannonX, this.cannonY, "cannon").setScale(0.72).setDepth(15);
       this.currentSpr = this.add.image(this.cannonX, this.cannonY, "bubble-0").setDepth(16);
-      this.nextSpr = this.add.image(this.cannonX + 56, this.cannonY + 16, "bubble-0").setScale(0.72).setDepth(14).setAlpha(0.9);
-      this.nextLabel = this.add.text(this.cannonX + 56, this.cannonY + 36, "NEXT", {
-        fontFamily: "Segoe UI, sans-serif", fontSize: "10px", color: "#64748b"
+      this.nextSpr = this.add.image(this.cannonX + 42, this.cannonY + 12, "bubble-0").setScale(0.7).setDepth(14).setAlpha(0.9);
+      this.nextLabel = this.add.text(this.cannonX + 42, this.cannonY + 28, "NEXT", {
+        fontFamily: "Segoe UI, sans-serif", fontSize: "9px", color: "#64748b"
       }).setOrigin(0.5, 0).setDepth(14);
 
       this.aimGfx = this.add.graphics().setDepth(12);
@@ -531,9 +737,21 @@
       var g = this.add.graphics().setDepth(0);
       g.fillStyle(0x060a12, 1);
       g.fillRect(0, 0, W, H);
-      g.lineStyle(1, 0xa78bfa, 0.15);
-      g.strokeRect(RADIUS, 10, W - RADIUS * 2, this.rowY(ROWS - 1) + RADIUS);
-      // danger line
+      // 場地框置中，視覺更遠、兩側留白
+      g.lineStyle(1, 0xa78bfa, 0.18);
+      g.strokeRect(
+        BOARD_LEFT,
+        TOP_PAD - RADIUS,
+        BOARD_W,
+        this.rowY(ROWS - 1) - TOP_PAD + RADIUS * 2 + 8
+      );
+      g.fillStyle(0x0a1020, 0.35);
+      g.fillRect(
+        BOARD_LEFT,
+        TOP_PAD - RADIUS,
+        BOARD_W,
+        this.rowY(ROWS - 1) - TOP_PAD + RADIUS * 2 + 8
+      );
       this.dangerGfx = this.add.graphics().setDepth(5);
       this.redrawDanger();
     }
@@ -542,20 +760,22 @@
       this.dangerGfx.clear();
       this.dangerGfx.lineStyle(2, 0xf472b6, 0.45);
       this.dangerGfx.beginPath();
-      this.dangerGfx.moveTo(RADIUS, this.dangerY);
-      this.dangerGfx.lineTo(W - RADIUS, this.dangerY);
+      this.dangerGfx.moveTo(BOARD_LEFT + 4, this.dangerY);
+      this.dangerGfx.lineTo(BOARD_RIGHT - 4, this.dangerY);
       this.dangerGfx.strokePath();
     }
 
     createHud() {
       this.hudScore = this.add.text(14, 8, "SCORE 0", {
-        fontFamily: "Segoe UI, sans-serif", fontSize: "16px", fontStyle: "bold", color: "#67e8f9"
+        fontFamily: "Segoe UI, sans-serif", fontSize: "18px", fontStyle: "bold", color: "#67e8f9",
+        shadow: { offsetX: 0, offsetY: 0, color: "#22d3ee", blur: 8, fill: true }
       }).setDepth(40);
-      this.hudDanger = this.add.text(14, 30, "DANGER: x1.00", {
+      this.hudDanger = this.add.text(14, 32, "DANGER: x1.00", {
         fontFamily: "Segoe UI, sans-serif", fontSize: "14px", fontStyle: "bold", color: "#f472b6"
       }).setDepth(40);
       this.hudCombo = this.add.text(W / 2, 8, "COMBO —", {
-        fontFamily: "Segoe UI, sans-serif", fontSize: "15px", fontStyle: "bold", color: "#fbbf24"
+        fontFamily: "Segoe UI, sans-serif", fontSize: "16px", fontStyle: "bold", color: "#fbbf24",
+        shadow: { offsetX: 0, offsetY: 0, color: "#fbbf24", blur: 10, fill: true }
       }).setOrigin(0.5, 0).setDepth(40);
       this.hudDrop = this.add.text(W - 14, 8, "DROP 0s", {
         fontFamily: "Segoe UI, sans-serif", fontSize: "13px", color: "#94a3b8"
@@ -565,12 +785,31 @@
       }).setOrigin(1, 0).setDepth(40);
     }
 
+    /** 加分並觸發 HUD／可選全螢幕彩閃 */
+    addScore(pts, fxOpts) {
+      var gain = Math.floor(pts);
+      if (gain <= 0) return 0;
+      this.score += gain;
+      pulseHudScore(this);
+      if (fxOpts && fxOpts.flash) {
+        var col = COLOR_HEX[(fxOpts.colorIdx != null ? fxOpts.colorIdx : 0) % COLOR_HEX.length];
+        this.flash.setFillStyle(col, 1);
+        this.flash.setAlpha(fxOpts.flash === "mega" ? 0.28 : 0.14);
+        this.tweens.add({
+          targets: this.flash, alpha: 0, duration: fxOpts.flash === "mega" ? 280 : 160, ease: "Cubic.easeOut"
+        });
+      }
+      return gain;
+    }
+
     cellX(c, r) {
-      return c * RADIUS * 2 + (r % 2 ? RADIUS : 0) + RADIUS;
+      return BOARD_LEFT + c * RADIUS * 2 + (r % 2 ? RADIUS : 0) + RADIUS;
     }
     rowY(r) {
       return r * RADIUS * 1.732 + RADIUS + TOP_PAD;
     }
+    wallLeft() { return BOARD_LEFT + RADIUS; }
+    wallRight() { return BOARD_RIGHT - RADIUS; }
 
     bindInput() {
       var self = this;
@@ -616,8 +855,9 @@
     }
 
     rollBubble() {
+      var n = Math.min(COLOR_HEX.length, this.diff.paletteSize || COLOR_HEX.length);
       return {
-        colorIdx: Phaser.Math.Between(0, COLOR_HEX.length - 1),
+        colorIdx: Phaser.Math.Between(0, n - 1),
         special: this.rollSpecial()
       };
     }
@@ -641,10 +881,10 @@
       b.spr = this.add.image(b.x, b.y, tex).setDepth(10);
       this.bubbleLayer.add(b.spr);
       if (b.special === "lightning") {
-        b.mark = this.add.image(b.x, b.y, "mark-lightning").setScale(0.55).setDepth(11);
+        b.mark = this.add.image(b.x, b.y, "mark-lightning").setScale(0.4).setDepth(11);
         this.bubbleLayer.add(b.mark);
       } else if (b.special === "blackhole") {
-        b.mark = this.add.image(b.x, b.y, "mark-blackhole").setDepth(11);
+        b.mark = this.add.image(b.x, b.y, "mark-blackhole").setScale(0.72).setDepth(11);
         this.bubbleLayer.add(b.mark);
       }
     }
@@ -663,10 +903,12 @@
 
     initGrid() {
       this.grid = [];
+      var fill = this.diff.initFill != null ? this.diff.initFill : 0.85;
+      var n = Math.min(COLOR_HEX.length, this.diff.paletteSize || COLOR_HEX.length);
       for (var r = 0; r < this.diff.initRows; r++) {
         for (var c = 0; c < COLS; c++) {
-          if (Math.random() < 0.88) {
-            this.grid.push(this.makeBubble(c, r, Phaser.Math.Between(0, COLOR_HEX.length - 1), this.rollSpecial()));
+          if (Math.random() < fill) {
+            this.grid.push(this.makeBubble(c, r, Phaser.Math.Between(0, n - 1), this.rollSpecial()));
           }
         }
       }
@@ -739,8 +981,8 @@
       for (var i = 0; i < len * 4; i++) {
         x += vx * step;
         y += vy * step;
-        if (x < RADIUS) { x = RADIUS; vx = Math.abs(vx); }
-        if (x > W - RADIUS) { x = W - RADIUS; vx = -Math.abs(vx); }
+        if (x < this.wallLeft()) { x = this.wallLeft(); vx = Math.abs(vx); }
+        if (x > this.wallRight()) { x = this.wallRight(); vx = -Math.abs(vx); }
         pts.push({ x: x, y: y });
         if (y < TOP_PAD + RADIUS) break;
         // stop near a bubble
@@ -815,7 +1057,7 @@
       var r = Math.round((y - RADIUS - TOP_PAD) / (RADIUS * 1.732));
       r = Phaser.Math.Clamp(r, 0, ROWS - 1);
       var offset = r % 2 ? RADIUS : 0;
-      var c = Math.round((x - RADIUS - offset) / (RADIUS * 2));
+      var c = Math.round((x - BOARD_LEFT - RADIUS - offset) / (RADIUS * 2));
       c = Phaser.Math.Clamp(c, 0, COLS - 1);
       return { c: c, r: r };
     }
@@ -876,26 +1118,40 @@
       this.comboTimer = 4.5;
 
       var colorIdx = cluster[0].colorIdx;
-      var tint = COLOR_HEX[colorIdx];
       var pts = Math.floor(cluster.length * 12 * (1 + this.combo * 0.35 + chainDepth * 0.2) * this.diff.scoreMult * (0.85 + this.dangerMultiplier * 0.15));
-      this.score += pts;
+      // 大簇額外獎勵，鼓勵一次清更多
+      if (cluster.length >= 6) pts = Math.floor(pts * 1.15);
+      if (cluster.length >= 9) pts = Math.floor(pts * 1.2);
+      this.addScore(pts, {
+        flash: this.combo >= 5 || cluster.length >= 7 ? "mega" : true,
+        colorIdx: colorIdx
+      });
 
-      // Juice：震屏 + 25 同色星塵 + 音階
-      doShake(this.cameras.main, 150, 0.02);
+      // Juice：震屏 + 炫彩得分彈幕 + 音階
+      var shakeAmt = 0.016 + Math.min(0.02, this.combo * 0.003) + (cluster.length >= 6 ? 0.008 : 0);
+      doShake(this.cameras.main, 120 + Math.min(80, this.combo * 12), shakeAmt);
       var cx = 0, cy = 0;
       for (var i = 0; i < cluster.length; i++) { cx += cluster[i].x; cy += cluster[i].y; }
       cx /= cluster.length; cy /= cluster.length;
-      neonBurst(this, cx, cy, tint, 25);
+
+      glamScoreFx(this, cx, cy, pts, {
+        combo: this.combo,
+        colorIdx: colorIdx,
+        mega: this.combo >= 5 || cluster.length >= 8 || pts >= 220
+      });
       SFX.pop(this.combo);
       SFX.ladder(Math.min(3 + this.combo, 8));
 
-      var floater = this.add.text(cx, cy, "+" + pts + (this.combo > 1 ? "  x" + this.combo : ""), {
-        fontFamily: "Segoe UI, sans-serif", fontSize: "22px", fontStyle: "bold", color: COLOR_CSS[colorIdx]
-      }).setOrigin(0.5).setDepth(35);
-      this.tweens.add({
-        targets: floater, y: cy - 50, alpha: 0, scale: 1.25, duration: 480, ease: "Cubic.easeOut",
-        onComplete: function () { floater.destroy(); }
-      });
+      // 逐顆錯開小爆發，層次更豐富
+      var self = this;
+      for (var p = 0; p < cluster.length; p++) {
+        (function (b, delay) {
+          self.time.delayedCall(delay, function () {
+            if (!self.alive) return;
+            neonBurst(self, b.x, b.y, COLOR_HEX[b.colorIdx], 16);
+          });
+        })(cluster[p], p * 28);
+      }
 
       // specials inside cluster
       var specials = [];
@@ -913,7 +1169,6 @@
       this.dropFloating();
 
       // chain check
-      var self = this;
       this.time.delayedCall(120, function () {
         var again = null;
         for (var g = 0; g < self.grid.length; g++) {
@@ -936,12 +1191,17 @@
           b.spr = null;
           b.mark = null;
           this.tweens.add({
-            targets: spr, scale: 1.6, alpha: 0, duration: 180, ease: "Cubic.easeOut",
+            targets: spr, scale: 1.85, alpha: 0, duration: 200, ease: "Back.easeIn",
             onComplete: function () { if (spr.destroy) spr.destroy(); }
+          });
+          // 爆開瞬間亮一點
+          spr.setTint(0xffffff);
+          this.tweens.add({
+            targets: spr, angle: Phaser.Math.Between(-25, 25), duration: 200
           });
           if (mark) {
             this.tweens.add({
-              targets: mark, scale: 1.4, alpha: 0, duration: 180,
+              targets: mark, scale: 1.6, alpha: 0, duration: 180,
               onComplete: function () { if (mark.destroy) mark.destroy(); }
             });
           }
@@ -971,38 +1231,50 @@
         doShake(this.cameras.main, 160, 0.022);
         // 貫穿整行
         var row = b.r;
-        var beam = this.add.rectangle(W / 2, this.rowY(row), W - 40, 10, 0xfbbf24, 0.85)
+        var beam = this.add.rectangle(W / 2, this.rowY(row), BOARD_W - 16, 8, 0xfbbf24, 0.85)
           .setDepth(30).setBlendMode(Phaser.BlendModes.ADD);
         this.tweens.add({
           targets: beam, alpha: 0, scaleY: 3, duration: 280, ease: "Cubic.easeOut",
           onComplete: function () { beam.destroy(); }
         });
         neonBurst(this, b.x, b.y, 0xfbbf24, 22);
+        rainbowConfetti(this, b.x, this.rowY(row), 1.4);
 
         var victims = [];
+        var bonus = 0;
         for (var i = 0; i < this.grid.length; i++) {
           if (this.grid[i].r === row) {
             victims.push(this.grid[i]);
-            this.score += Math.floor(15 * this.diff.scoreMult);
+            bonus += Math.floor(15 * this.diff.scoreMult);
           }
         }
+        this.addScore(bonus, { flash: true, colorIdx: 4 });
+        glamScoreFx(this, W / 2, this.rowY(row), bonus, {
+          colorIdx: 4, banner: "LIGHTNING", mega: victims.length >= 8
+        });
         this.popVisual(victims);
         this.removeFromGrid(victims);
       } else if (b.special === "blackhole") {
         SFX.blackhole();
         doShake(this.cameras.main, 170, 0.024);
         neonBurst(this, b.x, b.y, 0xa78bfa, 26);
+        shockRing(this, b.x, b.y, 0xa78bfa, 5.5);
         // 吸附消除周圍 3×3
         var victims = [];
+        var bonus = 0;
         for (var i = 0; i < this.grid.length; i++) {
           var g = this.grid[i];
           var dc = Math.abs(g.c - b.c);
           var dr = Math.abs(g.r - b.r);
           if (dc <= 1 && dr <= 1) {
             victims.push(g);
-            this.score += Math.floor(12 * this.diff.scoreMult);
+            bonus += Math.floor(12 * this.diff.scoreMult);
           }
         }
+        this.addScore(bonus, { flash: true, colorIdx: 1 });
+        glamScoreFx(this, b.x, b.y, bonus, {
+          colorIdx: 1, banner: "VOID PULL", mega: victims.length >= 7
+        });
         for (var v = 0; v < victims.length; v++) {
           if (victims[v].spr) {
             this.tweens.add({
@@ -1050,9 +1322,12 @@
 
       SFX.drop();
       doShake(this.cameras.main, 100, 0.012);
+      var dropPts = 0;
+      var midX = 0, midY = 0;
       for (var d = 0; d < drop.length; d++) {
         var db = drop[d];
-        this.score += Math.floor(8 * (1 + this.combo * 0.15) * this.diff.scoreMult);
+        dropPts += Math.floor(8 * (1 + this.combo * 0.15) * this.diff.scoreMult);
+        midX += db.x; midY += db.y;
         var spr = db.spr;
         var mark = db.mark;
         db.spr = null;
@@ -1078,6 +1353,15 @@
           life: 1.4
         });
       }
+      if (dropPts > 0) {
+        midX /= drop.length; midY /= drop.length;
+        this.addScore(dropPts, { colorIdx: drop[0].colorIdx });
+        glamScoreFx(this, midX, Math.min(midY + 20, H - 120), dropPts, {
+          colorIdx: drop[0].colorIdx,
+          banner: drop.length >= 4 ? "DROP BONUS" : null,
+          mega: drop.length >= 6
+        });
+      }
     }
 
     afterResolve() {
@@ -1088,9 +1372,17 @@
       this.checkDanger();
 
       if (this.grid.length === 0) {
-        this.score += Math.floor(800 * this.diff.scoreMult);
+        var clearBonus = Math.floor(800 * this.diff.scoreMult);
+        this.addScore(clearBonus, { flash: "mega", colorIdx: 0 });
         SFX.ladder(6);
-        doShake(this.cameras.main, 140, 0.018);
+        SFX.mega();
+        doShake(this.cameras.main, 180, 0.028);
+        glamScoreFx(this, W / 2, H / 2 - 40, clearBonus, {
+          colorIdx: 0, banner: "BOARD CLEAR", mega: true
+        });
+        rainbowConfetti(this, W / 2, H / 2, 2.4);
+        rainbowConfetti(this, W / 3, H / 2 - 30, 1.6);
+        rainbowConfetti(this, (W * 2) / 3, H / 2 - 30, 1.6);
         this.initGrid();
         this.dropTimer = this.diff.dropEvery / Math.max(0.5, this.dangerMultiplier);
       }
@@ -1110,9 +1402,11 @@
       }
 
       var newRow = [];
+      var n = Math.min(COLOR_HEX.length, this.diff.paletteSize || COLOR_HEX.length);
+      var fill = this.diff.initFill != null ? this.diff.initFill : 0.82;
       for (var c = 0; c < COLS; c++) {
-        if (Math.random() < 0.82) {
-          newRow.push(this.makeBubble(c, 0, Phaser.Math.Between(0, COLOR_HEX.length - 1), this.rollSpecial()));
+        if (Math.random() < fill) {
+          newRow.push(this.makeBubble(c, 0, Phaser.Math.Between(0, n - 1), this.rollSpecial()));
         }
       }
       this.grid = newRow.concat(this.grid);
@@ -1190,9 +1484,13 @@
       if (this.cursors.right.isDown) this.aimAngle += aimSpd * dt;
       this.aimAngle = Phaser.Math.Clamp(this.aimAngle, -1.35, 1.35);
 
-      // 壓陣間隔隨危險倍率縮短（Extreme 基準 5 秒）
-      var dropEvery = this.diff.dropEvery / Math.max(0.55, threat * 0.85 + 0.15);
-      if (this.diff.forceDrop) dropEvery = Math.min(dropEvery, 5 / Math.max(1, threat * 0.7));
+      // 壓陣間隔：依難度 dropThreat 緩和遞增；Extreme 有 forceDropCap
+      var threatFactor = 1 + (threat - 1) * (this.diff.dropThreat != null ? this.diff.dropThreat : 0.65);
+      var dropEvery = this.diff.dropEvery / Math.max(0.6, threatFactor);
+      if (this.diff.forceDrop) {
+        var cap = this.diff.forceDropCap || 7;
+        dropEvery = Math.min(dropEvery, cap / Math.max(1, 0.85 + (threat - 1) * 0.45));
+      }
       this.dropTimer -= dt;
       if (this.dropTimer <= 0) {
         this.pushCeiling();
@@ -1205,8 +1503,8 @@
         f.x += f.vx * dt;
         f.y += f.vy * dt;
         f.spr.setPosition(f.x, f.y);
-        if (f.x < RADIUS) { f.x = RADIUS; f.vx = Math.abs(f.vx); SFX.bounce(); }
-        if (f.x > W - RADIUS) { f.x = W - RADIUS; f.vx = -Math.abs(f.vx); SFX.bounce(); }
+        if (f.x < this.wallLeft()) { f.x = this.wallLeft(); f.vx = Math.abs(f.vx); SFX.bounce(); }
+        if (f.x > this.wallRight()) { f.x = this.wallRight(); f.vx = -Math.abs(f.vx); SFX.bounce(); }
         if (f.y < TOP_PAD + RADIUS) { this.landBubble(f); }
         else {
           for (var i = 0; i < this.grid.length; i++) {
@@ -1238,9 +1536,31 @@
       this.drawAimLaser();
       this.cannon.setRotation(this.aimAngle);
 
-      this.hudScore.setText("SCORE " + this.score.toLocaleString());
+      // 分數平滑追趕，視覺更華麗
+      if (this.displayScore < this.score) {
+        var gap = this.score - this.displayScore;
+        this.displayScore += Math.max(1, Math.ceil(gap * Math.min(1, dt * 8)));
+        if (this.displayScore > this.score) this.displayScore = this.score;
+      }
+      this.hudScore.setText("SCORE " + Math.floor(this.displayScore).toLocaleString());
       this.hudDanger.setText("DANGER: x" + this.dangerMultiplier.toFixed(2));
-      this.hudCombo.setText(this.combo > 0 ? "COMBO x" + this.combo : "COMBO —");
+      if (this.combo > 0) {
+        this.hudCombo.setText("COMBO ×" + this.combo);
+        var comboCols = ["#fbbf24", "#f472b6", "#a78bfa", "#22d3ee", "#34d399"];
+        this.hudCombo.setColor(comboCols[Math.min(this.combo - 1, comboCols.length - 1)]);
+        if (this._lastHudCombo !== this.combo) {
+          this._lastHudCombo = this.combo;
+          this.tweens.killTweensOf(this.hudCombo);
+          this.hudCombo.setScale(1);
+          this.tweens.add({
+            targets: this.hudCombo, scale: 1.28, duration: 100, yoyo: true, ease: "Back.easeOut"
+          });
+        }
+      } else {
+        this._lastHudCombo = 0;
+        this.hudCombo.setText("COMBO —");
+        this.hudCombo.setColor("#fbbf24");
+      }
       this.hudDrop.setText("DROP " + Math.max(0, this.dropTimer).toFixed(1) + "s");
     }
   }
@@ -1312,6 +1632,13 @@
       this.tweens.add({ targets: scoreTxt, alpha: 1, scale: 1, duration: 480, ease: "Back.easeOut", delay: 100 });
 
       neonBurst(this, W / 2, H / 2 - 40, 0x22d3ee, 22);
+      rainbowConfetti(this, W / 2, H / 2 - 40, 1.8);
+      glamScoreFx(this, W / 2, H / 2 - 100, score, {
+        colorIdx: 0,
+        label: score.toLocaleString(),
+        banner: "FINAL SCORE",
+        mega: score >= 5000
+      });
 
       var self = this;
       var retry = makeButton(this, W / 2 - 110, H / 2 + 95, "再試一次", 0x22d3ee, function () {

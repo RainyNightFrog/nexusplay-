@@ -1943,121 +1943,670 @@
       title: "ASTRO GRAVITY RUNNER",
       titleZh: "星際重力翻轉者",
       accent: 0x34d399,
-      help: "Space / W / ↑ 翻轉重力，在上下跑道切換並閃避障礙陣列。撞到障礙即結束。",
-      objective: "翻轉重力 · 閃過障礙 · 收集星核",
+      help: "點擊／空白鍵／W／↑ 翻轉重力，在上下星軌之間滑翔。障礙可讀可躲，翻轉途中仍會碰撞。同 X 不會雙線封死。收集星核加分。",
+      objective: "流暢翻轉 · 讀陣閃避 · 收集星核",
       scoreVerb: "DIST",
       startState: function (scene) {
         scene.physics.world.setBounds(0, 0, W, H);
         scene.physics.world.gravity.y = 0;
+
+        // 跑道對齊地板：消除「站在空中」的奇怪感
+        scene.laneDown = H - 96;
+        scene.laneUp = 96;
+        scene.railHalf = 10;
         scene.runnerGravity = 1;
-        scene.laneDown = H - 110;
-        scene.laneUp = 110;
-        scene.player = scene.physics.add.sprite(170, scene.laneDown, "runner");
-        scene.player.body.allowGravity = false;
-        scene.player.setCollideWorldBounds(true);
-        scene.player.setSize(52, 22);
-        scene.player.setOffset(8, 3);
-        scene.player.setTint(0x34d399);
-        scene.obstacles = scene.physics.add.group();
-        scene.stars = scene.physics.add.group();
+        scene.isFlipping = false;
+        scene.flipCd = 0;
+        scene.flipInvuln = 0;
         scene.spawnAcc = 0;
         scene.starAcc = 0;
-        scene.flipCd = 0;
-        scene.floorLines = [
-          scene.add.rectangle(W / 2, H - 70, W, 12, 0x0ea5e9, 0.8),
-          scene.add.rectangle(W / 2, 70, W, 12, 0x8b5cf6, 0.8)
-        ];
+        scene.patternQueue = [];
+        scene.lastSpawnLane = 1;
+
+        // 專用炫彩貼圖 v3（強制新 key，避免舊貼圖殘留）
+        (function buildAstroArt() {
+          var g = scene.make.graphics({ x: 0, y: 0, add: false });
+
+          // ── 艦體：流線戰艦 + 雙翼刃 + 引擎噴口 ──
+          g.clear();
+          // 外層光暈底
+          g.fillStyle(0x34d399, 0.25);
+          g.fillEllipse(48, 22, 92, 36);
+          // 下翼
+          g.fillStyle(0x059669, 1);
+          g.fillTriangle(18, 22, 52, 34, 8, 38);
+          g.fillStyle(0xf472b6, 0.95);
+          g.fillTriangle(20, 24, 48, 32, 12, 36);
+          // 上翼
+          g.fillStyle(0x0ea5e9, 1);
+          g.fillTriangle(18, 22, 52, 10, 8, 6);
+          g.fillStyle(0xa78bfa, 0.95);
+          g.fillTriangle(20, 20, 48, 12, 12, 8);
+          // 主艦身
+          g.fillStyle(0x022c22, 1);
+          g.fillRoundedRect(10, 12, 58, 20, 8);
+          g.fillStyle(0x34d399, 1);
+          g.fillRoundedRect(12, 14, 54, 16, 7);
+          g.fillStyle(0x6ee7b7, 1);
+          g.fillRoundedRect(16, 16, 42, 8, 4);
+          // 金色裝甲飾條
+          g.fillStyle(0xfbbf24, 1);
+          g.fillRect(18, 20, 38, 3);
+          g.fillStyle(0xfff7ed, 0.9);
+          g.fillRect(20, 20, 20, 1);
+          // 座艙
+          g.fillStyle(0x082f49, 1);
+          g.fillRoundedRect(22, 15, 20, 10, 4);
+          g.fillStyle(0x22d3ee, 0.95);
+          g.fillRoundedRect(24, 16, 16, 8, 3);
+          g.fillStyle(0xffffff, 0.75);
+          g.fillCircle(30, 19, 2.5);
+          // 艦首刃
+          g.fillStyle(0xecfeff, 1);
+          g.fillTriangle(64, 14, 94, 22, 64, 30);
+          g.fillStyle(0x67e8f9, 1);
+          g.fillTriangle(66, 16, 88, 22, 66, 28);
+          g.fillStyle(0xfbbf24, 1);
+          g.fillTriangle(78, 20, 94, 22, 78, 24);
+          // 引擎噴口
+          g.fillStyle(0x0f172a, 1);
+          g.fillRoundedRect(4, 15, 12, 14, 3);
+          g.fillStyle(0xf472b6, 1);
+          g.fillCircle(8, 22, 5);
+          g.fillStyle(0xfbbf24, 1);
+          g.fillCircle(7, 22, 3);
+          g.fillStyle(0xffffff, 0.95);
+          g.fillCircle(6, 21, 1.5);
+          g.generateTexture("astro-ship-v3", 96, 44);
+
+          // ── 下軌尖刺：高對比警示錐（紅白斜紋，易辨）──
+          g.clear();
+          g.fillStyle(0x000000, 0.55);
+          g.fillTriangle(30, 4, 58, 54, 2, 54);
+          g.fillStyle(0xffffff, 1);
+          g.fillTriangle(30, 2, 56, 52, 4, 52);
+          g.fillStyle(0xdc2626, 1);
+          g.fillTriangle(30, 8, 50, 50, 10, 50);
+          // 黃黑警示斜紋
+          g.fillStyle(0xfbbf24, 1);
+          g.fillTriangle(30, 16, 44, 46, 30, 46);
+          g.fillStyle(0x111827, 1);
+          g.fillTriangle(30, 22, 40, 46, 30, 46);
+          g.fillStyle(0xfbbf24, 1);
+          g.fillTriangle(30, 30, 36, 46, 30, 46);
+          // 驚嘆號
+          g.fillStyle(0xffffff, 1);
+          g.fillRoundedRect(27, 20, 6, 16, 2);
+          g.fillCircle(30, 42, 3.5);
+          g.generateTexture("astro-spike-down", 60, 56);
+
+          // ── 上軌尖刺：紫白警示錐（與下軌明顯不同色）──
+          g.clear();
+          g.fillStyle(0x000000, 0.55);
+          g.fillTriangle(30, 4, 58, 54, 2, 54);
+          g.fillStyle(0xffffff, 1);
+          g.fillTriangle(30, 2, 56, 52, 4, 52);
+          g.fillStyle(0x7c3aed, 1);
+          g.fillTriangle(30, 8, 50, 50, 10, 50);
+          g.fillStyle(0xf5d0fe, 1);
+          g.fillTriangle(30, 16, 44, 46, 30, 46);
+          g.fillStyle(0x4c1d95, 1);
+          g.fillTriangle(30, 22, 40, 46, 30, 46);
+          g.fillStyle(0xf5d0fe, 1);
+          g.fillTriangle(30, 30, 36, 46, 30, 46);
+          g.fillStyle(0xffffff, 1);
+          g.fillRoundedRect(27, 20, 6, 16, 2);
+          g.fillCircle(30, 42, 3.5);
+          g.generateTexture("astro-spike-up", 60, 56);
+
+          // ── 下軌能量柱：紅底白框 + DANGER 條紋 ──
+          g.clear();
+          g.fillStyle(0x000000, 0.5);
+          g.fillRoundedRect(4, 2, 44, 72, 8);
+          g.fillStyle(0xffffff, 1);
+          g.fillRoundedRect(6, 4, 40, 68, 7);
+          g.fillStyle(0xb91c1c, 1);
+          g.fillRoundedRect(10, 8, 32, 60, 5);
+          g.fillStyle(0xfbbf24, 1);
+          g.fillRect(10, 14, 32, 10);
+          g.fillStyle(0x111827, 1);
+          g.fillRect(10, 24, 32, 10);
+          g.fillStyle(0xfbbf24, 1);
+          g.fillRect(10, 34, 32, 10);
+          g.fillStyle(0x111827, 1);
+          g.fillRect(10, 44, 32, 10);
+          g.fillStyle(0xffffff, 1);
+          g.fillCircle(26, 58, 8);
+          g.fillStyle(0xdc2626, 1);
+          g.fillRoundedRect(24, 50, 4, 10, 1);
+          g.fillCircle(26, 64, 2.5);
+          g.generateTexture("astro-pillar-down", 52, 76);
+
+          // ── 上軌能量柱：紫底白框 ──
+          g.clear();
+          g.fillStyle(0x000000, 0.5);
+          g.fillRoundedRect(4, 2, 44, 72, 8);
+          g.fillStyle(0xffffff, 1);
+          g.fillRoundedRect(6, 4, 40, 68, 7);
+          g.fillStyle(0x6d28d9, 1);
+          g.fillRoundedRect(10, 8, 32, 60, 5);
+          g.fillStyle(0xe9d5ff, 1);
+          g.fillRect(10, 14, 32, 10);
+          g.fillStyle(0x2e1065, 1);
+          g.fillRect(10, 24, 32, 10);
+          g.fillStyle(0xe9d5ff, 1);
+          g.fillRect(10, 34, 32, 10);
+          g.fillStyle(0x2e1065, 1);
+          g.fillRect(10, 44, 32, 10);
+          g.fillStyle(0xffffff, 1);
+          g.fillCircle(26, 58, 8);
+          g.fillStyle(0xa78bfa, 1);
+          g.fillRoundedRect(24, 50, 4, 10, 1);
+          g.fillCircle(26, 64, 2.5);
+          g.generateTexture("astro-pillar-up", 52, 76);
+
+          // ── 星核獎勵：棱彩寶珠 + 八角芒 ──
+          g.clear();
+          g.fillStyle(0xfbbf24, 0.35);
+          g.fillCircle(28, 28, 26);
+          // 八角星芒
+          g.fillStyle(0xfde68a, 0.9);
+          g.fillTriangle(28, 2, 32, 22, 24, 22);
+          g.fillTriangle(28, 54, 32, 34, 24, 34);
+          g.fillTriangle(2, 28, 22, 32, 22, 24);
+          g.fillTriangle(54, 28, 34, 32, 34, 24);
+          g.fillStyle(0xf472b6, 0.85);
+          g.fillTriangle(10, 10, 24, 24, 18, 28);
+          g.fillTriangle(46, 10, 32, 24, 38, 28);
+          g.fillTriangle(10, 46, 24, 32, 18, 28);
+          g.fillTriangle(46, 46, 32, 32, 38, 28);
+          // 珠體
+          g.fillStyle(0xb45309, 1);
+          g.fillCircle(28, 28, 14);
+          g.fillStyle(0xfbbf24, 1);
+          g.fillCircle(28, 28, 12);
+          g.fillStyle(0x22d3ee, 0.9);
+          g.fillCircle(28, 28, 8);
+          g.fillStyle(0xffffff, 1);
+          g.fillCircle(28, 28, 5);
+          g.fillStyle(0xf472b6, 0.8);
+          g.fillCircle(24, 24, 3);
+          g.fillStyle(0xffffff, 1);
+          g.fillCircle(23, 23, 1.5);
+          g.generateTexture("astro-core-v3", 56, 56);
+
+          // ── 光粒子／拖尾用 ──
+          g.clear();
+          g.fillStyle(0x34d399, 1);
+          g.fillCircle(4, 4, 4);
+          g.generateTexture("astro-spark-g", 8, 8);
+          g.clear();
+          g.fillStyle(0x22d3ee, 1);
+          g.fillCircle(4, 4, 4);
+          g.generateTexture("astro-spark-c", 8, 8);
+          g.clear();
+          g.fillStyle(0xf472b6, 1);
+          g.fillCircle(4, 4, 4);
+          g.generateTexture("astro-spark-p", 8, 8);
+          g.clear();
+          g.fillStyle(0xfbbf24, 1);
+          g.fillCircle(5, 5, 5);
+          g.generateTexture("astro-spark-gold", 10, 10);
+          g.clear();
+          g.fillStyle(0xa78bfa, 1);
+          g.fillCircle(4, 4, 4);
+          g.generateTexture("astro-spark-v", 8, 8);
+
+          g.destroy();
+        })();
+
+        // 雙星軌：寬霓虹軌道 + 內發光
+        scene.add.rectangle(W / 2, H / 2, W, H, 0x020617, 0.35).setDepth(0);
+        var railDown = scene.add.rectangle(W / 2, scene.laneDown + 24, W + 40, 22, 0x0ea5e9, 0.35).setDepth(2);
+        var railUp = scene.add.rectangle(W / 2, scene.laneUp - 24, W + 40, 22, 0x8b5cf6, 0.35).setDepth(2);
+        railDown.setStrokeStyle(2, 0x67e8f9, 0.85);
+        railUp.setStrokeStyle(2, 0xc4b5fd, 0.85);
+        scene.floorLines = [railDown, railUp];
+        scene.add.rectangle(W / 2, scene.laneDown + 24, W + 40, 3, 0xecfeff, 0.95)
+          .setDepth(3).setBlendMode(Phaser.BlendModes.ADD);
+        scene.add.rectangle(W / 2, scene.laneUp - 24, W + 40, 3, 0xf5d0fe, 0.95)
+          .setDepth(3).setBlendMode(Phaser.BlendModes.ADD);
+        scene.add.rectangle(W / 2, H / 2, W, 3, 0x22d3ee, 0.12)
+          .setDepth(1).setBlendMode(Phaser.BlendModes.ADD);
+
+        // 背景漂浮星塵
+        for (var si = 0; si < 28; si++) {
+          var sc = [0x22d3ee, 0xa78bfa, 0xf472b6, 0xfbbf24, 0x34d399][si % 5];
+          var starDust = scene.add.circle(
+            Phaser.Math.Between(20, W - 20),
+            Phaser.Math.Between(40, H - 40),
+            Phaser.Math.Between(1, 3), sc, Phaser.Math.FloatBetween(0.15, 0.45)
+          ).setDepth(1).setBlendMode(Phaser.BlendModes.ADD);
+          scene.tweens.add({
+            targets: starDust,
+            x: starDust.x - Phaser.Math.Between(40, 120),
+            alpha: 0.08,
+            duration: Phaser.Math.Between(1800, 3600),
+            yoyo: true,
+            repeat: -1,
+            ease: "Sine.easeInOut"
+          });
+        }
+
+        scene.player = scene.physics.add.sprite(168, scene.laneDown, "astro-ship-v3");
+        scene.player.body.allowGravity = false;
+        scene.player.setCollideWorldBounds(true);
+        scene.player.setSize(52, 18);
+        scene.player.setOffset(14, 13);
+        scene.player.setDepth(12);
+        scene.player.setScale(1.05);
+
+        // 雙層艦體光環
+        scene.shipGlow = scene.add.circle(scene.player.x - 6, scene.player.y, 28, 0x34d399, 0.22)
+          .setDepth(10).setBlendMode(Phaser.BlendModes.ADD);
+        scene.shipGlow2 = scene.add.circle(scene.player.x + 8, scene.player.y, 16, 0x22d3ee, 0.28)
+          .setDepth(10).setBlendMode(Phaser.BlendModes.ADD);
+        scene.tweens.add({
+          targets: scene.shipGlow, scale: 1.25, alpha: 0.12, duration: 520, yoyo: true, repeat: -1, ease: "Sine.easeInOut"
+        });
+        scene.tweens.add({
+          targets: scene.shipGlow2, scale: 1.35, alpha: 0.1, duration: 380, yoyo: true, repeat: -1, ease: "Sine.easeInOut"
+        });
+
+        // 引擎拖尾粒子
+        scene.engineTrail = scene.add.particles(scene.player.x - 28, scene.player.y, "astro-spark-g", {
+          speed: { min: 40, max: 120 },
+          angle: { min: 150, max: 210 },
+          lifespan: { min: 220, max: 480 },
+          scale: { start: 1.1, end: 0 },
+          alpha: { start: 0.95, end: 0 },
+          blendMode: "ADD",
+          frequency: 28,
+          quantity: 2
+        }).setDepth(11);
+        scene.engineTrail2 = scene.add.particles(scene.player.x - 24, scene.player.y, "astro-spark-p", {
+          speed: { min: 20, max: 80 },
+          angle: { min: 160, max: 200 },
+          lifespan: { min: 180, max: 360 },
+          scale: { start: 0.8, end: 0 },
+          alpha: { start: 0.7, end: 0 },
+          blendMode: "ADD",
+          frequency: 40,
+          quantity: 1
+        }).setDepth(11);
+
+        scene.obstacles = scene.physics.add.group();
+        scene.stars = scene.physics.add.group();
+
+        scene.syncShipPose = function () {
+          scene.player.setAngle(scene.runnerGravity > 0 ? 5 : -5);
+          scene.player.setFlipY(false);
+          var down = scene.runnerGravity > 0;
+          if (scene.shipGlow) scene.shipGlow.setFillStyle(down ? 0x34d399 : 0xa78bfa, 0.28);
+          if (scene.shipGlow2) scene.shipGlow2.setFillStyle(down ? 0x22d3ee : 0xf472b6, 0.32);
+        };
+        scene.syncShipPose();
+
+        scene.destroyFxChild = function (obj) {
+          if (!obj) return;
+          var aura = obj.getData("aura");
+          var ring = obj.getData("ring");
+          var trail = obj.getData("trail");
+          var tag = obj.getData("tag");
+          if (aura && aura.destroy) aura.destroy();
+          if (ring && ring.destroy) ring.destroy();
+          if (trail && trail.destroy) trail.destroy();
+          if (tag && tag.destroy) tag.destroy();
+        };
+
+        scene.doFlip = function () {
+          if (!scene.alive || scene.isFlipping || scene.flipCd > 0) return;
+          scene.runnerGravity *= -1;
+          scene.flipCd = 0.12;
+          scene.isFlipping = true;
+          scene.flipInvuln = 0.07;
+          var targetY = scene.runnerGravity > 0 ? scene.laneDown : scene.laneUp;
+          SFX.jump();
+          scene.cameras.main.shake(70, 0.007);
+          neonBurst(scene, scene.player.x, scene.player.y, "spark-green", 16);
+          neonBurst(scene, scene.player.x, scene.player.y, "spark-violet", 14);
+          neonBurst(scene, scene.player.x, scene.player.y, "spark-gold", 12);
+          // 翻轉光柱
+          var beam = scene.add.rectangle(scene.player.x, H / 2, 18, H - 80, 0x34d399, 0.35)
+            .setDepth(9).setBlendMode(Phaser.BlendModes.ADD);
+          scene.tweens.add({
+            targets: beam, alpha: 0, scaleX: 3, duration: 260, ease: "Cubic.easeOut",
+            onComplete: function () { beam.destroy(); }
+          });
+          scene.syncShipPose();
+
+          scene.tweens.killTweensOf(scene.player);
+          scene.tweens.add({
+            targets: scene.player,
+            y: targetY,
+            duration: 200,
+            ease: "Cubic.easeInOut",
+            onUpdate: function () {
+              if (scene.player && scene.player.body) {
+                scene.player.body.reset(scene.player.x, scene.player.y);
+              }
+            },
+            onComplete: function () {
+              scene.isFlipping = false;
+              if (scene.player && scene.player.body) {
+                scene.player.y = targetY;
+                scene.player.body.reset(scene.player.x, targetY);
+              }
+            }
+          });
+        };
+
         scene.hitObstacle = function (obs) {
           if (!scene.alive || !obs || !obs.active) return;
+          if (scene.flipInvuln > 0) return;
+          scene.destroyFxChild(obs);
           try { obs.destroy(); } catch (_e) {}
           SFX.hit();
           SFX.explode();
           scene.cameras.main.shake(220, 0.028);
           neonBurst(scene, scene.player.x, scene.player.y, "spark-pink", 28);
           neonBurst(scene, scene.player.x, scene.player.y, "spark-violet", 18);
+          neonBurst(scene, scene.player.x, scene.player.y, "spark-gold", 14);
           scene.gameOver();
         };
+
         scene.physics.add.overlap(scene.player, scene.obstacles, function (_p, obs) {
           scene.hitObstacle(obs);
         });
         scene.physics.add.overlap(scene.player, scene.stars, function (_p, star) {
           if (!star.active) return;
+          var sx = star.x;
+          var sy = star.y;
+          scene.destroyFxChild(star);
           star.destroy();
-          scene.score += Math.floor(140 * scene.diff.scoreMult * (0.85 + scene.dangerMultiplier * 0.15));
+          scene.score += Math.floor(160 * scene.diff.scoreMult * (0.85 + scene.dangerMultiplier * 0.15));
           SFX.score();
-          scene.cameras.main.shake(100, 0.01);
-          neonBurst(scene, scene.player.x, scene.player.y, "spark-gold", 18);
+          scene.cameras.main.shake(100, 0.012);
+          neonBurst(scene, sx, sy, "spark-gold", 26);
+          neonBurst(scene, sx, sy, "spark-pink", 16);
+          neonBurst(scene, sx, sy, "spark-cyan", 14);
+          // 炫彩得分彈幕
+          var pop = scene.add.text(sx, sy, "+STAR CORE", {
+            fontFamily: "Segoe UI, sans-serif", fontSize: "18px", fontStyle: "bold",
+            color: "#ffffff", stroke: "#fbbf24", strokeThickness: 4
+          }).setOrigin(0.5).setDepth(30).setScale(0.5);
+          var ghost = scene.add.text(sx, sy, "+STAR CORE", {
+            fontFamily: "Segoe UI, sans-serif", fontSize: "18px", fontStyle: "bold", color: "#f472b6"
+          }).setOrigin(0.5).setDepth(29).setAlpha(0.6);
+          scene.tweens.add({
+            targets: [pop, ghost], y: sy - 48, scale: 1.25, duration: 520, ease: "Back.easeOut"
+          });
+          scene.tweens.add({
+            targets: [pop, ghost], alpha: 0, duration: 360, delay: 200, ease: "Cubic.easeIn",
+            onComplete: function () { pop.destroy(); ghost.destroy(); }
+          });
+          var ring = scene.add.circle(sx, sy, 8, 0xfbbf24, 0)
+            .setStrokeStyle(3, 0xfbbf24, 1).setDepth(28).setBlendMode(Phaser.BlendModes.ADD);
+          scene.tweens.add({
+            targets: ring, scale: 5, alpha: 0, duration: 400, ease: "Cubic.easeOut",
+            onComplete: function () { ring.destroy(); }
+          });
         });
+
+        scene.input.on("pointerdown", function () {
+          if (scene.alive) scene.doFlip();
+        });
+
+        scene.spawnObstacle = function (lane, kind, xExtra) {
+          var laneY = lane === 0 ? scene.laneDown : scene.laneUp;
+          var key = kind === "pillar"
+            ? (lane === 0 ? "astro-pillar-down" : "astro-pillar-up")
+            : (lane === 0 ? "astro-spike-down" : "astro-spike-up");
+          var obs = scene.obstacles.create(W + 48 + (xExtra || 0), laneY, key);
+          obs.body.allowGravity = false;
+          if (kind === "pillar") {
+            obs.setSize(26, 52);
+            obs.setOffset(13, 12);
+            obs.y = lane === 0 ? laneY - 12 : laneY + 12;
+            obs.setScale(1.12);
+          } else {
+            obs.setSize(30, 32);
+            obs.setOffset(15, 14);
+            if (lane === 1) obs.setFlipY(true);
+            obs.y = lane === 0 ? laneY - 6 : laneY + 6;
+            obs.setScale(1.15);
+          }
+          if (obs.body) obs.body.reset(obs.x, obs.y);
+          obs.setDepth(8);
+          obs.setData("lane", lane);
+
+          // 清晰描邊光暈（深色陰影＋細亮框），避免糊成一片
+          var shadow = scene.add.circle(obs.x, obs.y + 2, kind === "pillar" ? 28 : 22, 0x000000, 0.45)
+            .setDepth(7);
+          var ring = scene.add.circle(obs.x, obs.y, kind === "pillar" ? 26 : 20, 0xffffff, 0)
+            .setStrokeStyle(3, lane === 0 ? 0xfbbf24 : 0xe9d5ff, 1)
+            .setDepth(7);
+          // 警示標籤：下軌「危」、上軌「險」一眼分色
+          var tag = scene.add.text(obs.x, obs.y + (kind === "pillar" ? -40 : -28), lane === 0 ? "▼危" : "▲險", {
+            fontFamily: "Microsoft JhengHei, Segoe UI, sans-serif",
+            fontSize: "13px",
+            fontStyle: "bold",
+            color: "#ffffff",
+            backgroundColor: lane === 0 ? "#dc2626" : "#7c3aed",
+            padding: { x: 5, y: 2 }
+          }).setOrigin(0.5).setDepth(9);
+          scene.tweens.add({
+            targets: ring, scale: 1.12, duration: 280, yoyo: true, repeat: -1, ease: "Sine.easeInOut"
+          });
+          obs.setData("aura", shadow);
+          obs.setData("ring", ring);
+          obs.setData("tag", tag);
+          return obs;
+        };
+
+        scene.enqueuePatterns = function (threat) {
+          // 可讀陣型：絕不在同一 X 雙線封死
+          var bag = [
+            { kind: "single", lane: 0 },
+            { kind: "single", lane: 1 },
+            { kind: "single", lane: scene.lastSpawnLane ^ 1 },
+            { kind: "pair-stagger", first: 0 },
+            { kind: "pair-stagger", first: 1 },
+            { kind: "triple-alt" },
+            { kind: "pillar-gate", lane: 0 },
+            { kind: "pillar-gate", lane: 1 }
+          ];
+          if (threat > 1.35) {
+            bag.push({ kind: "fast-double", lane: 0 });
+            bag.push({ kind: "fast-double", lane: 1 });
+          }
+          if (threat > 1.8) {
+            bag.push({ kind: "zig-zag" });
+          }
+          // Casual 偏單障、少連發
+          if (scene.diffKey === "casual") {
+            bag = bag.filter(function (p) {
+              return p.kind === "single" || p.kind === "pair-stagger" || p.kind === "pillar-gate";
+            });
+          }
+          Phaser.Utils.Array.Shuffle(bag);
+          for (var i = 0; i < Math.min(4, bag.length); i++) scene.patternQueue.push(bag[i]);
+        };
+
+        scene.firePattern = function (pat, speed) {
+          if (!pat) return;
+          if (pat.kind === "single") {
+            scene.spawnObstacle(pat.lane, "spike", 0).setVelocityX(-speed);
+            scene.lastSpawnLane = pat.lane;
+          } else if (pat.kind === "pair-stagger") {
+            // 錯開 X：先逼翻轉，再回來——可讀
+            var a = scene.spawnObstacle(pat.first, "spike", 0);
+            var b = scene.spawnObstacle(pat.first ^ 1, "spike", 150);
+            a.setVelocityX(-speed);
+            b.setVelocityX(-speed);
+            scene.lastSpawnLane = pat.first ^ 1;
+          } else if (pat.kind === "triple-alt") {
+            var lanes = [0, 1, 0];
+            for (var t = 0; t < 3; t++) {
+              scene.spawnObstacle(lanes[t], "spike", t * 120).setVelocityX(-speed);
+            }
+            scene.lastSpawnLane = 0;
+          } else if (pat.kind === "pillar-gate") {
+            scene.spawnObstacle(pat.lane, "pillar", 0).setVelocityX(-speed * 0.92);
+            scene.lastSpawnLane = pat.lane;
+          } else if (pat.kind === "fast-double") {
+            scene.spawnObstacle(pat.lane, "spike", 0).setVelocityX(-speed * 1.12);
+            scene.spawnObstacle(pat.lane, "spike", 70).setVelocityX(-speed * 1.12);
+            scene.lastSpawnLane = pat.lane;
+          } else if (pat.kind === "zig-zag") {
+            for (var z = 0; z < 4; z++) {
+              scene.spawnObstacle(z % 2, "spike", z * 100).setVelocityX(-speed * 1.05);
+            }
+            scene.lastSpawnLane = 1;
+          }
+        };
       },
       updateState: function (scene, dt, threat) {
         if (!scene.alive) return;
-        var flip =
+
+        var flipKey =
           Phaser.Input.Keyboard.JustDown(scene.cursors.space) ||
           Phaser.Input.Keyboard.JustDown(scene.keys.W) ||
           Phaser.Input.Keyboard.JustDown(scene.cursors.up) ||
           Phaser.Input.Keyboard.JustDown(scene.keys.SPACE);
+        if (flipKey) scene.doFlip();
+
         scene.flipCd = Math.max(0, scene.flipCd - dt);
-        // 立即翻轉，短冷卻避免誤觸連按，不阻塞碰撞判定
-        if (flip && scene.flipCd <= 0) {
-          scene.runnerGravity *= -1;
-          scene.flipCd = 0.14;
-          var targetY = scene.runnerGravity > 0 ? scene.laneDown : scene.laneUp;
-          scene.player.setVelocity(0, 0);
-          scene.player.y = targetY;
-          if (scene.player.body) {
-            scene.player.body.reset(scene.player.x, targetY);
-          }
-          scene.player.setAngle(scene.runnerGravity > 0 ? 0 : 180);
-          SFX.jump();
-          scene.cameras.main.shake(80, 0.008);
-          neonBurst(scene, scene.player.x, scene.player.y, "spark-green", 16);
+        scene.flipInvuln = Math.max(0, scene.flipInvuln - dt);
+
+        if (scene.shipGlow && scene.player) {
+          scene.shipGlow.setPosition(scene.player.x - 4, scene.player.y);
+        }
+        if (scene.shipGlow2 && scene.player) {
+          scene.shipGlow2.setPosition(scene.player.x + 10, scene.player.y);
+        }
+        if (scene.engineTrail && scene.player) {
+          scene.engineTrail.setPosition(scene.player.x - 30, scene.player.y);
+        }
+        if (scene.engineTrail2 && scene.player) {
+          scene.engineTrail2.setPosition(scene.player.x - 26, scene.player.y);
         }
 
-        // 手動 AABB：高速障礙避免物理 overlap 穿透漏判
-        var pb = scene.player.body;
-        if (pb) {
+        // 鎖定 X，避免世界邊界推擠造成左右漂移怪異
+        if (scene.player && scene.player.body) {
+          scene.player.x = 168;
+          scene.player.setVelocityX(0);
+          if (!scene.isFlipping) {
+            var lockY = scene.runnerGravity > 0 ? scene.laneDown : scene.laneUp;
+            if (Math.abs(scene.player.y - lockY) > 1) {
+              scene.player.y = lockY;
+              scene.player.body.reset(168, lockY);
+            }
+            scene.player.setVelocityY(0);
+          }
+        }
+
+        // 手動 AABB（高速防穿透）
+        var pb = scene.player && scene.player.body;
+        if (pb && scene.flipInvuln <= 0) {
           var kids = scene.obstacles.getChildren();
           for (var i = 0; i < kids.length; i++) {
             var obs = kids[i];
             if (!obs || !obs.active || !obs.body) continue;
             var ob = obs.body;
-            if (
-              pb.right > ob.left &&
-              pb.left < ob.right &&
-              pb.bottom > ob.top &&
-              pb.top < ob.bottom
-            ) {
+            if (pb.right > ob.left && pb.left < ob.right && pb.bottom > ob.top && pb.top < ob.bottom) {
               scene.hitObstacle(obs);
               return;
             }
           }
         }
 
+        var speed = 240 * threat + 40 + (scene.diffKey === "extreme" ? 40 : 0);
         scene.spawnAcc += dt;
         scene.starAcc += dt;
-        scene.score += Math.floor(18 * dt * scene.diff.scoreMult * threat);
-        if (scene.spawnAcc >= Math.max(0.28, 0.9 / threat)) {
+        scene.score += Math.floor(16 * dt * scene.diff.scoreMult * threat);
+
+        var spawnEvery = Math.max(
+          scene.diffKey === "casual" ? 0.72 : scene.diffKey === "extreme" ? 0.34 : 0.48,
+          (scene.diffKey === "casual" ? 1.15 : scene.diffKey === "extreme" ? 0.72 : 0.92) / Math.max(0.85, threat)
+        );
+        if (scene.spawnAcc >= spawnEvery) {
           scene.spawnAcc = 0;
-          var laneY = Phaser.Math.Between(0, 1) ? scene.laneDown : scene.laneUp;
-          var obstacle = scene.obstacles.create(W + 40, laneY, "block");
-          obstacle.body.allowGravity = false;
-          obstacle.setSize(34, 34);
-          obstacle.setOffset(3, 3);
-          obstacle.setVelocityX(-(260 * threat + Phaser.Math.Between(10, 50)));
-          obstacle.setTint(laneY < H / 2 ? 0xa78bfa : 0x22d3ee);
+          if (!scene.patternQueue.length) scene.enqueuePatterns(threat);
+          scene.firePattern(scene.patternQueue.shift(), speed);
         }
-        if (scene.starAcc >= Math.max(0.9, 2.4 / threat)) {
+
+        if (scene.starAcc >= Math.max(1.0, 2.6 / Math.max(0.9, threat))) {
           scene.starAcc = 0;
-          var starLane = Phaser.Math.Between(0, 1) ? scene.laneDown : scene.laneUp;
-          var star = scene.stars.create(W + 20, starLane, "xp");
+          var starLane = scene.lastSpawnLane ^ 1;
+          if (Math.random() < 0.28) starLane = Phaser.Math.Between(0, 1);
+          var starY = starLane === 0 ? scene.laneDown : scene.laneUp;
+          var star = scene.stars.create(W + 28, starY, "astro-core-v3");
           star.body.allowGravity = false;
-          star.setTint(0xfbbf24);
-          star.setVelocityX(-(240 * threat));
-          scene.tweens.add({ targets: star, scale: 1.25, alpha: 0.5, duration: 400, repeat: -1, yoyo: true, ease: "Sine.easeInOut" });
+          star.setVelocityX(-(speed * 0.88));
+          star.setDepth(9);
+          star.setScale(0.95);
+          star.setSize(28, 28);
+          star.setOffset(14, 14);
+
+          var aura = scene.add.circle(star.x, star.y, 22, 0xfbbf24, 0.28)
+            .setDepth(8).setBlendMode(Phaser.BlendModes.ADD);
+          var ring = scene.add.circle(star.x, star.y, 18, 0xf472b6, 0)
+            .setStrokeStyle(2, 0x22d3ee, 0.95)
+            .setDepth(8).setBlendMode(Phaser.BlendModes.ADD);
+          var trail = scene.add.particles(star.x, star.y, "astro-spark-gold", {
+            speed: { min: 10, max: 50 },
+            lifespan: 420,
+            scale: { start: 0.9, end: 0 },
+            alpha: { start: 0.85, end: 0 },
+            blendMode: "ADD",
+            frequency: 50,
+            follow: star
+          }).setDepth(8);
+          scene.tweens.add({
+            targets: star, scale: 1.15, angle: 360, duration: 900, repeat: -1, ease: "Linear"
+          });
+          scene.tweens.add({
+            targets: aura, scale: 1.4, alpha: 0.1, duration: 400, yoyo: true, repeat: -1, ease: "Sine.easeInOut"
+          });
+          scene.tweens.add({
+            targets: ring, scale: 1.5, alpha: 0.3, duration: 480, yoyo: true, repeat: -1, ease: "Sine.easeInOut"
+          });
+          star.setData("aura", aura);
+          star.setData("ring", ring);
+          star.setData("trail", trail);
         }
-        scene.obstacles.getChildren().forEach(function (obs) { if (obs.active && obs.x < -40) obs.destroy(); });
-        scene.stars.getChildren().forEach(function (star) { if (star.active && star.x < -30) star.destroy(); });
-        scene.setExtraHud("GRAV " + (scene.runnerGravity > 0 ? "DOWN" : "UP") + " · HIT=OUT");
+
+        scene.obstacles.getChildren().forEach(function (o) {
+          if (!o.active) return;
+          var isPillar = o.texture && (o.texture.key === "astro-pillar-down" || o.texture.key === "astro-pillar-up");
+          if (o.body) o.setVelocityX(-(speed * (isPillar ? 0.92 : 1)));
+          var aura = o.getData("aura");
+          var ring = o.getData("ring");
+          var tag = o.getData("tag");
+          if (aura) aura.setPosition(o.x, o.y + 2);
+          if (ring) ring.setPosition(o.x, o.y);
+          if (tag) tag.setPosition(o.x, o.y + (isPillar ? -40 : -28));
+          if (o.x < -50) {
+            scene.destroyFxChild(o);
+            o.destroy();
+          }
+        });
+        scene.stars.getChildren().forEach(function (s) {
+          if (!s.active) return;
+          var aura = s.getData("aura");
+          var ring = s.getData("ring");
+          if (aura) aura.setPosition(s.x, s.y);
+          if (ring) ring.setPosition(s.x, s.y);
+          if (s.x < -40) {
+            scene.destroyFxChild(s);
+            s.destroy();
+          }
+        });
+
+        var gravLabel = scene.runnerGravity > 0 ? "↓ 下軌" : "↑ 上軌";
+        var flipHint = scene.isFlipping ? "翻轉中" : "點擊翻轉";
+        scene.setExtraHud(gravLabel + " · " + flipHint);
       }
     },
     "cyber-rogue-dungeon": {
