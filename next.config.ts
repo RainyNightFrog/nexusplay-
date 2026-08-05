@@ -30,6 +30,27 @@ function buildContentSecurityPolicy() {
     : "https://*.supabase.co";
   const playOrigin = resolvePlayOriginForCsp();
 
+  const pokerWsExtra: string[] = [];
+  const pokerWs = process.env.NEXT_PUBLIC_POKER_WS_URL?.trim();
+  if (pokerWs) {
+    try {
+      const u = new URL(pokerWs);
+      pokerWsExtra.push(u.origin);
+      if (u.protocol === "https:") pokerWsExtra.push(`wss://${u.host}`);
+      if (u.protocol === "http:") pokerWsExtra.push(`ws://${u.host}`);
+    } catch {
+      /* ignore bad url */
+    }
+  }
+  if (process.env.NODE_ENV === "development") {
+    pokerWsExtra.push(
+      "http://localhost:3101",
+      "ws://localhost:3101",
+      "http://127.0.0.1:3101",
+      "ws://127.0.0.1:3101"
+    );
+  }
+
   const directives = [
     "default-src 'self'",
     "base-uri 'self'",
@@ -38,7 +59,7 @@ function buildContentSecurityPolicy() {
     `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.googletagmanager.com https://www.google-analytics.com https://cdn.jsdelivr.net`,
     "style-src 'self' 'unsafe-inline'",
     `img-src 'self' data: blob: https: https://images.unsplash.com https://api.dicebear.com https://lh3.googleusercontent.com ${supabaseOrigin}`,
-    `connect-src 'self' ${supabaseOrigin} wss://${supabaseHostname} https://api.stripe.com https://www.google-analytics.com https://region1.google-analytics.com https://void-gacha.com https://*.void-gacha.com`,
+    `connect-src 'self' ${supabaseOrigin} wss://${supabaseHostname} https://api.stripe.com https://www.google-analytics.com https://region1.google-analytics.com https://void-gacha.com https://*.void-gacha.com ${pokerWsExtra.join(" ")}`.trim(),
     "font-src 'self' data:",
     "object-src 'none'",
     `frame-src 'self' ${playOrigin} ${supabaseOrigin} https://js.stripe.com https://hooks.stripe.com`,

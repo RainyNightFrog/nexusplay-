@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { createAuthServerClient } from "@/lib/supabase/server-auth";
 import { createServerSupabase } from "@/lib/supabase-server";
-import { claimBankruptcyRebuy } from "@/lib/poker/economy-service";
+import { repairStrandedBuyIns } from "@/lib/poker/economy-service";
 
+/** 退回「已扣買入但未兌現」的籌碼 */
 export async function POST() {
   try {
     const authClient = await createAuthServerClient();
@@ -14,11 +15,10 @@ export async function POST() {
     }
 
     const supabase = createServerSupabase();
-    const result = await claimBankruptcyRebuy(supabase, user.id);
-    /* 條件不符也回 200，由 granted／reason 表達，避免前端當系統錯誤 */
+    const result = await repairStrandedBuyIns(supabase, user.id);
     return NextResponse.json(result);
   } catch (e) {
-    const message = e instanceof Error ? e.message : "破產保護失敗";
+    const message = e instanceof Error ? e.message : "修復失敗";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -248,10 +248,10 @@ CREATE INDEX IF NOT EXISTS idx_poker_hand_results_user
 -- -----------------------------------------------------------------------------
 INSERT INTO poker_quests (slug, kind, target_value, reward_points, title_key, description_key)
 VALUES
-  ('play-20-hands', 'PLAY_HANDS', 20, 3000, 'poker.quest.playHands.title', 'poker.quest.playHands.desc'),
-  ('win-pair-or-better', 'WIN_HAND_PAIR_OR_BETTER', 1, 2500, 'poker.quest.winPair.title', 'poker.quest.winPair.desc'),
-  ('fold-preflop-5', 'FOLD_PREFLOP', 5, 1500, 'poker.quest.foldPreflop.title', 'poker.quest.foldPreflop.desc'),
-  ('win-3-pots', 'WIN_POTS', 3, 4000, 'poker.quest.winPots.title', 'poker.quest.winPots.desc')
+  ('play-20-hands', 'PLAY_HANDS', 40, 5500, 'poker.quest.playHands.title', 'poker.quest.playHands.desc'),
+  ('win-pair-or-better', 'WIN_HAND_PAIR_OR_BETTER', 3, 4500, 'poker.quest.winPair.title', 'poker.quest.winPair.desc'),
+  ('fold-preflop-5', 'FOLD_PREFLOP', 15, 2800, 'poker.quest.foldPreflop.title', 'poker.quest.foldPreflop.desc'),
+  ('win-3-pots', 'WIN_POTS', 8, 7000, 'poker.quest.winPots.title', 'poker.quest.winPots.desc')
 ON CONFLICT (slug) DO UPDATE SET
   target_value = EXCLUDED.target_value,
   reward_points = EXCLUDED.reward_points,

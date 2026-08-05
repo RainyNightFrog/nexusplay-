@@ -5,7 +5,7 @@
 
 import assert from "node:assert/strict";
 import { Deck, cardFromCode, createDeck } from "../deck";
-import { PokerHandEngine } from "../engine";
+import { PokerHandEngine, type EngineEvent } from "../engine";
 import { evaluateHand } from "../hand-evaluator";
 
 function run(name: string, fn: () => void) {
@@ -24,6 +24,12 @@ function deckFromCodes(codes: string[]): Deck {
   const used = new Set(ordered.map((c) => c.code));
   const rest = createDeck().filter((c) => !used.has(c.code));
   return new Deck([...ordered, ...rest]);
+}
+
+function lastOf(events: EngineEvent[]): EngineEvent {
+  const last = events[events.length - 1];
+  assert.ok(last, "expected at least one event");
+  return last;
 }
 
 console.log("engine.test.ts");
@@ -63,7 +69,7 @@ run("heads-up blinds and fold awards pot", () => {
   // First to act preflop HU = BB's left = SB (button)
   assert.equal(snap.actingSeatId, "sb");
 
-  const fold = engine.applyAction("sb", "fold");
+  const fold = lastOf(engine.applyAction("sb", "fold"));
   assert.equal(fold.type, "hand-complete");
   if (fold.type === "hand-complete") {
     assert.equal(fold.winners.get("bb"), 30); // 10+20
@@ -74,7 +80,7 @@ run("heads-up blinds and fold awards pot", () => {
 
 run("3-way all-in side pots settle correctly", () => {
   // Seats 0,1,2 — button 0 → SB=1, BB=2; first actor = 0 (UTG)
-  // Hole cards deal from SB(1): 
+  // Hole cards deal from SB(1):
   // round1: s1, s2, s0
   // round2: s1, s2, s0
   // Give s0 AA, s1 KK, s2 QQ — board all low → A wins main, then compare side
@@ -114,20 +120,30 @@ run("3-way all-in side pots settle correctly", () => {
   });
 
   // Preflop: A to act first — all-in 100
-  let ev = engine.applyAction("a", "all-in");
-  assert.ok(ev.type === "action" || ev.type === "street" || ev.type === "hand-complete");
+  let ev = lastOf(engine.applyAction("a", "all-in"));
+  assert.ok(
+    ev.type === "action" || ev.type === "street" || ev.type === "hand-complete",
+  );
 
   // B all-in 300 (has posted SB 50, stack left 250 → all-in adds 250, committed 300)
   if (!engine.isComplete) {
     assert.equal(engine.snapshot!.actingSeatId, "b");
-    ev = engine.applyAction("b", "all-in");
+    ev = lastOf(engine.applyAction("b", "all-in"));
   }
 
   // C calls / all-in covering
   if (!engine.isComplete) {
     assert.equal(engine.snapshot!.actingSeatId, "c");
-    ev = engine.applyAction("c", "all-in");
+    ev = lastOf(engine.applyAction("c", "all-in"));
   }
+
+  // All-in 後先開翻牌，再 drain 開完並攤牌
+  if (ev.type === "street") {
+    assert.equal(ev.street, "flop");
+    assert.equal(ev.board.length, 3);
+  }
+  const drained = engine.drainRunout();
+  ev = drained[drained.length - 1] ?? ev;
 
   // Should run out and complete
   assert.equal(ev.type, "hand-complete");
@@ -140,6 +156,7 @@ run("3-way all-in side pots settle correctly", () => {
     assert.equal(ev.winners.get("b"), 400);
     // C gets leftover uncontested 200
     assert.equal(ev.winners.get("c"), 200);
+    assert.equal(ev.snapshot.board.length, 5);
   }
 });
 
@@ -155,7 +172,7 @@ run("timeout auto-folds when facing bet", () => {
       { seatId: "bb", seatIndex: 1, name: "BB", stack: 500 },
     ],
   });
-  const ev = engine.applyTimeout("sb");
+  const ev = lastOf(engine.applyTimeout("sb"));
   assert.equal(ev.type, "hand-complete");
 });
 
@@ -176,7 +193,7 @@ run("check-check advances to flop", () => {
   assert.equal(engine.snapshot!.actingSeatId, "a");
   engine.applyAction("a", "call"); // 20
   engine.applyAction("b", "call"); // 10 more
-  const ev = engine.applyAction("c", "check");
+  const ev = lastOf(engine.applyAction("c", "check"));
   assert.equal(ev.type, "street");
   if (ev.type === "street") {
     assert.equal(ev.street, "flop");

@@ -94,7 +94,11 @@ export function resolvePlayUrl(gameUrl: string, gameId?: number) {
 }
 
 export function isDirectlyPlayable(gameUrl: string) {
-  return Boolean(gameUrl?.trim()) && !gameUrl.toLowerCase().endsWith(".zip");
+  const url = gameUrl?.trim() ?? "";
+  if (!url) return false;
+  if (url.toLowerCase().endsWith(".zip")) return false;
+  /* native:slug → 詳情頁掛 React 元件，視為可直接遊玩 */
+  return true;
 }
 
 export function stripPlayAccessFromGame(game: Game): Game {

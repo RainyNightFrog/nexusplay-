@@ -71,7 +71,7 @@ export const TABLE_TIERS: Record<TableTierId, TableTierConfig> = {
     bigBlind: 20,
     minBuyIn: 1_000,
     maxBuyIn: 4_000,
-    botProfile: "LOOSE_PASSIVE",
+    botProfile: "BALANCED",
   },
   LOW: {
     id: "LOW",
@@ -80,7 +80,7 @@ export const TABLE_TIERS: Record<TableTierId, TableTierConfig> = {
     bigBlind: 200,
     minBuyIn: 10_000,
     maxBuyIn: 40_000,
-    botProfile: "BALANCED",
+    botProfile: "GTO_LITE",
   },
   MID: {
     id: "MID",
@@ -103,13 +103,28 @@ export const TABLE_TIERS: Record<TableTierId, TableTierConfig> = {
 };
 
 /** 決策倒數（秒）與 Time Bank */
+/** 行動倒數秒數（不含 time bank） */
 export const TURN_TIMER_SECONDS = 15;
+/** 額外思考時間庫（秒） */
 export const TIME_BANK_SECONDS = 30;
+/** 連續錯過幾次行動後進入休息 */
+export const AFK_MISSED_TURNS_TO_REST = 2;
+/** 休息時長：期間可點「回來了」；到期未回則自動離桌兌現 */
+export const AFK_REST_MS = 10 * 60 * 1000;
 
-/** 座位：2–9 */
+/** 座位：固定 9 人桌（可有空位） */
 export const MIN_SEATS = 2;
 export const MAX_SEATS = 9;
-/** 真人少於此數時自動補 AI */
+/** 每個額度固定開放的牌桌數（供玩家自行挑選） */
+export const TABLES_PER_TIER = 4;
+/** 空桌時對手隨機人數下限／上限（每桌 5–9 人） */
+export const TARGET_BOTS_MIN = 5;
+export const TARGET_BOTS_MAX = 9;
+/**
+ * 真人入座可讓對手讓位，但至少保留此數量對手
+ */
+export const MIN_BOTS_AT_TABLE = 5;
+/** @deprecated */
 export const MIN_HUMANS_BEFORE_BOT_FILL = 3;
 
 export const SUITS: Suit[] = ["c", "d", "h", "s"];

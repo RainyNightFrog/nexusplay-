@@ -38,13 +38,16 @@ function persistVolume(v: number) {
 }
 
 type GameVolumeControlProps = {
-  iframeRef: RefObject<HTMLIFrameElement | null>;
+  iframeRef?: RefObject<HTMLIFrameElement | null>;
+  /** 原生 React 遊戲（如 Poker）自訂音量回呼 */
+  onVolumeChange?: (volume: number) => void;
   className?: string;
   compact?: boolean;
 };
 
 export function GameVolumeControl({
   iframeRef,
+  onVolumeChange,
   className,
   compact = false,
 }: GameVolumeControlProps) {
@@ -62,9 +65,12 @@ export function GameVolumeControl({
 
   const pushVolume = useCallback(
     (v: number) => {
-      postSetGameVolume(iframeRef.current, v);
+      if (iframeRef?.current) {
+        postSetGameVolume(iframeRef.current, v);
+      }
+      onVolumeChange?.(v);
     },
-    [iframeRef]
+    [iframeRef, onVolumeChange]
   );
 
   const applyVolume = useCallback(

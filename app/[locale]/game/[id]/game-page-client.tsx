@@ -60,6 +60,17 @@ import {
   isMobileNarrowPlayViewport,
   isPlatformLandscapePlaySlug,
 } from "@/lib/platform-landscape-play";
+import { isNativeReactPlaySlug } from "@/lib/native-react-games";
+import { forcePokerSettleLeave } from "@/hooks/use-poker-socket";
+import { usePokerStore } from "@/stores/poker-store";
+
+const PokerPageClient = dynamic(
+  () =>
+    import("@/components/poker/PokerPageClient").then(
+      (module) => module.PokerPageClient
+    ),
+  { ssr: false }
+);
 
 const GameSupportSection = dynamic(
   () =>
@@ -144,9 +155,20 @@ export default function GamePageClient({
   }, []);
 
   const closeFullscreen = useCallback(() => {
-    setShowFullscreen(false);
-    setAllowPortraitPlay(false);
-  }, []);
+    const finish = () => {
+      setShowFullscreen(false);
+      setAllowPortraitPlay(false);
+    };
+    const slug = String(game?.slug || "")
+      .trim()
+      .toLowerCase();
+    const { roomId, queueRoomId } = usePokerStore.getState();
+    if (isNativeReactPlaySlug(slug) && (roomId || queueRoomId)) {
+      void forcePokerSettleLeave(8000).finally(finish);
+      return;
+    }
+    finish();
+  }, [game?.slug]);
   const closeEmbed = useCallback(() => setShowEmbed(false), []);
   const [isMobilePlayShell, setIsMobilePlayShell] = useState(false);
   const [isLandscape, setIsLandscape] = useState(true);
@@ -470,10 +492,19 @@ export default function GamePageClient({
   }, [game, gameId, router]);
 
   const isUpcoming = game?.isUpcoming === true;
+  const gameSlugEarly = String(game?.slug || "")
+    .trim()
+    .toLowerCase();
+  const isNativeReactPlay = isNativeReactPlaySlug(gameSlugEarly);
   const playable =
-    game && !isUpcoming ? canPlay && isDirectlyPlayable(game.embedUrl) : false;
+    game && !isUpcoming
+      ? canPlay &&
+        (isNativeReactPlay || isDirectlyPlayable(game.embedUrl))
+      : false;
   const trustedEmbedUrl =
-    game && playable && isSafeEmbedUrl(game.embedUrl) ? game.embedUrl : null;
+    game && playable && !isNativeReactPlay && isSafeEmbedUrl(game.embedUrl)
+      ? game.embedUrl
+      : null;
 
   const iframeSrc = useMemo(() => {
     if (!trustedEmbedUrl || !game) return null;
@@ -487,9 +518,16 @@ export default function GamePageClient({
     return `${trustedEmbedUrl}${sep}gid=${game.id}&locale=${encodeURIComponent(locale)}${bust}`;
   }, [trustedEmbedUrl, game, locale]);
 
+  const hasPlaySurface = Boolean(iframeSrc) || (isNativeReactPlay && playable);
+
   useEffect(() => {
     setIframeReady(false);
     setStageReady(false);
+    if (isNativeReactPlay && playable) {
+      setStageReady(true);
+      setIframeReady(true);
+      return;
+    }
     if (!iframeSrc) return;
 
     const el = stageRef.current;
@@ -520,11 +558,9 @@ export default function GamePageClient({
       window.clearTimeout(bootTimer);
       window.clearTimeout(readyTimer);
     };
-  }, [iframeSrc]);
+  }, [iframeSrc, isNativeReactPlay, playable]);
 
-  const gameSlug = String(game?.slug || "")
-    .trim()
-    .toLowerCase();
+  const gameSlug = gameSlugEarly;
   const prefersLandscapePlay = isPlatformLandscapePlaySlug(gameSlug);
   /* 對齊 Phaser 邏輯解析度：街機 960×540／星際 1280×720，避免外殼與遊戲雙重黑邊 */
   const viewportWidth =
@@ -621,7 +657,7 @@ export default function GamePageClient({
 
   const showLandscapeGate =
     showFullscreen &&
-    Boolean(iframeSrc) &&
+    hasPlaySurface &&
     prefersLandscapePlay &&
     isMobilePlayShell &&
     !isLandscape &&
@@ -632,7 +668,7 @@ export default function GamePageClient({
   /* 橫屏全螢幕：隱藏頂欄，只留浮動關閉，把空間全給遊戲 */
   const compactMobileLandscapeChrome =
     showFullscreen &&
-    Boolean(iframeSrc) &&
+    hasPlaySurface &&
     prefersLandscapePlay &&
     isMobilePlayShell &&
     isLandscape;
@@ -726,6 +762,13 @@ export default function GamePageClient({
         /\/index\.html(?:[?#]|$)/i.test(iframeSrc) ||
         /\/games\/[^/?#]+\/index\.html/i.test(iframeSrc))
   );
+  const showVolumeControl = showGameMenuButton || (isNativeReactPlay && playable);
+
+  const handleNativeVolume = useCallback((v: number) => {
+    void import("@/lib/poker/sfx").then(({ pokerSfx }) => {
+      pokerSfx.setMasterVolume(v);
+    });
+  }, []);
 
   const handleBackToGameMenu = useCallback(() => {
     const iframe = iframeRef.current;
@@ -891,27 +934,27 @@ export default function GamePageClient({
             className={cn(
               "min-w-0",
               /* 手機提高層級避免遮罩擋觸控；電腦維持原本 z 軸 */
-              showFullscreen && iframeSrc && "relative z-[70] md:z-auto"
+              showFullscreen && hasPlaySurface && "relative z-[70] md:z-auto"
             )}
           >
             <div
               className={cn(
-                showFullscreen && iframeSrc
+                showFullscreen && hasPlaySurface
                   ? cn(
                       "fixed z-[71] flex flex-col overflow-hidden overscroll-none",
-                      fillFullscreen
+                      fillFullscreen || isNativeReactPlay
                         ? "border-0 bg-zinc-950 shadow-2xl shadow-black/60"
                         : "border-0 bg-zinc-950 shadow-2xl shadow-black/60 sm:rounded-2xl sm:border sm:border-white/10",
                       isMobilePlayShell
                         ? "touch-none"
-                        : fillFullscreen
+                        : fillFullscreen || isNativeReactPlay
                           ? "inset-0 touch-manipulation md:z-[61]"
                           : "inset-3 touch-manipulation md:inset-4 md:z-[61] lg:inset-6"
                     )
                   : "overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/60 shadow-2xl shadow-black/50 ring-1 ring-white/5"
               )}
               style={
-                showFullscreen && iframeSrc
+                showFullscreen && hasPlaySurface
                   ? {
                       ...(isMobilePlayShell
                         ? mobileViewportBox
@@ -945,7 +988,7 @@ export default function GamePageClient({
                 if (showFullscreen) event.stopPropagation();
               }}
             >
-              {showFullscreen && iframeSrc && !compactMobileLandscapeChrome && (
+              {showFullscreen && hasPlaySurface && !compactMobileLandscapeChrome && (
                 <div className="flex shrink-0 items-center justify-between gap-1.5 border-b border-white/10 px-1.5 py-1.5 sm:gap-3 sm:px-4 sm:py-3">
                   <div className="min-w-0">
                     <p className="truncate text-xs font-semibold text-white sm:text-sm">
@@ -969,8 +1012,14 @@ export default function GamePageClient({
                         </span>
                       </Button>
                     )}
-                    {showGameMenuButton && (
-                      <GameVolumeControl iframeRef={iframeRef} compact />
+                    {showVolumeControl && (
+                      <GameVolumeControl
+                        iframeRef={iframeRef}
+                        onVolumeChange={
+                          isNativeReactPlay ? handleNativeVolume : undefined
+                        }
+                        compact
+                      />
                     )}
                     {game.tipsEnabled && (
                       <Button
@@ -1029,8 +1078,8 @@ export default function GamePageClient({
                 ref={stageRef}
                 className={cn(
                   "relative w-full bg-black",
-                  showFullscreen && iframeSrc
-                    ? fillFullscreen
+                  showFullscreen && hasPlaySurface
+                    ? fillFullscreen || isNativeReactPlay
                       ? "flex min-h-0 flex-1 overflow-hidden"
                       : "flex min-h-0 flex-1 items-center justify-center overflow-hidden [container-type:size]"
                     : cn("mx-auto", playerMaxHeightClass)
@@ -1038,7 +1087,7 @@ export default function GamePageClient({
                 style={
                   showFullscreen
                     ? undefined
-                    : iframeSrc || showPurchaseGate
+                    : hasPlaySurface || showPurchaseGate
                       ? {
                           aspectRatio: `${viewportWidth} / ${viewportHeight}`,
                           width: `min(100%, ${playerMaxWidth}px)`,
@@ -1050,14 +1099,17 @@ export default function GamePageClient({
                 <div
                   className={cn(
                     "relative bg-black",
-                    showFullscreen && iframeSrc
-                      ? fillFullscreen
+                    showFullscreen && hasPlaySurface
+                      ? fillFullscreen || isNativeReactPlay
                         ? "size-full min-h-0 min-w-0"
                         : "max-h-full max-w-full"
                       : "absolute inset-0 size-full"
                   )}
                   style={
-                    showFullscreen && iframeSrc && !fillFullscreen
+                    showFullscreen &&
+                    hasPlaySurface &&
+                    !fillFullscreen &&
+                    !isNativeReactPlay
                       ? {
                           aspectRatio: `${viewportWidth} / ${viewportHeight}`,
                           width: `min(100cqw, calc(100cqh * ${viewportWidth} / ${viewportHeight}))`,
@@ -1138,6 +1190,10 @@ export default function GamePageClient({
                         onCheckoutSuccess={() => void refreshGameAfterPurchase()}
                       />
                     </div>
+                  </div>
+                ) : isNativeReactPlay && playable ? (
+                  <div className="absolute inset-0 overflow-auto bg-zinc-950">
+                    <PokerPageClient embedded />
                   </div>
                 ) : iframeSrc ? (
                   <>
@@ -1303,6 +1359,14 @@ export default function GamePageClient({
                         />
                       </div>
                     )}
+                    {isNativeReactPlay && playable && !showGameMenuButton && (
+                      <GameVolumeControl
+                        iframeRef={iframeRef}
+                        onVolumeChange={handleNativeVolume}
+                        compact
+                        className="shrink-0 [&_button]:size-10 [&_button]:min-h-10 sm:[&_button]:size-auto sm:[&_button]:min-h-0"
+                      />
+                    )}
                     <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
                       {game.tipsEnabled && (
                         <Button
@@ -1339,7 +1403,7 @@ export default function GamePageClient({
                       variant="outline"
                       size="sm"
                       onClick={() => setShowFullscreen(true)}
-                      disabled={!iframeSrc || !showCreatorFullscreen}
+                      disabled={!hasPlaySurface || !showCreatorFullscreen}
                       className="min-h-10 w-full justify-center gap-1.5 border-cyan-400/25 bg-cyan-500/10 text-cyan-100 touch-manipulation hover:border-cyan-400/45 hover:bg-cyan-500/15 disabled:opacity-40 sm:min-h-0 sm:w-auto"
                     >
                       <Maximize2 className="size-3.5" />
@@ -1350,7 +1414,7 @@ export default function GamePageClient({
               )}
             </div>
 
-            {showFullscreen && iframeSrc && (
+            {showFullscreen && hasPlaySurface && (
               <div
                 className={cn("mx-auto w-full", playerMaxHeightClass)}
                 style={{
@@ -1553,7 +1617,7 @@ export default function GamePageClient({
       </main>
 
       <AnimatePresence>
-        {showFullscreen && iframeSrc && (
+        {showFullscreen && hasPlaySurface && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

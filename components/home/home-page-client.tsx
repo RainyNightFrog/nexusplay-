@@ -14,7 +14,6 @@ import {
   SlidersHorizontal,
   ArrowUpDown,
   Search,
-  Dices,
 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -385,18 +384,6 @@ export function HomePageClient({ initialGames }: HomePageClientProps) {
 
         {/* 桌面：完整導覽；手機：收進「更多」選單，避免登入後頂欄擠爆 */}
         <div className="ml-auto hidden shrink-0 items-center gap-1.5 md:flex xl:gap-2">
-          <Link
-            href="/poker"
-            className={cn(
-              buttonVariants({ variant: "outline", size: "sm" }),
-              "inline-flex size-8 shrink-0 items-center justify-center gap-1.5 border-emerald-400/20 bg-emerald-500/10 p-0 text-emerald-200 hover:border-emerald-400/30 hover:bg-emerald-500/15",
-              "xl:h-8 xl:w-auto xl:px-3"
-            )}
-            aria-label="Neon Hold'em"
-          >
-            <Dices className="size-3.5" />
-            <span className="hidden xl:inline">Hold&apos;em</span>
-          </Link>
           <Link
             href="/community"
             className={cn(

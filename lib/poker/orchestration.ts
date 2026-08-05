@@ -1,12 +1,12 @@
 /**
  * 桌級編排輔助（Step 2 純邏輯；Step 3 WebSocket 會呼叫）
  * - 依餘額建議級別
- * - 真人 < 3 時計算需補幾個 AI
+ * - 空桌 AI 隨機 5–7 人，留空位；真人入座優先坐空位，滿則 AI 讓位
  */
 
 import {
   TABLE_TIERS,
-  MIN_HUMANS_BEFORE_BOT_FILL,
+  MIN_BOTS_AT_TABLE,
   MAX_SEATS,
   type TableTierId,
   type AiBotProfileId,
@@ -21,16 +21,19 @@ export function suggestTierForBalance(pointsBalance: number): TableTierId {
   return "MICRO";
 }
 
+/** 湊滿 maxSeats；並確保最終 bots >= MIN_BOTS_AT_TABLE（受空位限制） */
 export function botsNeededToFill(
-  humanCount: number,
+  _humanCount: number,
   occupiedSeats: number,
   maxSeats = MAX_SEATS,
+  currentBotCount = 0,
+  minBots = MIN_BOTS_AT_TABLE,
 ): number {
-  if (humanCount >= MIN_HUMANS_BEFORE_BOT_FILL) return 0;
-  const targetHumansPlusBots = MIN_HUMANS_BEFORE_BOT_FILL;
-  const need = Math.max(0, targetHumansPlusBots - occupiedSeats);
   const free = Math.max(0, maxSeats - occupiedSeats);
-  return Math.min(need, free);
+  const toFull = free;
+  const botsAfter = currentBotCount + toFull;
+  if (botsAfter >= minBots) return toFull;
+  return free;
 }
 
 export function botProfileForTier(tier: TableTierId): AiBotProfileId {

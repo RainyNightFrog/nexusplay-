@@ -223,19 +223,19 @@ export class PokerHandEngine {
     type: PlayerActionType,
     amount = 0,
     nowMs = Date.now(),
-  ): EngineEvent {
+  ): EngineEvent[] {
     if (!this.state || this.state.complete) {
-      return { type: "error", message: "No active hand" };
+      return [{ type: "error", message: "No active hand" }];
     }
     const state = this.state;
 
     if (state.actingSeatId !== seatId) {
-      return { type: "error", message: "Not your turn" };
+      return [{ type: "error", message: "Not your turn" }];
     }
 
     const seat = seatById(state.seats, seatId);
     if (!canAct(seat)) {
-      return { type: "error", message: "Seat cannot act" };
+      return [{ type: "error", message: "Seat cannot act" }];
     }
 
     const toCall = state.currentBet - seat.streetCommitted;
@@ -250,14 +250,18 @@ export class PokerHandEngine {
 
         case "check":
           if (toCall > 0) {
-            return { type: "error", message: "Cannot check; must call or fold" };
+            return [
+              { type: "error", message: "Cannot check; must call or fold" },
+            ];
           }
           action = this.record(state, seatId, "check", 0, nowMs);
           break;
 
         case "call": {
           if (toCall <= 0) {
-            return { type: "error", message: "Nothing to call; check instead" };
+            return [
+              { type: "error", message: "Nothing to call; check instead" },
+            ];
           }
           const pay = Math.min(toCall, seat.stack);
           this.commit(seat, pay);
@@ -277,17 +281,19 @@ export class PokerHandEngine {
           // amount = raise-to（本街 committed 目標）
           const raiseTo = amount;
           if (raiseTo <= state.currentBet && seat.stack > toCall) {
-            return {
-              type: "error",
-              message: `Raise must be to more than ${state.currentBet}`,
-            };
+            return [
+              {
+                type: "error",
+                message: `Raise must be to more than ${state.currentBet}`,
+              },
+            ];
           }
           const need = raiseTo - seat.streetCommitted;
           if (need <= 0) {
-            return { type: "error", message: "Invalid bet size" };
+            return [{ type: "error", message: "Invalid bet size" }];
           }
           if (need > seat.stack) {
-            return { type: "error", message: "Insufficient stack" };
+            return [{ type: "error", message: "Insufficient stack" }];
           }
 
           const isAllIn = need === seat.stack;
@@ -295,16 +301,20 @@ export class PokerHandEngine {
 
           // 非 all-in 時需滿足最小加注
           if (!isAllIn && state.currentBet > 0 && raiseSize < state.lastRaiseSize) {
-            return {
-              type: "error",
-              message: `Min raise size is ${state.lastRaiseSize}`,
-            };
+            return [
+              {
+                type: "error",
+                message: `Min raise size is ${state.lastRaiseSize}`,
+              },
+            ];
           }
           if (!isAllIn && state.currentBet === 0 && raiseTo < state.bigBlind) {
-            return {
-              type: "error",
-              message: `Min bet is ${state.bigBlind}`,
-            };
+            return [
+              {
+                type: "error",
+                message: `Min bet is ${state.bigBlind}`,
+              },
+            ];
           }
 
           this.commit(seat, need);
@@ -331,7 +341,9 @@ export class PokerHandEngine {
 
         case "all-in": {
           const pay = seat.stack;
-          if (pay <= 0) return { type: "error", message: "Already all-in" };
+          if (pay <= 0) {
+            return [{ type: "error", message: "Already all-in" }];
+          }
           const newStreet = seat.streetCommitted + pay;
           this.commit(seat, pay);
           seat.allIn = true;
@@ -348,46 +360,67 @@ export class PokerHandEngine {
         }
 
         default:
-          return { type: "error", message: `Unknown action ${type}` };
+          return [{ type: "error", message: `Unknown action ${type}` }];
       }
     } catch (e) {
-      return {
-        type: "error",
-        message: e instanceof Error ? e.message : "Action failed",
-      };
+      return [
+        {
+          type: "error",
+          message: e instanceof Error ? e.message : "Action failed",
+        },
+      ];
     }
 
     state.pendingActionSeatIds.delete(seatId);
 
-    // 只剩一人 → 直接結束
+    // 只剩一人 → 先廣播行動再結算
     const contenders = activeContenders(state.seats);
     if (contenders.length === 1) {
-      return this.finishUncontested(state, contenders[0]!.seatId);
+      state.actingSeatId = null;
+      const actionEv: EngineEvent = {
+        type: "action",
+        action,
+        snapshot: this.toSnapshot(state),
+      };
+      return [actionEv, this.finishUncontested(state, contenders[0]!.seatId)];
     }
 
-    // 本街是否結束
+    // 本街結束 → 先廣播行動，再進下一街／All-in 開公牌
     if (this.isBettingRoundComplete(state)) {
-      return this.advanceStreet(state);
+      state.actingSeatId = null;
+      const actionEv: EngineEvent = {
+        type: "action",
+        action,
+        snapshot: this.toSnapshot(state),
+      };
+      return [actionEv, this.advanceStreet(state)];
     }
 
     // 下一位
     const next = nextActor(state.seats, seat.seatIndex);
     state.actingSeatId = next?.seatId ?? null;
     if (!state.actingSeatId) {
-      return this.advanceStreet(state);
+      const actionEv: EngineEvent = {
+        type: "action",
+        action,
+        snapshot: this.toSnapshot(state),
+      };
+      return [actionEv, this.advanceStreet(state)];
     }
 
-    return {
-      type: "action",
-      action,
-      snapshot: this.toSnapshot(state),
-    };
+    return [
+      {
+        type: "action",
+        action,
+        snapshot: this.toSnapshot(state),
+      },
+    ];
   }
 
   /** 逾時：可 check 則 check，否則 fold */
-  applyTimeout(seatId: string, nowMs = Date.now()): EngineEvent {
+  applyTimeout(seatId: string, nowMs = Date.now()): EngineEvent[] {
     if (!this.state || this.state.actingSeatId !== seatId) {
-      return { type: "error", message: "Timeout seat mismatch" };
+      return [{ type: "error", message: "Timeout seat mismatch" }];
     }
     const seat = seatById(this.state.seats, seatId);
     const toCall = this.state.currentBet - seat.streetCommitted;
@@ -395,6 +428,97 @@ export class PokerHandEngine {
       return this.applyAction(seatId, "check", 0, nowMs);
     }
     return this.applyAction(seatId, "fold", 0, nowMs);
+  }
+
+  /**
+   * 強制蓋牌離桌用：即使未輪到該座位也可 fold。
+   * 輪到自己時走正常 applyAction；否則直接標記 folded 並推進牌局。
+   */
+  forceFold(seatId: string, nowMs = Date.now()): EngineEvent[] {
+    if (!this.state || this.state.complete) {
+      return [{ type: "error", message: "No active hand" }];
+    }
+    const state = this.state;
+    const seat = seatById(state.seats, seatId);
+    if (seat.folded) {
+      return [
+        {
+          type: "action",
+          action: {
+            seatId,
+            type: "fold",
+            amount: 0,
+            street: state.street,
+            atMs: nowMs,
+          },
+          snapshot: this.toSnapshot(state),
+        },
+      ];
+    }
+
+    /* 已是唯一存活者：先頒獎結束，避免 fold 後 0 人 */
+    const before = activeContenders(state.seats);
+    if (before.length === 1 && before[0]!.seatId === seatId) {
+      return [this.finishUncontested(state, seatId)];
+    }
+
+    /* 全下不可蓋牌放棄爭池（離桌應等本手結束） */
+    if (seat.allIn) {
+      return [];
+    }
+
+    if (state.actingSeatId === seatId) {
+      return this.applyAction(seatId, "fold", 0, nowMs);
+    }
+
+    seat.folded = true;
+    state.pendingActionSeatIds.delete(seatId);
+    const action = this.record(state, seatId, "fold", 0, nowMs);
+    const actionEv: EngineEvent = {
+      type: "action",
+      action,
+      snapshot: this.toSnapshot(state),
+    };
+
+    const contenders = activeContenders(state.seats);
+    if (contenders.length === 1) {
+      return [actionEv, this.finishUncontested(state, contenders[0]!.seatId)];
+    }
+    if (contenders.length === 0) {
+      return [actionEv, this.finishUncontested(state, seatId)];
+    }
+    if (this.isBettingRoundComplete(state)) {
+      return [actionEv, this.advanceStreet(state)];
+    }
+    return [actionEv];
+  }
+
+  /**
+   * 是否需要 All-in 開公牌／進攤牌（無人可互加注，但 ≥2 人仍爭池）。
+   */
+  needsRunout(): boolean {
+    if (!this.state || this.state.complete) return false;
+    if (activeContenders(this.state.seats).length < 2) return false;
+    const actors = this.state.seats.filter(canAct);
+    return actors.length < 2;
+  }
+
+  /** 開下一張公牌，或河牌後攤牌結算（由伺服器延遲呼叫，讓玩家看得到） */
+  continueRunout(): EngineEvent | null {
+    if (!this.needsRunout() || !this.state) return null;
+    return this.advanceStreet(this.state);
+  }
+
+  /** 測試用：同步發完公牌直到手牌結束 */
+  drainRunout(): EngineEvent[] {
+    const out: EngineEvent[] = [];
+    while (this.needsRunout()) {
+      const ev = this.continueRunout();
+      if (!ev) break;
+      out.push(ev);
+      if (ev.type === "hand-complete" || ev.type === "error") break;
+    }
+    return out;
   }
 
   // ---------------------------------------------------------------------------
@@ -492,9 +616,9 @@ export class PokerHandEngine {
       return this.finishUncontested(state, contenders[0]!.seatId);
     }
 
-    // 若所有人都 all-in（或只剩一人可行動），直接發完公牌進攤牌
-    const canStillBet = state.seats.some(canAct) &&
-      state.seats.filter(canAct).length >= 2;
+    // 若所有人都 all-in（或只剩一人可行動），逐街開公牌（不一次發完）
+    const canStillBet =
+      state.seats.some(canAct) && state.seats.filter(canAct).length >= 2;
 
     const order: Street[] = ["preflop", "flop", "turn", "river", "showdown"];
     const idx = order.indexOf(state.street as (typeof order)[number]);
@@ -503,17 +627,31 @@ export class PokerHandEngine {
     }
 
     if (!canStillBet) {
-      // Run out board
-      while (state.board.length < 5) {
-        if (state.board.length === 0) {
-          state.board.push(...state.deck.burnAndDraw(3));
-        } else {
-          state.board.push(...state.deck.burnAndDraw(1));
-        }
+      // 河牌已開滿 → 攤牌；否則開下一街給玩家看
+      if (state.board.length >= 5) {
+        state.street = "showdown";
+        state.actingSeatId = null;
+        return this.finishShowdown(state);
       }
-      state.street = "showdown";
+      this.clearStreetCommitments(state);
+      if (state.board.length === 0) {
+        state.board.push(...state.deck.burnAndDraw(3));
+        state.street = "flop";
+      } else if (state.board.length === 3) {
+        state.board.push(...state.deck.burnAndDraw(1));
+        state.street = "turn";
+      } else {
+        state.board.push(...state.deck.burnAndDraw(1));
+        state.street = "river";
+      }
       state.actingSeatId = null;
-      return this.finishShowdown(state);
+      this.state = state;
+      return {
+        type: "street",
+        street: state.street,
+        board: state.board.slice(),
+        snapshot: this.toSnapshot(state),
+      };
     }
 
     const nextStreet = order[idx + 1]!;
@@ -539,9 +677,16 @@ export class PokerHandEngine {
     state.actingSeatId = first?.seatId ?? null;
     this.resetPendingForStreet(state);
 
-    // 若無人可行動（全 all-in），繼續往下
+    // 若無人可互加注（全 all-in），回傳本街公牌，由 orchestrator 延遲繼續開牌
     if (!state.actingSeatId || state.seats.filter(canAct).length < 2) {
-      return this.advanceStreet(state);
+      state.actingSeatId = null;
+      this.state = state;
+      return {
+        type: "street",
+        street: state.street,
+        board: state.board.slice(),
+        snapshot: this.toSnapshot(state),
+      };
     }
 
     return {

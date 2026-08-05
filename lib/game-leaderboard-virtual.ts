@@ -47,6 +47,7 @@ const BASE_SCORE_BANDS: Record<string, ScoreBand> = {
   "void-relay": { min: 480, max: 4_100 },
   "orbital-salvage": { min: 920, max: 8_400 },
   "void-gacha": { min: 520, max: 5_400 },
+  "neon-holdem": { min: 1_200, max: 48_000 },
 };
 
 const DEFAULT_BAND: ScoreBand = { min: 800, max: 5_200 };

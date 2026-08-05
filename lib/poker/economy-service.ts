@@ -13,6 +13,7 @@ import {
   PLAYTIME_MIN_HANDS_PER_INTERVAL,
   PLAYTIME_REWARD_POINTS,
 } from "./economy";
+import { listPokerVirtualLeaderRows } from "./virtual-roster";
 
 /** 香港日界（與平台任務一致） */
 export function pokerDateHongKong(now = new Date()): string {
@@ -30,6 +31,34 @@ function yesterdayHongKong(today: string): string {
   const utc = Date.UTC(y!, m! - 1, d!);
   const prev = new Date(utc - 86400000);
   return pokerDateHongKong(prev);
+}
+
+/** 香港週一日期（YYYY-MM-DD），作為每週任務 period key */
+export function pokerWeekStartHongKong(now = new Date()): string {
+  const today = pokerDateHongKong(now);
+  const [y, m, d] = today.split("-").map(Number);
+  // 用正午 UTC 對齊該曆日，再取 HK weekday
+  const probe = new Date(Date.UTC(y!, m! - 1, d!, 4, 0, 0));
+  const weekday = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Hong_Kong",
+    weekday: "short",
+  }).format(probe);
+  const offsetMap: Record<string, number> = {
+    Mon: 0,
+    Tue: 1,
+    Wed: 2,
+    Thu: 3,
+    Fri: 4,
+    Sat: 5,
+    Sun: 6,
+  };
+  const back = offsetMap[weekday] ?? 0;
+  const mondayUtc = Date.UTC(y!, m! - 1, d!) - back * 86400000;
+  return pokerDateHongKong(new Date(mondayUtc));
+}
+
+function questPeriodDate(isDaily: boolean, now = new Date()): string {
+  return isDaily ? pokerDateHongKong(now) : pokerWeekStartHongKong(now);
 }
 
 export type PokerUserRow = {
@@ -53,16 +82,52 @@ export async function ensurePokerUser(
     .eq("user_id", userId)
     .maybeSingle();
 
-  if (existing) return existing as PokerUserRow;
+  /* 與網站右上角一致：優先用 profiles.display_name */
+  const { data: siteProfile } = await supabase
+    .from("profiles")
+    .select("display_name, avatar_url")
+    .eq("id", userId)
+    .maybeSingle();
 
   const displayName =
-    profile?.displayName?.trim() || `Player_${userId.slice(0, 6)}`;
+    profile?.displayName?.trim() ||
+    siteProfile?.display_name?.trim() ||
+    (existing as PokerUserRow | null)?.display_name ||
+    `Player_${userId.slice(0, 6)}`;
+  const avatarUrl =
+    profile?.avatarUrl !== undefined
+      ? profile.avatarUrl
+      : ((siteProfile?.avatar_url as string | null | undefined) ??
+        (existing as PokerUserRow | null)?.avatar_url ??
+        null);
+
+  if (existing) {
+    const row = existing as PokerUserRow;
+    const needSync =
+      row.display_name !== displayName ||
+      (avatarUrl != null && row.avatar_url !== avatarUrl);
+    if (needSync) {
+      const { data: updated, error: upErr } = await supabase
+        .from("poker_users")
+        .update({
+          display_name: displayName,
+          avatar_url: avatarUrl,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", row.id)
+        .select("*")
+        .single();
+      if (!upErr && updated) return updated as PokerUserRow;
+    }
+    return row;
+  }
+
   const { data, error } = await supabase
     .from("poker_users")
     .insert({
       user_id: userId,
       display_name: displayName,
-      avatar_url: profile?.avatarUrl ?? null,
+      avatar_url: avatarUrl,
       points_balance: 5000,
     })
     .select("*")
@@ -292,6 +357,9 @@ export type QuestProgressView = {
   currentValue: number;
   completed: boolean;
   claimed: boolean;
+  /** daily = 每日；weekly = 每週（週一重置） */
+  cadence: "daily" | "weekly";
+  periodDate: string;
 };
 
 export async function listQuestProgress(
@@ -299,22 +367,25 @@ export async function listQuestProgress(
   userId: string,
 ): Promise<QuestProgressView[]> {
   const pokerUser = await ensurePokerUser(supabase, userId);
-  const today = pokerDateHongKong();
 
   const { data: quests, error } = await supabase
     .from("poker_quests")
     .select("*")
-    .eq("active", true);
+    .eq("active", true)
+    .order("is_daily", { ascending: false })
+    .order("reward_points", { ascending: true });
   if (error) throw new Error(error.message);
 
   const views: QuestProgressView[] = [];
   for (const q of quests ?? []) {
+    const isDaily = q.is_daily !== false;
+    const periodDate = questPeriodDate(isDaily);
     let { data: prog } = await supabase
       .from("poker_quest_progress")
       .select("*")
       .eq("poker_user_id", pokerUser.id)
       .eq("quest_id", q.id)
-      .eq("progress_date", today)
+      .eq("progress_date", periodDate)
       .maybeSingle();
 
     if (!prog) {
@@ -323,7 +394,7 @@ export async function listQuestProgress(
         .insert({
           poker_user_id: pokerUser.id,
           quest_id: q.id,
-          progress_date: today,
+          progress_date: periodDate,
           current_value: 0,
         })
         .select("*")
@@ -343,6 +414,8 @@ export async function listQuestProgress(
       currentValue: prog.current_value,
       completed: prog.completed,
       claimed: prog.claimed,
+      cadence: isDaily ? "daily" : "weekly",
+      periodDate,
     });
   }
   return views;
@@ -362,7 +435,6 @@ export async function trackPokerQuestEvent(
   amount = 1,
 ): Promise<void> {
   const pokerUser = await ensurePokerUser(supabase, userId);
-  const today = pokerDateHongKong();
 
   const { data: quests } = await supabase
     .from("poker_quests")
@@ -371,12 +443,14 @@ export async function trackPokerQuestEvent(
     .eq("active", true);
 
   for (const q of quests ?? []) {
+    const isDaily = q.is_daily !== false;
+    const periodDate = questPeriodDate(isDaily);
     const { data: prog } = await supabase
       .from("poker_quest_progress")
       .select("*")
       .eq("poker_user_id", pokerUser.id)
       .eq("quest_id", q.id)
-      .eq("progress_date", today)
+      .eq("progress_date", periodDate)
       .maybeSingle();
 
     const current = (prog?.current_value ?? 0) + amount;
@@ -387,7 +461,7 @@ export async function trackPokerQuestEvent(
       await supabase
         .from("poker_quest_progress")
         .update({
-          current_value: current,
+          current_value: Math.min(current, q.target_value * 2),
           completed,
           updated_at: new Date().toISOString(),
         })
@@ -396,7 +470,7 @@ export async function trackPokerQuestEvent(
       await supabase.from("poker_quest_progress").insert({
         poker_user_id: pokerUser.id,
         quest_id: q.id,
-        progress_date: today,
+        progress_date: periodDate,
         current_value: current,
         completed,
       });
@@ -410,21 +484,22 @@ export async function claimQuestReward(
   questId: string,
 ): Promise<{ balance: number; pointsAwarded: number }> {
   const pokerUser = await ensurePokerUser(supabase, userId);
-  const today = pokerDateHongKong();
 
   const { data: quest } = await supabase
     .from("poker_quests")
-    .select("reward_points")
+    .select("reward_points, is_daily")
     .eq("id", questId)
     .single();
   if (!quest) throw new Error("找不到任務");
+
+  const periodDate = questPeriodDate(quest.is_daily !== false);
 
   const { data: prog } = await supabase
     .from("poker_quest_progress")
     .select("*")
     .eq("poker_user_id", pokerUser.id)
     .eq("quest_id", questId)
-    .eq("progress_date", today)
+    .eq("progress_date", periodDate)
     .maybeSingle();
 
   if (!prog) throw new Error("找不到任務進度");
@@ -453,6 +528,89 @@ export async function claimQuestReward(
   );
 
   return { balance, pointsAwarded: reward };
+}
+
+export type PokerLeaderboardEntry = {
+  rank: number;
+  displayName: string;
+  avatarUrl: string | null;
+  pointsBalance: number;
+  isYou: boolean;
+};
+
+export async function listPointsLeaderboard(
+  supabase: SupabaseClient,
+  userId: string | null,
+  limit = 20,
+): Promise<{ entries: PokerLeaderboardEntry[]; you: PokerLeaderboardEntry | null }> {
+  const fetchLimit = Math.min(Math.max(limit, 5), 50);
+  const { data, error } = await supabase
+    .from("poker_users")
+    .select("user_id, display_name, avatar_url, points_balance")
+    .order("points_balance", { ascending: false })
+    .limit(fetchLimit);
+
+  if (error) throw new Error(error.message);
+
+  type Row = {
+    displayName: string;
+    avatarUrl: string | null;
+    pointsBalance: number;
+    isYou: boolean;
+  };
+
+  const realRows: Row[] = (data ?? []).map((row) => ({
+    displayName: row.display_name as string,
+    avatarUrl: (row.avatar_url as string | null) ?? null,
+    pointsBalance: row.points_balance as number,
+    isYou: Boolean(userId && row.user_id === userId),
+  }));
+
+  const virtualRows: Row[] = listPokerVirtualLeaderRows().map((v) => ({
+    displayName: v.displayName,
+    avatarUrl: v.avatarUrl,
+    pointsBalance: v.pointsBalance,
+    isYou: false,
+  }));
+
+  const merged = [...realRows, ...virtualRows].sort(
+    (a, b) => b.pointsBalance - a.pointsBalance,
+  );
+
+  const entries: PokerLeaderboardEntry[] = merged
+    .slice(0, fetchLimit)
+    .map((row, index) => ({
+      rank: index + 1,
+      displayName: row.displayName,
+      avatarUrl: row.avatarUrl,
+      pointsBalance: row.pointsBalance,
+      isYou: row.isYou,
+    }));
+
+  let you: PokerLeaderboardEntry | null =
+    entries.find((e) => e.isYou) ?? null;
+
+  if (userId && !you) {
+    const { data: self } = await supabase
+      .from("poker_users")
+      .select("user_id, display_name, avatar_url, points_balance")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (self) {
+      const selfPoints = self.points_balance as number;
+      const above =
+        merged.filter((r) => r.pointsBalance > selfPoints).length;
+      you = {
+        rank: above + 1,
+        displayName: self.display_name as string,
+        avatarUrl: (self.avatar_url as string | null) ?? null,
+        pointsBalance: selfPoints,
+        isYou: true,
+      };
+    }
+  }
+
+  return { entries, you };
 }
 
 export type BankruptcyResult = {
@@ -558,4 +716,75 @@ export async function creditCashOut(
     "room",
     roomId,
   );
+}
+
+/**
+ * 對帳修復：
+ * - 不再把「買入 − 兌現」差額當 stranded 退回（那會把桌上輸贏退成白拿積分）
+ * - 僅回收先前錯誤退款造成的多餘 ADMIN_ADJUST（stranded-buyin）
+ * 真正離桌／斷線必須由牌桌伺服器即時 creditCashOut(實際籌碼)。
+ */
+export async function repairStrandedBuyIns(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<{ refunded: number; clawedBack: number; balance: number }> {
+  const pokerUser = await ensurePokerUser(supabase, userId);
+  const { data: rows, error } = await supabase
+    .from("poker_points_ledger")
+    .select("delta, reason, ref_type, ref_id")
+    .eq("poker_user_id", pokerUser.id)
+    .in("reason", ["HAND_BUY_IN", "HAND_CASH_OUT", "ADMIN_ADJUST"]);
+
+  if (error) throw new Error(error.message);
+
+  let buyInTotal = 0;
+  let cashOutTotal = 0;
+  let repairedTotal = 0;
+  for (const row of rows ?? []) {
+    const delta = Number(row.delta) || 0;
+    if (row.reason === "HAND_BUY_IN") {
+      buyInTotal += Math.abs(delta);
+    } else if (row.reason === "HAND_CASH_OUT") {
+      cashOutTotal += Math.max(0, delta);
+    } else if (
+      row.reason === "ADMIN_ADJUST" &&
+      row.ref_type === "repair" &&
+      row.ref_id === "stranded-buyin"
+    ) {
+      repairedTotal += delta;
+    }
+  }
+
+  /*
+   * 正確經濟：買入後桌上輸贏靠「兌現實際 stack」結算。
+   * 不再把 buyIn−cashOut 當 stranded 補發。
+   * 僅回收帳上仍為正的 stranded-buyin 錯誤補發。
+   */
+  const overRefund = Math.max(0, repairedTotal);
+  if (overRefund <= 0) {
+    return {
+      refunded: 0,
+      clawedBack: 0,
+      balance: pokerUser.points_balance,
+    };
+  }
+
+  const claw = Math.min(overRefund, pokerUser.points_balance);
+  if (claw <= 0) {
+    return {
+      refunded: 0,
+      clawedBack: 0,
+      balance: pokerUser.points_balance,
+    };
+  }
+  const balance = await creditViaRpc(
+    supabase,
+    userId,
+    -claw,
+    "ADMIN_ADJUST",
+    "repair",
+    "stranded-buyin",
+    { buyInTotal, cashOutTotal, repairedTotal, clawback: claw },
+  );
+  return { refunded: 0, clawedBack: claw, balance };
 }

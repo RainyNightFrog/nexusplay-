@@ -273,6 +273,32 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
     ],
   },
   {
+    slug: "neon-holdem",
+    title: "Neon Hold'em",
+    creator: "卡牌收集家",
+    categories: ["卡牌", "策略"],
+    description:
+      "霓虹德州撲克：積分入場、24/7 常開牌桌，支援跟注、加注、棄牌與全下。每日簽到與任務累積籌碼，在雨夜牌局裡拼一把運氣與膽識。",
+    coverPath: "/covers/neon-holdem-cover.png",
+    playsCount: 3_640,
+    likesCount: 214,
+    sharesCount: 168,
+    ratingAvg: 4.76,
+    featured: false,
+    featuredAccent: "cyan",
+    /* 原生 React 遊玩標記，詳情頁不走 iframe */
+    demoUrl: "native:neon-holdem",
+    viewportWidth: 1100,
+    viewportHeight: 720,
+    devlogs: [
+      {
+        title: "牌桌經濟與任務上線",
+        content: "積分籌碼、每日簽到與牌桌節奏調整完成，歡迎來湊一桌。",
+        createdAtOffsetDays: 1,
+      },
+    ],
+  },
+  {
     slug: "cyber-blade-dash",
     title: "賽博光刃切擊",
     creator: "RNF Creator Pool",

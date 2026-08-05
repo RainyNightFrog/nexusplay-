@@ -1,9 +1,10 @@
+import { isNativeReactPlaySlug } from "@/lib/native-react-games";
 import { PLATFORM_GAMES } from "@/lib/platform-catalog";
 
 const LANDSCAPE_SLUGS = new Set(
-  PLATFORM_GAMES.filter((game) => game.slug !== "void-gacha").map(
-    (game) => game.slug
-  )
+  PLATFORM_GAMES.filter(
+    (game) => game.slug !== "void-gacha" && !isNativeReactPlaySlug(game.slug)
+  ).map((game) => game.slug)
 );
 
 /** 平台內建橫向遊戲（街機 + demos，不含 VOID GACHA 響應式頁） */
