@@ -224,14 +224,13 @@ export function PokerLobby() {
       if (data.alreadyClaimed) {
         showToast({
           title: "今日已簽到",
-          detail: `連續第 ${data.streakDay} 天（今日已領 ${awarded.toLocaleString()} 積分）· 明日再來`,
-          pointsDelta: awarded > 0 ? awarded : undefined,
+          detail: `連續第 ${data.streakDay} 天 · 明日再來`,
           tone: "info",
         });
       } else {
         showToast({
-          title: "簽到成功！",
-          detail: `連續第 ${data.streakDay} 天 · 獲得 ${awarded.toLocaleString()} 積分`,
+          title: "簽到成功",
+          detail: `連續第 ${data.streakDay} 天`,
           pointsDelta: awarded,
           tone: "success",
         });

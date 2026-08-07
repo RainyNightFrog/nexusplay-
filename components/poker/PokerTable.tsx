@@ -414,11 +414,6 @@ export function PokerTable() {
             底池 {pot.toLocaleString()}
           </div>
           <ChipStack amount={pot} />
-          {handHint ? (
-            <div className="mt-0.5 rounded-full border border-sky-300/50 bg-black/80 px-3 py-1 text-xs font-bold tracking-wide text-sky-100 shadow-[0_0_12px_rgba(125,211,252,0.35)] sm:text-sm">
-              你的牌型 · {handHint}
-            </div>
-          ) : null}
           {activeFx?.kind === "win" && activeFx.summary && (
             <div className="mt-1 max-w-[min(92%,20rem)] rounded-xl border-2 border-yellow-300/80 bg-black/90 px-3 py-2 text-center text-sm font-black leading-snug text-yellow-50 shadow-[0_0_20px_rgba(250,204,21,0.55)] sm:text-base">
               {activeFx.summary}

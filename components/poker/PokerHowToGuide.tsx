@@ -318,7 +318,7 @@ function TabContent({ tab }: { tab: TabId }) {
         />
         <Bullet
           title="牌型提示"
-          body="桌心與操作區會顯示「你的牌型」（一對、兩對、同花等），只給你自己看，方便判斷強弱。"
+          body="下方操作區會顯示目前牌型（一對、兩對、同花等），只給你自己看，方便判斷強弱。"
         />
         <Bullet
           title="離桌兌現"

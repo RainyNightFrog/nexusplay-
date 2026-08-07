@@ -90,6 +90,8 @@ export function PokerSeat({
     !seat.folded &&
     !seat.sittingOut;
 
+  const hasRoleBadge = isDealer || blindRole === "SB" || blindRole === "BB";
+
   return (
     <div
       className={cn("absolute", isYou ? "z-30" : "z-10")}
@@ -114,6 +116,36 @@ export function PokerSeat({
             "ring-2 ring-yellow-200 shadow-[0_0_28px_rgba(250,204,21,0.75)]",
         )}
       >
+        {/* 莊家／盲注：框外右上，不擋名字、少與 ALL-IN 重疊 */}
+        {hasRoleBadge ? (
+          <div className="pointer-events-none absolute -right-1 -top-2 z-20 flex translate-x-1/2 items-center gap-0.5">
+            {isDealer && (
+              <span
+                className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-yellow-200 to-amber-500 text-[10px] font-black text-amber-950 shadow"
+                title="莊家"
+              >
+                D
+              </span>
+            )}
+            {blindRole === "SB" && (
+              <span
+                className="flex h-5 min-w-5 items-center justify-center rounded-full bg-sky-500 px-1 text-[9px] font-black text-white shadow"
+                title="小盲"
+              >
+                小
+              </span>
+            )}
+            {blindRole === "BB" && (
+              <span
+                className="flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-black text-white shadow"
+                title="大盲"
+              >
+                大
+              </span>
+            )}
+          </div>
+        ) : null}
+
         <AnimatePresence>
           {fxKind === "allin" && (
             <motion.div
@@ -161,30 +193,6 @@ export function PokerSeat({
         )}
 
         <div className="relative flex items-center justify-center gap-0.5">
-          {isDealer && (
-            <span
-              className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-yellow-200 to-amber-500 text-[10px] font-black text-amber-950"
-              title="莊家"
-            >
-              D
-            </span>
-          )}
-          {blindRole === "SB" && (
-            <span
-              className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-sky-500 px-1 text-[9px] font-black text-white shadow"
-              title="小盲"
-            >
-              小
-            </span>
-          )}
-          {blindRole === "BB" && (
-            <span
-              className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-black text-white shadow"
-              title="大盲"
-            >
-              大
-            </span>
-          )}
           {seat.avatarUrl && !isYou ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -196,7 +204,9 @@ export function PokerSeat({
           <span
             className={cn(
               "truncate font-semibold text-amber-50",
-              "max-w-[3.8rem] text-[11px] sm:text-xs",
+              isYou
+                ? "max-w-[4.5rem] text-[11px] sm:max-w-[5rem] sm:text-xs"
+                : "max-w-[4.2rem] text-[11px] sm:max-w-[4.6rem] sm:text-xs",
             )}
           >
             {isYou ? "你" : seat.name}
