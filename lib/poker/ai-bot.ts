@@ -151,7 +151,7 @@ function analyzeMade(
   }
   const boardPaired = [...rankCounts.values()].some((n) => n >= 2);
   const boardTrips = [...rankCounts.values()].some((n) => n >= 3);
-  const suitCounts = new Map<string, number>();
+  const suitCounts = new Map<number, number>();
   for (const c of board) {
     suitCounts.set(c.suit, (suitCounts.get(c.suit) ?? 0) + 1);
   }
