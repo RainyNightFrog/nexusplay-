@@ -6,5 +6,8 @@
 import "./hand-evaluator.test";
 import "./pot.test";
 import "./engine.test";
+import "./hud-stats.test";
+import "./pre-action.test";
+import "./ai-bot.test";
 
-console.log("✅ lib/poker — all Step 2 unit tests passed");
+console.log("✅ lib/poker — all unit tests passed");

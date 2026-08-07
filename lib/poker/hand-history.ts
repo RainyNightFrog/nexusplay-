@@ -12,6 +12,25 @@ export type HandWinnerInfo = {
   name: string;
   amount: number;
   handLabelZh?: string;
+  holeCards?: string[];
+};
+
+/** 單座位本手結算明細（含投入／贏得／淨值；攤牌時含底牌） */
+export type HandSeatResult = {
+  seatId: string;
+  name: string;
+  seatIndex: number;
+  folded: boolean;
+  allIn: boolean;
+  /** 本手投入底池總額 */
+  committed: number;
+  /** 分到的獎金 */
+  won: number;
+  /** 淨輸贏 = won - committed */
+  net: number;
+  handLabelZh?: string;
+  /** 攤牌公開的底牌；客戶端可再補上自己的底牌 */
+  holeCards?: string[];
 };
 
 /** Socket 可安全 JSON 序列化的引擎事件 */
@@ -35,6 +54,7 @@ export type PublicEngineEvent =
       type: "hand-complete";
       handId: string;
       winners: HandWinnerInfo[];
+      seats: HandSeatResult[];
       board: string[];
       potTotal: number;
       showdown: boolean;
@@ -53,8 +73,11 @@ export type HandHistoryRecord = {
   handId: string;
   lines: HandLogLine[];
   winners: HandWinnerInfo[];
+  /** 本手參與者勝負明細 */
+  seats: HandSeatResult[];
   board: string[];
   potTotal: number;
+  showdown: boolean;
   completed: boolean;
   summary: string;
 };
@@ -150,34 +173,88 @@ export function serializeEngineEvent(
   }
 
   /* hand-complete */
-  const winners: HandWinnerInfo[] = [];
-  for (const [seatId, amount] of ev.winners) {
-    if (amount <= 0) continue;
-    const seat = ev.snapshot.seats.find((s) => s.seatId === seatId);
-    let handLabelZh: string | undefined;
-    if (seat && !seat.folded && ev.snapshot.board.length >= 3) {
-      handLabelZh = handLabelZhFromCards([
-        ...seat.holeCards,
-        ...ev.snapshot.board,
-      ]);
-    }
-    winners.push({
-      seatId,
-      name: nameOf(seatId),
-      amount,
-      handLabelZh,
+  const survivors = ev.snapshot.seats.filter((s) => !s.folded);
+  const isShowdown =
+    survivors.length >= 2 && ev.snapshot.board.length >= 3;
+
+  const seats: HandSeatResult[] = ev.snapshot.seats
+    .filter((s) => s.committed > 0 || s.holeCards.length > 0)
+    .map((seat) => {
+      const won = ev.winners.get(seat.seatId) ?? 0;
+      const committed = seat.committed;
+      let handLabelZh: string | undefined;
+      if (!seat.folded && ev.snapshot.board.length >= 3) {
+        handLabelZh = handLabelZhFromCards([
+          ...seat.holeCards,
+          ...ev.snapshot.board,
+        ]);
+      }
+      /* 僅攤牌公開未蓋牌者底牌；棄牌者不外洩 */
+      const holeCards =
+        isShowdown && !seat.folded
+          ? seat.holeCards.map((c) => c.code)
+          : undefined;
+      return {
+        seatId: seat.seatId,
+        name: nameOf(seat.seatId),
+        seatIndex: seat.seatIndex,
+        folded: seat.folded,
+        allIn: seat.allIn,
+        committed,
+        won,
+        net: won - committed,
+        handLabelZh,
+        holeCards,
+      };
+    })
+    .sort((a, b) => {
+      /* 贏家優先，其餘依淨值、座位 */
+      if (a.won !== b.won) return b.won - a.won;
+      if (a.net !== b.net) return b.net - a.net;
+      return a.seatIndex - b.seatIndex;
     });
-  }
-  winners.sort((a, b) => b.amount - a.amount);
+
+  const winners: HandWinnerInfo[] = seats
+    .filter((s) => s.won > 0)
+    .map((s) => ({
+      seatId: s.seatId,
+      name: s.name,
+      amount: s.won,
+      handLabelZh: s.handLabelZh,
+      holeCards: s.holeCards,
+    }));
 
   return {
     type: "hand-complete",
     handId: ev.snapshot.handId,
     winners,
+    seats,
     board: ev.snapshot.board.map((c) => c.code),
     potTotal: winners.reduce((s, w) => s + w.amount, 0),
-    showdown: ev.snapshot.board.length >= 3 && winners.length > 0,
+    showdown: isShowdown,
   };
+}
+
+/** 用公開快照補上自己的底牌（棄牌時事件不會帶） */
+export function mergeSeatHoleCardsFromSnapshot(
+  seats: HandSeatResult[],
+  snap: PublicHandSnapshot | null | undefined,
+  mySeatId: string | null,
+): HandSeatResult[] {
+  if (!snap?.seats?.length) return seats;
+  return seats.map((r) => {
+    if (r.holeCards?.length) return r;
+    const fromSnap = snap.seats.find((s) => s.seatId === r.seatId);
+    if (!fromSnap?.holeCards?.length) return r;
+    /* 快照僅含自己或攤牌公開牌，可安心合併 */
+    if (mySeatId && r.seatId === mySeatId) {
+      return { ...r, holeCards: fromSnap.holeCards.slice() };
+    }
+    if (!r.folded && fromSnap.holeCards.length) {
+      return { ...r, holeCards: fromSnap.holeCards.slice() };
+    }
+    return r;
+  });
 }
 
 export function whoName(
@@ -214,29 +291,77 @@ export function formatActionLine(
   return `${street}${who} ${verb} ${action.amount.toLocaleString()}`;
 }
 
+export function formatNetZh(net: number): string {
+  if (net > 0) return `+${net.toLocaleString()}`;
+  if (net < 0) return net.toLocaleString();
+  return "±0";
+}
+
 export function formatWinnersSummary(
   winners: HandWinnerInfo[],
   mySeatId: string | null,
+  seats?: HandSeatResult[],
 ): string {
   if (winners.length === 0) return "本手無人獲獎";
-  return winners
-    .map((w) => {
-      const name = mySeatId && w.seatId === mySeatId ? "你" : w.name;
-      const hand = w.handLabelZh ? `（${w.handLabelZh}）` : "";
-      return `${name} 贏得 ${w.amount.toLocaleString()} 積分${hand}`;
-    })
-    .join(" · ");
+  const parts = winners.map((w) => {
+    const name = mySeatId && w.seatId === mySeatId ? "你" : w.name;
+    const hand = w.handLabelZh ? `（${w.handLabelZh}）` : "";
+    const cards =
+      w.holeCards?.length
+        ? `〔${w.holeCards.map(formatCardCode).join(" ")}〕`
+        : "";
+    return `${name}${cards} 贏得 ${w.amount.toLocaleString()} 積分${hand}`;
+  });
+  if (mySeatId && seats?.length) {
+    const mine = seats.find((s) => s.seatId === mySeatId);
+    if (mine && mine.won <= 0 && mine.committed > 0) {
+      parts.push(`你 ${formatNetZh(mine.net)}`);
+    }
+  }
+  return parts.join(" · ");
 }
 
 export function buildHandSummary(
   handNumber: number,
   winners: HandWinnerInfo[],
   mySeatId: string | null,
+  seats?: HandSeatResult[],
 ): string {
+  const mine = mySeatId
+    ? seats?.find((s) => s.seatId === mySeatId)
+    : undefined;
+  if (mine && mine.committed > 0) {
+    const tag =
+      mine.net > 0 ? "贏" : mine.net < 0 ? "輸" : "平";
+    return `第 ${handNumber} 手 · 你${tag} ${formatNetZh(mine.net)}`;
+  }
   if (winners.length === 0) return `第 ${handNumber} 手 · 結束`;
   const top = winners[0]!;
   const name = mySeatId && top.seatId === mySeatId ? "你" : top.name;
   const extra =
     winners.length > 1 ? ` 等 ${winners.length} 人` : "";
   return `第 ${handNumber} 手 · ${name}${extra} +${top.amount.toLocaleString()}`;
+}
+
+/** 產生勝負明細文字行（寫入牌局 log） */
+export function formatSeatResultLines(
+  seats: HandSeatResult[],
+  mySeatId: string | null,
+): string[] {
+  return seats.map((s) => {
+    const name = mySeatId && s.seatId === mySeatId ? "你" : s.name;
+    const cards = s.holeCards?.length
+      ? ` ${s.holeCards.map(formatCardCode).join(" ")}`
+      : "";
+    const status = s.folded
+      ? "蓋牌"
+      : s.handLabelZh
+        ? s.handLabelZh
+        : s.allIn
+          ? "全下"
+          : "攤牌";
+    const wonPart =
+      s.won > 0 ? ` · 贏得 ${s.won.toLocaleString()}` : "";
+    return `${name}${cards} · ${status} · 投入 ${s.committed.toLocaleString()}${wonPart} · 淨 ${formatNetZh(s.net)}`;
+  });
 }

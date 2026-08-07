@@ -48,6 +48,13 @@ import {
   serializeEngineEvent,
   type PublicEngineEvent,
 } from "./hand-history";
+import {
+  applyHandDeltas,
+  computeHandHudDeltas,
+  emptyHudAccum,
+  toPublicHud,
+  type SeatHudAccum,
+} from "./hud-stats";
 
 export type { PublicHandSnapshot, PublicSeat, PublicTableState, OccupantKind };
 export type { PublicEngineEvent };
@@ -78,6 +85,8 @@ export interface TableOccupant {
   /** 剩餘 time bank（秒） */
   timeBankSec: number;
   socketId?: string;
+  /** 本桌入座起累計的風格統計 */
+  sessionHud: SeatHudAccum;
 }
 
 export interface ActiveTable {
@@ -554,6 +563,7 @@ export class TableOrchestrator {
       restUntilMs: null,
       timeBankSec: TIME_BANK_SECONDS,
       socketId: opts.socketId,
+      sessionHud: emptyHudAccum(),
     };
     target.occupants.push(seat);
     this.userToRoom.set(opts.userId, target.roomId);
@@ -635,6 +645,7 @@ export class TableOrchestrator {
         restUntilMs: null,
         timeBankSec: TIME_BANK_SECONDS,
         socketId: entry.socketId,
+        sessionHud: emptyHudAccum(),
       };
       table.occupants.push(seat);
       this.userToRoom.set(entry.userId, table.roomId);
@@ -1055,6 +1066,7 @@ export class TableOrchestrator {
         seatedAtMs: Date.now(),
         minStayMs: randomVirtualStayMs(),
         timeBankSec: TIME_BANK_SECONDS,
+        sessionHud: emptyHudAccum(),
       });
       botsNow += 1;
     }
@@ -1192,6 +1204,10 @@ export class TableOrchestrator {
       }
     }
 
+    if (ev.type === "hand-complete") {
+      this.applySessionHud(table, ev);
+    }
+
     const publicEvent = serializeEngineEvent(ev, (seatId) => {
       const occ = table.occupants.find((o) => o.seatId === seatId);
       if (occ) return occ.name;
@@ -1261,6 +1277,20 @@ export class TableOrchestrator {
       const pending = this.pendingLeaveResolvers.get(userId);
       const left = this.forceLeaveWithStack(userId);
       pending?.(left);
+    }
+  }
+
+  private applySessionHud(table: ActiveTable, ev: EngineEvent): void {
+    if (ev.type !== "hand-complete") return;
+    const deltas = computeHandHudDeltas(
+      ev.snapshot,
+      ev.winners,
+      table.startingStacks,
+    );
+    for (const d of deltas) {
+      const occ = table.occupants.find((o) => o.seatId === d.seatId);
+      if (!occ) continue;
+      occ.sessionHud = applyHandDeltas(occ.sessionHud, d);
     }
   }
 
@@ -1484,6 +1514,7 @@ export class TableOrchestrator {
         allIn: eng?.allIn,
         streetCommitted: eng?.streetCommitted,
         committed: eng?.committed,
+        hud: toPublicHud(o.sessionHud ?? emptyHudAccum()),
       };
     });
 

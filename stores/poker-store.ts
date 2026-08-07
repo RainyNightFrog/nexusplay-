@@ -12,12 +12,30 @@ import {
   formatActionLine,
   formatCardCode,
   formatWinnersSummary,
+  mergeSeatHoleCardsFromSnapshot,
   streetLabelZh,
   whoName,
   type HandHistoryRecord,
   type HandLogLine,
   type PublicEngineEvent,
 } from "@/lib/poker/hand-history";
+
+function emptyHandDraft(
+  partial: Pick<HandHistoryRecord, "id" | "handNumber" | "handId"> &
+    Partial<HandHistoryRecord>,
+): HandHistoryRecord {
+  return {
+    lines: [],
+    winners: [],
+    seats: [],
+    board: [],
+    potTotal: 0,
+    showdown: false,
+    completed: false,
+    summary: `第 ${partial.handNumber} 手 · 進行中`,
+    ...partial,
+  };
+}
 
 export type PokerConnectionStatus =
   | "idle"
@@ -277,17 +295,11 @@ export const usePokerStore = create<PokerStore>((set, get) => ({
 
       if (ev.type === "hand-started") {
         const handNumber = snap.handNumber || history.length + 1;
-        draft = {
+        draft = emptyHandDraft({
           id: ev.handId || `hand_${handNumber}_${Date.now()}`,
           handNumber,
           handId: ev.handId,
-          lines: [],
-          winners: [],
-          board: [],
-          potTotal: 0,
-          completed: false,
-          summary: `第 ${handNumber} 手 · 進行中`,
-        };
+        });
         pushLine(draft, "meta", `—— 第 ${handNumber} 手開始 ——`);
         logs.push(`第 ${handNumber} 手開始`);
         set({ tableFx: null });
@@ -295,17 +307,12 @@ export const usePokerStore = create<PokerStore>((set, get) => ({
 
       if (ev.type === "street") {
         if (!draft) {
-          draft = {
+          draft = emptyHandDraft({
             id: `hand_live_${snap.handNumber || Date.now()}`,
             handNumber: snap.handNumber || history.length + 1,
             handId: `unknown_${Date.now()}`,
-            lines: [],
-            winners: [],
-            board: [],
             potTotal: snap.potTotal ?? 0,
-            completed: false,
-            summary: `第 ${snap.handNumber || "?"} 手 · 進行中`,
-          };
+          });
         }
         draft.board = ev.board.slice();
         const cards = ev.board.map(formatCardCode).join(" ");
@@ -316,17 +323,13 @@ export const usePokerStore = create<PokerStore>((set, get) => ({
 
       if (ev.type === "action") {
         if (!draft) {
-          draft = {
+          draft = emptyHandDraft({
             id: `hand_live_${snap.handNumber || Date.now()}`,
             handNumber: snap.handNumber || history.length + 1,
             handId: `unknown_${Date.now()}`,
-            lines: [],
-            winners: [],
             board: snap.board ?? [],
             potTotal: snap.potTotal ?? 0,
-            completed: false,
-            summary: `第 ${snap.handNumber || "?"} 手 · 進行中`,
-          };
+          });
         }
         const who = whoName(ev.action.seatId, mySeatId, snap);
         const text = formatActionLine(ev.action, who);
@@ -356,21 +359,23 @@ export const usePokerStore = create<PokerStore>((set, get) => ({
       if (ev.type === "hand-complete") {
         get().bumpHandComplete();
         if (!draft) {
-          draft = {
+          draft = emptyHandDraft({
             id: ev.handId || `hand_${snap.handNumber || Date.now()}`,
             handNumber: snap.handNumber || history.length + 1,
             handId: ev.handId,
-            lines: [],
-            winners: [],
-            board: [],
-            potTotal: 0,
-            completed: false,
             summary: "",
-          };
+          });
         }
+        const seatResults = mergeSeatHoleCardsFromSnapshot(
+          ev.seats ?? [],
+          snap,
+          mySeatId,
+        );
         draft.board = ev.board.slice();
         draft.winners = ev.winners.slice();
+        draft.seats = seatResults;
         draft.potTotal = ev.potTotal;
+        draft.showdown = ev.showdown;
         draft.completed = true;
         if (ev.board.length) {
           const boardText = `公牌 ${ev.board.map(formatCardCode).join(" ")}`;
@@ -378,7 +383,11 @@ export const usePokerStore = create<PokerStore>((set, get) => ({
             pushLine(draft, "street", boardText);
           }
         }
-        const winText = formatWinnersSummary(ev.winners, mySeatId);
+        const winText = formatWinnersSummary(
+          ev.winners,
+          mySeatId,
+          seatResults,
+        );
         pushLine(draft, "result", winText);
         pushLine(
           draft,
@@ -389,6 +398,7 @@ export const usePokerStore = create<PokerStore>((set, get) => ({
           draft.handNumber,
           ev.winners,
           mySeatId,
+          seatResults,
         );
         logs.push(winText);
         logs.push(`—— 第 ${draft.handNumber} 手結束 ——`);

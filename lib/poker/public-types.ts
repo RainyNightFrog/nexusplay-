@@ -3,6 +3,9 @@
  */
 
 import type { TableTierId } from "./types";
+import type { PublicSeatHud } from "./hud-stats";
+
+export type { PublicSeatHud };
 
 export type OccupantKind = "HUMAN" | "AI_BOT";
 
@@ -22,6 +25,8 @@ export type PublicSeat = {
   allIn?: boolean;
   streetCommitted?: number;
   committed?: number;
+  /** 本桌 session 風格統計（點座位可看） */
+  hud?: PublicSeatHud;
 };
 
 export type PublicTableState = {

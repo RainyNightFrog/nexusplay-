@@ -297,6 +297,14 @@ function TabContent({ tab }: { tab: TabId }) {
       <SectionTitle>介面看哪裡？</SectionTitle>
       <div className="grid gap-2">
         <Bullet
+          title="預選下一步"
+          body="還沒輪到你時，可先點「過牌／蓋牌」「跟注」「跟任何注」或「全下」。按鈕會亮起，輪到你時自動執行；再點一次可取消。"
+        />
+        <Bullet
+          title="點擊牌手框"
+          body="點任一玩家座位，可查看本桌手數、VPIP、翻前加注、3-Bet、持續下注、進攤牌率與本桌淨輸贏。"
+        />
+        <Bullet
           title="自己座位（螢幕下方）"
           body="標示「你」，底牌會正面顯示且較大。發光＝輪到你行動。"
         />

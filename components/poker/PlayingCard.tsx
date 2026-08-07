@@ -172,7 +172,14 @@ export function PlayingCard({
   );
 }
 
-export function ChipStack({ amount }: { amount: number }) {
+export function ChipStack({
+  amount,
+  hideAmount = false,
+}: {
+  amount: number;
+  /** 與「底池 xxx」並列時隱藏數字，只留籌碼堆視覺 */
+  hideAmount?: boolean;
+}) {
   if (amount <= 0) return null;
   const layers = Math.min(5, Math.max(1, Math.ceil(Math.log10(amount + 1))));
   return (
@@ -187,11 +194,13 @@ export function ChipStack({ amount }: { amount: number }) {
           style={{ bottom: i * 2.5 }}
         />
       ))}
-      <span className="relative z-10 text-[10px] font-bold text-amber-50 drop-shadow-md">
-        {amount >= 1000
-          ? `${(amount / 1000).toFixed(amount % 1000 === 0 ? 0 : 1)}k`
-          : amount}
-      </span>
+      {!hideAmount ? (
+        <span className="relative z-10 text-[10px] font-bold text-amber-50 drop-shadow-md">
+          {amount >= 1000
+            ? `${(amount / 1000).toFixed(amount % 1000 === 0 ? 0 : 1)}k`
+            : amount}
+        </span>
+      ) : null}
     </div>
   );
 }

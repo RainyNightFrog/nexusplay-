@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Coins } from "lucide-react";
 import { usePokerStore } from "@/stores/poker-store";
 import { usePokerSocket } from "@/hooks/use-poker-socket";
@@ -15,9 +15,16 @@ import {
 } from "./PokerSeat";
 import { PokerHandHistory } from "./PokerHandHistory";
 import { PokerHowToGuide } from "./PokerHowToGuide";
+import { PokerPlayerInfoDialog } from "./PokerPlayerInfoDialog";
 import { describeLiveHandZh } from "@/lib/poker/hand-hint";
+import {
+  preActionLabelZh,
+  resolvePreAction,
+  type PreAction,
+} from "@/lib/poker/pre-action";
 import { cn } from "@/lib/utils";
 import { MAX_SEATS } from "@/lib/poker/types";
+import type { PublicSeat } from "@/lib/poker/public-types";
 
 const STREET_ZH: Record<string, string> = {
   waiting: "等待",
@@ -33,6 +40,9 @@ const STREET_ZH: Record<string, string> = {
   RIVER: "河牌",
   SHOWDOWN: "攤牌",
 };
+
+/** 防止 React Strict Mode／重繪重複送出同一預選 */
+const recentPreActionKeys = new Set<string>();
 
 export function PokerTable() {
   const {
@@ -53,6 +63,14 @@ export function PokerTable() {
   const [showTopUp, setShowTopUp] = useState(false);
   const [topUpAmount, setTopUpAmount] = useState(0);
   const [topUpBusy, setTopUpBusy] = useState(false);
+  const [infoSeatId, setInfoSeatId] = useState<string | null>(null);
+  const [preAction, setPreAction] = useState<PreAction | null>(null);
+  const autoSentKeyRef = useRef<string | null>(null);
+
+  const infoSeat: PublicSeat | null = useMemo(() => {
+    if (!infoSeatId || !table) return null;
+    return table.seats.find((s) => s.seatId === infoSeatId) ?? null;
+  }, [infoSeatId, table]);
 
   const you = table?.seats.find((s) => s.seatId === seatId);
   const isResting = Boolean(you?.sittingOut && (you?.restUntilMs ?? 0) > 0);
@@ -74,6 +92,24 @@ export function PokerTable() {
   const betweenHands =
     !streetKey || streetKey === "waiting" || streetKey === "complete";
 
+  const canPreAct =
+    !isResting &&
+    !betweenHands &&
+    !!you &&
+    !you.folded &&
+    !you.sittingOut;
+
+  const togglePre = (next: PreAction) => {
+    setPreAction((prev) => {
+      if (!prev) return next;
+      if (prev.kind !== next.kind) return next;
+      if (prev.kind === "call" && next.kind === "call") {
+        return prev.maxCall === next.maxCall ? null : next;
+      }
+      return null;
+    });
+  };
+
   const topUpRoom = Math.max(0, (table?.maxBuyIn ?? 0) - stack);
   const canTopUp =
     betweenHands &&
@@ -82,10 +118,10 @@ export function PokerTable() {
 
   const handHint = useMemo(
     () =>
-      you && !you.folded
+      you?.holeCards?.length
         ? describeLiveHandZh(you.holeCards, table?.board)
         : null,
-    [you, you?.holeCards, you?.folded, table?.board],
+    [you, you?.holeCards, table?.board],
   );
 
   const [tick, setTick] = useState(0);
@@ -104,6 +140,45 @@ export function PokerTable() {
   useEffect(() => {
     setRaiseTo(minRaise);
   }, [minRaise, table?.handNumber, table?.street]);
+
+  /* 新手牌／新街／蓋牌後清除預選 */
+  useEffect(() => {
+    setPreAction(null);
+    autoSentKeyRef.current = null;
+  }, [table?.handNumber, table?.street, you?.folded, betweenHands, isResting]);
+
+  /* 輪到你且有預選 → 自動執行 */
+  useEffect(() => {
+    if (!isYourTurn || !preAction || !canPreAct || !seatId) return;
+    const key = `${table?.roomId}|${table?.handNumber}|${table?.street}|${seatId}|${preAction.kind}`;
+    if (recentPreActionKeys.has(key) || autoSentKeyRef.current === key) {
+      setPreAction(null);
+      return;
+    }
+
+    const resolved = resolvePreAction(preAction, { toCall, stack });
+    setPreAction(null);
+    if (!resolved) return;
+
+    autoSentKeyRef.current = key;
+    recentPreActionKeys.add(key);
+    if (recentPreActionKeys.size > 40) {
+      const first = recentPreActionKeys.values().next().value;
+      if (first) recentPreActionKeys.delete(first);
+    }
+    sendAction(resolved);
+  }, [
+    isYourTurn,
+    preAction,
+    canPreAct,
+    toCall,
+    stack,
+    seatId,
+    table?.roomId,
+    table?.handNumber,
+    table?.street,
+    sendAction,
+  ]);
 
   /* 新手牌重置發牌動畫標記 */
   useEffect(() => {
@@ -370,11 +445,12 @@ export function PokerTable() {
                     : null
               }
               fxKind={fxKind}
+              onSelect={() => setInfoSeatId(s.seatId)}
             />
           );
         })}
 
-        {/* 下注籌碼：獨立於座位框，靠桌心一圈 */}
+        {/* 下注籌碼：貼座位內側一圈，z 低於公牌以免遮牌 */}
         {table.seats.map((s) => {
           const bet = s.streetCommitted ?? 0;
           if (bet <= 0 || s.folded) return null;
@@ -382,20 +458,20 @@ export function PokerTable() {
           return (
             <div
               key={`bet-${s.seatId}`}
-              className="pointer-events-none absolute z-40"
+              className="pointer-events-none absolute z-[18]"
               style={betChipStyle(angleIndex)}
             >
-              <div className="flex flex-col items-center gap-1">
-                <div className="h-3.5 w-3.5 rounded-full border-2 border-amber-100/90 bg-gradient-to-br from-yellow-300 to-amber-600 shadow-[0_0_12px_rgba(251,191,36,0.85)]" />
-                <div className="rounded-full border-2 border-yellow-300/80 bg-black/90 px-2.5 py-1 text-sm font-black tabular-nums tracking-wide text-yellow-50 shadow-[0_0_14px_rgba(250,204,21,0.45)] backdrop-blur-sm sm:text-base">
+              <div className="flex items-center gap-1 rounded-full border-2 border-yellow-300/80 bg-black/90 py-0.5 pl-1 pr-2 shadow-[0_0_14px_rgba(250,204,21,0.45)] backdrop-blur-sm">
+                <div className="h-3 w-3 shrink-0 rounded-full border-2 border-amber-100/90 bg-gradient-to-br from-yellow-300 to-amber-600 shadow-[0_0_8px_rgba(251,191,36,0.85)]" />
+                <span className="text-sm font-black tabular-nums tracking-wide text-yellow-50 sm:text-[15px]">
                   {formatBetAmount(bet)}
-                </div>
+                </span>
               </div>
             </div>
           );
         })}
 
-        <div className="absolute left-1/2 top-[44%] z-20 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5">
+        <div className="absolute left-1/2 top-[43%] z-30 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5">
           <div className="flex min-h-[3.75rem] items-center justify-center gap-1.5">
             {(table.board ?? []).length > 0 ? (
               (table.board ?? []).map((c) => (
@@ -410,10 +486,12 @@ export function PokerTable() {
               <span className="text-xs text-emerald-200/35">等待公牌</span>
             )}
           </div>
-          <div className="rounded-full border border-amber-300/55 bg-gradient-to-r from-amber-950/90 via-yellow-900/75 to-amber-950/90 px-4 py-1.5 text-base font-black tabular-nums text-yellow-100 shadow-[0_0_18px_rgba(251,191,36,0.35)] sm:text-lg">
-            底池 {pot.toLocaleString()}
+          <div className="flex items-center gap-2">
+            <ChipStack amount={pot} hideAmount />
+            <div className="rounded-full border border-amber-300/55 bg-gradient-to-r from-amber-950/90 via-yellow-900/75 to-amber-950/90 px-4 py-1.5 text-base font-black tabular-nums text-yellow-100 shadow-[0_0_18px_rgba(251,191,36,0.35)] sm:text-lg">
+              底池 {pot.toLocaleString()}
+            </div>
           </div>
-          <ChipStack amount={pot} />
           {activeFx?.kind === "win" && activeFx.summary && (
             <div className="mt-1 max-w-[min(92%,20rem)] rounded-xl border-2 border-yellow-300/80 bg-black/90 px-3 py-2 text-center text-sm font-black leading-snug text-yellow-50 shadow-[0_0_20px_rgba(250,204,21,0.55)] sm:text-base">
               {activeFx.summary}
@@ -459,46 +537,123 @@ export function PokerTable() {
             目前牌型 · {handHint}
           </p>
         ) : null}
+        {!isYourTurn && canPreAct && preAction ? (
+          <p className="mb-2 text-center text-xs font-bold text-amber-100">
+            已預選「{preActionLabelZh(preAction, toCall)}」· 輪到你時自動執行
+            <span className="ml-1 font-medium text-amber-200/50">
+              （再點一次取消）
+            </span>
+          </p>
+        ) : null}
+        {!isYourTurn && canPreAct && !preAction ? (
+          <p className="mb-2 text-center text-[11px] text-amber-200/45">
+            可先點選預選下一步，輪到你時自動操作
+          </p>
+        ) : null}
         <div className="mb-3 flex justify-center gap-2">
           <ActionBtn
-            disabled={!isYourTurn}
-            onClick={() => sendAction({ type: "fold" })}
+            disabled={isYourTurn ? !isYourTurn : !canPreAct}
+            selected={!isYourTurn && preAction?.kind === "checkFold"}
+            onClick={() => {
+              if (isYourTurn) {
+                setPreAction(null);
+                sendAction({ type: "fold" });
+                return;
+              }
+              togglePre({ kind: "checkFold" });
+            }}
             tone="danger"
             wide
           >
-            蓋牌
+            {isYourTurn ? "蓋牌" : "過牌／蓋牌"}
           </ActionBtn>
-          {canCheck ? (
-            <ActionBtn
-              disabled={!isYourTurn}
-              onClick={() => sendAction({ type: "check" })}
-              wide
-            >
-              過牌
-            </ActionBtn>
+          {isYourTurn ? (
+            canCheck ? (
+              <ActionBtn
+                disabled={!isYourTurn}
+                onClick={() => {
+                  setPreAction(null);
+                  sendAction({ type: "check" });
+                }}
+                wide
+              >
+                過牌
+              </ActionBtn>
+            ) : (
+              <ActionBtn
+                disabled={!canCall && !callAllIn}
+                onClick={() => {
+                  setPreAction(null);
+                  sendAction(
+                    callAllIn ? { type: "all-in" } : { type: "call" },
+                  );
+                }}
+                tone="accent"
+                wide
+              >
+                {callAllIn
+                  ? `全下跟注 ${stack.toLocaleString()}`
+                  : `跟注 ${toCall.toLocaleString()}`}
+              </ActionBtn>
+            )
           ) : (
             <ActionBtn
-              disabled={!canCall && !callAllIn}
-              onClick={() =>
-                sendAction(callAllIn ? { type: "all-in" } : { type: "call" })
+              disabled={!canPreAct}
+              selected={
+                preAction?.kind === "callAny" ||
+                (preAction?.kind === "call" && preAction.maxCall === toCall)
               }
+              onClick={() => {
+                if (toCall > 0) {
+                  /* 跟注目前金額；若之後被人再加注則取消 */
+                  togglePre({ kind: "call", maxCall: toCall });
+                } else {
+                  togglePre({ kind: "callAny" });
+                }
+              }}
               tone="accent"
               wide
             >
-              {callAllIn
-                ? `全下跟注 ${stack.toLocaleString()}`
-                : `跟注 ${toCall.toLocaleString()}`}
+              {toCall > 0 ? `跟注 ${toCall.toLocaleString()}` : "過牌／跟注"}
             </ActionBtn>
           )}
-          <ActionBtn
-            disabled={!isYourTurn || stack <= 0}
-            onClick={() => sendAction({ type: "all-in" })}
-            tone="accent"
-            wide
-          >
-            全下
-          </ActionBtn>
+          {isYourTurn ? (
+            <ActionBtn
+              disabled={!isYourTurn || stack <= 0}
+              onClick={() => {
+                setPreAction(null);
+                sendAction({ type: "all-in" });
+              }}
+              tone="accent"
+              wide
+            >
+              全下
+            </ActionBtn>
+          ) : (
+            <ActionBtn
+              disabled={!canPreAct || stack <= 0}
+              selected={preAction?.kind === "allIn"}
+              onClick={() => togglePre({ kind: "allIn" })}
+              tone="accent"
+              wide
+            >
+              全下
+            </ActionBtn>
+          )}
         </div>
+
+        {/* 未輪到你時：額外「跟任何注」快捷 */}
+        {!isYourTurn && canPreAct && toCall > 0 ? (
+          <div className="mb-3 flex justify-center">
+            <ActionBtn
+              selected={preAction?.kind === "callAny"}
+              onClick={() => togglePre({ kind: "callAny" })}
+              tone="accent"
+            >
+              跟任何注
+            </ActionBtn>
+          </div>
+        ) : null}
 
         <div className="flex flex-col gap-2.5 border-t border-amber-700/30 pt-3">
           <div className="flex flex-wrap items-center justify-center gap-2">
@@ -621,6 +776,15 @@ export function PokerTable() {
 
       {/* 牌局紀錄 */}
       <PokerHandHistory />
+
+      <PokerPlayerInfoDialog
+        seat={infoSeat}
+        open={Boolean(infoSeat)}
+        onOpenChange={(open) => {
+          if (!open) setInfoSeatId(null);
+        }}
+        isYou={Boolean(infoSeat && infoSeat.seatId === seatId)}
+      />
     </div>
   );
 }
@@ -631,12 +795,15 @@ function ActionBtn({
   disabled,
   tone = "default",
   wide,
+  selected,
 }: {
   children: React.ReactNode;
   onClick: () => void;
   disabled?: boolean;
   tone?: "default" | "danger" | "accent";
   wide?: boolean;
+  /** 預選中高亮 */
+  selected?: boolean;
 }) {
   const tones = {
     default:
@@ -651,10 +818,13 @@ function ActionBtn({
       type="button"
       disabled={disabled}
       onClick={onClick}
+      aria-pressed={selected || undefined}
       className={cn(
         "min-h-11 rounded-xl border px-4 py-2.5 text-sm font-bold touch-manipulation transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-35",
         wide && "min-w-[5.5rem] flex-1 sm:flex-none sm:min-w-[6.5rem]",
         tones[tone],
+        selected &&
+          "border-yellow-300 ring-2 ring-yellow-300/90 shadow-[0_0_16px_rgba(250,204,21,0.45)]",
       )}
     >
       {children}

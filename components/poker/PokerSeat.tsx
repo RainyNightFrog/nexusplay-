@@ -47,11 +47,27 @@ export function seatStyle(angleIndex: number, isYou = false): CSSProperties {
   };
 }
 
-/** 下注籌碼獨立定位：比座位更靠桌心，不進座位框 */
+/**
+ * 下注籌碼橢圓半徑（相對桌心 %）：貼座位朝桌心一側，刻意避開中央公牌帶。
+ * 座位約 rx45／ry39；籌碼約 78–87%，正左／正右再橫向拉開。
+ */
+const BET_CHIP_RADIUS: ReadonlyArray<{ rx: number; ry: number }> = [
+  { rx: 34, ry: 28 }, // 0 自己（底）
+  { rx: 36, ry: 31 }, // 1 左下
+  { rx: 40, ry: 28 }, // 2 正左
+  { rx: 37, ry: 34 }, // 3 左上
+  { rx: 32, ry: 35 }, // 4 正上
+  { rx: 37, ry: 34 }, // 5 右上
+  { rx: 40, ry: 28 }, // 6 正右
+  { rx: 36, ry: 30 }, // 7 右下偏
+  { rx: 36, ry: 31 }, // 8 右下
+];
+
+/** 下注籌碼獨立定位：貼近對應座位，不擋中央公牌 */
 export function betChipStyle(angleIndex: number): CSSProperties {
-  const angle = ((ANGLE_BY_INDEX[angleIndex % 9] ?? 90) * Math.PI) / 180;
-  const rx = 27;
-  const ry = 24;
+  const i = ((angleIndex % 9) + 9) % 9;
+  const angle = ((ANGLE_BY_INDEX[i] ?? 90) * Math.PI) / 180;
+  const { rx, ry } = BET_CHIP_RADIUS[i] ?? { rx: 36, ry: 31 };
   return {
     left: `${50 + rx * Math.cos(angle)}%`,
     top: `${50 + ry * Math.sin(angle)}%`,
@@ -74,6 +90,7 @@ export function PokerSeat({
   isYou,
   blindRole,
   fxKind,
+  onSelect,
 }: {
   seat: SeatView;
   angleIndex: number;
@@ -83,12 +100,15 @@ export function PokerSeat({
   blindRole?: "SB" | "BB" | null;
   /** 當前特效（全下／獲勝） */
   fxKind?: "allin" | "win" | null;
+  /** 點擊座位查看玩家資訊 */
+  onSelect?: () => void;
 }) {
+  /* 自己棄牌後仍看得到底牌；對手棄牌則不顯示 */
   const showFace =
-    isYou &&
-    !!seat.holeCards?.length &&
-    !seat.folded &&
-    !seat.sittingOut;
+    isYou && !!seat.holeCards?.length && !seat.sittingOut;
+  const showCards =
+    !seat.sittingOut &&
+    (!seat.folded || showFace);
 
   const hasRoleBadge = isDealer || blindRole === "SB" || blindRole === "BB";
 
@@ -97,16 +117,28 @@ export function PokerSeat({
       className={cn("absolute", isYou ? "z-30" : "z-10")}
       style={seatStyle(angleIndex, isYou)}
     >
-      <div
+      <button
+        type="button"
+        onClick={onSelect}
+        aria-label={`查看 ${isYou ? "你" : seat.name} 的資訊`}
         className={cn(
-          "relative rounded-xl border text-center shadow-lg backdrop-blur-md",
+          "relative rounded-xl border text-center shadow-lg backdrop-blur-md transition",
+          "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-300/80",
+          "hover:brightness-110 active:scale-[0.98]",
           isYou
             ? "w-[6.25rem] px-1.5 py-1.5 sm:w-[6.75rem]"
             : "w-[5.1rem] px-1.5 py-1.5 sm:w-[5.75rem]",
-          seat.folded
+          seat.folded && !isYou
             ? "border-white/10 bg-black/45 opacity-40"
-            : "border-amber-400/45 bg-gradient-to-b from-amber-950/90 to-black/80",
-          isYou && "border-yellow-300/95 shadow-[0_0_24px_rgba(250,204,21,0.35)]",
+            : seat.folded && isYou
+              ? "border-zinc-400/40 bg-gradient-to-b from-zinc-900/90 to-black/80 opacity-90"
+              : "border-amber-400/45 bg-gradient-to-b from-amber-950/90 to-black/80",
+          isYou &&
+            !seat.folded &&
+            "border-yellow-300/95 shadow-[0_0_24px_rgba(250,204,21,0.35)]",
+          isYou &&
+            seat.folded &&
+            "border-yellow-300/50 shadow-[0_0_12px_rgba(250,204,21,0.2)]",
           isActing &&
             "border-yellow-300 ring-2 ring-yellow-300/80 shadow-[0_0_0_3px_rgba(250,204,21,0.25),0_0_22px_rgba(250,204,21,0.45)]",
           seat.allIn &&
@@ -213,7 +245,7 @@ export function PokerSeat({
           </span>
         </div>
 
-        {!seat.folded && !seat.sittingOut && (
+        {showCards ? (
           <div className="relative mt-1 flex justify-center gap-0.5">
             {showFace ? (
               seat.holeCards!.map((c) => (
@@ -226,7 +258,13 @@ export function PokerSeat({
               </>
             )}
           </div>
-        )}
+        ) : null}
+
+        {isYou && seat.folded && !seat.sittingOut ? (
+          <div className="relative mt-0.5 text-[9px] font-black tracking-wide text-zinc-300">
+            已棄牌
+          </div>
+        ) : null}
 
         <div className="relative mt-1 text-[11px] font-bold tabular-nums text-amber-100">
           {seat.stack.toLocaleString()}
@@ -246,7 +284,7 @@ export function PokerSeat({
             行動中
           </div>
         )}
-      </div>
+      </button>
     </div>
   );
 }
