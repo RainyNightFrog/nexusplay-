@@ -191,7 +191,7 @@ export function GameVolumeControl({
               onClick={close}
             />
             <div
-              className="fixed z-[120] flex w-16 flex-col items-center gap-1.5 rounded-xl border border-cyan-400/25 bg-zinc-950/98 px-2 py-3 shadow-[0_16px_48px_rgba(0,0,0,0.65)] backdrop-blur-md"
+              className="fixed z-[120] flex w-16 flex-col items-center gap-1.5 rounded-2xl border border-white/10 bg-zinc-950/95 px-2 py-3 shadow-2xl shadow-black/60 backdrop-blur-xl"
               style={{ top: panelPos.top, left: panelPos.left }}
               role="dialog"
               aria-label={tc("gameVolume")}
@@ -275,15 +275,17 @@ export function GameVolumeControl({
           "gap-1.5 border-white/10 bg-white/5 text-zinc-300 touch-manipulation hover:border-cyan-400/30 hover:text-white",
           compact
             ? "size-9 p-0 sm:size-auto sm:min-h-0 sm:px-3"
-            : "min-h-10 justify-center sm:min-h-0"
+            : "min-h-10 min-w-0 justify-center sm:min-h-0 sm:flex-none"
         )}
       >
         {muted ? (
-          <VolumeX className="size-3.5" />
+          <VolumeX className="size-3.5 shrink-0" />
         ) : (
-          <Volume2 className="size-3.5" />
+          <Volume2 className="size-3.5 shrink-0" />
         )}
-        <span className="hidden sm:inline">{tc("gameVolume")}</span>
+        <span className={cn(compact ? "hidden sm:inline" : "truncate")}>
+          {tc("gameVolume")}
+        </span>
       </Button>
       {overlay}
     </div>

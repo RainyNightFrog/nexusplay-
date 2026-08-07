@@ -1,0 +1,23 @@
+# 牌桌伺服器 Docker 建置用（縮小上傳／映像）
+node_modules
+.next
+.git
+.env
+.env.*
+!.env.example
+coverage
+*.md
+public
+app
+components
+hooks
+messages
+docs
+scripts
+supabase
+stores
+**/*.test.ts
+**/__tests__
+.vercel
+.cursor
+*.log

@@ -279,7 +279,7 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
     categories: ["卡牌", "策略"],
     description:
       "霓虹德州撲克：積分入場、24/7 常開牌桌，支援跟注、加注、棄牌與全下。每日簽到與任務累積籌碼，在雨夜牌局裡拼一把運氣與膽識。",
-    coverPath: "/covers/neon-holdem-cover.png",
+    coverPath: "/covers/neon-holdem-cover.webp",
     playsCount: 3_640,
     likesCount: 214,
     sharesCount: 168,
@@ -290,6 +290,11 @@ export const PLATFORM_GAMES: PlatformGameMeta[] = [
     demoUrl: "native:neon-holdem",
     viewportWidth: 1100,
     viewportHeight: 720,
+    galleryImages: [
+      "/covers/neon-holdem-cover.webp",
+      "/covers/neon-holdem-screenshot-1.webp",
+      "/covers/neon-holdem-screenshot-2.webp",
+    ],
     devlogs: [
       {
         title: "牌桌經濟與任務上線",

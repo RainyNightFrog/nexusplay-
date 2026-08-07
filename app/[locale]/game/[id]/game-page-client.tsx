@@ -1352,19 +1352,13 @@ export default function GamePageClient({
                           <Gamepad2 className="size-3.5 shrink-0" />
                           <span className="truncate">{tc("backToGameMenu")}</span>
                         </Button>
-                        <GameVolumeControl
-                          iframeRef={iframeRef}
-                          compact
-                          className="shrink-0 [&_button]:size-10 [&_button]:min-h-10 sm:[&_button]:size-auto sm:[&_button]:min-h-0"
-                        />
+                        <GameVolumeControl iframeRef={iframeRef} />
                       </div>
                     )}
                     {isNativeReactPlay && playable && !showGameMenuButton && (
                       <GameVolumeControl
                         iframeRef={iframeRef}
                         onVolumeChange={handleNativeVolume}
-                        compact
-                        className="shrink-0 [&_button]:size-10 [&_button]:min-h-10 sm:[&_button]:size-auto sm:[&_button]:min-h-0"
                       />
                     )}
                     <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">

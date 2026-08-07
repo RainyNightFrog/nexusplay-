@@ -130,7 +130,12 @@ async function main() {
   const description =
     "霓虹德州撲克：積分入場、24/7 常開牌桌，支援跟注、加注、棄牌與全下。每日簽到與任務累積籌碼，在雨夜牌局裡拼一把運氣與膽識。";
   const gameUrl = nativeReactGameUrl(NEON_HOLDEM_SLUG);
-  const coverUrl = "/covers/neon-holdem-cover.png";
+  const coverUrl = "/covers/neon-holdem-cover.webp";
+  const galleryUrls = [
+    "/covers/neon-holdem-cover.webp",
+    "/covers/neon-holdem-screenshot-1.webp",
+    "/covers/neon-holdem-screenshot-2.webp",
+  ];
   const tags = ["卡牌", "策略", "賽博朋克", "多人", "休閒"];
 
   const { data: existing } = await admin
@@ -147,6 +152,7 @@ async function main() {
         description,
         category: "卡牌",
         cover_url: coverUrl,
+        gallery_urls: galleryUrls,
         game_url: gameUrl,
         creator_id: creatorId,
         publish_status: "public",
@@ -178,6 +184,7 @@ async function main() {
         description,
         category: "卡牌",
         cover_url: coverUrl,
+        gallery_urls: galleryUrls,
         game_url: gameUrl,
         creator_id: creatorId,
         created_at: new Date(Date.now() - 2 * 86_400_000).toISOString(),

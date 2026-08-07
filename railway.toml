@@ -1,0 +1,13 @@
+# Neon Hold'em 牌桌伺服器（獨立於 Next.js 主站）
+# 部署：在 game-platform 目錄執行 railway up
+# 公開網址：railway domain
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile.poker"
+
+[deploy]
+healthcheckPath = "/"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5

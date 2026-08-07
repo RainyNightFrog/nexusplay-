@@ -39,12 +39,17 @@ function loadEnvLocal() {
 
 loadEnvLocal();
 
-const PORT = Number(process.env.POKER_WS_PORT || 3101);
+/** 雲端平台（Railway／Fly）會注入 PORT；本機預設 3101 */
+const PORT = Number(
+  process.env.PORT || process.env.POKER_WS_PORT || 3101,
+);
+const HOST = process.env.POKER_HOST || "0.0.0.0";
 const ORIGIN = process.env.POKER_CORS_ORIGIN || "*";
 /** 開發預設允許無 token 連線，方便本機測試；正式站請勿開 */
 const ALLOW_ANON =
   process.env.POKER_ALLOW_ANON === "1" ||
-  process.env.NODE_ENV !== "production";
+  (process.env.NODE_ENV !== "production" &&
+    process.env.POKER_ALLOW_ANON !== "0");
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey =
@@ -647,7 +652,7 @@ io.on("connection", (socket) => {
   });
 });
 
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, HOST, () => {
   const lobby = orchestrator.listLobby();
   const byTier = ["MICRO", "LOW", "MID", "HIGH"]
     .map((tier) => {
@@ -660,7 +665,7 @@ httpServer.listen(PORT, () => {
     })
     .join(" ");
   console.log(
-    `✅ Poker game server → http://localhost:${PORT}  path=/poker-socket`,
+    `✅ Poker game server → http://${HOST}:${PORT}  path=/poker-socket`,
   );
   console.log(`   大廳牌桌：${lobby.length} 桌｜${byTier}`);
 });
